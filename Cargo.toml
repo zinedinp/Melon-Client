@@ -6,7 +6,7 @@ edition = "2024"
 rust-version = "1.100.0"
 description = "Minecraft Client in Rust with Vulkan"
 readme = "README.md"
-repository = "https://github.com/zinedinp/Melon"
+repository = "https://github.com/zinedinp/Melon-Client"
 license = "GPL-3.0"
 default-run = "melon"
 
@@ -29,15 +29,15 @@ png = "0.18.1"
 num-bigint = "0.5.1"
 open = "5.4.5"
 # The integrated server: Pumpkin, checked out next to this repository.
-pumpkin = { package = "pumpkin-core", git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-config = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-mod = { git = "https://github.com/zinedinp/pumpkin-mod", branch = "main" }
-pumpkin-data = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-nbt = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-protocol = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-util = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-wasm-host = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-world = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
+pumpkin = { package = "pumpkin-core", git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip", rev = "175d0dc81bfab65cf8230f8abd3909653efcf532" }
+pumpkin-config = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip", rev = "175d0dc81bfab65cf8230f8abd3909653efcf532" }
+pumpkin-mod = { git = "https://github.com/zinedinp/pumpkin-mod", branch = "main", rev = "175d0dc81bfab65cf8230f8abd3909653efcf532" }
+pumpkin-data = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip", rev = "175d0dc81bfab65cf8230f8abd3909653efcf532" }
+pumpkin-nbt = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip", rev = "175d0dc81bfab65cf8230f8abd3909653efcf532" }
+pumpkin-protocol = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip", rev = "175d0dc81bfab65cf8230f8abd3909653efcf532" }
+pumpkin-util = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip", rev = "175d0dc81bfab65cf8230f8abd3909653efcf532" }
+pumpkin-wasm-host = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip", rev = "175d0dc81bfab65cf8230f8abd3909653efcf532" }
+pumpkin-world = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip", rev = "175d0dc81bfab65cf8230f8abd3909653efcf532" }
 rand = "0.10.4"
 raw-window-handle = "0.6.2"
 rodio = { version = "0.23.0", default-features = false, features = ["playback", "vorbis"] }
@@ -49,15 +49,15 @@ sha2 = "0.11.1"
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "io-util", "macros", "time"] }
 tokio-util = { version = "0.7.20", features = ["rt", "io-util"] }
 ureq = { version = "3.5.2", default-features = false, features = ["rustls", "json"] }
-uuid = { version = "1.29.2", features = ["v3", "v4", "v5"] }
+uuid = { version = "1.29.3", features = ["v3", "v4", "v5"] }
 winit = "0.30.13"
 # Resource packs: their `filter` patterns.
 regex = { version = "1.13", default-features = false, features = ["std", "perf", "unicode"] }
 # Resource packs' core shaders, compiled at runtime as vanilla does: the
 # system's shaderc library, from the same install `glslc` comes from.
 shaderc = "0.10.1"
-zip = { version = "9.6.0", default-features = false, features = ["deflate-flate2"] }
-miraculix = "0.5.0-beta"
+zip = { version = "9.6.1", default-features = false, features = ["deflate-flate2"] }
+miraculix = "0.5.5-beta"
 
 [profile.dev]
 opt-level = 1
