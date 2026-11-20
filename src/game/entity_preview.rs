@@ -249,6 +249,9 @@ impl InWorld {
             .avatar_state(arms, swing, false, config.model_parts);
         let (x_angle, y_angle) = preview.angles();
         state.position = Vec3::ZERO;
+        // `InventoryScreen.renderEntityInInventory` divides the scale
+        // attribute back out: the doll is always the same size.
+        state.scale = 1.0;
         state.body_yaw = x_angle * 20.0;
         state.humanoid.y_rot = x_angle * 20.0;
         state.humanoid.x_rot = -y_angle * 20.0;

@@ -203,6 +203,8 @@ struct Pipelines {
     translucent: pipeline::Pass,
     /// The blended variant that writes depth, for translucent terrain.
     translucent_terrain: pipeline::Pass,
+    /// Added on: lightning bolts.
+    lightning: pipeline::Pass,
     /// Text displays: blended, depth written.
     text: pipeline::Pass,
     /// Fancy clouds: blended, no back-face cull.
@@ -435,6 +437,7 @@ impl Drop for Renderer {
             self.pipelines.world.destroy(&self.device);
             self.pipelines.translucent.destroy(&self.device);
             self.pipelines.translucent_terrain.destroy(&self.device);
+            self.pipelines.lightning.destroy(&self.device);
             self.pipelines.text.destroy(&self.device);
             self.pipelines.clouds.destroy(&self.device);
             self.pipelines.weather.destroy(&self.device);

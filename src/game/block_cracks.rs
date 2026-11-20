@@ -110,6 +110,7 @@ impl BlockCracks {
             }
         }
         out.extend(self.overlays.iter().map(|overlay| EntityDraw {
+            alpha: 1.0,
             mesh: overlay.mesh,
             atlas: stages[usize::from(overlay.stage)],
             model: glam::Mat4::IDENTITY,

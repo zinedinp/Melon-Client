@@ -231,6 +231,7 @@ impl ParticleMeshes {
                     self.meshes.push(mesh);
                     self.drawn += batch.vertices.len() / 4;
                     out.push(EntityDraw {
+                        alpha: 1.0,
                         mesh,
                         atlas: texture,
                         model: Mat4::IDENTITY,

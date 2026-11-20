@@ -21,6 +21,9 @@ pub struct Cube {
     pub grow: Vec3,
     pub mirror: bool,
     pub faces: Directions,
+    /// `addBox(..., uScale, vScale)`: the texture taken as this many times
+    /// its size for this box alone (an arrow's shaft).
+    pub tex_scale: Vec2,
 }
 
 impl Cube {
@@ -33,7 +36,14 @@ impl Cube {
             grow: Vec3::ZERO,
             mirror: false,
             faces: ALL_FACES,
+            tex_scale: Vec2::ONE,
         }
+    }
+
+    /// `CubeListBuilder.addBox(..., CubeDeformation.NONE, u, v)`.
+    pub fn tex_scaled(mut self, u: f32, v: f32) -> Self {
+        self.tex_scale = Vec2::new(u, v);
+        self
     }
 
     pub fn grown(mut self, by: f32) -> Self {
@@ -95,7 +105,8 @@ impl Cube {
                     Vec2::new(a, b),
                     Vec2::new(a, e),
                     Vec2::new(c, e),
-                ];
+                ]
+                .map(|uv| uv / self.tex_scale);
                 if self.mirror {
                     corners.reverse();
                     uvs.reverse();

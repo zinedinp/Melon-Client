@@ -61,6 +61,7 @@ impl LeadMeshes {
         }
         if let Some(mesh) = kept.mesh {
             out.push(EntityDraw {
+                alpha: 1.0,
                 mesh,
                 atlas: white,
                 model: Mat4::IDENTITY,

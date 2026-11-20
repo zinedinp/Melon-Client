@@ -16,6 +16,24 @@ use crate::world::level::Level;
 use crate::world::model_part::{Sprite, emit};
 use glam::{DVec3, Mat4, Vec2, Vec3};
 
+/// `BuiltInBlockModels`' special models of a block drawn away from its
+/// block entity (in a minecart, as a falling block or a display): a chest
+/// or shulker box shut, a banner's plain flag, a pot without sherds, at
+/// the origin. `false` for a state without one of these.
+pub fn at_rest(state: u16, models: &BlockModels, out: &mut Vec<Vertex>) -> bool {
+    let Some(kind) = kind_of(state) else {
+        return false;
+    };
+    if !matches!(
+        kind,
+        Kind::Chest { .. } | Kind::Shulker { .. } | Kind::Banner { .. } | Kind::DecoratedPot { .. }
+    ) {
+        return false;
+    }
+    BlockEntities::default().build_one([0, 0, 0], kind, models, 0.0, out);
+    true
+}
+
 /// The middle of the block at `pos`.
 fn block_center(pos: [i32; 3]) -> DVec3 {
     DVec3::from_array(pos.map(f64::from)) + DVec3::splat(0.5)

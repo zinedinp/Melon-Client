@@ -222,6 +222,7 @@ impl Renderer {
                             }
                             Blending::Text => (Mode::Text, &self.pipelines.text),
                             Blending::Opaque => (Mode::Opaque, &self.pipelines.world),
+                            Blending::Additive => (Mode::Lightning, &self.pipelines.lightning),
                         };
                         let at = (
                             view_proj * world.relative_to(entity.model, entity.origin),
@@ -234,7 +235,7 @@ impl Renderer {
                                 world.ambient[2],
                             ]);
                             world
-                                .light([r, g, b, 1.0])
+                                .light([r, g, b, entity.alpha])
                                 .fogged(fog)
                                 .overlaid(entity.overlay)
                         };
@@ -515,6 +516,7 @@ impl Renderer {
             Mode::Solid => &self.pipelines.solid,
             Mode::Opaque => &self.pipelines.world,
             Mode::Translucent => &self.pipelines.translucent,
+            Mode::Lightning => &self.pipelines.lightning,
             Mode::TranslucentTerrain => &self.pipelines.translucent_terrain,
             Mode::Text => &self.pipelines.text,
             Mode::Clouds => &self.pipelines.clouds,
@@ -618,6 +620,7 @@ impl Renderer {
             Mode::Solid => &self.pipelines.terrain[0],
             Mode::Opaque => &self.pipelines.terrain[1],
             Mode::Translucent
+            | Mode::Lightning
             | Mode::Text
             | Mode::TranslucentTerrain
             | Mode::Clouds

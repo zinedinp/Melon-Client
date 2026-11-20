@@ -216,6 +216,7 @@ impl InWorld {
                             let pose = HandPose::first_person(arm);
                             for (mesh, atlas, translucent) in assets.held.get(stack, pose, using) {
                                 entities.push(EntityDraw {
+                                    alpha: 1.0,
                                     mesh,
                                     atlas,
                                     model: matrix,
@@ -334,12 +335,16 @@ impl InWorld {
         self.shadows.end_frame(renderer);
         self.leads.end_frame(renderer);
         self.fishing.end_frame(renderer);
+        self.paintings.end_frame(renderer);
+        self.sprites.end_frame(renderer);
+        self.beams.end_frame(renderer);
         self.poses.end_frame();
         entities.extend(
             block_entity_meshes
                 .into_iter()
                 .flatten()
                 .map(|(mesh, origin)| EntityDraw {
+                    alpha: 1.0,
                     mesh,
                     atlas: assets.atlas,
                     model: Mat4::IDENTITY,

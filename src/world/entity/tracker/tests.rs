@@ -1113,3 +1113,62 @@ fn a_picked_up_item_flies_to_the_taker_in_three_ticks() {
     entities.tick_pickups(|_| Some(target));
     assert!(entities.pickups().is_empty());
 }
+
+fn launch(id: i32, kind: &EntityType, pos: [f64; 3], velocity: [f64; 3]) -> EntityPacket {
+    let EntityPacket::Add(mut add) = add(id, kind, pos) else {
+        unreachable!()
+    };
+    add.velocity = velocity;
+    EntityPacket::Add(add)
+}
+
+#[test]
+fn a_wither_skull_flies_on_between_the_servers_updates() {
+    let level = level_with_floor(None);
+    let mut entities = Entities::default();
+    entities.apply(
+        launch(
+            9,
+            &EntityType::WITHER_SKULL,
+            [8.0, 100.0, 1.0],
+            [0.0, 0.0, 0.1],
+        ),
+        1,
+    );
+    // `AbstractHurtingProjectile.applyInertia`: plus 0.1 along its heading,
+    // then 0.95 of that.
+    let mut z = 1.0;
+    let mut v = 0.1;
+    for _ in 0..3 {
+        entities.tick();
+        entities.simulate(&level);
+        v = (v + 0.1) * f64::from(0.95_f32);
+        z += v;
+    }
+    let at = entities.get(9).unwrap().tick_pos();
+    assert!((at.z - z).abs() < 1e-9, "{} vs {z}", at.z);
+    assert_eq!(at.y, 100.0, "no gravity");
+}
+
+#[test]
+fn a_snowball_falls_and_stops_at_the_floor() {
+    let level = level_with_floor(Some(64));
+    let mut entities = Entities::default();
+    entities.apply(
+        launch(9, &EntityType::SNOWBALL, [8.0, 66.0, 8.0], [0.0, -1.0, 0.0]),
+        1,
+    );
+    for _ in 0..5 {
+        entities.tick();
+        entities.simulate(&level);
+    }
+    let at = entities.get(9).unwrap().tick_pos();
+    assert!((at.y - 65.0).abs() < 1e-6, "{at}");
+}
+
+#[test]
+fn an_eye_of_ender_still_glides_to_the_servers_positions() {
+    let mut entities = Entities::default();
+    entities.apply(add(9, &EntityType::EYE_OF_ENDER, [8.0, 100.0, 8.0]), 1);
+    assert!(!entities.get(9).unwrap().simulates());
+}

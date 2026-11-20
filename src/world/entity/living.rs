@@ -38,7 +38,7 @@ impl Swim {
 }
 
 /// `LivingEntityRenderState`, as far as Melon's models read it.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug)]
 pub struct LivingRenderState {
     /// Feet, in the world (or relative to a draw's origin).
     pub position: Vec3,
@@ -63,6 +63,30 @@ pub struct LivingRenderState {
     pub swim: Swim,
     /// Drawn upside down (`isUpsideDown`: a `Dinnerbone`), with the body's
     pub upside_down: Option<f32>,
+    /// `scale`: the `scale` attribute the whole model grows by, about its
+    /// feet.
+    pub scale: f32,
+}
+
+impl Default for LivingRenderState {
+    fn default() -> Self {
+        Self {
+            position: Vec3::ZERO,
+            body_rot: 0.0,
+            y_rot: 0.0,
+            x_rot: 0.0,
+            walk_position: 0.0,
+            walk_speed: 0.0,
+            age_in_ticks: 0.0,
+            death_time: 0.0,
+            hurt: false,
+            baby: false,
+            riding: false,
+            swim: Swim::default(),
+            upside_down: None,
+            scale: 1.0,
+        }
+    }
 }
 
 /// How a renderer places its model: `LivingEntityRenderer.scale`'s own
@@ -80,6 +104,9 @@ pub struct Placement {
     pub fish: Option<super::mobs::fish::Wobble>,
     /// Extra pitch after the body's turn (`FoxRenderer.setupRotations`).
     pub extra_pitch: f32,
+    /// A move in the scaled model's space before its 1.501 drop (a
+    /// sulfur cube's `vOffset`).
+    pub offset: Vec3,
 }
 
 impl Default for Placement {
@@ -92,6 +119,7 @@ impl Default for Placement {
             squid: None,
             fish: None,
             extra_pitch: 0.0,
+            offset: Vec3::ZERO,
         }
     }
 }
@@ -99,10 +127,16 @@ impl Default for Placement {
 /// `LivingEntityRenderer.submit`'s transform: `EntityRenderDispatcher`
 pub fn root_transform(state: &LivingRenderState, placement: Placement) -> Mat4 {
     let bob = placement.fish.map_or(0.0, |fish| fish.bob);
+    // `poseStack.scale(scale)` before `setupRotations`, which takes its
+    // moves in the scaled space (`boundingBoxHeight / entityScale`).
+    let scale = if state.scale > 0.0 { state.scale } else { 1.0 };
+    let grow = Mat4::from_scale(Vec3::splat(scale));
     let mut m = Mat4::from_translation(state.position + Vec3::new(0.0, bob, 0.0))
+        * grow
         * Mat4::rot_y(-state.body_rot.to_radians());
     if let Some(tilt) = placement.squid {
         m = Mat4::from_translation(state.position + Vec3::new(0.0, tilt.lift(), 0.0))
+            * grow
             * Mat4::rot_y(-state.body_rot.to_radians())
             * Mat4::rot_x_deg(tilt.x_degrees)
             * Mat4::rot_y_deg(tilt.z_degrees)
@@ -114,7 +148,8 @@ pub fn root_transform(state: &LivingRenderState, placement: Placement) -> Mat4 {
             .min(1.0);
         m *= Mat4::rot_z_deg(fall * placement.flip_degrees);
     } else if let Some(height) = state.upside_down {
-        m *= Mat4::from_translation(Vec3::new(0.0, height + 0.1, 0.0)) * Mat4::rot_z_deg(180.0);
+        m *= Mat4::from_translation(Vec3::new(0.0, (height + 0.1) / scale, 0.0))
+            * Mat4::rot_z_deg(180.0);
     }
     if let Some(fish) = placement.fish {
         m *= Mat4::rot_y_deg(fish.yaw);
@@ -137,7 +172,7 @@ pub fn root_transform(state: &LivingRenderState, placement: Placement) -> Mat4 {
         m *= Mat4::rot_x_deg(placement.extra_pitch);
     }
     m * Mat4::from_scale(Vec3::new(-1.0, -1.0, 1.0) * placement.scale)
-        * Mat4::from_translation(Vec3::new(0.0, -1.501, 0.0))
+        * Mat4::from_translation(placement.offset + Vec3::new(0.0, -1.501, 0.0))
 }
 
 /// The rest of `setupRotations` for a swimmer, after the yaw and the

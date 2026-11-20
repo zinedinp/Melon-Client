@@ -81,6 +81,7 @@ impl ModelMeshes {
                 })
                 .filter_map(|((_, mesh), matrix)| Some(((*mesh)?, (*matrix)?)))
                 .map(|(mesh, model)| EntityDraw {
+                    alpha: 1.0,
                     mesh,
                     atlas: style.texture,
                     model,
@@ -111,6 +112,7 @@ impl ModelMeshes {
                 .filter(|((index, _), _)| skip.iter().all(|p| p.0 != *index))
                 .filter_map(|((_, mesh), matrix)| Some(((*mesh)?, (*matrix)?)))
                 .map(|(mesh, model)| EntityDraw {
+                    alpha: 1.0,
                     mesh,
                     atlas: style.texture,
                     model,
@@ -340,6 +342,38 @@ impl PlayerModels {
             };
         }
         self.default_look(default_skin(uuid))
+    }
+}
+
+impl PlayerModels {
+    /// `ClientMannequin.getSkin`: its profile's skin once fetched, else the
+    /// default one by the profile's id, with the patch's body and arms.
+    pub fn for_avatar(&self, avatar: &crate::world::head_profile::AvatarProfile) -> PlayerLook<'_> {
+        let mut look = match &avatar.profile {
+            Some(profile) if self.has_head_skin(profile) => self.for_profile(profile.skin_key()),
+            _ => self.default_look(default_skin(avatar.default_skin_id())),
+        };
+        // `PlayerSkin.Patch.body`: a default skin's texture is all this
+        // draws; another asset keeps the profile's.
+        if let Some(body) = avatar.patch.body.as_deref() {
+            let path = body.strip_prefix("minecraft:").unwrap_or(body);
+            if let Some(index) = (0..DEFAULT_SKINS.len()).find(|&i| {
+                let (name, model) = DEFAULT_SKINS[i];
+                path == format!("entity/player/{}/{name}", model.folder())
+            }) {
+                let (texture, image) = &self.skins[index];
+                look.texture = *texture;
+                look.image = image;
+            }
+        }
+        if let Some(slim) = avatar.patch.slim {
+            look.model = self.model(if slim {
+                PlayerModelType::Slim
+            } else {
+                PlayerModelType::Wide
+            });
+        }
+        look
     }
 }
 

@@ -39,6 +39,7 @@ pub mod phantom;
 pub mod pig;
 pub mod piglin;
 pub mod polar_bear;
+pub mod projectile;
 pub mod rabbit;
 pub mod ravager;
 pub mod segmented;
@@ -51,6 +52,7 @@ pub mod snow_golem;
 pub mod spider;
 pub mod squid;
 pub mod strider;
+pub mod sulfur_cube;
 pub mod tnt;
 pub mod turtle;
 pub mod vehicle;
@@ -246,6 +248,23 @@ pub enum ModelId {
     NautilusSaddle,
     Armor(ArmorStyle, ArmorSlot),
     BabyArmor(ArmorStyle, ArmorSlot),
+    SulfurCubeOuter,
+    SulfurCubeInner,
+    SulfurCubeSmallOuter,
+    SulfurCubeSmallInner,
+    /// `ZombieNautilusCoralModel`: the warm one's corals on the shell.
+    ZombieNautilusCoral,
+    WitherSkull,
+    ShulkerBullet,
+    /// The bullet again, half as big again, for its translucent glow.
+    ShulkerBulletGlow,
+    LlamaSpit,
+    WindCharge,
+    EvokerFangs,
+    EndCrystal,
+    Trident,
+    Arrow,
+    Cushion,
 }
 
 /// Whose armor models a wearer has: the models differ in their boxes.
@@ -261,7 +280,7 @@ pub enum ArmorStyle {
 }
 
 impl ModelId {
-    pub const ALL: [Self; 169] = {
+    pub const ALL: [Self; 184] = {
         use ArmorSlot::{Chest, Feet, Head, Legs};
         use ArmorStyle::{Humanoid, Piglin, ZombieVillager};
         [
@@ -434,6 +453,21 @@ impl ModelId {
             Self::BabyArmor(ArmorStyle::ArmorStand, Chest),
             Self::BabyArmor(ArmorStyle::ArmorStand, Legs),
             Self::BabyArmor(ArmorStyle::ArmorStand, Feet),
+            Self::SulfurCubeOuter,
+            Self::SulfurCubeInner,
+            Self::SulfurCubeSmallOuter,
+            Self::SulfurCubeSmallInner,
+            Self::ZombieNautilusCoral,
+            Self::WitherSkull,
+            Self::ShulkerBullet,
+            Self::LlamaSpit,
+            Self::WindCharge,
+            Self::EvokerFangs,
+            Self::EndCrystal,
+            Self::Trident,
+            Self::Arrow,
+            Self::Cushion,
+            Self::ShulkerBulletGlow,
         ]
     };
 
@@ -585,6 +619,21 @@ impl ModelId {
             Self::BabyArmor(ArmorStyle::ArmorStand, slot) => 165 + slot as usize,
             Self::Armor(style, slot) => 139 + armor_index(style, slot),
             Self::BabyArmor(style, slot) => 151 + baby_armor_index(style, slot),
+            Self::SulfurCubeOuter => 169,
+            Self::SulfurCubeInner => 170,
+            Self::SulfurCubeSmallOuter => 171,
+            Self::SulfurCubeSmallInner => 172,
+            Self::ZombieNautilusCoral => 173,
+            Self::WitherSkull => 174,
+            Self::ShulkerBullet => 175,
+            Self::LlamaSpit => 176,
+            Self::WindCharge => 177,
+            Self::EvokerFangs => 178,
+            Self::EndCrystal => 179,
+            Self::Trident => 180,
+            Self::Arrow => 181,
+            Self::Cushion => 182,
+            Self::ShulkerBulletGlow => 183,
         }
     }
 
@@ -770,6 +819,21 @@ impl ModelId {
                 piglin::baby_armor()[slot as usize].clone()
             }
             Self::BabyArmor(_, slot) => humanoid::create_baby_armor_layers()[slot as usize].clone(),
+            Self::SulfurCubeOuter => sulfur_cube::outer(),
+            Self::SulfurCubeInner => sulfur_cube::inner(),
+            Self::SulfurCubeSmallOuter => sulfur_cube::outer_small(),
+            Self::SulfurCubeSmallInner => sulfur_cube::inner_small(),
+            Self::ZombieNautilusCoral => nautilus::zombie_coral(),
+            Self::WitherSkull => projectile::wither_skull(),
+            Self::ShulkerBullet => projectile::shulker_bullet(),
+            Self::LlamaSpit => projectile::llama_spit(),
+            Self::WindCharge => projectile::wind_charge(),
+            Self::EvokerFangs => projectile::evoker_fangs(),
+            Self::EndCrystal => projectile::end_crystal(),
+            Self::Trident => projectile::trident(),
+            Self::Arrow => projectile::arrow(),
+            Self::Cushion => projectile::cushion(),
+            Self::ShulkerBulletGlow => projectile::shulker_bullet_glow(),
         }
     }
 }
@@ -851,6 +915,8 @@ pub enum Rig {
     Creaking(creaking::CreakingParts),
     CopperGolem(copper_golem::CopperGolemParts),
     ArmorStand(armor_stand::ArmorStandParts),
+    /// A projectile's, crystal's or fangs' few moving parts.
+    Thing(projectile::ThingParts),
     /// Not posed: drawn as built.
     Static,
 }
@@ -905,7 +971,7 @@ impl Rig {
             M::Turtle | M::TurtleBaby => Self::Turtle(turtle::TurtleParts::find(model)),
             M::Guardian | M::ElderGuardian => Self::Guardian(guardian::GuardianParts::find(model)),
             M::Tadpole => Self::Fish(fish::FishRig::tadpole(model)),
-            M::Nautilus | M::NautilusBaby | M::NautilusSaddle => {
+            M::Nautilus | M::NautilusBaby | M::NautilusSaddle | M::ZombieNautilusCoral => {
                 Self::Nautilus(nautilus::NautilusParts::find(model))
             }
             M::Axolotl => Self::Axolotl(axolotl::AxolotlParts::find(model)),
@@ -961,6 +1027,21 @@ impl Rig {
                 Self::Boat(vehicle::BoatParts::find(model))
             }
             M::MagmaCube => Self::MagmaCube(slime::MagmaParts::find(model)),
+            M::WitherSkull => Self::Thing(projectile::ThingParts::look(model, "head")),
+            M::ShulkerBullet | M::ShulkerBulletGlow => {
+                Self::Thing(projectile::ThingParts::look(model, "main"))
+            }
+            M::WindCharge => Self::Thing(projectile::ThingParts::wind_charge(model)),
+            M::EvokerFangs => Self::Thing(projectile::ThingParts::fangs(model)),
+            M::EndCrystal => Self::Thing(projectile::ThingParts::crystal(model)),
+            M::Arrow => Self::Thing(projectile::ThingParts::Arrow),
+            M::SulfurCubeOuter
+            | M::SulfurCubeInner
+            | M::SulfurCubeSmallOuter
+            | M::SulfurCubeSmallInner
+            | M::LlamaSpit
+            | M::Trident
+            | M::Cushion => Self::Static,
             M::Villager | M::VillagerNoHat | M::VillagerBaby | M::VillagerBabyNoHat | M::Witch => {
                 Self::Villager(villager::VillagerParts::find(model))
             }
@@ -1073,6 +1154,7 @@ pub struct PoseInput {
     pub creaking_move: bool,
     pub copper_holding: bool,
     pub armor_stand: armor_stand::StandPoseInput,
+    pub thing: projectile::ThingPose,
 }
 
 impl MobModel {
@@ -1330,6 +1412,9 @@ impl MobModel {
                 piglin::setup_anim(parts, &mut pose, &input.living, input.piglin);
             }
             Rig::ArmorStand(parts) => armor_stand::setup_anim(parts, &mut pose, &input.armor_stand),
+            Rig::Thing(parts) => {
+                projectile::setup_anim(&self.model, *parts, &mut pose, input.thing)
+            }
             Rig::Humanoid(parts) => {
                 humanoid::setup_anim(parts, &mut pose, &input.humanoid);
                 if input.skeleton_melee {
@@ -1404,6 +1489,56 @@ mod tests {
         let mut out = Vec::new();
         layers(entity, 0.0, &|_| villager::Hat::None, &mut out);
         out
+    }
+
+    #[test]
+    fn shadows_follow_each_renderers_radius() {
+        let radius = |ty: &EntityType, baby: bool| {
+            let mut entity = spawned(ty);
+            entity.appearance.baby = baby;
+            shadow_radius(&entity)
+        };
+        let close = |a: f32, b: f32| (a - b).abs() < 1e-6;
+        assert!(close(radius(&EntityType::COW, true), 0.35));
+        // `VillagerRenderer` and `StriderRenderer` halve a baby's again.
+        assert!(close(radius(&EntityType::VILLAGER, true), 0.125));
+        assert!(close(radius(&EntityType::STRIDER, true), 0.125));
+        // `Turtle.getAgeScale` is 0.3, and `TurtleRenderer` takes 0.83 of it.
+        assert!(close(radius(&EntityType::TURTLE, true), 0.7 * 0.3 * 0.83));
+        assert!(close(radius(&EntityType::GOAT, true), 0.7 * 0.55));
+        assert!(close(radius(&EntityType::ARMOR_STAND, false), 0.0));
+        assert!(close(radius(&EntityType::GIANT, false), 3.0));
+        let mut cube = spawned(&EntityType::SULFUR_CUBE);
+        cube.appearance.size = 2;
+        cube.appearance.baby = true;
+        assert!(close(shadow_radius(&cube), 0.5));
+        assert!(close(shadow_strength(&spawned(&EntityType::ITEM)), 0.75));
+    }
+
+    #[test]
+    fn the_new_things_have_their_layers() {
+        let mut skull = spawned(&EntityType::WITHER_SKULL);
+        assert_eq!(body(&skull)[0].texture, projectile::WITHER_TEXTURE);
+        skull.appearance.thing.dangerous = true;
+        assert_eq!(
+            body(&skull)[0].texture,
+            projectile::WITHER_INVULNERABLE_TEXTURE
+        );
+        let bullet = body(&spawned(&EntityType::SHULKER_BULLET));
+        assert_eq!(bullet.len(), 2);
+        assert!(bullet[1].translucent && bullet[1].alpha < 0.2);
+        let cube = body(&spawned(&EntityType::SULFUR_CUBE));
+        assert_eq!(cube.len(), 2, "core then shell");
+        assert_eq!(cube[0].model, ModelId::SulfurCubeInner);
+        assert!(body(&spawned(&EntityType::EVOKER_FANGS)).is_empty());
+        let mut arrow = spawned(&EntityType::ARROW);
+        assert_eq!(body(&arrow)[0].texture, projectile::ARROW_TEXTURE);
+        arrow.appearance.thing.arrow_color = 0xFF0000;
+        assert_eq!(body(&arrow)[0].texture, projectile::TIPPED_ARROW_TEXTURE);
+        assert_eq!(
+            body(&spawned(&EntityType::PARCHED))[0].texture,
+            "minecraft:entity/skeleton/parched"
+        );
     }
 
     #[test]

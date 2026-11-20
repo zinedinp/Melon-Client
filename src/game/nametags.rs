@@ -108,11 +108,16 @@ impl InWorld {
             } else {
                 None
             };
-            let score = if dist_sq < entity.below_name_distance * entity.below_name_distance {
+            let score = if dist_sq >= entity.below_name_distance * entity.below_name_distance {
+                None
+            } else if let Some(mannequin) = &entity.mannequin {
+                // `ClientMannequin.belowNameDisplay`: its description, drawn
+                // only along with its name (`submitNameTag` skips a tag
+                // without the name's attachment).
+                mannequin.description.clone().filter(|_| name.is_some())
+            } else {
                 self.scoreboard
                     .below_name_display(&self.score_holder(entity))
-            } else {
-                None
             };
             let height = f64::from(entity.size().1);
             let anchor = feet + DVec3::new(0.0, height + 0.5, 0.0);

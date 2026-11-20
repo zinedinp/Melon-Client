@@ -251,11 +251,47 @@ pub struct ClientEntity {
     movement_speed: f32,
     jump_strength: f32,
     step_height: f32,
+    /// `Attributes.SCALE` (`LivingEntity.getScale`): the box and the model
+    /// grow with it.
+    scale_attribute: f32,
     /// `Attributes.NAME_TAG_DISTANCE` and `BELOW_NAME_DISTANCE`, in blocks.
     pub name_tag_distance: f32,
     pub below_name_distance: f32,
     /// The body turn of the living vehicle it rides, last tick's and this
     vehicle_body: Option<(f32, f32)>,
+    /// `EvokerFangs.lifeTicks` once the bite began (`clientSideAttackStarted`).
+    pub fangs_life: Option<i32>,
+    /// `AbstractArrow.shakeTime`: ticks left of the wobble when it sticks.
+    pub arrow_shake: i32,
+    /// `SulfurCube.fuse` or `MinecartTNT.fuse`: ticks until it blows, -1
+    /// unlit.
+    pub fuse_ticks: i32,
+    /// A mannequin's profile and description; `None` for anything else.
+    pub mannequin: Option<Box<Mannequin>>,
+    /// `EnderDragon.nearestCrystal`: the end crystal healing it, by id.
+    pub nearest_crystal: Option<i32>,
+}
+
+/// `Mannequin`'s synced look.
+#[derive(Clone, Debug)]
+pub struct Mannequin {
+    /// `DATA_PROFILE`.
+    pub profile: crate::world::head_profile::AvatarProfile,
+    /// `DATA_DESCRIPTION`: the line under its name, the "Mannequin" label
+    /// until the server says otherwise; `None` once hidden.
+    pub description: Option<Component>,
+}
+
+impl Default for Mannequin {
+    fn default() -> Self {
+        Self {
+            profile: Default::default(),
+            description: Some(Component::translatable(
+                "entity.minecraft.mannequin.label",
+                Vec::new(),
+            )),
+        }
+    }
 }
 
 /// How long a started mod movement state stays on an entity.
@@ -377,6 +413,7 @@ impl ClientEntity {
                 0.42,
             ),
             step_height: type_attr(ty, crate::network::play::game::ATTRIBUTE_STEP_HEIGHT, 0.6),
+            scale_attribute: type_attr(ty, crate::network::play::game::ATTRIBUTE_SCALE, 1.0),
             name_tag_distance: type_attr(
                 ty,
                 crate::network::play::game::ATTRIBUTE_NAME_TAG_DISTANCE,
@@ -388,6 +425,11 @@ impl ClientEntity {
                 10.0,
             ),
             vehicle_body: None,
+            fangs_life: None,
+            arrow_shake: 0,
+            fuse_ticks: -1,
+            mannequin: (EntityKind::of(ty) == EntityKind::Mannequin).then(Default::default),
+            nearest_crystal: None,
         })
     }
 
@@ -399,11 +441,36 @@ impl ClientEntity {
             EntityPacket::HeadRotation { yaw, .. } => self.head_lerp = Some((yaw, LERP_STEPS)),
             EntityPacket::Data { values, .. } => {
                 for (index, value) in &values {
-                    if self.kind == EntityKind::Item
-                        && *index == pumpkin_data::tracked_data::item::DATA_ITEM.id.0
-                        && let crate::network::play::game::DataValue::Item(stack) = value
+                    // `ItemEntity.DATA_ITEM`, and the thrown items', rockets' and
+                    // spawners' stack (index 8 of each).
+                    let holds_item = match self.kind {
+                        EntityKind::Item => {
+                            *index == pumpkin_data::tracked_data::item::DATA_ITEM.id.0
+                        }
+                        EntityKind::ThrownItem
+                        | EntityKind::FireworkRocket
+                        | EntityKind::OminousItemSpawner => *index == 8,
+                        _ => false,
+                    };
+                    if holds_item && let crate::network::play::game::DataValue::Item(stack) = value
                     {
                         self.item = (**stack).clone();
+                    }
+                    if let Some(mannequin) = &mut self.mannequin {
+                        use pumpkin_data::tracked_data::mannequin as m;
+                        match value {
+                            crate::network::play::game::DataValue::Profile(profile)
+                                if *index == m::DATA_PROFILE.id.0 =>
+                            {
+                                mannequin.profile = (**profile).clone();
+                            }
+                            crate::network::play::game::DataValue::Name(text)
+                                if *index == m::DATA_DESCRIPTION.id.0 =>
+                            {
+                                mannequin.description = text.as_deref().cloned();
+                            }
+                            _ => {}
+                        }
                     }
                     if self.kind.is_item_frame() {
                         match (index, value) {
@@ -435,7 +502,17 @@ impl ClientEntity {
                             || format!("{value:?}"),
                         );
                     }
+                    let thing = self.appearance.thing;
                     self.appearance.apply(self.kind, *index, value);
+                    let now = self.appearance.thing;
+                    // `AbstractArrow.onSyncedDataUpdated`: it shakes as it sticks.
+                    if now.in_ground && !thing.in_ground && self.age > 0 && self.arrow_shake <= 0 {
+                        self.arrow_shake = mobs::projectile::ARROW_SHAKE_TICKS;
+                    }
+                    // `SulfurCube.onSyncedDataUpdated(MAX_FUSE)`.
+                    if now.max_fuse != thing.max_fuse {
+                        self.fuse_ticks = now.max_fuse;
+                    }
                     if *index == appearance::CUSTOM_NAME_INDEX
                         && let Some(name) = value.name()
                     {
@@ -462,6 +539,17 @@ impl ClientEntity {
                 if self.kind.is_squid() && event == mobs::squid::EVENT_STROKE {
                     self.squid.stroke();
                 }
+                if self.kind == EntityKind::Minecart
+                    && self.ty.resource_name == "tnt_minecart"
+                    && event == mobs::vehicle::EVENT_PRIME_TNT
+                {
+                    self.fuse_ticks = crate::world::entity::appearance::DEFAULT_FUSE;
+                }
+                if self.kind == EntityKind::EvokerFangs
+                    && event == mobs::projectile::EVENT_FANGS_ATTACK
+                {
+                    self.fangs_life = Some(mobs::projectile::FANGS_LIFE_TICKS);
+                }
                 if self.kind == EntityKind::Rabbit && event == mobs::rabbit::EVENT_JUMP {
                     self.rabbit.jump();
                 }
@@ -486,6 +574,8 @@ impl ClientEntity {
                         self.jump_strength = value;
                     } else if attribute == crate::network::play::game::ATTRIBUTE_STEP_HEIGHT {
                         self.step_height = value;
+                    } else if attribute == crate::network::play::game::ATTRIBUTE_SCALE {
+                        self.scale_attribute = value;
                     } else if attribute == crate::network::play::game::ATTRIBUTE_NAME_TAG_DISTANCE {
                         self.name_tag_distance = value;
                     } else if attribute == crate::network::play::game::ATTRIBUTE_BELOW_NAME_DISTANCE

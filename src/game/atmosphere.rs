@@ -52,6 +52,7 @@ impl InWorld {
         let clouds = self.cloud_mesh.map(|mesh| CloudDraw {
             color: cloud_frame.color,
             draw: EntityDraw {
+                alpha: 1.0,
                 mesh,
                 atlas: renderer.white_texture(),
                 model: Mat4::from_translation(cloud_anchor.1),

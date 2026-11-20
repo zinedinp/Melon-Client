@@ -6,6 +6,7 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::InWorld;
 use super::entity_models::{DrawStyle, PlayerLook};
+use super::entity_sprites;
 use super::shadows::OWN;
 use super::world_resources::WorldResources;
 use crate::math::angle::Rotation;
@@ -44,10 +45,10 @@ pub(super) struct Avatar<'a> {
 
 /// Where one entity's draws go: the block its positions are relative to,
 #[derive(Clone, Copy)]
-struct Placed {
-    origin: IVec3,
-    layer: RenderLayer,
-    light: [f32; 3],
+pub(super) struct Placed {
+    pub origin: IVec3,
+    pub layer: RenderLayer,
+    pub light: [f32; 3],
 }
 
 impl InWorld {
@@ -173,10 +174,17 @@ impl InWorld {
         }
         let mut layers = Vec::new();
         for entity in self.entities.iter() {
-            if entity.kind == EntityKind::Player {
-                assets
-                    .players
-                    .request(entity.uuid, self.profile_textures(entity.uuid));
+            if entity.kind.is_avatar() {
+                match entity.mannequin.as_deref() {
+                    Some(mannequin) => {
+                        if let Some(profile) = &mannequin.profile.profile {
+                            assets.players.request_head(profile);
+                        }
+                    }
+                    None => assets
+                        .players
+                        .request(entity.uuid, self.profile_textures(entity.uuid)),
+                }
                 layers.clear();
                 mobs::equipment_layers(entity, &mut layers);
                 for layer in &layers {
@@ -210,6 +218,56 @@ impl InWorld {
             }
             if entity.kind == EntityKind::Item {
                 assets.prepare_held(renderer, &entity.item, false);
+            }
+            if let Some(stack) = entity_sprites::shown_item(entity) {
+                assets.prepare_held(renderer, &stack, false);
+            }
+            match entity.kind {
+                EntityKind::ExperienceOrb => {
+                    assets
+                        .mobs
+                        .prepare_texture(renderer, entity_sprites::ORB_TEXTURE);
+                }
+                EntityKind::DragonFireball => {
+                    assets
+                        .mobs
+                        .prepare_texture(renderer, entity_sprites::DRAGON_FIREBALL_TEXTURE);
+                }
+                EntityKind::EndCrystal | EntityKind::EnderDragon => {
+                    assets
+                        .mobs
+                        .prepare_texture(renderer, crate::world::entity::crystal_beam::TEXTURE);
+                }
+                EntityKind::Minecart => {
+                    if let Some((state, _)) = minecart_block(entity) {
+                        let models = assets.models.clone();
+                        let at = block_at(entity);
+                        assets.blocks.prepare(renderer, &models, state, |kind| {
+                            self.level.tint_at(kind, at)
+                        });
+                    }
+                }
+                EntityKind::Painting => {
+                    use crate::world::entity::painting;
+                    if let Some(variant) = painting::variant(entity.appearance.thing.variant) {
+                        assets
+                            .mobs
+                            .prepare_texture(renderer, &painting::front_texture(variant));
+                        assets
+                            .mobs
+                            .prepare_texture(renderer, painting::BACK_TEXTURE);
+                    }
+                }
+                EntityKind::SulfurCube => {
+                    if let Some(state) = mobs::sulfur_cube::swallowed_block(entity) {
+                        let models = assets.models.clone();
+                        let at = block_at(entity);
+                        assets.blocks.prepare(renderer, &models, state, |kind| {
+                            self.level.tint_at(kind, at)
+                        });
+                    }
+                }
+                _ => {}
             }
             if entity.kind.is_item_frame() {
                 for model in FRAME_MODELS {
@@ -266,6 +324,15 @@ impl InWorld {
         std::array::from_fn(|i| &slots[i])
     }
 
+    /// What a shadow's light reads: the time of day's darkening and the
+    /// dimension's ambient light.
+    pub(super) fn shadow_light(&self) -> crate::world::shadow::ShadowLight {
+        crate::world::shadow::ShadowLight {
+            sky_light_level: self.effects.sky_light_level(),
+            ambient: self.dimension_type.ambient_light,
+        }
+    }
+
     /// `EntityRenderer.getPackedLightCoords`: the light at `eye`, with at
     pub(super) fn light_at_eye(&self, eye: Vec3, glow: u8, params: &LightmapParams) -> [f32; 3] {
         let at = eye.floor().as_ivec3();
@@ -294,6 +361,22 @@ impl InWorld {
             if entity.kind.is_display() {
                 self.submit_display(assets, entity, camera, partial, view, params, out);
                 mark_glowing(glowing, first..out.len(), outline);
+                if let Some(state) = entity.display.as_deref()
+                    && !entity.appearance.invisible()
+                {
+                    let tick = entity.age_in_ticks(0.0) as i32;
+                    self.shadows.draw(
+                        renderer,
+                        &self.level,
+                        entity.id,
+                        entity.pos(partial).as_vec3(),
+                        camera.as_vec3(),
+                        state.shadow(tick, partial),
+                        self.shadow_light(),
+                        assets.shadow,
+                        out,
+                    );
+                }
                 continue;
             }
             if entity.kind.is_item_frame() {
@@ -307,22 +390,50 @@ impl InWorld {
             ) {
                 continue;
             }
+            if entity.kind == EntityKind::Painting {
+                self.paintings
+                    .draw(renderer, assets, &self.level, entity, out);
+                mark_glowing(glowing, first..out.len(), outline);
+                continue;
+            }
             let glow = mobs::block_glow(entity);
-            let light = self.light_at_eye(entity.eye(partial), glow, params);
+            let light = if entity.kind == EntityKind::ExperienceOrb {
+                // `ExperienceOrbRenderer.getBlockLightLevel`: the block's + 7.
+                let at = entity.eye(partial).floor().as_ivec3();
+                let (block, sky) = self.level.light_at(at.x, at.y, at.z);
+                lightmap::sample((block + 7).min(15), sky, params)
+            } else {
+                self.light_at_eye(entity.eye(partial), glow, params)
+            };
             let at = entity.pos(partial);
             let origin = at.floor().as_ivec3();
             let feet = at.as_vec3();
-            if entity.kind == EntityKind::Player {
-                let spectator = self
-                    .players
-                    .get(&entity.uuid)
-                    .is_some_and(|p| p.game_mode.is_spectator());
-                let upside_down = self.players.get(&entity.uuid).is_some_and(|p| {
-                    AvatarRenderState::wants_upside_down(&p.name, entity.appearance.shown)
-                });
+            if entity.kind.is_avatar() {
+                let spectator = entity.kind == EntityKind::Player
+                    && self
+                        .players
+                        .get(&entity.uuid)
+                        .is_some_and(|p| p.game_mode.is_spectator());
+                // `AvatarRenderer.isEntityUpsideDown`: a player by its
+                // profile's name, a mannequin by its custom name.
+                let upside_down = match &entity.mannequin {
+                    Some(_) => entity.custom_name.as_deref().is_some_and(|name| {
+                        AvatarRenderState::wants_upside_down(
+                            &name.plain_text(),
+                            entity.appearance.shown,
+                        )
+                    }),
+                    None => self.players.get(&entity.uuid).is_some_and(|p| {
+                        AvatarRenderState::wants_upside_down(&p.name, entity.appearance.shown)
+                    }),
+                };
+                let look = match &entity.mannequin {
+                    Some(mannequin) => assets.players.for_avatar(&mannequin.profile),
+                    None => assets.players.for_profile(entity.uuid),
+                };
                 let avatar = remote_avatar(
                     entity,
-                    assets,
+                    look,
                     origin,
                     partial,
                     light,
@@ -351,7 +462,19 @@ impl InWorld {
                     );
                 }
                 let at = block_at(entity);
-                if entity.kind.is_block() {
+                if entity.kind.is_sprite() {
+                    entity_sprites::submit(
+                        &mut self.sprites,
+                        renderer,
+                        assets,
+                        entity,
+                        from_block(entity.pos(partial), origin),
+                        placed,
+                        partial,
+                        view,
+                        out,
+                    );
+                } else if entity.kind.is_block() {
                     submit_block_entity(
                         assets,
                         entity,
@@ -373,20 +496,76 @@ impl InWorld {
                         |kind| self.level.tint_at(kind, at),
                         out,
                     );
+                    if entity.kind == EntityKind::Minecart {
+                        submit_minecart_block(
+                            assets,
+                            entity,
+                            placed,
+                            partial,
+                            |kind| self.level.tint_at(kind, at),
+                            out,
+                        );
+                    }
+                    if entity.kind == EntityKind::SulfurCube {
+                        submit_swallowed_block(
+                            assets,
+                            &mut self.poses,
+                            entity,
+                            placed,
+                            partial,
+                            |kind| self.level.tint_at(kind, at),
+                            out,
+                        );
+                    }
+                    if let Some((from, delta, time)) = self.crystal_beam(entity, partial) {
+                        self.beams
+                            .draw(renderer, assets, entity.id, from, delta, time, light, out);
+                    }
                 }
             }
             mark_glowing(glowing, first..out.len(), outline);
-            let radius = mobs::shadow_radius(entity);
-            self.shadows.draw(
-                renderer,
-                &self.level,
-                entity.id,
-                feet,
-                camera.as_vec3(),
-                radius,
-                assets.shadow,
-                out,
-            );
+            // `extractShadow`: none for an invisible entity, even one whose
+            // armor still shows.
+            if !entity.appearance.invisible() {
+                self.shadows.draw(
+                    renderer,
+                    &self.level,
+                    entity.id,
+                    feet,
+                    camera.as_vec3(),
+                    (mobs::shadow_radius(entity), mobs::shadow_strength(entity)),
+                    self.shadow_light(),
+                    assets.shadow,
+                    out,
+                );
+            }
+        }
+    }
+
+    /// The crystal beam `entity` casts, if any: where it starts, toward
+    /// where (in blocks) and the time it scrolls by. An end crystal's runs
+    /// from its target to itself (`EndCrystalRenderer.submit`), a dragon's
+    /// from itself to the crystal healing it (`EnderDragonRenderer`).
+    fn crystal_beam(&self, entity: &ClientEntity, partial: f32) -> Option<(DVec3, Vec3, f32)> {
+        use crate::world::entity::mobs::projectile::crystal_y;
+        let at = entity.pos(partial);
+        match entity.kind {
+            EntityKind::EndCrystal => {
+                let [x, y, z] = entity.appearance.thing.beam_target?;
+                let target = DVec3::new(f64::from(x), f64::from(y), f64::from(z)) + 0.5;
+                let age = entity.age_in_ticks(partial);
+                let mut delta = (at - target).as_vec3();
+                delta.y += crystal_y(age);
+                Some((target, delta, age))
+            }
+            EntityKind::EnderDragon => {
+                let crystal = self.entities.get(entity.nearest_crystal?)?;
+                let age = crystal.age_in_ticks(partial);
+                let mut delta = (crystal.pos(partial) - at).as_vec3();
+                delta.y += crystal_y(age);
+                Some((at, delta, entity.age_in_ticks(partial)))
+            }
+            _ => None,
         }
     }
 
@@ -450,6 +629,7 @@ impl InWorld {
                     .mesh(state.block_state, |kind| self.level.tint_at(kind, at))
                 {
                     out.push(EntityDraw {
+                        alpha: 1.0,
                         mesh,
                         atlas: assets.atlas,
                         model,
@@ -505,6 +685,7 @@ impl InWorld {
         let frame = assets.held.block(model);
         for (mesh, atlas, translucent) in frame.filter(|_| !entity.appearance.invisible()) {
             out.push(EntityDraw {
+                alpha: 1.0,
                 mesh,
                 atlas,
                 model: base,
@@ -633,13 +814,19 @@ impl InWorld {
         };
         submit_avatar(assets, &avatar, origin, RenderLayer::Entities, out);
         if !spectator {
+            // `LivingEntityRenderer.getShadowRadius`: times the `scale`
+            // attribute.
             self.shadows.draw(
                 renderer,
                 &self.level,
                 OWN,
                 feet,
                 camera.as_vec3(),
-                crate::world::shadow::PLAYER_RADIUS,
+                (
+                    crate::world::shadow::PLAYER_RADIUS * self.player.scale() as f32,
+                    1.0,
+                ),
+                self.shadow_light(),
                 assets.shadow,
                 out,
             );
@@ -671,6 +858,13 @@ pub(super) fn visible_entities(
         .iter()
         .filter(|e| e.kind != EntityKind::Other && shows_when_invisible(e))
         .filter(|e| {
+            // `LightningBoltRenderer.affectedByCulling`: never culled; nor
+            // a crystal casting a beam (`EndCrystalRenderer.shouldRender`).
+            if e.kind == EntityKind::LightningBolt
+                || e.kind == EntityKind::EndCrystal && e.appearance.thing.beam_target.is_some()
+            {
+                return true;
+            }
             if e.kind.is_display()
                 && e.display
                     .as_deref()
@@ -689,7 +883,7 @@ pub(super) fn visible_entities(
 #[allow(clippy::too_many_arguments)]
 fn remote_avatar<'a>(
     entity: &'a ClientEntity,
-    assets: &'a WorldResources,
+    look: PlayerLook<'a>,
     origin: IVec3,
     partial: f32,
     light: [f32; 3],
@@ -725,13 +919,14 @@ fn remote_avatar<'a>(
         death_time: input.living.death_time,
         swim: input.living.swim,
         upside_down: None,
+        scale: input.living.scale,
     };
     if upside_down {
         state.turn_upside_down(entity.size().1);
     }
     Avatar {
         state,
-        look: assets.players.for_profile(entity.uuid),
+        look,
         main_arm,
         hands: Hand::ALL.map(|hand| {
             let stack = entity.equipment.hand(hand);
@@ -875,6 +1070,103 @@ fn submit_block_entity(
         )
     };
     out.push(EntityDraw {
+        alpha: 1.0,
+        mesh,
+        atlas: assets.atlas,
+        model,
+        origin: placed.origin,
+        layer: placed.layer,
+        blend: crate::renderer::Blending::Opaque,
+        light: Some(placed.light),
+        overlay,
+        glint: Glint::None,
+    });
+}
+
+/// What a minecart carries, and how high.
+fn minecart_block(entity: &ClientEntity) -> Option<(u16, i32)> {
+    let thing = &entity.appearance.thing;
+    mobs::vehicle::minecart_block(
+        entity.ty.resource_name,
+        thing.display_block,
+        thing.display_offset,
+        thing.fuel,
+    )
+}
+
+/// `AbstractMinecartRenderer.submit`'s contents: the carried block, and
+/// a TNT cart's swelling, flashing fuse (`TntMinecartRenderer`).
+fn submit_minecart_block(
+    assets: &WorldResources,
+    entity: &ClientEntity,
+    placed: Placed,
+    partial: f32,
+    tint: impl FnOnce(TintKind) -> [u8; 3],
+    out: &mut Vec<EntityDraw>,
+) {
+    let Some((state, offset)) = minecart_block(entity) else {
+        return;
+    };
+    let Some(mesh) = assets.blocks.mesh(state, tint) else {
+        return;
+    };
+    let mut input = mobs::pose_input(entity, partial);
+    input.living.position = from_block(entity.pos(partial), placed.origin);
+    let root = mobs::root(entity, &input, partial);
+    let tnt = entity.ty.resource_name == "tnt_minecart";
+    let fuse = if entity.fuse_ticks > -1 {
+        entity.fuse_ticks as f32 - partial + 1.0
+    } else {
+        -1.0
+    };
+    let swell = (tnt && fuse > -1.0 && fuse < 10.0).then(|| tnt::swell_amount(fuse));
+    out.push(EntityDraw {
+        alpha: 1.0,
+        mesh,
+        atlas: assets.atlas,
+        model: mobs::vehicle::minecart_block_matrix(root, offset, swell),
+        origin: placed.origin,
+        layer: placed.layer,
+        blend: crate::renderer::Blending::Opaque,
+        light: Some(placed.light),
+        overlay: if tnt && tnt::is_lit(fuse) { -1.0 } else { 0.0 },
+        glint: Glint::None,
+    });
+}
+
+/// `SulfurCubeInnerLayer`: the block a sulfur cube swallowed, in place of
+/// its core, in the model's space (flipped back up, and halved for a
+/// baby), flashing white with the fuse.
+fn submit_swallowed_block(
+    assets: &WorldResources,
+    _poses: &mut PoseCache,
+    entity: &ClientEntity,
+    placed: Placed,
+    partial: f32,
+    tint: impl FnOnce(TintKind) -> [u8; 3],
+    out: &mut Vec<EntityDraw>,
+) {
+    let Some(state) = mobs::sulfur_cube::swallowed_block(entity) else {
+        return;
+    };
+    let Some(mesh) = assets.blocks.mesh(state, tint) else {
+        return;
+    };
+    let mut input = mobs::pose_input(entity, partial);
+    input.living.position = from_block(entity.pos(partial), placed.origin);
+    let mut model = mobs::root(entity, &input, partial) * Mat4::rot_x_deg(180.0);
+    if entity.appearance.baby {
+        model *= Mat4::from_scale(Vec3::splat(0.5));
+    }
+    model *= Mat4::from_translation(Vec3::new(-0.5, -0.518, -0.5));
+    let fuse = mobs::sulfur_cube::fuse_remaining(entity.fuse_ticks, partial);
+    let overlay = if mobs::sulfur_cube::core_flashes(fuse) {
+        -1.0
+    } else {
+        mobs::overlay(entity, &input.living, partial)
+    };
+    out.push(EntityDraw {
+        alpha: 1.0,
         mesh,
         atlas: assets.atlas,
         model,
@@ -918,13 +1210,28 @@ fn submit_dropped(
     placed: Placed,
     out: &mut Vec<EntityDraw>,
 ) {
-    let Some((min_y, depth)) = assets.held.ground_bounds(stack) else {
+    let Some((min_y, _)) = assets.held.ground_bounds(stack) else {
         return;
     };
     let feet = from_block(feet, placed.origin);
     let lift = item_drop::bob(age, bob_offs) - min_y + 0.0625;
     let base = Mat4::from_translation(feet + Vec3::Y * lift)
         * Mat4::from_rotation_y(item_drop::spin(age, bob_offs));
+    submit_item_cluster(assets, stack, base, placed, out);
+}
+
+/// `ItemEntityRenderer.submitMultipleFromCount`: the stack drawn once per
+/// few items, spread a little, from `base`.
+pub(super) fn submit_item_cluster(
+    assets: &WorldResources,
+    stack: &ItemStack,
+    base: Mat4,
+    placed: Placed,
+    out: &mut Vec<EntityDraw>,
+) {
+    let Some((_, depth)) = assets.held.ground_bounds(stack) else {
+        return;
+    };
     let seed = i64::from(stack.item.id);
     for offset in item_drop::offsets(stack.item_count, depth, seed) {
         let at = base * Mat4::from_translation(offset);
@@ -1004,6 +1311,7 @@ fn submit_mob(
         if hide_body && !layer.copy_humanoid {
             continue;
         }
+        let first = out.len();
         meshes.draws(
             matrices,
             placed.origin,
@@ -1017,11 +1325,26 @@ fn submit_mob(
                     placed.layer
                 },
                 light: Some(light),
-                overlay: if layer.copy_humanoid { 0.0 } else { overlay },
-                glint: Glint::armor(layer.foil),
+                overlay: match layer.overlay {
+                    _ if layer.copy_humanoid => 0.0,
+                    Some(own) => own,
+                    None => overlay,
+                },
+                // `entitySolidGlint`: a thrown trident's glint is an
+                // entity's, over its own texture; worn things the armor's.
+                glint: if entity.kind == EntityKind::Trident {
+                    Glint::entity(layer.foil, 16)
+                } else {
+                    Glint::armor(layer.foil)
+                },
             },
             out,
         );
+        if layer.alpha < 1.0 {
+            for draw in &mut out[first..] {
+                draw.alpha = layer.alpha;
+            }
+        }
     }
     if let Some(model) = mobs::mushroom_model(entity)
         && let Some(Rig::Quadruped(parts)) = last.as_ref().map(|(_, mob, _)| &mob.rig)
@@ -1055,6 +1378,7 @@ fn submit_mob(
         && let Some(mesh) = assets.blocks.mesh(state, tint)
     {
         out.push(EntityDraw {
+            alpha: 1.0,
             mesh,
             atlas: assets.atlas,
             model: mobs::enderman::carried_block_transform(root),
@@ -1158,6 +1482,7 @@ fn submit_flower(assets: &WorldResources, arm: Mat4, placed: Placed, out: &mut V
         * Mat4::rot_x_deg(-90.0);
     for &(mesh, atlas, translucent) in &parts {
         out.push(EntityDraw {
+            alpha: 1.0,
             mesh,
             atlas,
             model,
@@ -1186,6 +1511,7 @@ fn submit_pumpkin(
         * Mat4::from_scale(Vec3::new(0.625, -0.625, -0.625));
     for &(mesh, atlas, translucent) in &parts {
         out.push(EntityDraw {
+            alpha: 1.0,
             mesh,
             atlas,
             model,
@@ -1223,6 +1549,7 @@ fn submit_mushrooms(
     for model in places {
         for &(mesh, atlas, translucent) in &parts {
             out.push(EntityDraw {
+                alpha: 1.0,
                 mesh,
                 atlas,
                 model,
@@ -1272,7 +1599,7 @@ fn submit_worn(
 }
 
 /// `ItemInHandLayer`: `stack` held in `arm`, placed by `at`.
-fn submit_item(
+pub(super) fn submit_item(
     assets: &WorldResources,
     stack: &ItemStack,
     pose: HandPose,
@@ -1284,6 +1611,7 @@ fn submit_item(
     let parts: Vec<_> = assets.held.get(stack, pose, using).collect();
     for &(mesh, atlas, translucent) in &parts {
         out.push(EntityDraw {
+            alpha: 1.0,
             mesh,
             atlas,
             model: at,

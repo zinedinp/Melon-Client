@@ -18,6 +18,19 @@ pub fn placement(entity: &ClientEntity, partial: f32) -> Placement {
     match entity.kind {
         EntityKind::Creeper => placement.scale = creeper::swell_scale(entity.swelling(partial)),
         EntityKind::Cat => placement.lie_down = entity.feline_amounts(partial).lie_down,
+        EntityKind::SulfurCube => {
+            let a = &entity.appearance;
+            let (scale, offset) = sulfur_cube::placement(
+                a.size as f32,
+                entity.squish(partial),
+                sulfur_cube::swallowed_block(entity).is_some(),
+                sulfur_cube::fuse_remaining(entity.fuse_ticks, partial),
+                a.baby,
+                a.invisible(),
+            );
+            placement.scale = scale;
+            placement.offset = offset;
+        }
         EntityKind::Slime | EntityKind::MagmaCube => {
             let size = entity.appearance.size as f32;
             let squish = entity.squish(partial);
@@ -92,7 +105,12 @@ pub fn overlay(entity: &ClientEntity, state: &LivingRenderState, partial: f32) -
 /// `GlowSquidRenderer.getBlockLightLevel`: the light it gives off, 15
 pub fn block_glow(entity: &ClientEntity) -> u8 {
     match entity.kind {
-        EntityKind::MagmaCube | EntityKind::Blaze => 15,
+        EntityKind::MagmaCube
+        | EntityKind::Blaze
+        | EntityKind::WitherSkull
+        | EntityKind::ShulkerBullet => 15,
+        EntityKind::DragonFireball => 15,
+        EntityKind::ThrownItem if projectile::thrown_look(entity.ty).1 => 15,
         EntityKind::GlowSquid => {
             let lit = 1.0 - entity.appearance.dark_ticks as f32 / 10.0;
             (lit.clamp(0.0, 1.0) * 15.0) as u8
@@ -101,16 +119,54 @@ pub fn block_glow(entity: &ClientEntity) -> u8 {
     }
 }
 
-/// The renderer's `shadowRadius`, halved for babies (`MobRenderer`).
+/// `LivingEntity.getAgeScale`: how much smaller a baby is, by kind.
+pub fn age_scale(entity: &ClientEntity) -> f32 {
+    if !entity.appearance.baby {
+        return 1.0;
+    }
+    match entity.kind {
+        EntityKind::Armadillo | EntityKind::Camel | EntityKind::CamelHusk => 0.6,
+        EntityKind::Turtle => 0.3,
+        EntityKind::Dolphin => 0.65,
+        EntityKind::HappyGhast => 0.2375,
+        EntityKind::Goat => 0.55,
+        _ => 0.5,
+    }
+}
+
+/// `EntityRenderer.getShadowRadius` as each renderer has it: the
+/// renderer's `shadowRadius`, times the age scale for a `MobRenderer`
+/// (and the extra halving some give their young), or worked out from
+/// the size for the cube mobs and pufferfish. `LivingEntityRenderer`
+/// would multiply by the `scale` attribute too, which is not tracked
+/// for other entities (1).
 pub fn shadow_radius(entity: &ClientEntity) -> f32 {
-    let radius = match entity.kind {
-        EntityKind::Slime | EntityKind::MagmaCube => 0.25 * entity.appearance.size as f32,
-        EntityKind::Pufferfish => 0.1 + 0.1 * entity.appearance.puff_state as f32,
-        kind => kind.look().shadow,
-    };
-    if entity.appearance.baby {
-        radius * 0.5
-    } else {
-        radius
+    let a = &entity.appearance;
+    match entity.kind {
+        // `AbstractCubeMobRenderer` / `PufferfishRenderer` replace the
+        // radius outright: no age scale.
+        k if k.is_cube() => 0.25 * a.size as f32,
+        EntityKind::Pufferfish => 0.1 + 0.1 * a.puff_state as f32,
+        kind => {
+            // `LivingEntityRenderer.getShadowRadius`: times the scale.
+            let radius = kind.look().shadow * entity.entity_scale();
+            if !kind.is_mob() {
+                return radius;
+            }
+            let radius = radius * age_scale(entity);
+            match kind {
+                EntityKind::Villager | EntityKind::Strider if a.baby => radius * 0.5,
+                EntityKind::Turtle if a.baby => radius * 0.83,
+                _ => radius,
+            }
+        }
+    }
+}
+
+/// `EntityRenderer.getShadowStrength`: items and orbs cast a fainter one.
+pub fn shadow_strength(entity: &ClientEntity) -> f32 {
+    match entity.kind {
+        EntityKind::Item | EntityKind::ExperienceOrb => 0.75,
+        _ => 1.0,
     }
 }

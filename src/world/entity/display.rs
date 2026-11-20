@@ -21,6 +21,8 @@ mod index {
     pub const BILLBOARD: u8 = 15;
     pub const BRIGHTNESS: u8 = 16;
     pub const VIEW_RANGE: u8 = 17;
+    pub const SHADOW_RADIUS: u8 = 18;
+    pub const SHADOW_STRENGTH: u8 = 19;
     pub const WIDTH: u8 = 20;
     pub const HEIGHT: u8 = 21;
     pub const GLOW_COLOR: u8 = 22;
@@ -117,6 +119,12 @@ pub struct DisplayState {
     pub flags: u8,
     /// Counts the changes of what a text display shows, for its mesh.
     pub revision: u32,
+    /// `shadow_radius` and `shadow_strength` as the data says now, and
+    /// interpolated like the style (`Display.RenderState`): from and to.
+    shadow: (f32, f32),
+    shadow_from: (f32, f32),
+    shadow_to: (f32, f32),
+    dirty_shadow: bool,
 }
 
 impl std::fmt::Debug for DisplayState {
@@ -158,6 +166,10 @@ impl Default for DisplayState {
             opacity: -1,
             flags: 0,
             revision: 0,
+            shadow: (0.0, 1.0),
+            shadow_from: (0.0, 1.0),
+            shadow_to: (0.0, 1.0),
+            dirty_shadow: false,
         }
     }
 }
@@ -222,6 +234,18 @@ impl DisplayState {
             index::BRIGHTNESS => {
                 if let Some(v) = int() {
                     self.brightness = v;
+                }
+            }
+            index::SHADOW_RADIUS => {
+                if let Some(v) = value.float() {
+                    self.shadow.0 = v;
+                    self.dirty_shadow = true;
+                }
+            }
+            index::SHADOW_STRENGTH => {
+                if let Some(v) = value.float() {
+                    self.shadow.1 = v;
+                    self.dirty_shadow = true;
                 }
             }
             index::VIEW_RANGE => {
@@ -302,6 +326,14 @@ impl DisplayState {
             self.to = self.pending;
             self.shown = true;
         }
+        if std::mem::take(&mut self.dirty_shadow) {
+            self.shadow_from = if self.duration != 0 && self.style_shown {
+                self.shadow_value(self.last_progress.get())
+            } else {
+                self.shadow
+            };
+            self.shadow_to = self.shadow;
+        }
         if std::mem::take(&mut self.dirty_style) {
             let now = (i32::from(self.opacity as u8), self.background);
             self.style_from = if self.duration != 0 && self.style_shown {
@@ -336,6 +368,19 @@ impl DisplayState {
     pub fn style(&self, tick: i32, partial: f32) -> (u8, u32) {
         let (o, b) = self.style_value(self.progress(tick, partial));
         (o as u8, b as u32)
+    }
+
+    fn shadow_value(&self, progress: f32) -> (f32, f32) {
+        let lerp = |a: f32, b: f32| a + progress * (b - a);
+        (
+            lerp(self.shadow_from.0, self.shadow_to.0),
+            lerp(self.shadow_from.1, self.shadow_to.1),
+        )
+    }
+
+    /// `DisplayRenderer.getShadowRadius` and `getShadowStrength`.
+    pub fn shadow(&self, tick: i32, partial: f32) -> (f32, f32) {
+        self.shadow_value(self.progress(tick, partial))
     }
 
     /// `calculateInterpolationProgress`.

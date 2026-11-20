@@ -166,6 +166,9 @@ pub enum Mode {
     LinesTranslucent,
     /// `RenderPipelines.LINES_TRANSLUCENT_NO_DEPTH_WRITE`.
     LinesNoDepthWrite,
+    /// `RenderPipelines.LIGHTNING`: added on (`BlendFunction.LIGHTNING`),
+    /// the default depth test and write.
+    Lightning,
 }
 
 impl Mode {
@@ -278,6 +281,22 @@ pub unsafe fn create(
                 .depth_write_enable(true)
                 .depth_compare_op(vk::CompareOp::GREATER_OR_EQUAL),
             translucent_blend(),
+        ),
+        Mode::Lightning => (
+            vk::CullModeFlags::BACK,
+            vk::PipelineDepthStencilStateCreateInfo::default()
+                .depth_test_enable(true)
+                .depth_write_enable(true)
+                .depth_compare_op(vk::CompareOp::GREATER_OR_EQUAL),
+            vk::PipelineColorBlendAttachmentState::default()
+                .color_write_mask(vk::ColorComponentFlags::RGBA)
+                .blend_enable(true)
+                .src_color_blend_factor(vk::BlendFactor::SRC_ALPHA)
+                .dst_color_blend_factor(vk::BlendFactor::ONE)
+                .color_blend_op(vk::BlendOp::ADD)
+                .src_alpha_blend_factor(vk::BlendFactor::SRC_ALPHA)
+                .dst_alpha_blend_factor(vk::BlendFactor::ONE)
+                .alpha_blend_op(vk::BlendOp::ADD),
         ),
         Mode::Celestial => (
             vk::CullModeFlags::NONE,

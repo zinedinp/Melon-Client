@@ -44,6 +44,9 @@ pub fn vertices(models: &BlockModels, state: u16, rgb: [u8; 3]) -> Vec<WorldVert
             }));
         }
     });
+    // A chest's or banner's own model has no quads: its look is the block
+    // entity's (`BuiltInBlockModels`).
+    crate::world::block_entity::at_rest(state, models, &mut out);
     out
 }
 

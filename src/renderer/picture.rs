@@ -276,11 +276,13 @@ impl Renderer {
         for entity in entities {
             let (mode, layout) = match entity.blend {
                 Blending::Opaque => (Mode::Opaque, self.pipelines.world.layout),
-                Blending::Text | Blending::Translucent => (Mode::Text, self.pipelines.text.layout),
+                Blending::Text | Blending::Translucent | Blending::Additive => {
+                    (Mode::Text, self.pipelines.text.layout)
+                }
             };
             let at = (picture.view_proj * entity.model, Vec3::ZERO);
             let [r, g, b] = entity.light.unwrap_or([1.0; 3]);
-            let light = DrawLight::tint([r, g, b, 1.0]).overlaid(entity.overlay);
+            let light = DrawLight::tint([r, g, b, entity.alpha]).overlaid(entity.overlay);
             if self.bind_world_pass(cmd, entity.atlas, mode) {
                 self.draw_world_mesh(cmd, layout, entity.mesh, at, &light, None);
             }

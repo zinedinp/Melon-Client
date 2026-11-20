@@ -123,6 +123,9 @@ pub struct EntityDraw {
     pub overlay: f32,
     /// Enchantment glint overlay (`ItemStack.hasFoil`).
     pub glint: Glint,
+    /// Multiplies the texels' alpha: a model drawn with a colour whose
+    /// alpha is below one (a shulker bullet's glow, an experience orb).
+    pub alpha: f32,
 }
 
 /// How an [`EntityDraw`] meets what is drawn already. In the order they are
@@ -139,6 +142,9 @@ pub enum Blending {
     /// `ENTITY_TRANSLUCENT`), where they are drawn far to near; not for
     /// particles.
     Translucent,
+    /// Added onto what is behind it (`BlendFunction.LIGHTNING`: source
+    /// alpha and one), depth tested and written: lightning bolts.
+    Additive,
 }
 
 impl Blending {

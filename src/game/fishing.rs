@@ -89,6 +89,7 @@ impl FishingMeshes {
         }
         if let Some(mesh) = kept.mesh {
             out.push(EntityDraw {
+                alpha: 1.0,
                 mesh,
                 atlas: white,
                 model: Mat4::IDENTITY,
@@ -223,6 +224,7 @@ impl InWorld {
             if let (Some(mesh), Some(texture)) = (sprite, texture) {
                 let facing = display::orientation(3, (0.0, 0.0), view.angles);
                 out.push(EntityDraw {
+                    alpha: 1.0,
                     mesh,
                     atlas: texture,
                     model: Mat4::from_translation(hook - origin.as_vec3())

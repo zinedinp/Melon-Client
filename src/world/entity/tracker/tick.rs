@@ -11,6 +11,14 @@ impl ClientEntity {
         self.prev_head = self.head;
         self.prev_body = self.body;
         self.age = self.age.wrapping_add(1);
+        self.arrow_shake = (self.arrow_shake - 1).max(0);
+        if let Some(life) = &mut self.fangs_life {
+            *life -= 1;
+        }
+        if matches!(self.kind, EntityKind::SulfurCube | EntityKind::Minecart) && self.fuse_ticks > 0
+        {
+            self.fuse_ticks -= 1;
+        }
         if let Some(display) = &mut self.display {
             display.tick(self.age as i32);
         }
@@ -201,20 +209,26 @@ impl ClientEntity {
                 &mut self.body,
                 &mut self.head,
             );
-        } else if self.kind == EntityKind::Player {
+        } else if self.kind.is_avatar() {
             self.body = tick_head_turn(self.body, self.walk_direction(moved), self.head, 50.0);
         } else {
             self.body = self.yaw;
         }
 
         let dying = self.appearance.dying();
-        if dying {
+        if dying && self.death_time < DEATH_DURATION {
+            self.death_time += 1;
+        }
+        // `calculateEntityAnimation`: no walk while riding or dead.
+        if dying || self.vehicle.is_some() {
             self.walk.stop();
-            if self.death_time < DEATH_DURATION {
-                self.death_time += 1;
-            }
         } else {
-            self.walk.tick(side.sqrt() as f32, self.appearance.baby);
+            let distance = if self.omnidirectional_air_mover() {
+                moved.length()
+            } else {
+                side.sqrt()
+            };
+            self.update_walk_animation(distance as f32);
         }
         if self.hurt_time > 0 {
             self.hurt_time -= 1;
@@ -254,7 +268,7 @@ impl ClientEntity {
     /// The swimming box, which `isInWater` tests: a player in the swimming
     pub(super) fn water_box(&self) -> Aabb {
         let (w, h) = self.size();
-        let h = if self.kind == EntityKind::Player && self.appearance.visually_swimming() {
+        let h = if self.kind.is_avatar() && self.appearance.visually_swimming() {
             h.min(0.6)
         } else {
             h
@@ -265,7 +279,7 @@ impl ClientEntity {
     /// How a swimmer's body is laid down, if this kind swims.
     pub(super) fn swim(&self, partial: f32) -> Swim {
         let turn = match self.kind {
-            EntityKind::Player => SwimTurn::Avatar {
+            EntityKind::Player | EntityKind::Mannequin => SwimTurn::Avatar {
                 in_water: self.in_water,
                 visually_swimming: self.appearance.visually_swimming() && self.in_water,
             },
@@ -401,7 +415,49 @@ impl ClientEntity {
 
     /// `LivingEntityRenderer.isEntityUpsideDown`: a `Dinnerbone`. A player's
     pub fn upside_down(&self) -> bool {
-        self.kind != EntityKind::Player && self.appearance.magic == Magic::UpsideDown
+        !self.kind.is_avatar() && self.appearance.magic == Magic::UpsideDown
+    }
+
+    /// `omnidirectionalAirMover`: whose walk counts the climb too.
+    fn omnidirectional_air_mover(&self) -> bool {
+        match self.kind {
+            EntityKind::Bee | EntityKind::Parrot => true,
+            EntityKind::SulfurCube => !self
+                .equipment
+                .get(crate::network::play::game::EquipmentSlot::Body)
+                .is_empty(),
+            _ => false,
+        }
+    }
+
+    /// `updateWalkAnimation`, with the overrides of the mobs that walk
+    /// their own way.
+    fn update_walk_animation(&mut self, distance: f32) {
+        let scale = if self.appearance.baby { 3.0 } else { 1.0 };
+        match self.kind {
+            // `Creaking`: quick to swing, no baby.
+            EntityKind::Creaking => self.walk.update((distance * 25.0).min(3.0), 0.4, 1.0),
+            // `Camel`: only standing and not dashing, and slow to ease.
+            EntityKind::Camel | EntityKind::CamelHusk => {
+                let standing = self.appearance.pose == 0 && !self.anim[camel::DASH].is_started();
+                let target = if standing {
+                    (distance * 6.0).min(1.0)
+                } else {
+                    0.0
+                };
+                self.walk.update(target, 0.2, scale);
+            }
+            // `Frog`: not while it leaps.
+            EntityKind::Frog => {
+                let target = if self.anim[mobs::frog::JUMP].is_started() {
+                    0.0
+                } else {
+                    (distance * 25.0).min(1.0)
+                };
+                self.walk.update(target, 0.4, scale);
+            }
+            _ => self.walk.tick(distance, self.appearance.baby),
+        }
     }
 
     /// `SquidRenderState`: the tentacle angle, and how the body lies.

@@ -6,6 +6,9 @@ use pumpkin_data::entity::EntityType;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum EntityKind {
     Player,
+    /// `ClientMannequin`: a player's look with no player behind it, drawn
+    /// by the `AvatarRenderer` in the skin its profile names.
+    Mannequin,
     Pig,
     Cow,
     /// A cow with a mushroom coat and mushrooms on its back.
@@ -188,6 +191,50 @@ pub enum EntityKind {
     Interaction,
     /// `FishingHook`: the bobber of a rod cast, drawn with its line.
     FishingBobber,
+    /// `SulfurCubeModel` / `SmallSulfurCubeModel`: a cube mob that swallows
+    /// blocks and swells like TNT before it blows.
+    SulfurCube,
+    /// A skeleton in its own coat.
+    Parched,
+    /// `GiantMobRenderer`: a zombie six times over.
+    Giant,
+    /// The nautilus's model in rotten flesh, or with corals for the warm one.
+    ZombieNautilus,
+    /// `CushionModel`: a dyed pillow on the ground.
+    Cushion,
+    /// `WitherSkullRenderer`: the wither's head, flying.
+    WitherSkull,
+    /// `ShulkerBulletModel` in a translucent glow.
+    ShulkerBullet,
+    /// `LlamaSpitModel`.
+    LlamaSpit,
+    /// `WindChargeModel`: the player's and the breeze's.
+    WindCharge,
+    /// `DragonFireballRenderer`: a sprite facing the camera.
+    DragonFireball,
+    /// `EvokerFangsModel`: jaws that snap up out of the ground.
+    EvokerFangs,
+    /// `EndCrystalModel`: spinning glass, and the beam to what it heals.
+    EndCrystal,
+    /// `TridentModel`, thrown.
+    Trident,
+    /// `ArrowModel` with the plain or tipped texture.
+    Arrow,
+    /// `ArrowModel` with the spectral texture.
+    SpectralArrow,
+    /// `ExperienceOrbRenderer`: a sprite by value, shimmering.
+    ExperienceOrb,
+    /// `ThrownItemRenderer`: its item facing the camera (snowballs, eggs,
+    /// pearls, potions, eyes of ender and fireballs).
+    ThrownItem,
+    /// `FireworkEntityRenderer`.
+    FireworkRocket,
+    /// `OminousItemSpawnerRenderer`: a spinning item that grows in.
+    OminousItemSpawner,
+    /// `PaintingRenderer`.
+    Painting,
+    /// `LightningBoltRenderer`.
+    LightningBolt,
     /// Tracked but not drawn yet.
     Other,
 }
@@ -285,7 +332,7 @@ impl EntityKind {
             }
             Self::Villager | Self::WanderingTrader => Look::new(0.5).adults_scaled(0.9375),
             Self::ZombieVillager => Look::new(0.5),
-            Self::Player => Look::new(0.5).scaled(0.9375),
+            Self::Player | Self::Mannequin => Look::new(0.5).scaled(0.9375),
             Self::Husk => Look::new(0.5).adults_scaled(1.0625),
             Self::WitherSkeleton => Look::new(0.5).scaled(1.2),
             Self::Fox => Look::new(0.4),
@@ -321,7 +368,28 @@ impl EntityKind {
             Self::Item => Look::new(0.15),
             Self::Boat => Look::new(0.8),
             Self::Minecart => Look::new(0.7),
-            Self::ArmorStand => Look::new(1.7),
+            Self::ArmorStand => Look::new(0.0),
+            Self::SulfurCube => Look::new(0.25),
+            Self::Parched => Look::new(0.5),
+            Self::Giant => Look::new(3.0).scaled(6.0),
+            Self::ZombieNautilus => Look::new(0.7),
+            Self::EndCrystal => Look::new(0.5),
+            Self::ExperienceOrb => Look::new(0.15),
+            Self::Cushion
+            | Self::WitherSkull
+            | Self::ShulkerBullet
+            | Self::LlamaSpit
+            | Self::WindCharge
+            | Self::DragonFireball
+            | Self::EvokerFangs
+            | Self::Trident
+            | Self::Arrow
+            | Self::SpectralArrow
+            | Self::ThrownItem
+            | Self::FireworkRocket
+            | Self::OminousItemSpawner
+            | Self::Painting
+            | Self::LightningBolt => Look::new(0.0),
             Self::LeashKnot
             | Self::Other
             | Self::ItemDisplay
@@ -341,8 +409,9 @@ impl EntityKind {
         if ty.resource_name.ends_with("minecart") {
             return Self::Minecart;
         }
-        let kinds: [(&EntityType, Self); 99] = [
+        let kinds: [(&EntityType, Self); 130] = [
             (&EntityType::PLAYER, Self::Player),
+            (&EntityType::MANNEQUIN, Self::Mannequin),
             (&EntityType::PIG, Self::Pig),
             (&EntityType::COW, Self::Cow),
             (&EntityType::MOOSHROOM, Self::Mooshroom),
@@ -441,6 +510,36 @@ impl EntityKind {
             (&EntityType::GLOW_ITEM_FRAME, Self::GlowItemFrame),
             (&EntityType::INTERACTION, Self::Interaction),
             (&EntityType::FISHING_BOBBER, Self::FishingBobber),
+            (&EntityType::SULFUR_CUBE, Self::SulfurCube),
+            (&EntityType::PARCHED, Self::Parched),
+            (&EntityType::GIANT, Self::Giant),
+            (&EntityType::ZOMBIE_NAUTILUS, Self::ZombieNautilus),
+            (&EntityType::CUSHION, Self::Cushion),
+            (&EntityType::WITHER_SKULL, Self::WitherSkull),
+            (&EntityType::SHULKER_BULLET, Self::ShulkerBullet),
+            (&EntityType::LLAMA_SPIT, Self::LlamaSpit),
+            (&EntityType::WIND_CHARGE, Self::WindCharge),
+            (&EntityType::BREEZE_WIND_CHARGE, Self::WindCharge),
+            (&EntityType::DRAGON_FIREBALL, Self::DragonFireball),
+            (&EntityType::EVOKER_FANGS, Self::EvokerFangs),
+            (&EntityType::END_CRYSTAL, Self::EndCrystal),
+            (&EntityType::TRIDENT, Self::Trident),
+            (&EntityType::ARROW, Self::Arrow),
+            (&EntityType::SPECTRAL_ARROW, Self::SpectralArrow),
+            (&EntityType::EXPERIENCE_ORB, Self::ExperienceOrb),
+            (&EntityType::SNOWBALL, Self::ThrownItem),
+            (&EntityType::EGG, Self::ThrownItem),
+            (&EntityType::ENDER_PEARL, Self::ThrownItem),
+            (&EntityType::EXPERIENCE_BOTTLE, Self::ThrownItem),
+            (&EntityType::SPLASH_POTION, Self::ThrownItem),
+            (&EntityType::LINGERING_POTION, Self::ThrownItem),
+            (&EntityType::EYE_OF_ENDER, Self::ThrownItem),
+            (&EntityType::FIREBALL, Self::ThrownItem),
+            (&EntityType::SMALL_FIREBALL, Self::ThrownItem),
+            (&EntityType::FIREWORK_ROCKET, Self::FireworkRocket),
+            (&EntityType::OMINOUS_ITEM_SPAWNER, Self::OminousItemSpawner),
+            (&EntityType::PAINTING, Self::Painting),
+            (&EntityType::LIGHTNING_BOLT, Self::LightningBolt),
         ];
         kinds
             .into_iter()
@@ -451,6 +550,11 @@ impl EntityKind {
     /// An item frame, glowing or not.
     pub fn is_item_frame(self) -> bool {
         matches!(self, Self::ItemFrame | Self::GlowItemFrame)
+    }
+
+    /// An `Avatar`: drawn by the `AvatarRenderer`, a player or a mannequin.
+    pub fn is_avatar(self) -> bool {
+        matches!(self, Self::Player | Self::Mannequin)
     }
 
     /// A `Display` entity.
@@ -466,6 +570,7 @@ impl EntityKind {
         !matches!(
             self,
             Self::Player
+                | Self::Mannequin
                 | Self::LeashKnot
                 | Self::ArmorStand
                 | Self::FallingBlock
@@ -479,6 +584,44 @@ impl EntityKind {
                 | Self::Boat
                 | Self::Minecart
                 | Self::Other
+        ) && !self.is_projectile()
+            && !matches!(
+                self,
+                Self::Cushion | Self::EndCrystal | Self::Painting | Self::LightningBolt
+            )
+    }
+
+    /// A `Projectile` (or an orb, a spawner): not alive, drawn by its own
+    /// renderer rather than `LivingEntityRenderer`.
+    pub fn is_projectile(self) -> bool {
+        matches!(
+            self,
+            Self::WitherSkull
+                | Self::ShulkerBullet
+                | Self::LlamaSpit
+                | Self::WindCharge
+                | Self::DragonFireball
+                | Self::EvokerFangs
+                | Self::Trident
+                | Self::Arrow
+                | Self::SpectralArrow
+                | Self::ExperienceOrb
+                | Self::ThrownItem
+                | Self::FireworkRocket
+                | Self::OminousItemSpawner
+        )
+    }
+
+    /// Drawn as a camera-facing sprite or item, not a model.
+    pub fn is_sprite(self) -> bool {
+        matches!(
+            self,
+            Self::LightningBolt
+                | Self::DragonFireball
+                | Self::ExperienceOrb
+                | Self::ThrownItem
+                | Self::FireworkRocket
+                | Self::OminousItemSpawner
         )
     }
 
@@ -545,6 +688,8 @@ impl EntityKind {
                 | Self::Zoglin
                 | Self::Strider
                 | Self::Sniffer
+                | Self::SulfurCube
+                | Self::ZombieNautilus
         )
     }
 
@@ -575,7 +720,7 @@ impl EntityKind {
 
     /// `AbstractCubeMob`: sized by metadata, squashes when it lands.
     pub fn is_cube(self) -> bool {
-        matches!(self, Self::Slime | Self::MagmaCube)
+        matches!(self, Self::Slime | Self::MagmaCube | Self::SulfurCube)
     }
 
     /// Drawn with the zombie's model and arms.
@@ -587,6 +732,7 @@ impl EntityKind {
                 | Self::Drowned
                 | Self::ZombifiedPiglin
                 | Self::ZombieVillager
+                | Self::Giant
         )
     }
 
@@ -623,7 +769,7 @@ impl EntityKind {
     pub fn is_skeleton(self) -> bool {
         matches!(
             self,
-            Self::Skeleton | Self::Stray | Self::WitherSkeleton | Self::Bogged
+            Self::Skeleton | Self::Stray | Self::WitherSkeleton | Self::Bogged | Self::Parched
         )
     }
 }
@@ -636,7 +782,18 @@ mod tests {
     fn kinds_come_from_the_registry() {
         let pig = EntityType::from_raw(EntityType::PIG.id).unwrap();
         assert_eq!(EntityKind::of(pig), EntityKind::Pig);
-        assert_eq!(EntityKind::of(&EntityType::ARROW), EntityKind::Other);
+        assert_eq!(EntityKind::of(&EntityType::ARROW), EntityKind::Arrow);
+        assert_eq!(EntityKind::of(&EntityType::MARKER), EntityKind::Other);
+        assert_eq!(
+            EntityKind::of(&EntityType::WITHER_SKULL),
+            EntityKind::WitherSkull
+        );
+        assert_eq!(
+            EntityKind::of(&EntityType::SULFUR_CUBE),
+            EntityKind::SulfurCube
+        );
+        assert!(EntityKind::SulfurCube.is_cube() && EntityKind::SulfurCube.is_mob());
+        assert!(!EntityKind::WitherSkull.is_mob());
         assert_eq!(
             EntityKind::of(&EntityType::MOOSHROOM),
             EntityKind::Mooshroom

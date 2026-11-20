@@ -40,7 +40,8 @@ pub fn pose_input(entity: &ClientEntity, partial: f32) -> PoseInput {
         | EntityKind::Husk
         | EntityKind::Drowned
         | EntityKind::ZombieVillager
-        | EntityKind::ZombifiedPiglin => {
+        | EntityKind::ZombifiedPiglin
+        | EntityKind::Giant => {
             humanoid.attack = AttackStyle::Zombie {
                 aggressive: a.aggressive(),
                 baby_holding: a.baby && !main_hand.is_empty(),
@@ -171,7 +172,8 @@ pub fn pose_input(entity: &ClientEntity, partial: f32) -> PoseInput {
         EntityKind::Stray
         | EntityKind::Skeleton
         | EntityKind::WitherSkeleton
-        | EntityKind::Bogged => {
+        | EntityKind::Bogged
+        | EntityKind::Parched => {
             if a.aggressive() && holding_bow {
                 match main_arm {
                     Arm::Right => humanoid.right_arm_pose = ArmPose::BowAndArrow,
@@ -194,6 +196,7 @@ pub fn pose_input(entity: &ClientEntity, partial: f32) -> PoseInput {
         _ => {}
     }
     PoseInput {
+        thing: entity.thing_pose(partial),
         living,
         humanoid,
         skeleton_melee,
@@ -335,6 +338,17 @@ pub fn root(entity: &ClientEntity, input: &PoseInput, partial: f32) -> glam::Mat
             entity.pitch_degrees(partial),
             entity.vehicle_shake(partial),
         ),
+        kind if kind.is_projectile()
+            || matches!(kind, EntityKind::EndCrystal | EntityKind::Cushion) =>
+        {
+            projectile::root(
+                kind,
+                position,
+                entity.yaw_degrees(partial),
+                entity.pitch_degrees(partial),
+                entity.age_in_ticks(partial),
+            )
+        }
         _ => living::root_transform(&input.living, placement(entity, partial)),
     }
 }

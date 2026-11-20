@@ -10,6 +10,11 @@ use pumpkin_data::tracked_data::{
     sniffer, snow_golem, strider, trader_llama, tropical_fish, turtle, vex, villager, vindicator,
     wither, wolf, zombie, zombie_villager,
 };
+use pumpkin_data::tracked_data::{
+    abstract_arrow, abstract_minecart, arrow, cushion, end_crystal, experience_orb,
+    firework_rocket, minecart_furnace, painting, sulfur_cube, thrown_trident, wither_skull,
+    zombie_nautilus,
+};
 
 use super::kind::EntityKind;
 use super::magic_name::Magic;
@@ -201,6 +206,8 @@ pub struct Appearance {
     pub name_visible: bool,
     /// The limb angles in degrees (x, y, z), by [`StandPose`]'s order.
     pub stand_pose: [[f32; 3]; 6],
+    /// What projectiles, orbs and decorations sync about how they look.
+    pub thing: ThingLook,
 }
 
 /// Where each limb sits in [`Appearance::stand_pose`].
@@ -315,6 +322,7 @@ impl Default for Appearance {
             stand_flags: 0,
             name_visible: false,
             stand_pose: DEFAULT_STAND_POSE,
+            thing: ThingLook::default(),
         }
     }
 }
@@ -373,7 +381,7 @@ impl Appearance {
 
     fn apply_kind(&mut self, kind: EntityKind, i: u8, value: &DataValue) {
         use EntityKind as K;
-        if kind == K::Player {
+        if kind.is_avatar() {
             if i == index(avatar::DATA_PLAYER_MODE_CUSTOMISATION)
                 && let Some(mask) = value.byte()
             {
@@ -638,6 +646,54 @@ impl Appearance {
             K::Piglin if i == index(piglin::DATA_IS_DANCING) => {
                 self.dancing = value.bool().unwrap_or(self.dancing);
             }
+            K::SulfurCube if i == index(sulfur_cube::ID_SIZE) => {
+                if let Some(s) = value.int() {
+                    self.size = s.clamp(1, 127);
+                }
+            }
+            K::SulfurCube if i == index(sulfur_cube::MAX_FUSE) => {
+                self.thing.max_fuse = value.int().unwrap_or(self.thing.max_fuse);
+            }
+            K::WitherSkull if i == index(wither_skull::DATA_DANGEROUS) => {
+                self.thing.dangerous = value.bool().unwrap_or(self.thing.dangerous);
+            }
+            K::Arrow | K::SpectralArrow | K::Trident if i == index(abstract_arrow::IN_GROUND) => {
+                self.thing.in_ground = value.bool().unwrap_or(self.thing.in_ground);
+            }
+            K::Arrow if i == index(arrow::ID_EFFECT_COLOR) => {
+                self.thing.arrow_color = value.int().unwrap_or(self.thing.arrow_color);
+            }
+            K::Trident if i == index(thrown_trident::ID_FOIL) => {
+                self.thing.foil = value.bool().unwrap_or(self.thing.foil);
+            }
+            K::EndCrystal if i == index(end_crystal::DATA_BEAM_TARGET) => {
+                if let Some(target) = value.block_pos() {
+                    self.thing.beam_target = target;
+                }
+            }
+            K::EndCrystal if i == index(end_crystal::DATA_SHOW_BOTTOM) => {
+                self.thing.show_bottom = value.bool().unwrap_or(self.thing.show_bottom);
+            }
+            K::ExperienceOrb if i == index(experience_orb::DATA_VALUE) => {
+                self.thing.xp_value = value.int().unwrap_or(self.thing.xp_value);
+            }
+            K::FireworkRocket if i == index(firework_rocket::DATA_SHOT_AT_ANGLE) => {
+                self.thing.shot_at_angle = value.bool().unwrap_or(self.thing.shot_at_angle);
+            }
+            K::Cushion if i == index(cushion::DATA_COLOR) => {
+                self.thing.color = value
+                    .int()
+                    .map_or(self.thing.color, |c| c.clamp(0, 15) as u8);
+            }
+            K::ZombieNautilus if i == index(zombie_nautilus::DATA_VARIANT_ID) => {
+                self.thing.variant = value.int().unwrap_or(self.thing.variant);
+            }
+            K::Painting if i == index(painting::DATA_DIRECTION) => {
+                self.thing.direction = value.int().unwrap_or(self.thing.direction);
+            }
+            K::Painting if i == index(painting::DATA_PAINTING_VARIANT_ID) => {
+                self.thing.variant = value.int().unwrap_or(self.thing.variant);
+            }
             K::Slime | K::MagmaCube if i == index(slime::ID_SIZE) => {
                 if let Some(s) = value.int() {
                     self.size = s.clamp(1, 127);
@@ -672,6 +728,16 @@ impl Appearance {
             }
             K::Boat | K::Minecart if i == index(boat::DATA_ID_DAMAGE) => {
                 self.vehicle_damage = value.float().unwrap_or(0.0);
+            }
+            K::Minecart if i == index(abstract_minecart::DATA_ID_CUSTOM_DISPLAY_BLOCK) => {
+                // A block state id, 0 for none (the type's own then).
+                self.thing.display_block = value.int().unwrap_or(0);
+            }
+            K::Minecart if i == index(abstract_minecart::DATA_ID_DISPLAY_OFFSET) => {
+                self.thing.display_offset = value.int();
+            }
+            K::Minecart if i == index(minecart_furnace::DATA_ID_FUEL) => {
+                self.thing.fuel = value.bool().unwrap_or(self.thing.fuel);
             }
             K::Boat if i == index(boat::DATA_ID_PADDLE_LEFT) => {
                 self.paddles.0 = value.bool().unwrap_or(false);
@@ -820,7 +886,7 @@ impl Appearance {
 
     /// `getMainArm`: a mob's from its flags, a player's from its data.
     pub fn main_arm(&self, kind: EntityKind) -> Arm {
-        if kind == EntityKind::Player {
+        if kind.is_avatar() {
             self.player_main_arm
         } else if self.mob_flags & MOB_LEFT_HANDED != 0 {
             Arm::Left
@@ -926,5 +992,63 @@ mod tests {
         assert!(!a.dying());
         a.apply(EntityKind::Zombie, 9, &DataValue::Float(0.0));
         assert!(a.dying());
+    }
+}
+
+/// The synced data of the things that are not mobs: projectiles, orbs,
+/// crystals, paintings (and the sulfur cube's fuse, the zombie nautilus's
+/// variant, which share the fields).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ThingLook {
+    /// `WitherSkull.DATA_DANGEROUS`: the blue skull.
+    pub dangerous: bool,
+    /// `AbstractArrow.IN_GROUND`.
+    pub in_ground: bool,
+    /// `Arrow.ID_EFFECT_COLOR`: above 0 for a tipped arrow.
+    pub arrow_color: i32,
+    /// `ThrownTrident.ID_FOIL`.
+    pub foil: bool,
+    /// `EndCrystal.DATA_BEAM_TARGET` and `DATA_SHOW_BOTTOM`.
+    pub beam_target: Option<[i32; 3]>,
+    pub show_bottom: bool,
+    /// `ExperienceOrb.DATA_VALUE`.
+    pub xp_value: i32,
+    /// `FireworkRocketEntity.DATA_SHOT_AT_ANGLE`.
+    pub shot_at_angle: bool,
+    /// `Cushion.DATA_COLOR`, a dye id.
+    pub color: u8,
+    /// `SulfurCube.MAX_FUSE`: the fuse it was lit with, -1 unlit.
+    pub max_fuse: i32,
+    /// A zombie nautilus's or painting's variant (registry id).
+    pub variant: i32,
+    /// `Painting.DATA_DIRECTION` (`Direction.get3DDataValue`).
+    pub direction: i32,
+    /// `AbstractMinecart.DATA_ID_CUSTOM_DISPLAY_BLOCK` (0 for the type's
+    /// own) and `DATA_ID_DISPLAY_OFFSET` (`None` for the type's default).
+    pub display_block: i32,
+    pub display_offset: Option<i32>,
+    /// `MinecartFurnace.DATA_ID_FUEL`: its furnace is lit.
+    pub fuel: bool,
+}
+
+impl Default for ThingLook {
+    fn default() -> Self {
+        Self {
+            dangerous: false,
+            in_ground: false,
+            arrow_color: -1,
+            foil: false,
+            beam_target: None,
+            show_bottom: true,
+            xp_value: 0,
+            shot_at_angle: false,
+            color: 0,
+            max_fuse: -1,
+            variant: 0,
+            direction: 2,
+            display_block: 0,
+            display_offset: None,
+            fuel: false,
+        }
     }
 }

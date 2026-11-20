@@ -39,6 +39,7 @@ impl BorderMesh {
             Ok(mesh) => {
                 self.mesh = Some(mesh);
                 out.push(EntityDraw {
+                    alpha: 1.0,
                     mesh,
                     atlas: texture,
                     model: Mat4::IDENTITY,

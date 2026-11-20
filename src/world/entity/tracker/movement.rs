@@ -3,6 +3,62 @@
 use super::*;
 use crate::world::fluid::FluidKind;
 
+/// How a projectile moves itself each tick, on the client as on the server
+/// (`Projectile.getMoveSimulationType` is `SERVER_AND_CLIENT`).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) enum Flight {
+    /// `AbstractHurtingProjectile.tick`: speeds up along its heading
+    /// (`accelerationPower`), slowed by its inertia, unswayed by gravity.
+    Hurting { acceleration: f64, wind: bool },
+    /// `ThrowableProjectile.tick`: falls by its gravity, drag 0.99.
+    Thrown { gravity: f64 },
+    /// `LlamaSpit.tick`.
+    Spit,
+    /// `ShulkerBullet.tick` on the client: straight on, the server steers.
+    Bullet,
+    /// `AbstractArrow.tick`, until it sticks; the water drag is a trident's
+    /// 0.99 or an arrow's 0.6.
+    Arrow { water_drag: f64 },
+}
+
+impl Flight {
+    pub(super) fn of(ty: &EntityType) -> Option<Self> {
+        let hurting = |acceleration, wind| Some(Self::Hurting { acceleration, wind });
+        let thrown = |gravity| Some(Self::Thrown { gravity });
+        match ty.resource_name {
+            "wither_skull" | "fireball" | "small_fireball" | "dragon_fireball" => {
+                hurting(0.1, false)
+            }
+            // `AbstractWindCharge`: no acceleration, inertia 1 in air and water.
+            "wind_charge" | "breeze_wind_charge" => hurting(0.0, true),
+            "snowball" | "egg" | "ender_pearl" => thrown(0.03),
+            "experience_bottle" => thrown(0.07),
+            "splash_potion" | "lingering_potion" => thrown(0.05),
+            "llama_spit" => Some(Self::Spit),
+            "shulker_bullet" => Some(Self::Bullet),
+            "arrow" | "spectral_arrow" => Some(Self::Arrow { water_drag: 0.6 }),
+            "trident" => Some(Self::Arrow { water_drag: 0.99 }),
+            _ => None,
+        }
+    }
+}
+
+/// `Vec3.horizontalDistance`.
+fn horizontal(v: DVec3) -> f64 {
+    (v.x * v.x + v.z * v.z).sqrt()
+}
+
+/// `Projectile.lerpRotation`: a fifth of the way to `rot`, the short way.
+fn lerp_rotation(mut from: f32, to: f32) -> f32 {
+    while to - from < -180.0 {
+        from -= 360.0;
+    }
+    while to - from >= 180.0 {
+        from += 360.0;
+    }
+    from + 0.2 * (to - from)
+}
+
 impl ClientEntity {
     /// `moveOrInterpolateTo`: glide there over [`LERP_STEPS`] ticks, or
     pub(super) fn interpolate_to(&mut self, pos: DVec3, yaw: f32, pitch: f32) {
@@ -14,7 +70,7 @@ impl ClientEntity {
             self.lerp = None;
             return;
         }
-        if self.kind.simulates_movement() {
+        if self.simulates() {
             self.pos = pos;
             self.yaw = yaw;
             self.pitch = pitch;
@@ -148,6 +204,10 @@ impl ClientEntity {
             self.simulate_item(level);
             return false;
         }
+        if let Some(flight) = Flight::of(self.ty) {
+            self.fly(level, flight);
+            return false;
+        }
         if !self.appearance.no_gravity {
             self.velocity.y -= GRAVITY;
         }
@@ -261,5 +321,135 @@ impl ClientEntity {
             f64::from(AIR_DRAG),
             false,
         );
+    }
+}
+
+impl ClientEntity {
+    /// Whether the client runs its physics: the falling blocks, primed TNT,
+    /// dropped items and the projectiles that fly themselves.
+    pub(super) fn simulates(&self) -> bool {
+        self.kind.simulates_movement() || Flight::of(self.ty).is_some()
+    }
+
+    /// `Entity.applyGravity`'s pull, none with `NoGravity`.
+    fn gravity(&self, gravity: f64) -> f64 {
+        if self.appearance.no_gravity {
+            0.0
+        } else {
+            gravity
+        }
+    }
+
+    /// Whether its box's block holds water (`isInWater`, near enough for
+    /// a projectile's small box).
+    fn projectile_in_water(&self, level: &Level) -> bool {
+        let at = self.pos.floor().as_ivec3();
+        physics::fluid_at(level, at.x, at.y, at.z) == Some(FluidKind::Water)
+    }
+
+    /// One tick of a projectile's own flight. It stops where it would
+    /// enter a block; the server says what it hit.
+    pub(super) fn fly(&mut self, level: &Level, flight: Flight) {
+        match flight {
+            Flight::Hurting { acceleration, wind } => {
+                let inertia: f32 = if wind {
+                    1.0
+                } else if self.projectile_in_water(level) {
+                    0.8
+                } else if self.kind == EntityKind::WitherSkull && self.appearance.thing.dangerous {
+                    0.73
+                } else {
+                    0.95
+                };
+                let heading = self.velocity.normalize_or_zero();
+                self.velocity = (self.velocity + heading * acceleration) * f64::from(inertia);
+                self.step_or_stop(level);
+                self.rotate_towards_movement(0.2);
+            }
+            Flight::Thrown { gravity } => {
+                self.velocity.y -= self.gravity(gravity);
+                let inertia: f32 = if self.projectile_in_water(level) {
+                    0.8
+                } else {
+                    0.99
+                };
+                self.velocity *= f64::from(inertia);
+                self.step_or_stop(level);
+                self.update_rotation();
+            }
+            Flight::Spit => {
+                let movement = self.velocity;
+                self.update_rotation();
+                self.velocity =
+                    movement * f64::from(0.99f32) - DVec3::new(0.0, self.gravity(0.06), 0.0);
+                self.pos += movement;
+            }
+            Flight::Bullet => {
+                self.pos += self.velocity;
+                self.rotate_towards_movement(0.5);
+            }
+            Flight::Arrow { water_drag } => {
+                if self.appearance.thing.in_ground {
+                    return;
+                }
+                let movement = self.velocity;
+                let in_water = self.projectile_in_water(level);
+                if in_water {
+                    self.velocity *= water_drag;
+                }
+                let yaw = (movement.x.atan2(movement.z) as f32).to_degrees();
+                let pitch = (movement.y.atan2(horizontal(movement)) as f32).to_degrees();
+                self.pitch = lerp_rotation(self.pitch, pitch);
+                self.yaw = lerp_rotation(self.yaw, yaw);
+                let end = self.pos + movement;
+                self.pos = crate::world::pick::clip_colliders(level, self.pos, end).unwrap_or(end);
+                if !in_water {
+                    self.velocity *= f64::from(0.99f32);
+                }
+                self.velocity.y -= self.gravity(0.05);
+            }
+        }
+    }
+
+    /// `ProjectileUtil.getHitResultOnMoveVector` for blocks only: on along
+    /// the velocity, or up to the block in the way.
+    fn step_or_stop(&mut self, level: &Level) {
+        let end = self.pos + self.velocity;
+        self.pos = crate::world::pick::clip_colliders(level, self.pos, end).unwrap_or(end);
+    }
+
+    /// `Projectile.updateRotation`: a fifth of the way to facing its
+    /// movement, from last tick's angles.
+    fn update_rotation(&mut self) {
+        let movement = self.velocity;
+        let pitch = (movement.y.atan2(horizontal(movement)) as f32).to_degrees();
+        let yaw = (movement.x.atan2(movement.z) as f32).to_degrees();
+        self.pitch = lerp_rotation(self.prev_pitch, pitch);
+        self.yaw = lerp_rotation(self.prev_yaw, yaw);
+    }
+
+    /// `ProjectileUtil.rotateTowardsMovement`: its look turns toward its
+    /// movement by `speed` of the way each tick.
+    fn rotate_towards_movement(&mut self, speed: f32) {
+        let movement = self.velocity;
+        if movement.length_squared() == 0.0 {
+            return;
+        }
+        let flat = horizontal(movement);
+        let yaw = (movement.z.atan2(movement.x) as f32).to_degrees() + 90.0;
+        let pitch = (flat.atan2(movement.y) as f32).to_degrees() - 90.0;
+        let unwrap = |to: f32, mut from: f32| {
+            while to - from < -180.0 {
+                from -= 360.0;
+            }
+            while to - from >= 180.0 {
+                from += 360.0;
+            }
+            from
+        };
+        self.prev_pitch = unwrap(pitch, self.prev_pitch);
+        self.prev_yaw = unwrap(yaw, self.prev_yaw);
+        self.pitch = self.prev_pitch + speed * (pitch - self.prev_pitch);
+        self.yaw = self.prev_yaw + speed * (yaw - self.prev_yaw);
     }
 }

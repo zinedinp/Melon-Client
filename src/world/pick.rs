@@ -166,6 +166,27 @@ fn fluid_shape(level: &Level, (x, y, z): (i32, i32, i32), id: u16) -> Option<Aab
     })
 }
 
+/// `Level.clip` with `ClipContext.Block.COLLIDER` and no fluid: where a
+/// projectile's move from `start` to `end` first meets a collision box.
+pub fn clip_colliders(level: &Level, start: DVec3, end: DVec3) -> Option<DVec3> {
+    let delta = end - start;
+    let length = delta.length();
+    if length < 1.0e-7 {
+        return None;
+    }
+    let dir = delta / length;
+    let region = Aabb {
+        min: start.min(end),
+        max: start.max(end),
+    }
+    .deflate(-1.0e-7);
+    crate::world::physics::block_boxes(level, &region)
+        .iter()
+        .filter_map(|aabb| clip_aabb(aabb, start, dir, length).map(|(t, _, _)| t))
+        .min_by(f64::total_cmp)
+        .map(|t| start + dir * t)
+}
+
 /// Sight for name tags. Vanilla writes framebuffer depth from drawn
 pub fn clip_blocks_for_nametag(level: &Level, start: DVec3, end: DVec3) -> Option<BlockHit> {
     clip_blocks_where(level, start, end, occludes_name_tag, false)

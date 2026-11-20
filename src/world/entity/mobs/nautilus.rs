@@ -52,6 +52,61 @@ pub fn adult() -> LayerDefinition {
     LayerDefinition::new(r, 128.0, 128.0)
 }
 
+/// `ZombieNautilusCoralModel.createBodyLayer`: the adult's body with
+/// corals growing on the shell. Vanilla's angles are its own literals.
+#[allow(clippy::approx_constant)]
+pub fn zombie_coral() -> LayerDefinition {
+    let mut layer = adult();
+    let shell = layer.root.child_mut("root").child_mut("shell");
+    let corals = shell.add_or_replace_child("corals", vec![], Pose::offset(8.0, 4.5, -8.0));
+    let plane = |uv, min, size| vec![Cube::new(uv, min, size)];
+    let yellow =
+        corals.add_or_replace_child("yellow_coral", vec![], Pose::offset(0.0, -11.0, 11.0));
+    yellow.add_or_replace_child(
+        "yellow_coral_second",
+        plane((0.0, 85.0), (-4.5, -3.5, 0.0), (6.0, 8.0, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, 2.0), (0.0, -0.7854, 0.0)),
+    );
+    yellow.add_or_replace_child(
+        "yellow_coral_first",
+        plane((0.0, 85.0), (-4.5, -3.5, 0.0), (6.0, 8.0, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, 0.7854, 0.0)),
+    );
+    let pink = corals.add_or_replace_child(
+        "pink_coral",
+        plane((-8.0, 94.0), (-4.5, 4.5, 0.0), (6.0, 0.0, 8.0)),
+        Pose::offset(-12.5, -18.0, 11.0),
+    );
+    pink.add_or_replace_child(
+        "pink_coral_second",
+        plane((-8.0, 94.0), (-3.0, 0.0, -4.0), (6.0, 0.0, 8.0)),
+        Pose::offset_rotation((-1.5, 4.5, 4.0), (0.0, 0.0, 1.5708)),
+    );
+    let blue = corals.add_or_replace_child("blue_coral", vec![], Pose::offset(-14.0, 0.0, 5.5));
+    blue.add_or_replace_child(
+        "blue_second",
+        plane((0.0, 102.0), (-3.5, -5.5, 0.0), (5.0, 10.0, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, -2.0), (0.0, 0.7854, 0.0)),
+    );
+    blue.add_or_replace_child(
+        "blue_first",
+        plane((0.0, 102.0), (-3.5, -5.5, 0.0), (5.0, 10.0, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, -0.7854, 0.0)),
+    );
+    let red = corals.add_or_replace_child("red_coral", vec![], Pose::ZERO);
+    red.add_or_replace_child(
+        "red_coral_second",
+        plane((0.0, 112.0), (-2.5, -5.5, 0.0), (4.0, 10.0, 0.0)),
+        Pose::offset_rotation((-0.5, -1.0, 1.5), (0.0, -0.829, 0.0)),
+    );
+    red.add_or_replace_child(
+        "red_coral_first",
+        plane((0.0, 112.0), (-4.5, -5.5, 0.0), (6.0, 10.0, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, 0.7854, 0.0)),
+    );
+    layer
+}
+
 /// `NautilusSaddleModel.createSaddleLayer`: the shell grown by 0.2.
 pub fn saddle() -> LayerDefinition {
     let mut r = PartDefinition::root();

@@ -265,6 +265,7 @@ impl Slot {
 
     fn draw(&self, atlas: TextureId, layer: RenderLayer, blend: Blending) -> Option<EntityDraw> {
         Some(EntityDraw {
+            alpha: 1.0,
             mesh: self.mesh?,
             atlas,
             model: Mat4::IDENTITY,

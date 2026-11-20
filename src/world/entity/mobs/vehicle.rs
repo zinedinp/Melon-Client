@@ -284,6 +284,66 @@ pub fn boat_root(position: Vec3, yaw: f32, shake: Shake) -> Mat4 {
         * Mat4::rot_y_deg(90.0)
 }
 
+/// The block a minecart carries (`getDisplayBlockState`): the synced one,
+/// or its type's own; and how high (`getDisplayOffset`, in pixels).
+pub fn minecart_block(
+    name: &str,
+    custom: i32,
+    offset: Option<i32>,
+    fuel: bool,
+) -> Option<(u16, i32)> {
+    use pumpkin_data::Block;
+    let (default, default_offset) = match name {
+        "chest_minecart" => (Some(Block::CHEST.default_state.id.as_u16()), 8),
+        "hopper_minecart" => (Some(Block::HOPPER.default_state.id.as_u16()), 1),
+        "tnt_minecart" => (Some(Block::TNT.default_state.id.as_u16()), 6),
+        "spawner_minecart" => (Some(Block::SPAWNER.default_state.id.as_u16()), 6),
+        "command_block_minecart" => (Some(Block::COMMAND_BLOCK.default_state.id.as_u16()), 6),
+        // Facing north (the default), lit while it has fuel.
+        "furnace_minecart" => {
+            let default = Block::FURNACE.default_state.id.as_u16();
+            let lit = Block::FURNACE
+                .states
+                .iter()
+                .map(|s| s.id.as_u16())
+                .find(|&id| {
+                    crate::particle::client::lit(id)
+                        && crate::particle::client::prop(id, "facing").as_deref() == Some("north")
+                });
+            (
+                Some(if fuel {
+                    lit.unwrap_or(default)
+                } else {
+                    default
+                }),
+                6,
+            )
+        }
+        _ => (None, 6),
+    };
+    let state = u16::try_from(custom).ok().filter(|&s| s != 0).or(default)?;
+    Some((state, offset.unwrap_or(default_offset)))
+}
+
+/// Where the carried block sits, from the cart's `minecart_root`: unflipped,
+/// three quarters big, `offset` pixels up, turned a quarter.
+pub fn minecart_block_matrix(root: Mat4, offset: i32, tnt_swell: Option<f32>) -> Mat4 {
+    let mut m = root
+        * Mat4::from_scale(Vec3::new(-1.0, -1.0, 1.0))
+        * Mat4::from_scale(Vec3::splat(0.75))
+        * Mat4::from_translation(Vec3::new(-0.5, (offset - 8) as f32 / 16.0, 0.5))
+        * Mat4::rot_y_deg(90.0);
+    if let Some(swell) = tnt_swell {
+        m = m
+            * Mat4::from_translation(Vec3::new(-swell * 0.5, 0.0, -swell * 0.5))
+            * Mat4::from_scale(Vec3::splat(1.0 + swell));
+    }
+    m
+}
+
+/// `MinecartTNT.handleEntityEvent`: the fuse is lit.
+pub const EVENT_PRIME_TNT: u8 = 10;
+
 /// `AbstractMinecartRenderer.oldRender` and its shake: up 0.375, turned by
 pub fn minecart_root(position: Vec3, yaw: f32, pitch: f32, shake: Shake) -> Mat4 {
     Mat4::from_translation(position + Vec3::new(0.0, 0.375, 0.0))

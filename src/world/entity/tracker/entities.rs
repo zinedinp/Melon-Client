@@ -105,12 +105,63 @@ impl Entities {
             entity.tick();
         }
         self.position_riders();
+        self.check_crystals();
+    }
+
+    /// `EnderDragon.checkCrystals` as the client runs it: the crystal it
+    /// heals from is forgotten once gone, and one tick in ten (vanilla's
+    /// `random.nextInt(10) == 0`) it looks again for the nearest within 32
+    /// blocks of its box.
+    fn check_crystals(&mut self) {
+        let crystals: Vec<(i32, DVec3)> = self
+            .by_id
+            .values()
+            .filter(|e| e.kind == EntityKind::EndCrystal)
+            .map(|e| (e.id, e.pos))
+            .collect();
+        for dragon in self.by_id.values_mut() {
+            if dragon.kind != EntityKind::EnderDragon || dragon.appearance.dying() {
+                continue;
+            }
+            if let Some(id) = dragon.nearest_crystal
+                && !crystals.iter().any(|&(c, _)| c == id)
+            {
+                dragon.nearest_crystal = None;
+            }
+            // A stand-in for the dragon's random: well spread over ticks
+            // and dragons.
+            let roll = (u64::from(dragon.age) ^ (dragon.id as u64).rotate_left(32))
+                .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+                >> 32;
+            if !roll.is_multiple_of(10) {
+                continue;
+            }
+            let (min, max) = dragon.bounds(0.0);
+            let (min, max) = (min - DVec3::splat(32.0), max + DVec3::splat(32.0));
+            // An end crystal's box is two blocks wide and high.
+            let near = |pos: DVec3| {
+                pos.x + 1.0 > min.x
+                    && pos.x - 1.0 < max.x
+                    && pos.y + 2.0 > min.y
+                    && pos.y < max.y
+                    && pos.z + 1.0 > min.z
+                    && pos.z - 1.0 < max.z
+            };
+            dragon.nearest_crystal = crystals
+                .iter()
+                .filter(|&&(_, pos)| near(pos))
+                .min_by(|a, b| {
+                    a.1.distance_squared(dragon.pos)
+                        .total_cmp(&b.1.distance_squared(dragon.pos))
+                })
+                .map(|&(id, _)| id);
+        }
     }
 
     /// The physics of the entities that run their own
     pub fn simulate(&mut self, level: &Level) {
         self.by_id
-            .retain(|_, entity| !(entity.kind.simulates_movement() && entity.simulate(level)));
+            .retain(|_, entity| !(entity.simulates() && entity.simulate(level)));
     }
 
     /// Which swimmers are in water: each kind that swims tests its box
@@ -125,8 +176,10 @@ impl Entities {
                     eye.z.floor() as i32,
                 ) == Some(crate::world::fluid::FluidKind::Water);
             } else if entity.kind.is_aquatic()
-                || (matches!(entity.kind, EntityKind::Player | EntityKind::Drowned)
-                    && (entity.swim_amount > 0.0 || entity.appearance.visually_swimming()))
+                || (matches!(
+                    entity.kind,
+                    EntityKind::Player | EntityKind::Mannequin | EntityKind::Drowned
+                ) && (entity.swim_amount > 0.0 || entity.appearance.visually_swimming()))
             {
                 entity.in_water = crate::world::physics::touches_fluid(level, &entity.water_box())
                     == Some(crate::world::fluid::FluidKind::Water);

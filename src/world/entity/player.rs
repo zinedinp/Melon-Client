@@ -245,6 +245,8 @@ pub struct AvatarRenderState {
     pub swim: Swim,
     /// Drawn upside down, with the body's height (see
     pub upside_down: Option<f32>,
+    /// `LivingEntity.getScale`.
+    pub scale: f32,
 }
 
 impl AvatarRenderState {
@@ -375,6 +377,7 @@ impl PlayerModel {
             death_time: state.death_time,
             swim: state.swim,
             upside_down: state.upside_down,
+            scale: state.scale,
             ..Default::default()
         };
         living::root_transform(

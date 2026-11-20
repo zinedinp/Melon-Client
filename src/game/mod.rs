@@ -21,6 +21,8 @@ mod gizmos;
 mod hand_render;
 mod heads;
 pub use heads::sync_head_objects;
+mod crystal_beams;
+mod entity_sprites;
 mod fishing;
 pub mod held_items;
 mod interaction;
@@ -31,6 +33,7 @@ mod loading;
 mod nametags;
 mod outline;
 mod overlay;
+mod paintings;
 mod particles;
 mod players;
 mod position_report;
@@ -224,6 +227,10 @@ pub struct InWorld {
     /// The leads drawn, one mesh each.
     leads: leads::LeadMeshes,
     fishing: fishing::FishingMeshes,
+    /// The orbs' and fireballs' camera-facing quads.
+    sprites: entity_sprites::SpriteMeshes,
+    beams: crystal_beams::BeamMeshes,
+    paintings: paintings::PaintingMeshes,
     text_displays: text_displays::TextDisplayMeshes,
     /// The mobs' part matrices from the frame before, for those standing
     poses: crate::world::entity::pose_cache::PoseCache,
@@ -452,6 +459,9 @@ impl InWorld {
             shadows: Default::default(),
             leads: Default::default(),
             fishing: Default::default(),
+            sprites: Default::default(),
+            beams: Default::default(),
+            paintings: Default::default(),
             text_displays: Default::default(),
             poses: Default::default(),
             cracks: Default::default(),
@@ -733,6 +743,9 @@ impl InWorld {
         self.border_mesh.clear(renderer);
         self.leads.clear(renderer);
         self.fishing.clear(renderer);
+        self.sprites.clear(renderer);
+        self.beams.clear(renderer);
+        self.paintings.clear(renderer);
         self.text_displays.clear(renderer);
         self.poses.clear();
         self.entities.clear();

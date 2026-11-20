@@ -19,19 +19,35 @@ impl ClientEntity {
             let b = self.interaction.unwrap_or_default();
             return (b.width, b.height);
         }
-        let scale = self.scale();
+        let scale = self.scale() * self.entity_scale();
         let [w, h] = self.ty.dimension;
         (w * scale, h * scale)
     }
 
+    /// `LivingEntity.getScale`: the `scale` attribute, as `sanitizeScale`
+    /// keeps it (a dragon's always 1, a shulker's at most 3); 1 for what
+    /// isn't living.
+    pub fn entity_scale(&self) -> f32 {
+        if !self.is_living() {
+            return 1.0;
+        }
+        match self.kind {
+            EntityKind::EnderDragon => 1.0,
+            EntityKind::Shulker => self.scale_attribute.min(3.0),
+            _ => self.scale_attribute,
+        }
+    }
+
     /// What the type's dimensions are multiplied by: half for a baby,
     pub fn scale(&self) -> f32 {
-        if self.appearance.baby
+        if self.kind.is_cube() {
+            // `AbstractCubeMob.getDefaultDimensions`: by size alone, a baby
+            // sulfur cube is simply size 1.
+            self.appearance.size as f32
+        } else if self.appearance.baby
             || (self.kind == EntityKind::ArmorStand && self.appearance.stand_small())
         {
             0.5
-        } else if self.kind.is_cube() {
-            self.appearance.size as f32
         } else {
             1.0
         }
@@ -123,6 +139,22 @@ impl ClientEntity {
     }
 
     /// `getYRot(partial)` and `getXRot(partial)`, vanilla's degrees (0 faces
+    /// What a projectile's, crystal's or fangs' `setupAnim` reads.
+    pub fn thing_pose(&self, partial: f32) -> mobs::projectile::ThingPose {
+        mobs::projectile::ThingPose {
+            y_rot: self.yaw_degrees(partial),
+            x_rot: self.pitch_degrees(partial),
+            age_in_ticks: self.age_in_ticks(partial),
+            bite: mobs::projectile::bite_progress(self.fangs_life, partial),
+            shake: if self.arrow_shake > 0 {
+                self.arrow_shake as f32 - partial
+            } else {
+                0.0
+            },
+            shows_bottom: self.appearance.thing.show_bottom,
+        }
+    }
+
     pub fn yaw_degrees(&self, partial: f32) -> f32 {
         rot_lerp(partial, self.prev_yaw, self.yaw)
     }
@@ -230,6 +262,7 @@ impl ClientEntity {
         } else {
             0.0
         };
+        let scale = self.entity_scale();
         let upside_down = self.upside_down().then(|| self.size().1);
         let invert = if upside_down.is_some() { -1.0 } else { 1.0 };
         LivingRenderState {
@@ -258,6 +291,7 @@ impl ClientEntity {
             riding,
             swim: self.swim(partial),
             upside_down,
+            scale,
         }
     }
 

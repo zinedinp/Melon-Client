@@ -110,6 +110,10 @@ pub struct LayerSpec {
     pub copy_humanoid: bool,
     /// `ItemStack.hasFoil`: the armor or equipment glint overlay.
     pub foil: bool,
+    /// Its own overlay instead of the body's (a sulfur cube's lit core).
+    pub overlay: Option<f32>,
+    /// The colour's alpha it is drawn with (a shulker bullet's glow).
+    pub alpha: f32,
 }
 
 impl LayerSpec {
@@ -134,6 +138,8 @@ impl LayerSpec {
             water_mask: false,
             copy_humanoid: false,
             foil: false,
+            overlay: None,
+            alpha: 1.0,
         }
     }
 
@@ -187,6 +193,25 @@ impl LayerSpec {
             water_mask: false,
             copy_humanoid: false,
             foil: false,
+            overlay: None,
+            alpha: 1.0,
+        }
+    }
+
+    /// Drawn with `overlay` rather than the body's.
+    pub(super) fn with_overlay(self, overlay: f32) -> Self {
+        Self {
+            overlay: Some(overlay),
+            ..self
+        }
+    }
+
+    /// Blended at `alpha`.
+    pub(super) fn faded(self, alpha: f32) -> Self {
+        Self {
+            alpha,
+            translucent: true,
+            ..self
         }
     }
 }
@@ -803,7 +828,99 @@ pub fn layers(
             }
         }
         EntityKind::Minecart => out.push(plain(M::Minecart, vehicle::MINECART_TEXTURE)),
+        EntityKind::SulfurCube => {
+            let fuse = sulfur_cube::fuse_remaining(entity.fuse_ticks, 0.0);
+            let holds_block = sulfur_cube::swallowed_block(entity).is_some();
+            if !holds_block && !a.invisible() {
+                let inner = if baby {
+                    plain(M::SulfurCubeSmallInner, sulfur_cube::INNER_SMALL)
+                } else {
+                    plain(M::SulfurCubeInner, sulfur_cube::INNER)
+                }
+                .translucent();
+                out.push(if sulfur_cube::core_flashes(fuse) {
+                    inner.with_overlay(-1.0)
+                } else {
+                    inner
+                });
+            }
+            out.push(
+                if baby {
+                    plain(M::SulfurCubeSmallOuter, sulfur_cube::OUTER_SMALL)
+                } else {
+                    plain(M::SulfurCubeOuter, sulfur_cube::OUTER)
+                }
+                .translucent(),
+            );
+        }
+        EntityKind::Parched => out.push(plain(M::Skeleton, "minecraft:entity/skeleton/parched")),
+        EntityKind::Giant => out.push(plain(M::Zombie, "minecraft:entity/zombie/zombie")),
+        EntityKind::ZombieNautilus => {
+            use pumpkin_data::zombie_nautilus_variant::ZombieNautilusVariant;
+            let variant = u8::try_from(a.thing.variant)
+                .ok()
+                .and_then(ZombieNautilusVariant::from_id)
+                .unwrap_or_default();
+            // `ZombieNautilusCoralModel`: the corals hide under armor.
+            let armored = !entity.equipment.get(EquipmentSlot::Body).is_empty();
+            let model = if variant.model() == Some("warm") && !armored {
+                M::ZombieNautilusCoral
+            } else {
+                M::Nautilus
+            };
+            out.push(plain(model, variant.asset_id()));
+        }
+        EntityKind::Cushion => out.push(plain(
+            M::Cushion,
+            projectile::cushion_texture(a.thing.color),
+        )),
+        EntityKind::WitherSkull => out.push(plain(
+            M::WitherSkull,
+            if a.thing.dangerous {
+                projectile::WITHER_INVULNERABLE_TEXTURE
+            } else {
+                projectile::WITHER_TEXTURE
+            },
+        )),
+        EntityKind::ShulkerBullet => {
+            out.push(plain(M::ShulkerBullet, projectile::SHULKER_BULLET_TEXTURE));
+            out.push(
+                plain(M::ShulkerBulletGlow, projectile::SHULKER_BULLET_TEXTURE)
+                    .faded(projectile::SHULKER_GLOW_ALPHA),
+            );
+        }
+        EntityKind::LlamaSpit => out.push(plain(M::LlamaSpit, projectile::LLAMA_SPIT_TEXTURE)),
+        EntityKind::WindCharge => {
+            out.push(plain(M::WindCharge, projectile::WIND_CHARGE_TEXTURE).translucent())
+        }
+        EntityKind::EvokerFangs => {
+            // `EvokerFangsRenderer`: nothing until the bite starts.
+            if entity.fangs_life.is_some() {
+                out.push(plain(M::EvokerFangs, projectile::EVOKER_FANGS_TEXTURE));
+            }
+        }
+        EntityKind::EndCrystal => out.push(plain(M::EndCrystal, projectile::END_CRYSTAL_TEXTURE)),
+        EntityKind::Trident => {
+            out.push(plain(M::Trident, projectile::TRIDENT_TEXTURE).with_foil(a.thing.foil))
+        }
+        EntityKind::Arrow => out.push(plain(
+            M::Arrow,
+            if a.thing.arrow_color > 0 {
+                projectile::TIPPED_ARROW_TEXTURE
+            } else {
+                projectile::ARROW_TEXTURE
+            },
+        )),
+        EntityKind::SpectralArrow => out.push(plain(M::Arrow, projectile::SPECTRAL_ARROW_TEXTURE)),
+        EntityKind::DragonFireball
+        | EntityKind::ExperienceOrb
+        | EntityKind::ThrownItem
+        | EntityKind::FireworkRocket
+        | EntityKind::OminousItemSpawner
+        | EntityKind::Painting
+        | EntityKind::LightningBolt => {}
         EntityKind::Player
+        | EntityKind::Mannequin
         | EntityKind::FallingBlock
         | EntityKind::PrimedTnt
         | EntityKind::Item

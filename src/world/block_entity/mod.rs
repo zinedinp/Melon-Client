@@ -15,7 +15,7 @@ use textures::{
 };
 
 pub use kind::{KIND_STATES, Kind, Placement, kind_of};
-pub use render::skull_transform;
+pub use render::{at_rest, skull_transform};
 pub use textures::atlas_textures;
 
 use std::collections::HashMap;

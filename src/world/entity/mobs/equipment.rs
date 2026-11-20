@@ -15,7 +15,7 @@ pub fn shows_held_item(entity: &ClientEntity) -> bool {
 
 /// The armor slots an entity shows (`HumanoidArmorLayer`): humanoids only.
 pub fn wears_armor(kind: EntityKind) -> bool {
-    kind == EntityKind::Player
+    kind.is_avatar()
         || kind == EntityKind::ArmorStand
         || kind.is_zombie()
         || kind.is_skeleton()

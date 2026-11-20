@@ -30,6 +30,10 @@ pub enum DataValue {
     Quat([f32; 4]),
     /// A text component (`DATA_TEXT_ID` of a text display).
     Text(Box<Component>),
+    /// `OPTIONAL_BLOCK_POS`: an end crystal's beam target.
+    BlockPos(Option<[i32; 3]>),
+    /// `RESOLVABLE_PROFILE`: a mannequin's skin.
+    Profile(Box<crate::world::head_profile::AvatarProfile>),
 }
 
 impl std::fmt::Debug for DataValue {
@@ -48,6 +52,8 @@ impl std::fmt::Debug for DataValue {
             Self::Vec3(v) => write!(f, "Vec3({v:?})"),
             Self::Quat(q) => write!(f, "Quat({q:?})"),
             Self::Text(t) => write!(f, "Text({:?})", t.plain_text()),
+            Self::BlockPos(p) => write!(f, "BlockPos({p:?})"),
+            Self::Profile(p) => write!(f, "Profile({p:?})"),
         }
     }
 }
@@ -68,6 +74,8 @@ impl PartialEq for DataValue {
             (Self::Vec3(a), Self::Vec3(b)) => a == b,
             (Self::Quat(a), Self::Quat(b)) => a == b,
             (Self::Text(a), Self::Text(b)) => a == b,
+            (Self::BlockPos(a), Self::BlockPos(b)) => a == b,
+            (Self::Profile(a), Self::Profile(b)) => a == b,
             (Self::Item(a), Self::Item(b)) => {
                 a.item.id == b.item.id && a.item_count == b.item_count
             }
@@ -94,6 +102,14 @@ impl DataValue {
     pub fn text(&self) -> Option<&Component> {
         match self {
             Self::Text(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    /// An optional block position; `None` for another type.
+    pub fn block_pos(&self) -> Option<Option<[i32; 3]>> {
+        match self {
+            Self::BlockPos(p) => Some(*p),
             _ => None,
         }
     }
@@ -225,12 +241,11 @@ fn read_value(r: &mut Reader<'_>, ty: i32) -> Result<Option<DataValue>> {
             r.i64_be()?;
             return Ok(None);
         }
-        OPT_BLOCK_POS => {
-            if r.bool()? {
-                r.i64_be()?;
-            }
-            return Ok(None);
-        }
+        OPT_BLOCK_POS => DataValue::BlockPos(if r.bool()? {
+            Some(unpack_block_pos(r.i64_be()?))
+        } else {
+            None
+        }),
         OPT_ENTITY => {
             if r.bool()? {
                 r.uuid()?;
@@ -246,10 +261,12 @@ fn read_value(r: &mut Reader<'_>, ty: i32) -> Result<Option<DataValue>> {
             return Ok(None);
         }
         PAINTING => {
-            if r.var_int()? == 0 {
+            // A holder: 0 for an inline variant, else the registry id + 1.
+            let id = r.var_int()?;
+            if id == 0 {
                 bail!("inline painting variant");
             }
-            return Ok(None);
+            DataValue::Int(id - 1)
         }
         PARTICLE => DataValue::Particles(vec![r.particle()?]),
         PARTICLES => {
@@ -260,10 +277,73 @@ fn read_value(r: &mut Reader<'_>, ty: i32) -> Result<Option<DataValue>> {
             }
             DataValue::Particles(list)
         }
-        PROFILE => bail!("entity data type {ty}"),
+        PROFILE => DataValue::Profile(Box::new(read_profile(r)?)),
         _ if (0..64).contains(&ty) => DataValue::Int(r.var_int()?),
         _ => bail!("entity data type {ty}"),
     }))
+}
+
+/// `ResolvableProfile.STREAM_CODEC`: a whole `GameProfile` or a partial
+/// one (either), then the `PlayerSkin.Patch`.
+fn read_profile(r: &mut Reader<'_>) -> Result<crate::world::head_profile::AvatarProfile> {
+    use crate::world::head_profile::{AvatarProfile, HeadProfile, SkinPatch};
+    let (id, name) = if r.bool()? {
+        (Some(r.uuid()?), Some(r.string_max(16)?))
+    } else {
+        let name = if r.bool()? {
+            Some(r.string_max(16)?)
+        } else {
+            None
+        };
+        let id = if r.bool()? { Some(r.uuid()?) } else { None };
+        (id, name)
+    };
+    // `GAME_PROFILE_PROPERTIES`: name, value and an optional signature.
+    let count = r.var_int()?;
+    if !(0..=16).contains(&count) {
+        bail!("{count} profile properties");
+    }
+    let mut textures = None;
+    for _ in 0..count {
+        let key = r.string_max(64)?;
+        let value = r.string_max(32767)?;
+        if r.bool()? {
+            r.string_max(1024)?;
+        }
+        if key == "textures" {
+            textures = Some(value.into_boxed_str());
+        }
+    }
+    let asset = |r: &mut Reader<'_>| -> Result<Option<Box<str>>> {
+        Ok(if r.bool()? {
+            Some(r.string()?.into_boxed_str())
+        } else {
+            None
+        })
+    };
+    let body = asset(r)?;
+    let _cape = asset(r)?;
+    let _elytra = asset(r)?;
+    let slim = if r.bool()? { Some(r.bool()?) } else { None };
+    let profile = HeadProfile {
+        id: id.filter(|id| !id.is_nil()),
+        name: name.filter(|n| !n.is_empty()).map(String::into_boxed_str),
+        textures,
+    };
+    let named = profile.id.is_some() || profile.name.is_some() || profile.textures.is_some();
+    Ok(AvatarProfile {
+        profile: named.then_some(profile),
+        patch: SkinPatch { body, slim },
+    })
+}
+
+/// `BlockPos.of`: 26 bits of x, 26 of z, 12 of y.
+fn unpack_block_pos(packed: i64) -> [i32; 3] {
+    [
+        (packed >> 38) as i32,
+        ((packed << 52) >> 52) as i32,
+        ((packed << 26) >> 38) as i32,
+    ]
 }
 
 #[cfg(test)]
@@ -320,8 +400,25 @@ mod tests {
 
     #[test]
     fn an_unreadable_value_keeps_what_came_before() {
-        let body = [0, 0, 1, 9, T::RESOLVABLE_PROFILE.id as u8, 5, 0xFF];
+        let body = [0, 0, 1, 9, 200, 5, 0xFF];
         let values = read_entity_data(&mut Reader::new(&body));
         assert_eq!(values, vec![(0, DataValue::Byte(1))]);
+    }
+
+    #[test]
+    fn a_mannequin_profile_is_read_with_the_values_after_it() {
+        // A partial profile named "Notch" with no id or properties, a slim
+        // patch, then a byte.
+        let mut body = vec![17, T::RESOLVABLE_PROFILE.id as u8, 0, 1, 5];
+        body.extend_from_slice(b"Notch");
+        body.extend_from_slice(&[0, 0, 0, 0, 0, 1, 1, 16, 0, 0x7F, 0xFF]);
+        let values = read_entity_data(&mut Reader::new(&body));
+        let DataValue::Profile(profile) = &values[0].1 else {
+            panic!("{values:?}");
+        };
+        let named = profile.profile.as_ref().unwrap();
+        assert_eq!(named.name.as_deref(), Some("Notch"));
+        assert_eq!(profile.patch.slim, Some(true));
+        assert_eq!(values[1], (16, DataValue::Byte(0x7F)));
     }
 }

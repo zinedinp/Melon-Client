@@ -127,6 +127,7 @@ pub const ATTRIBUTE_NAME_TAG_DISTANCE: i32 =
     pumpkin_data::attributes::Attributes::NAME_TAG_DISTANCE.id as i32;
 pub const ATTRIBUTE_BELOW_NAME_DISTANCE: i32 =
     pumpkin_data::attributes::Attributes::BELOW_NAME_DISTANCE.id as i32;
+pub const ATTRIBUTE_SCALE: i32 = pumpkin_data::attributes::Attributes::SCALE.id as i32;
 
 /// `AttributeInstance.calculateValue`: the base plus the added amounts,
 pub fn attribute_value(base: f64, modifiers: &[(i8, f64)]) -> f64 {

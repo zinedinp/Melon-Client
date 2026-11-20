@@ -28,6 +28,7 @@ pub struct ShadowMeshes {
 
 impl ShadowMeshes {
     /// The shadow of `caster` standing at `feet`, `radius` blocks wide,
+    /// `strength` as dark as a full one (`getShadowStrength`).
     #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &mut self,
@@ -36,10 +37,14 @@ impl ShadowMeshes {
         caster: i32,
         feet: Vec3,
         camera: Vec3,
-        radius: f32,
+        (radius, strength): (f32, f32),
+        light: shadow::ShadowLight,
         texture: TextureId,
         out: &mut Vec<EntityDraw>,
     ) {
+        if radius <= 0.0 || strength <= 0.0 {
+            return;
+        }
         let shadow = self.by_caster.entry(caster).or_insert_with(|| Shadow {
             mesh: None,
             origin: IVec3::ZERO,
@@ -47,7 +52,7 @@ impl ShadowMeshes {
             seen: false,
         });
         shadow.seen = true;
-        let vertices = shadow::quads(level, feet, camera, radius);
+        let vertices = shadow::quads(level, feet, camera, radius, strength, light);
         if vertices != shadow.vertices {
             if let Some(old) = shadow.mesh.take() {
                 renderer.free_mesh(old);
@@ -72,6 +77,7 @@ impl ShadowMeshes {
         }
         if let Some(mesh) = shadow.mesh {
             out.push(EntityDraw {
+                alpha: 1.0,
                 mesh,
                 atlas: texture,
                 model: Mat4::IDENTITY,

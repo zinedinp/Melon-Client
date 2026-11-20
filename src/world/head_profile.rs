@@ -75,6 +75,35 @@ impl HeadProfile {
     }
 }
 
+/// `PlayerSkin.Patch`: what a profile's skin is overridden with. Only the
+/// body texture and the arms are drawn; the cape and elytra aren't.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SkinPatch {
+    /// `texture`: an asset id, `minecraft:entity/player/wide/steve`.
+    pub body: Option<Box<str>>,
+    /// `model`: `true` for slim arms.
+    pub slim: Option<bool>,
+}
+
+/// `Mannequin.DATA_PROFILE`: whose skin it wears, and the patch on it.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct AvatarProfile {
+    /// `None` for `ResolvableProfile.Static.EMPTY`, a nameless nobody.
+    pub profile: Option<HeadProfile>,
+    pub patch: SkinPatch,
+}
+
+impl AvatarProfile {
+    /// `DefaultPlayerSkin.get(partialProfile)`: the default skin is picked
+    /// by the profile's id, the nil one when it has none.
+    pub fn default_skin_id(&self) -> Uuid {
+        self.profile
+            .as_ref()
+            .and_then(|p| p.id)
+            .unwrap_or(Uuid::nil())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

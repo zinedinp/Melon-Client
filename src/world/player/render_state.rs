@@ -123,6 +123,7 @@ impl PlayerState {
             shown,
             death_time: 0.0,
             upside_down: None,
+            scale: self.scale() as f32,
             swim: Swim {
                 amount: self.swim_amount_old
                     + (self.swim_amount - self.swim_amount_old) * self.partial,
