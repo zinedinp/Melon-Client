@@ -1,6 +1,6 @@
 //! One particle.
 
-use glam::DVec3;
+use glam::{DVec3, Vec3};
 
 use super::animation::Rect;
 use super::animation::fade::{Glow, LifetimeAlpha, SizeCurve};
@@ -63,8 +63,11 @@ impl Default for Look {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Particle {
     pub kind: Kind,
-    pub pos: DVec3,
-    pub prev: DVec3,
+    /// Written through [`Self::set_pos`], which keeps `prev` in its place.
+    pos: DVec3,
+    /// `xo`, `yo`, `zo` less `pos`. Only drawn from, never moved by, so
+    /// f32 holds it without touching the double physics.
+    prev_offset: Vec3,
     pub vel: DVec3,
     /// `bbWidth`, `bbHeight`.
     pub width: f32,
@@ -100,7 +103,7 @@ impl Particle {
         Self {
             kind,
             pos,
-            prev: pos,
+            prev_offset: Vec3::ZERO,
             vel: DVec3::ZERO,
             width: 0.2,
             height: 0.2,
@@ -168,7 +171,7 @@ impl Particle {
     /// `Particle.move`.
     pub fn move_by(&mut self, ctx: &TickCtx, delta: DVec3) {
         if self.free_move {
-            self.pos += delta;
+            self.set_pos(self.pos + delta);
             return;
         }
         if self.stopped {
@@ -178,7 +181,7 @@ impl Particle {
         if self.physics && delta != DVec3::ZERO && delta.length_squared() < MAX_COLLISION_SPEED_SQ {
             moved = physics::collide(ctx.level, &[], self.bounds(), delta, 0.0, false);
         }
-        self.pos += moved;
+        self.set_pos(self.pos + moved);
         if delta.y.abs() >= 1.0e-5 && moved.y.abs() < 1.0e-5 {
             self.stopped = true;
         }
@@ -193,7 +196,7 @@ impl Particle {
 
     /// `Particle.tick`: ages, falls by its gravity, moves and slows down.
     pub fn base_tick(&mut self, ctx: &TickCtx) {
-        self.prev = self.pos;
+        self.reset_prev();
         if self.age >= self.lifetime {
             self.age += 1;
             self.removed = true;
@@ -216,7 +219,7 @@ impl Particle {
 
     /// The start of a tick for classes with their own: the place before.
     pub fn begin_tick(&mut self) {
-        self.prev = self.pos;
+        self.reset_prev();
         self.prev_roll = self.roll;
     }
 
@@ -256,6 +259,31 @@ impl Particle {
 
     /// Where it is drawn at `partial`.
     pub fn lerp_pos(&self, partial: f32) -> DVec3 {
-        self.prev.lerp(self.pos, f64::from(partial))
+        self.prev().lerp(self.pos, f64::from(partial))
+    }
+
+    pub fn pos(&self) -> DVec3 {
+        self.pos
+    }
+
+    /// Moves it to `pos`; where it was the tick before stays.
+    pub fn set_pos(&mut self, pos: DVec3) {
+        let prev = self.prev();
+        self.pos = pos;
+        self.set_prev(prev);
+    }
+
+    /// Where it was when the tick began (`xo`, `yo`, `zo`).
+    pub fn prev(&self) -> DVec3 {
+        self.pos + self.prev_offset.as_dvec3()
+    }
+
+    pub fn set_prev(&mut self, prev: DVec3) {
+        self.prev_offset = (prev - self.pos).as_vec3();
+    }
+
+    /// `xo = x` and so on: the tick before is where it is now.
+    pub fn reset_prev(&mut self) {
+        self.prev_offset = Vec3::ZERO;
     }
 }

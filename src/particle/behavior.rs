@@ -204,7 +204,7 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
         Behavior::Town => {
             p.begin_tick();
             if !p.count_down() {
-                p.pos += p.vel;
+                p.set_pos(p.pos() + p.vel);
                 p.vel *= 0.99;
             }
         }
@@ -217,7 +217,7 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
             p.vel.y += 0.002;
             p.move_by(ctx, p.vel);
             p.vel *= f64::from(0.85f32);
-            let cell = p.pos.floor().as_ivec3();
+            let cell = p.pos().floor().as_ivec3();
             if physics::fluid_at(ctx.level, cell.x, cell.y, cell.z) != Some(FluidKind::Water) {
                 p.removed = true;
             }
@@ -234,7 +234,7 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
             if !p.removed {
                 let odds = p.age as f32 / p.lifetime.max(1) as f32;
                 if rng.next_float() > odds {
-                    out.push(Spawn::new(ParticleSpec::simple(Kind::Smoke), p.pos, p.vel));
+                    out.push(Spawn::new(ParticleSpec::simple(Kind::Smoke), p.pos(), p.vel));
                 }
             }
         }
@@ -276,7 +276,7 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
             if p.age > p.lifetime / 2 {
                 p.color[3] = 1.0 - (p.age - p.lifetime / 2) as f32 / p.lifetime.max(1) as f32;
             }
-            let cell = p.pos.floor().as_ivec3();
+            let cell = p.pos().floor().as_ivec3();
             if ctx.level.block_state(cell.x, cell.y, cell.z).unwrap_or(0) == 0 {
                 p.vel.y -= f64::from(0.0074f32);
             }
@@ -313,9 +313,9 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
             if landed {
                 p.vel.y += 0.002;
             }
-            let y = p.pos.y;
+            let y = p.pos().y;
             p.move_by(ctx, p.vel);
-            if p.pos.y == y {
+            if p.pos().y == y {
                 p.vel.x *= 1.1;
                 p.vel.z *= 1.1;
             }
@@ -335,7 +335,7 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
         }
         Behavior::Spell { alpha } => {
             p.base_tick(ctx);
-            if ctx.close_to_scope(p.pos) {
+            if ctx.close_to_scope(p.pos()) {
                 p.color[3] = 0.0;
             } else {
                 p.color[3] += (alpha - p.color[3]) * 0.05;
@@ -345,7 +345,7 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
         Behavior::DustTransition { .. } => p.base_tick(ctx),
         Behavior::InWater => {
             p.base_tick(ctx);
-            let cell = p.pos.floor().as_ivec3();
+            let cell = p.pos().floor().as_ivec3();
             if !p.removed
                 && physics::fluid_at(ctx.level, cell.x, cell.y, cell.z) != Some(FluidKind::Water)
             {
@@ -361,7 +361,7 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
             p.vel.x = (p.vel.x + f64::from(0.6 * cos)) * 0.07;
             p.vel.z = (p.vel.z + f64::from(0.6 * sin)) * 0.07;
             p.move_by(ctx, p.vel);
-            let cell = p.pos.floor().as_ivec3();
+            let cell = p.pos().floor().as_ivec3();
             if physics::fluid_at(ctx.level, cell.x, cell.y, cell.z) != Some(FluidKind::Water)
                 || p.on_ground
             {
@@ -419,13 +419,13 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
                 return;
             }
             let t = p.age as f32 / p.lifetime.max(1) as f32;
-            p.pos = start + p.vel * f64::from(1.0 - t);
+            p.set_pos(start + p.vel * f64::from(1.0 - t));
             let [a, r, g, b] = srgb_lerp(t, from, to);
             p.color = [r, g, b, a];
         }
         Behavior::Firefly => {
             p.base_tick(ctx);
-            let cell = p.pos.floor().as_ivec3();
+            let cell = p.pos().floor().as_ivec3();
             let state = ctx.level.block_state(cell.x, cell.y, cell.z).unwrap_or(0);
             if !super::client::block_name(state).ends_with("air") {
                 p.removed = true;
@@ -441,10 +441,12 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
         Behavior::PlayerCloud => {
             p.base_tick(ctx);
             if !p.removed
-                && let Some(player) = (ctx.nearest_player)(p.pos, 2.0)
-                && p.pos.y > player.pos.y
+                && let Some(player) = (ctx.nearest_player)(p.pos(), 2.0)
+                && p.pos().y > player.pos.y
             {
-                p.pos.y += (player.pos.y - p.pos.y) * 0.2;
+                let mut pos = p.pos();
+                pos.y += (player.pos.y - pos.y) * 0.2;
+                p.set_pos(pos);
                 p.vel.y += (player.vel.y - p.vel.y) * 0.2;
             }
         }
@@ -480,10 +482,10 @@ fn sulfur_bubble(
 ) {
     const RISE: f64 = 3.0;
     p.base_tick(ctx);
-    if !p.removed && !water_source(ctx, p.pos.floor().as_ivec3()) {
+    if !p.removed && !water_source(ctx, p.pos().floor().as_ivec3()) {
         p.removed = true;
     }
-    if !p.removed && (p.pos.y >= y_start + RISE || p.pos.y <= y_prev) {
+    if !p.removed && (p.pos().y >= y_start + RISE || p.pos().y <= y_prev) {
         p.removed = true;
     }
     let mut wiggle = || {
@@ -493,26 +495,26 @@ fn sulfur_bubble(
     p.vel.x += wiggle();
     p.vel.z += wiggle();
     p.move_by(ctx, DVec3::new(p.vel.x, 0.0, p.vel.z));
-    let progress = ((p.pos.y - y_start) / RISE) as f32;
+    let progress = ((p.pos().y - y_start) / RISE) as f32;
     p.quad_size = size_start + progress * (0.15 - size_start);
     p.behavior = Behavior::SulfurBubble {
         y_start,
-        y_prev: p.pos.y,
+        y_prev: p.pos().y,
         size_start,
     };
 }
 
 /// `GeyserPlumeParticle.tick`.
 fn geyser_plume(p: &mut Particle, ctx: &TickCtx, mut plume: Plume) {
-    let y_before = p.pos.y;
+    let y_before = p.pos().y;
     p.base_tick(ctx);
     let max_y = plume.start_y + f64::from(plume.height) - 1.0;
-    if !plume.done && (p.vel.y < 0.0 || p.pos.y > max_y || p.pos.y == y_before) {
+    if !plume.done && (p.vel.y < 0.0 || p.pos().y > max_y || p.pos().y == y_before) {
         p.lifetime = p.lifetime.min(p.age + 5);
         p.friction = 0.0;
         plume.done = true;
     }
-    let linear = ((p.pos.y - plume.start_y) / (max_y - plume.start_y)).clamp(0.0, 1.0);
+    let linear = ((p.pos().y - plume.start_y) / (max_y - plume.start_y)).clamp(0.0, 1.0);
     p.gravity = plume.propulsion * linear.powi(3) as f32 * 0.12;
     p.vel.x = linear * f64::from(plume.spray[0]);
     p.vel.z = linear * f64::from(plume.spray[1]);
@@ -572,9 +574,9 @@ fn water_drop(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom) {
         p.vel.x *= f64::from(0.7f32);
         p.vel.z *= f64::from(0.7f32);
     }
-    let cell = p.pos.floor().as_ivec3();
-    let inside = surface_at(ctx, cell, p.pos);
-    if inside > 0.0 && p.pos.y < f64::from(cell.y) + inside {
+    let cell = p.pos().floor().as_ivec3();
+    let inside = surface_at(ctx, cell, p.pos());
+    if inside > 0.0 && p.pos().y < f64::from(cell.y) + inside {
         p.removed = true;
     }
 }
@@ -604,7 +606,7 @@ fn tick_drip(p: &mut Particle, drip: Drip, ctx: &TickCtx, out: &mut Vec<Spawn>) 
         if drip.stage == DripStage::Hang
             && let Some(next) = drip.next
         {
-            out.push(Spawn::new(ParticleSpec::simple(next), p.pos, p.vel));
+            out.push(Spawn::new(ParticleSpec::simple(next), p.pos(), p.vel));
         }
         return;
     }
@@ -616,7 +618,7 @@ fn tick_drip(p: &mut Particle, drip: Drip, ctx: &TickCtx, out: &mut Vec<Spawn>) 
         DripStage::FallAndLand if p.on_ground => {
             p.removed = true;
             if let Some(next) = drip.next {
-                out.push(Spawn::new(ParticleSpec::simple(next), p.pos, DVec3::ZERO));
+                out.push(Spawn::new(ParticleSpec::simple(next), p.pos(), DVec3::ZERO));
             }
         }
         _ => {}
@@ -626,9 +628,9 @@ fn tick_drip(p: &mut Particle, drip: Drip, ctx: &TickCtx, out: &mut Vec<Spawn>) 
     }
     p.vel *= f64::from(0.98f32);
     if let Some(fluid) = drip.fluid {
-        let cell = p.pos.floor().as_ivec3();
+        let cell = p.pos().floor().as_ivec3();
         if let Some(height) = physics::fluid_height(ctx.level, cell, fluid)
-            && p.pos.y < f64::from(cell.y) + f64::from(height)
+            && p.pos().y < f64::from(cell.y) + f64::from(height)
         {
             p.removed = true;
         }
@@ -729,9 +731,9 @@ mod tests {
             tick(&mut p, ctx, &mut rng, &mut out);
             tick(&mut p, ctx, &mut rng, &mut out);
             assert!(p.behavior.drawn());
-            assert_eq!(p.pos, DVec3::ZERO);
+            assert_eq!(p.pos(), DVec3::ZERO);
             tick(&mut p, ctx, &mut rng, &mut out);
-            assert!(p.pos.y > 0.0);
+            assert!(p.pos().y > 0.0);
         });
     }
 
@@ -747,9 +749,9 @@ mod tests {
                 tick(&mut p, ctx, &mut rng, &mut out);
             }
             assert!(!p.removed);
-            assert!(p.pos.y < at.y);
+            assert!(p.pos().y < at.y);
             assert_ne!(p.roll, 0.0);
-            assert!(p.pos.x != 0.0 || p.pos.z != 0.0);
+            assert!(p.pos().x != 0.0 || p.pos().z != 0.0);
         });
     }
 }

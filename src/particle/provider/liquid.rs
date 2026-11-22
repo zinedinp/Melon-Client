@@ -239,7 +239,7 @@ pub(super) fn geyser_plume(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     p.quad_size = min_size;
     p.look.animated = true;
     p.behavior = Behavior::GeyserPlume(Plume {
-        start_y: p.pos.y,
+        start_y: p.pos().y,
         height: height as f32,
         propulsion,
         spray,

@@ -285,8 +285,8 @@ fn rising(kind: Kind, pos: DVec3, aux: DVec3, uv: [f32; 4], rng: &mut JavaRandom
     p.friction = 0.96;
     p.vel = p.vel * f64::from(0.01f32) + aux;
     let mut jitter = || f64::from((rng.next_float() - rng.next_float()) * 0.05);
-    p.pos += DVec3::new(jitter(), jitter(), jitter());
-    p.prev = p.pos;
+    p.set_pos(p.pos() + DVec3::new(jitter(), jitter(), jitter()));
+    p.reset_prev();
     p.lifetime = (8.0 / (rng.next_double() * 0.8 + 0.2)) as i32 + 4;
     p
 }

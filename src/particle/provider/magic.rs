@@ -85,7 +85,7 @@ pub(super) fn effect(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
         _ => {}
     }
     p.behavior = Behavior::Spell { alpha: p.color[3] };
-    if ctx.close_to_scope(p.pos) {
+    if ctx.close_to_scope(p.pos()) {
         p.color[3] = 0.0;
     }
     Some(p)
@@ -95,7 +95,7 @@ pub(super) fn effect(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
 pub(super) fn enchant(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     let Cx { kind, pos, aux, .. } = *c;
     let mut p = Particle::at(kind, pos + aux, rng);
-    p.prev = pos + aux;
+    p.set_prev(pos + aux);
     p.look.uv = c.sprite(rng);
     p.vel = aux;
     p.quad_size = 0.1 * (rng.next_float() * 0.5 + 0.2);
@@ -460,8 +460,8 @@ pub(super) fn ominous_spawning(c: &Cx, rng: &mut JavaRandom) -> Option<Particle>
     let mut p = Particle::at(kind, pos, rng);
     p.look.uv = uv;
     p.vel = aux;
-    p.pos = pos + aux;
-    p.prev = p.pos;
+    p.set_pos(pos + aux);
+    p.reset_prev();
     p.quad_size = 0.1 * (rng.next_float() * 0.5 + 0.2);
     p.physics = false;
     p.free_move = true;

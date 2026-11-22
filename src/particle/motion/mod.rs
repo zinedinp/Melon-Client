@@ -17,11 +17,11 @@ pub fn portal(p: &mut Particle, start: DVec3) {
     let a = p.age as f32 / p.lifetime.max(1) as f32;
     let pos = 1.0 - (-a + a * a * 2.0);
     let pos = f64::from(pos);
-    p.pos = DVec3::new(
+    p.set_pos(DVec3::new(
         start.x + p.vel.x * pos,
         start.y + p.vel.y * pos + f64::from(1.0 - a),
         start.z + p.vel.z * pos,
-    );
+    ));
 }
 
 /// `ReversePortalParticle.tick`: speeds off along its velocity.
@@ -31,7 +31,7 @@ pub fn reverse_portal(p: &mut Particle) {
         return;
     }
     let speed = f64::from(p.age as f32 / p.lifetime.max(1) as f32);
-    p.pos += p.vel * speed;
+    p.set_pos(p.pos() + p.vel * speed);
 }
 
 /// `FlyTowardsPositionParticle.tick`.
@@ -45,11 +45,11 @@ pub fn fly_towards(p: &mut Particle, start: DVec3) {
     pp *= pp;
     pp *= pp;
     let pos = f64::from(pos);
-    p.pos = DVec3::new(
+    p.set_pos(DVec3::new(
         start.x + p.vel.x * pos,
         start.y + p.vel.y * pos - f64::from(pp * 1.2),
         start.z + p.vel.z * pos,
-    );
+    ));
 }
 
 /// `TrailParticle.tick`.
@@ -59,7 +59,7 @@ pub fn trail(p: &mut Particle, target: DVec3) {
         return;
     }
     let left = (p.lifetime - p.age).max(1);
-    p.pos = p.pos.lerp(target, 1.0 / f64::from(left));
+    p.set_pos(p.pos().lerp(target, 1.0 / f64::from(left)));
 }
 
 /// Where a vibration is going now.
@@ -92,27 +92,29 @@ pub fn vibration(p: &mut Particle, ctx: &TickCtx) {
     if p.age_out() {
         return;
     }
-    let Behavior::Vibration {
-        to,
-        rot,
-        prev_rot,
-        pitch,
-        prev_pitch,
-    } = &mut p.behavior
-    else {
+    let Behavior::Vibration { to, .. } = p.behavior else {
         return;
     };
-    let Some(target) = destination(*to, ctx) else {
+    let Some(target) = destination(to, ctx) else {
         p.removed = true;
         return;
     };
     let left = (p.lifetime - p.age).max(1);
-    p.pos = p.pos.lerp(target, 1.0 / f64::from(left));
-    let (new_rot, new_pitch) = heading(p.pos, target);
-    *prev_rot = *rot;
-    *rot = new_rot;
-    *prev_pitch = *pitch;
-    *pitch = new_pitch;
+    p.set_pos(p.pos().lerp(target, 1.0 / f64::from(left)));
+    let (new_rot, new_pitch) = heading(p.pos(), target);
+    if let Behavior::Vibration {
+        rot,
+        prev_rot,
+        pitch,
+        prev_pitch,
+        ..
+    } = &mut p.behavior
+    {
+        *prev_rot = *rot;
+        *rot = new_rot;
+        *prev_pitch = *pitch;
+        *pitch = new_pitch;
+    }
 }
 
 #[cfg(test)]
@@ -130,7 +132,7 @@ mod tests {
         for _ in 0..3 {
             trail(&mut p, target);
         }
-        assert!((p.pos.x - 4.0).abs() < 1e-9, "{:?}", p.pos);
+        assert!((p.pos().x - 4.0).abs() < 1e-9, "{:?}", p.pos());
     }
 
     #[test]
@@ -143,6 +145,6 @@ mod tests {
         for _ in 0..10 {
             portal(&mut p, start);
         }
-        assert!(p.pos.x.abs() < 1e-6 && (p.pos.y - 64.0).abs() < 1e-6);
+        assert!(p.pos().x.abs() < 1e-6 && (p.pos().y - 64.0).abs() < 1e-6);
     }
 }

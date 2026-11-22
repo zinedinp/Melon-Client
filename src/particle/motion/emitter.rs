@@ -29,12 +29,12 @@ pub fn tick(
     rng: &mut JavaRandom,
     out: &mut Vec<Spawn>,
 ) {
-    p.prev = p.pos;
+    p.reset_prev();
     match emitter {
         Emitter::ExplosionSeed => {
             for _ in 0..6 {
                 let mut spread = || (rng.next_double() - rng.next_double()) * 4.0;
-                let at = p.pos + DVec3::new(spread(), spread(), spread());
+                let at = p.pos() + DVec3::new(spread(), spread(), spread());
                 out.push(Spawn::new(
                     ParticleSpec::simple(Kind::Explosion),
                     at,
@@ -77,7 +77,7 @@ pub fn tick(
                 let scale = f64::from(scale);
                 for _ in 0..3 {
                     let mut spread = || (rng.next_double() - rng.next_double()) * scale;
-                    let at = p.pos + DVec3::new(spread(), spread(), spread());
+                    let at = p.pos() + DVec3::new(spread(), spread(), spread());
                     let progress = f64::from(p.age as f32 / p.lifetime as f32);
                     out.push(Spawn::simple(
                         Kind::Gust,
@@ -95,7 +95,7 @@ pub fn tick(
         Emitter::NoxiousGasCloud => {
             p.base_tick(ctx);
             if p.age % 2 == 0 {
-                let source = p.pos.floor().as_ivec3();
+                let source = p.pos().floor().as_ivec3();
                 let dir = DVec3::new(
                     f64::from(rng.next_float() - 0.5),
                     0.0,
@@ -121,7 +121,7 @@ pub fn tick(
             };
             if p.age % 2 == 0 {
                 for _ in 0..2 {
-                    out.push(Spawn::new(base(Kind::GeyserBase, 1.5), p.pos, aux));
+                    out.push(Spawn::new(base(Kind::GeyserBase, 1.5), p.pos(), aux));
                 }
             }
             let plume = ParticleSpec {
@@ -129,11 +129,11 @@ pub fn tick(
                 data: ParticleData::Geyser { water_blocks },
             };
             for _ in 0..water_blocks.max(0) + 2 {
-                out.push(Spawn::new(plume, p.pos, aux));
+                out.push(Spawn::new(plume, p.pos(), aux));
             }
             if p.age % 10 == 0 {
                 for _ in 0..20 {
-                    out.push(Spawn::new(base(Kind::GeyserPoof, 2.0), p.pos, aux));
+                    out.push(Spawn::new(base(Kind::GeyserPoof, 2.0), p.pos(), aux));
                 }
             }
         }
