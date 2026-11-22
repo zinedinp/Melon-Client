@@ -35,6 +35,18 @@ pub struct EffectState {
 }
 
 impl EffectState {
+    /// A new world's, with the vignette the last one left.
+    pub(super) fn with_vignette(vignette: f32) -> Self {
+        Self {
+            vignette,
+            ..Self::default()
+        }
+    }
+
+    pub(super) fn vignette(&self) -> f32 {
+        self.vignette
+    }
+
     /// How bright the sky counts, as of the last frame.
     pub fn sky_light_level(&self) -> f32 {
         self.sky_light_level

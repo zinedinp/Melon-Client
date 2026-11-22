@@ -65,7 +65,7 @@ impl BenchRun {
             config.render_distance,
             self.options
                 .fps_cap
-                .map_or_else(|| "keine".to_owned(), |fps| fps.to_string()),
+                .map_or_else(|| "none".to_owned(), |fps| fps.to_string()),
         );
     }
 

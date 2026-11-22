@@ -27,15 +27,16 @@ pub fn instance(args: &[String]) -> Option<String> {
 
 /// Reads the command line. A flag missing its address is an error.
 pub fn parse(args: &[String]) -> Result<Command, String> {
-    let value_of =
-        |flag: &str| -> Result<Option<String>, String> {
-            match args.iter().position(|a| a == flag) {
-                None => Ok(None),
-                Some(pos) => args.get(pos + 1).cloned().map(Some).ok_or_else(|| {
-                    format!("{flag} braucht eine Adresse, z.B. {flag} 127.0.0.1:25565")
-                }),
-            }
-        };
+    let value_of = |flag: &str| -> Result<Option<String>, String> {
+        match args.iter().position(|a| a == flag) {
+            None => Ok(None),
+            Some(pos) => args
+                .get(pos + 1)
+                .cloned()
+                .map(Some)
+                .ok_or_else(|| format!("{flag} needs an address, e.g. {flag} 127.0.0.1:25565")),
+        }
+    };
     if let Some(address) = value_of("--connect")? {
         return Ok(Command::Connect(address));
     }
@@ -44,7 +45,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             .get(file + 1)
             .cloned()
             .map(Command::Packets)
-            .ok_or_else(|| "--packets braucht eine Datei".to_owned());
+            .ok_or_else(|| "--packets needs a file".to_owned());
     }
     Ok(Command::Play(LaunchOptions {
         validation: args.iter().any(|a| a == "--vulkan-validation"),
@@ -64,7 +65,7 @@ fn bench_options(args: &[String]) -> Result<Option<crate::game::bench::BenchOpti
             Some(pos) => args
                 .get(pos + 1)
                 .map(Some)
-                .ok_or_else(|| format!("{flag} braucht einen Wert")),
+                .ok_or_else(|| format!("{flag} needs a value")),
         }
     };
     let fps_cap = match value_of("--fps-cap")? {
@@ -74,7 +75,7 @@ fn bench_options(args: &[String]) -> Result<Option<crate::game::bench::BenchOpti
                 .parse::<u32>()
                 .ok()
                 .filter(|&fps| fps > 0)
-                .ok_or_else(|| format!("--fps-cap braucht eine Zahl, nicht {value}"))?,
+                .ok_or_else(|| format!("--fps-cap needs a number above 0, not {value}"))?,
         ),
     };
     Ok(Some(crate::game::bench::BenchOptions {
@@ -86,13 +87,13 @@ fn bench_options(args: &[String]) -> Result<Option<crate::game::bench::BenchOpti
         scene: match value_of("--scene")? {
             None => crate::game::bench::Scene::Calm,
             Some(name) => crate::game::bench::Scene::parse(name)
-                .ok_or_else(|| format!("--scene braucht calm oder active, nicht {name}"))?,
+                .ok_or_else(|| format!("--scene needs calm or active, not {name}"))?,
         },
         out: value_of("--out")?.map(std::path::PathBuf::from),
         hold: match value_of("--hold")? {
             None => None,
             Some(name) => Some(crate::game::bench::Phase::parse_holdable(name).ok_or_else(
-                || format!("--hold braucht crowd, rise, turn, fly, sound oder idle, nicht {name}"),
+                || format!("--hold needs crowd, rise, turn, fly, sound or idle, not {name}"),
             )?),
         },
     }))

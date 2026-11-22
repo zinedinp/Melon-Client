@@ -121,8 +121,8 @@ struct RunningState {
     /// Uploaded on the first join and kept, since the renderer can't free all of it.
     world_resources: Option<WorldResources>,
     world: Option<InWorld>,
-    /// `Camera.fovModifier`: outlives the worlds, as vanilla's camera does.
-    fov: crate::game::camera::FovState,
+    /// What outlives the worlds, as vanilla's `Camera` and `Hud` do.
+    lasting: crate::game::Lasting,
     input: InputState,
     last_frame: Instant,
     /// When the framerate limit lets the next frame start.
@@ -217,7 +217,7 @@ impl App {
             background,
             world_resources: None,
             world: None,
-            fov: Default::default(),
+            lasting: Default::default(),
             input: InputState::new(),
             last_frame: Instant::now(),
             next_frame: None,
@@ -358,7 +358,7 @@ impl RunningState {
         if let Some((info, events)) = received.rejoined.take()
             && let Some(world) = self.world.take()
         {
-            self.fov = world.fov_state();
+            self.lasting = world.lasting();
             let joined = world.rejoin(&mut self.renderer, *info, events);
             self.enter_world(joined);
         }
@@ -398,7 +398,7 @@ impl RunningState {
                 }
             }
         }
-        let mut world = InWorld::enter(joined, self.env.assets.game_dir(), self.fov);
+        let mut world = InWorld::enter(joined, self.env.assets.game_dir(), self.lasting);
         world.set_chat_settings(&self.env.config.chat, &self.env.gui_assets.font);
         world.set_smooth_lighting(self.env.config.smooth_lighting);
         world.set_chunk_builder(self.env.config.chunk_builder);
@@ -426,7 +426,7 @@ impl RunningState {
         };
         crate::assets::packs::server::end();
         crate::dialog::connection::end();
-        self.fov = world.fov_state();
+        self.lasting = world.lasting();
         // `Minecraft.disconnect` -> `updateLevelInEngines(null)`: silence.
         self.env.audio.stop_all();
         world.release(&mut self.renderer);

@@ -288,10 +288,29 @@ pub enum LoadingReason {
     Other,
 }
 
+/// What vanilla's `Camera` and `Hud` carry from one world into the next,
+/// since they outlive worlds. The app keeps it between them.
+#[derive(Clone, Copy, Debug)]
+pub struct Lasting {
+    pub fov: camera::FovState,
+    /// `Hud.vignetteBrightness`: `1.0` at game start, so the first world
+    /// fades in from a dark vignette.
+    pub vignette: f32,
+}
+
+impl Default for Lasting {
+    fn default() -> Self {
+        Self {
+            fov: camera::FovState::default(),
+            vignette: 1.0,
+        }
+    }
+}
+
 impl InWorld {
     /// `game_dir` holds `hotbar.nbt` and `command_history.txt`.
-    /// `fov` is what the last world's camera left (`Camera` outlives worlds).
-    pub fn enter(mut joined: Joined, game_dir: &Path, fov: camera::FovState) -> Self {
+    /// `lasting` is what the last world left.
+    pub fn enter(mut joined: Joined, game_dir: &Path, lasting: Lasting) -> Self {
         let (debug_view, debug_visible) = debug::view::DebugView::load(game_dir);
         let mut debug =
             DebugOverlay::new(crate::gui::hud::debug_entries::DebugEntries::load(game_dir));
@@ -342,12 +361,12 @@ impl InWorld {
             fog: Default::default(),
             sky: Default::default(),
             body: Default::default(),
-            fov,
+            fov: lasting.fov,
             interaction: Default::default(),
             audio: Default::default(),
             loading: Some(loading::LevelLoad::new()),
             level_became_ready: false,
-            effects: effects::EffectState::default(),
+            effects: effects::EffectState::with_vignette(lasting.vignette),
             effects_frame: Default::default(),
             player,
             inventory: Inventory::default(),
@@ -410,6 +429,14 @@ impl InWorld {
     }
 
     /// Whether this is a singleplayer world on the integrated server.
+    /// What the next world starts from.
+    pub fn lasting(&self) -> Lasting {
+        Lasting {
+            fov: self.fov,
+            vignette: self.effects.vignette(),
+        }
+    }
+
     pub fn is_integrated(&self) -> bool {
         self.joined.is_integrated()
     }

@@ -191,7 +191,7 @@ const FOV_MODIFIER_RANGE: (f32, f32) = (0.1, 1.5);
 /// Vanilla's `Camera` lives as long as the game: the modifier starts at 0
 /// (Java's default) and carries over from one world into the next, so a
 /// sprint's wider view is still there on the next world's first tick. The
-/// app keeps it between worlds ([`InWorld::fov_state`]).
+/// app keeps it between worlds ([`super::Lasting`]).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct FovState {
     modifier: f32,
@@ -234,11 +234,6 @@ impl InWorld {
     pub(super) fn fov_with_effects(&self, fov: f32, partial: f32) -> f32 {
         let modifier = self.fov.old + (self.fov.modifier - self.fov.old) * partial;
         fov * modifier.max(FOV_MODIFIER_RANGE.0)
-    }
-
-    /// The smoothed FOV modifier, for the next world to start from.
-    pub fn fov_state(&self) -> FovState {
-        self.fov
     }
 
     /// `GameRenderer.bobHurt`.
