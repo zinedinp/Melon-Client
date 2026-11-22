@@ -2,6 +2,7 @@
 
 use super::super::humanoid::{self, HumanoidParts};
 use super::super::model::{LayerDefinition, ModelPose};
+use super::{LayerSpec, ModelId as M};
 use crate::world::model_part::{Cube, Pose};
 
 /// Where `createMesh(NONE, -14)` stands the body.
@@ -97,6 +98,13 @@ pub fn setup_anim(parts: &HumanoidParts, pose: &mut ModelPose, enderman: Enderma
         pose[parts.head].pose.offset.y -= 5.0;
         pose[parts.hat].pose.offset.y += 5.0;
     }
+}
+
+/// `EndermanRenderer` and `EnderEyesLayer`.
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Enderman, "minecraft:entity/enderman/enderman"));
+    out.push(plain(M::Enderman, "minecraft:entity/enderman/enderman_eyes").glowing());
 }
 
 #[cfg(test)]

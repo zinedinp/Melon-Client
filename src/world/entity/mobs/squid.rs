@@ -2,6 +2,7 @@
 
 use glam::DVec3;
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::model_part::{Cube, Pose};
@@ -180,6 +181,25 @@ impl Swim {
             z_degrees: self.old_z_body + (self.z_body - self.old_z_body) * partial,
             baby,
         }
+    }
+}
+
+/// `SquidRenderer` and `GlowSquidRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    match entity.kind {
+        EntityKind::Squid => out.push(LayerSpec::aged(
+            baby,
+            (M::Squid, "minecraft:entity/squid/squid"),
+            (M::SquidBaby, "minecraft:entity/squid/squid_baby"),
+        )),
+        EntityKind::GlowSquid => out.push(LayerSpec::aged(
+            baby,
+            (M::Squid, "minecraft:entity/squid/glow_squid"),
+            (M::SquidBaby, "minecraft:entity/squid/glow_squid_baby"),
+        )),
+        _ => {}
     }
 }
 

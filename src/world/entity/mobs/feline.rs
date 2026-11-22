@@ -1,5 +1,6 @@
 //! `AdultFelineModel` and `BabyFelineModel`: cats and ocelots, which
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, dye_tint};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -339,6 +340,64 @@ impl Amounts {
             lie_down_tail: mix(before.lie_down_tail, now.lie_down_tail),
             relax_one: mix(before.relax_one, now.relax_one),
         }
+    }
+}
+
+/// `CatVariant` (registry order) by age.
+const TEXTURES: [[&str; 2]; 11] = {
+    macro_rules! cats {
+        ($($v:literal),*) => { [$([
+            concat!("minecraft:entity/cat/cat_", $v),
+            concat!("minecraft:entity/cat/cat_", $v, "_baby"),
+        ]),*] };
+    }
+    cats!(
+        "all_black",
+        "black",
+        "british_shorthair",
+        "calico",
+        "jellie",
+        "persian",
+        "ragdoll",
+        "red",
+        "siamese",
+        "tabby",
+        "white"
+    )
+};
+
+/// `CatRenderer` (with `CatCollarLayer`) and `OcelotRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Cat => {
+            let variant = usize::try_from(a.cat_variant)
+                .ok()
+                .filter(|&v| v < TEXTURES.len())
+                .unwrap_or(9);
+            out.push(plain(
+                if baby { M::FelineBaby } else { M::Feline },
+                TEXTURES[variant][usize::from(baby)],
+            ));
+            if a.tame() {
+                out.push(
+                    LayerSpec::aged(
+                        baby,
+                        (M::FelineCollar, "minecraft:entity/cat/cat_collar"),
+                        (M::FelineBabyCollar, "minecraft:entity/cat/cat_collar_baby"),
+                    )
+                    .with_tint(dye_tint(a.collar_color())),
+                );
+            }
+        }
+        EntityKind::Ocelot => out.push(LayerSpec::aged(
+            baby,
+            (M::Feline, "minecraft:entity/cat/ocelot"),
+            (M::FelineBaby, "minecraft:entity/cat/ocelot_baby"),
+        )),
+        _ => {}
     }
 }
 

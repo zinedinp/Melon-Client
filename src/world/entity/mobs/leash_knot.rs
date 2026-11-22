@@ -1,5 +1,6 @@
 //! `LeashKnotModel`: the knot a lead is tied to a fence with. It doesn't
 
+use super::{LayerSpec, ModelId as M};
 use crate::world::entity::model::{LayerDefinition, PartDefinition};
 use crate::world::model_part::{Cube, Pose};
 
@@ -13,4 +14,10 @@ pub fn layer() -> LayerDefinition {
         Pose::ZERO,
     );
     LayerDefinition::new(root, 32.0, 32.0)
+}
+
+/// `LeashKnotRenderer`.
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(M::LeashKnot, TEXTURE));
 }

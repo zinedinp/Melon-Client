@@ -1,5 +1,6 @@
 //! `FrogModel`: a keyframe-driven hopper. Walk and swim follow the walk
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::animations::frog as anim;
 use crate::world::entity::keyframe::{AnimationDefinition, KeyframeAnimation};
 use crate::world::entity::living::LivingRenderState;
@@ -152,6 +153,13 @@ pub fn setup_anim(
         walk.apply_walk(pose, living.walk_position, living.walk_speed, 1.5, 2.5);
     }
     pose[parts.croaking_body].visible = croaking;
+}
+
+/// `FrogRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Frog, texture(a.variant)));
 }
 
 #[cfg(test)]

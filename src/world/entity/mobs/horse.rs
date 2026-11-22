@@ -1,5 +1,6 @@
 //! `AbstractEquineModel`: horses, donkeys, mules and the undead horses,
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI, QUARTER_PI, SIXTH_PI, THIRD_PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -463,6 +464,84 @@ impl Amounts {
             stand: mix(before.stand, now.stand),
             mouth: mix(before.mouth, now.mouth),
         }
+    }
+}
+
+/// `Variant` by id, adult and foal.
+const COATS: [[&str; 2]; 7] = {
+    macro_rules! coats {
+        ($($v:literal),*) => { [$([
+            concat!("minecraft:entity/horse/horse_", $v),
+            concat!("minecraft:entity/horse/horse_", $v, "_baby"),
+        ]),*] };
+    }
+    coats!(
+        "white",
+        "creamy",
+        "chestnut",
+        "brown",
+        "black",
+        "gray",
+        "darkbrown"
+    )
+};
+
+/// `Markings` after `NONE`, adult and foal.
+const MARKINGS: [[&str; 2]; 4] = {
+    macro_rules! markings {
+        ($($v:literal),*) => { [$([
+            concat!("minecraft:entity/horse/horse_markings_", $v),
+            concat!("minecraft:entity/horse/horse_markings_", $v, "_baby"),
+        ]),*] };
+    }
+    markings!("white", "whitefield", "whitedots", "blackdots")
+};
+
+/// `HorseRenderer` (coat and `HorseMarkingLayer`), `DonkeyRenderer` and
+/// `UndeadHorseRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Horse => {
+            let colour = usize::try_from(a.horse_variant & 0xFF).unwrap_or(0) % COATS.len();
+            let markings = usize::try_from((a.horse_variant >> 8) & 0xFF).unwrap_or(0) % 5;
+            out.push(plain(
+                if baby { M::HorseBaby } else { M::Horse },
+                COATS[colour][usize::from(baby)],
+            ));
+            if markings > 0 {
+                out.push(
+                    plain(
+                        if baby { M::HorseBaby } else { M::Horse },
+                        MARKINGS[markings - 1][usize::from(baby)],
+                    )
+                    .translucent(),
+                );
+            }
+        }
+        EntityKind::Donkey => out.push(LayerSpec::aged(
+            baby,
+            (M::Donkey, "minecraft:entity/horse/donkey"),
+            (M::DonkeyBaby, "minecraft:entity/horse/donkey_baby"),
+        )),
+        EntityKind::Mule => out.push(LayerSpec::aged(
+            baby,
+            (M::Donkey, "minecraft:entity/horse/mule"),
+            (M::DonkeyBaby, "minecraft:entity/horse/mule_baby"),
+        )),
+        EntityKind::SkeletonHorse => out.push(LayerSpec::aged(
+            baby,
+            (M::Horse, "minecraft:entity/horse/horse_skeleton"),
+            (M::HorseBaby, "minecraft:entity/horse/horse_skeleton_baby"),
+        )),
+        EntityKind::ZombieHorse => out.push(LayerSpec::aged(
+            baby,
+            (M::Horse, "minecraft:entity/horse/horse_zombie"),
+            (M::HorseBaby, "minecraft:entity/horse/horse_zombie_baby"),
+        )),
+        _ => {}
     }
 }
 

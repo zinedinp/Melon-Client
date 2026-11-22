@@ -1,5 +1,6 @@
 //! `BreezeModel`: idle, shoot, jump, inhale and slide are keyframe
 
+use super::{LayerSpec, ModelId as M};
 use crate::math::angle::{EIGHTH_PI, PI, THIRD_PI};
 use crate::world::entity::animations::breeze as anim;
 use crate::world::entity::keyframe::{AnimationDefinition, AnimationState};
@@ -172,6 +173,14 @@ pub fn tick_anim(anim: &mut [AnimationState], tick: i32, pose: i32) {
         }
     }
     anim[IDLE].start_if_stopped(tick);
+}
+
+/// `BreezeRenderer`, `BreezeWindLayer` and `BreezeEyesLayer`.
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Breeze, texture()));
+    out.push(plain(M::BreezeWind, wind_texture()));
+    out.push(plain(M::Breeze, eyes_texture()).glowing());
 }
 
 #[cfg(test)]

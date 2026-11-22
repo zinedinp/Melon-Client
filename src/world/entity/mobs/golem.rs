@@ -1,5 +1,6 @@
 //! `IronGolemModel`: a broad body on long arms and short legs.
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::entity::quadruped::look;
@@ -14,12 +15,10 @@ pub const ATTACK_TICKS: i32 = 10;
 /// `IronGolem.OFFER_FLOWER_TICKS`.
 pub const OFFER_FLOWER_TICKS: i32 = 400;
 
-/// `IronGolem`'s `MAX_HEALTH` attribute.
-pub const MAX_HEALTH: f32 = 100.0;
-
 /// `Crackiness.GOLEM.byFraction(health / maxHealth)`: the cracks of a
-pub fn crackiness(health: f32) -> Option<&'static str> {
-    let fraction = health / MAX_HEALTH;
+/// hurt golem, by its synced `MAX_HEALTH` (100 unless changed).
+pub fn crackiness(health: f32, max_health: f32) -> Option<&'static str> {
+    let fraction = health / max_health;
     if fraction < 0.25 {
         Some("minecraft:entity/iron_golem/iron_golem_crackiness_high")
     } else if fraction < 0.5 {
@@ -153,6 +152,19 @@ pub fn setup_anim(
     pose[parts.left_leg].pose.rotation.x = 1.5 * wave * speed;
 }
 
+/// `IronGolemRenderer` and `IronGolemCrackinessLayer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let plain = LayerSpec::plain;
+    out.push(plain(
+        M::IronGolem,
+        "minecraft:entity/iron_golem/iron_golem",
+    ));
+    if let Some(cracks) = crackiness(a.health, entity.max_health) {
+        out.push(plain(M::IronGolem, cracks));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -166,12 +178,12 @@ mod tests {
 
     #[test]
     fn cracks_show_as_the_golem_loses_health() {
-        assert_eq!(crackiness(100.0), None);
-        assert_eq!(crackiness(75.0), None);
-        assert!(crackiness(74.0).unwrap().ends_with("low"));
-        assert!(crackiness(49.0).unwrap().ends_with("medium"));
-        assert!(crackiness(24.0).unwrap().ends_with("high"));
-        assert!(crackiness(0.0).unwrap().ends_with("high"));
+        assert_eq!(crackiness(100.0, 100.0), None);
+        assert_eq!(crackiness(75.0, 100.0), None);
+        assert!(crackiness(74.0, 100.0).unwrap().ends_with("low"));
+        assert!(crackiness(49.0, 100.0).unwrap().ends_with("medium"));
+        assert!(crackiness(24.0, 100.0).unwrap().ends_with("high"));
+        assert!(crackiness(0.0, 100.0).unwrap().ends_with("high"));
     }
 
     #[test]

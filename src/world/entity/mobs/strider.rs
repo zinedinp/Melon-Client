@@ -1,5 +1,6 @@
 //! `AdultStriderModel` and `BabyStriderModel`: a two-legged walker whose
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -234,6 +235,17 @@ fn animate_bristle(pose: &mut ModelPose, bristles: [PartId; 3], flow: f32, age: 
     add(&mut pose[bristles[0]].pose, 0.1 * angle::sin(age * 0.4));
     add(&mut pose[bristles[1]].pose, 0.1 * angle::sin(age * 0.2));
     add(&mut pose[bristles[2]].pose, 0.05 * angle::sin(age * -0.4));
+}
+
+/// `StriderRenderer`: warm or cold.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    out.push(LayerSpec::aged(
+        baby,
+        (M::Strider, texture(a.strider_cold, false)),
+        (M::StriderBaby, texture(a.strider_cold, true)),
+    ));
 }
 
 #[cfg(test)]

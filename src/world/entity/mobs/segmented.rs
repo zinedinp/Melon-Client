@@ -1,5 +1,6 @@
 //! `EndermiteModel` and `SilverfishModel`: a row of boxes that wriggle
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -197,5 +198,20 @@ pub fn setup_anim(parts: &SegmentedParts, pose: &mut ModelPose, state: &LivingRe
         if layer.sways {
             part.offset.x = xs[layer.at];
         }
+    }
+}
+
+/// `EndermiteRenderer` and `SilverfishRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Endermite => {
+            out.push(plain(M::Endermite, "minecraft:entity/endermite/endermite"))
+        }
+        EntityKind::Silverfish => out.push(plain(
+            M::Silverfish,
+            "minecraft:entity/silverfish/silverfish",
+        )),
+        _ => {}
     }
 }

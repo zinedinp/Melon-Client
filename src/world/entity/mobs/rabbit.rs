@@ -1,8 +1,10 @@
 //! `AdultRabbitModel` and `BabyRabbitModel`: hopping and the idle head tilt
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::animations::{baby_rabbit, rabbit};
 use crate::world::entity::keyframe::{AnimationDefinition, AnimationState};
 use crate::world::entity::living::LivingRenderState;
+use crate::world::entity::magic_name::Magic;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::model_part::{Cube, Pose};
 
@@ -306,6 +308,22 @@ impl RabbitClock {
             self.jump_duration = 0;
         }
     }
+}
+
+/// `RabbitRenderer`: the coat, or Toast's.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let coat = if a.magic == Magic::Toast {
+        TOAST
+    } else {
+        a.rabbit_variant
+    };
+    out.push(LayerSpec::aged(
+        baby,
+        (M::Rabbit, texture(coat, false)),
+        (M::RabbitBaby, texture(coat, true)),
+    ));
 }
 
 #[cfg(test)]

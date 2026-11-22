@@ -1,5 +1,6 @@
 //! `AdultArmadilloModel` and `BabyArmadilloModel`: walk is a keyframe
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{EIGHTH_PI, THIRD_PI};
 use crate::world::entity::animations::{armadillo as adult_anim, baby_armadillo as baby_anim};
 use crate::world::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
@@ -248,6 +249,20 @@ pub fn tick_anim(anim: &mut [AnimationState], tick: i32, state: i32, ticks_in_st
         }
         _ => {}
     }
+}
+
+/// `ArmadilloRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    out.push(LayerSpec::aged(
+        baby,
+        (M::Armadillo, "minecraft:entity/armadillo/armadillo"),
+        (
+            M::ArmadilloBaby,
+            "minecraft:entity/armadillo/armadillo_baby",
+        ),
+    ));
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 //! `ShulkerModel`: a lid and a base that hide a head. The lid lifts by the
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -131,6 +132,13 @@ pub fn setup_anim(
     let head = &mut pose[parts.head].pose;
     head.rotation.x = state.x_rot.to_radians();
     head.rotation.y = (state.y_rot - 180.0).to_radians();
+}
+
+/// `ShulkerRenderer`: the colour's texture.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Shulker, texture(i32::from(a.shulker_color))));
 }
 
 #[cfg(test)]

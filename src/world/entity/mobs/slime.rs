@@ -1,5 +1,6 @@
 //! `SlimeModel` and `MagmaCubeModel`: the cube mobs. A slime is a small
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::model_part::{Cube, Pose};
 
@@ -105,6 +106,19 @@ pub fn setup_anim(parts: &MagmaParts, pose: &mut ModelPose, squish: f32) {
     let squish = squish.max(0.0);
     for (i, &cube) in parts.cubes.iter().enumerate() {
         pose[cube].pose.offset.y = -(4.0 - i as f32) * squish * 1.7;
+    }
+}
+
+/// `SlimeRenderer` (with `SlimeOuterLayer`) and `MagmaCubeRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Slime => {
+            out.push(plain(M::SlimeInner, "minecraft:entity/slime/slime"));
+            out.push(plain(M::SlimeOuter, "minecraft:entity/slime/slime").translucent());
+        }
+        EntityKind::MagmaCube => out.push(plain(M::MagmaCube, "minecraft:entity/slime/magmacube")),
+        _ => {}
     }
 }
 

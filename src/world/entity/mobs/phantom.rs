@@ -1,5 +1,6 @@
 //! `PhantomModel`: a body with a two-part tail and two two-part wings.
 
+use super::{LayerSpec, ModelId as M};
 use crate::math::angle::{self, DEG_TO_RAD};
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::model_part::{Cube, Pose};
@@ -97,6 +98,13 @@ pub fn setup_anim(parts: &PhantomParts, pose: &mut ModelPose, flap_time: f32) {
     let tail = -(5.0 + angle::cos(anim * 2.0) * 5.0) * DEG_TO_RAD;
     pose[parts.tail_base].pose.rotation.x = tail;
     pose[parts.tail_tip].pose.rotation.x = tail;
+}
+
+/// `PhantomRenderer` and `PhantomEyesLayer`.
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Phantom, TEXTURE));
+    out.push(plain(M::Phantom, EYES).glowing());
 }
 
 #[cfg(test)]

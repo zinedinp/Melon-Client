@@ -1,5 +1,6 @@
 //! `AllayModel`: a small winged body that bobs while idle, leans into a
 
+use super::{LayerSpec, ModelId as M};
 use crate::math::angle::{self, DEG_TO_RAD, PI, QUARTER_PI, THIRD_PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -139,6 +140,12 @@ pub fn setup_anim(
     pose[parts.right_arm].pose.rotation.z = arm_z;
     pose[parts.right_arm].pose.rotation.y = 0.27925268 * holding;
     pose[parts.left_arm].pose.rotation.y = -0.27925268 * holding;
+}
+
+/// `AllayRenderer`.
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Allay, TEXTURE));
 }
 
 #[cfg(test)]

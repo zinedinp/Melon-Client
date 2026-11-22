@@ -1,5 +1,6 @@
 //! `WolfModel` (`AdultWolfModel`, `BabyWolfModel`): a quadruped with a
 
+use super::{ClientEntity, LayerSpec, ModelId as M, dye_tint};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -240,6 +241,69 @@ fn sit(parts: &WolfParts, pose: &mut ModelPose, s: f32) {
             upper.rotation.y = 0.0;
         }
         None => pose[parts.body].pose.rotation.x -= PI / 2.0,
+    }
+}
+
+/// A wolf's textures by age and state: wild, tame, angry.
+macro_rules! wolf_set {
+    ($base:literal) => {
+        [
+            [
+                concat!("minecraft:entity/wolf/", $base),
+                concat!("minecraft:entity/wolf/", $base, "_tame"),
+                concat!("minecraft:entity/wolf/", $base, "_angry"),
+            ],
+            [
+                concat!("minecraft:entity/wolf/", $base, "_baby"),
+                concat!("minecraft:entity/wolf/", $base, "_tame_baby"),
+                concat!("minecraft:entity/wolf/", $base, "_angry_baby"),
+            ],
+        ]
+    };
+}
+
+/// `WolfVariant` in registry order: ashen, black, chestnut, pale (the
+/// default, plain `wolf`), rusty, snowy, spotted, striped, woods.
+const TEXTURES: [[[&str; 3]; 2]; 9] = [
+    wolf_set!("wolf_ashen"),
+    wolf_set!("wolf_black"),
+    wolf_set!("wolf_chestnut"),
+    wolf_set!("wolf"),
+    wolf_set!("wolf_rusty"),
+    wolf_set!("wolf_snowy"),
+    wolf_set!("wolf_spotted"),
+    wolf_set!("wolf_striped"),
+    wolf_set!("wolf_woods"),
+];
+
+/// `WolfRenderer`: the variant's wild, tame or angry body and
+/// `WolfCollarLayer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    let variant = usize::try_from(a.wolf_variant)
+        .ok()
+        .filter(|&v| v < TEXTURES.len())
+        .unwrap_or(3);
+    let state = if a.tame() {
+        1
+    } else if a.angry {
+        2
+    } else {
+        0
+    };
+    let tints = TEXTURES[variant][usize::from(baby)][state];
+    out.push(plain(if baby { M::WolfBaby } else { M::Wolf }, tints));
+    if a.tame() {
+        out.push(
+            LayerSpec::aged(
+                baby,
+                (M::Wolf, "minecraft:entity/wolf/wolf_collar"),
+                (M::WolfBaby, "minecraft:entity/wolf/wolf_collar_baby"),
+            )
+            .with_tint(dye_tint(a.collar_color())),
+        );
     }
 }
 

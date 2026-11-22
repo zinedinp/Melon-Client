@@ -7,6 +7,7 @@ use glam::Vec3;
 use pumpkin_data::Block;
 
 use super::tnt;
+use super::{LayerSpec, ModelId as M};
 use crate::network::play::game::EquipmentSlot;
 use crate::world::entity::model::{LayerDefinition, PartDefinition};
 use crate::world::entity::tracker::ClientEntity;
@@ -113,6 +114,36 @@ pub fn placement(
 /// `SulfurCubeInnerLayer`: the core flashes white while the fuse is lit.
 pub fn core_flashes(fuse: f32) -> bool {
     fuse > 0.0 && tnt::is_lit(fuse)
+}
+
+/// `SulfurCubeRenderer`: the core (unless it holds a block) and the shell.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    let fuse = fuse_remaining(entity.fuse_ticks, 0.0);
+    let holds_block = swallowed_block(entity).is_some();
+    if !holds_block && !a.invisible() {
+        let inner = if baby {
+            plain(M::SulfurCubeSmallInner, INNER_SMALL)
+        } else {
+            plain(M::SulfurCubeInner, INNER)
+        }
+        .translucent();
+        out.push(if core_flashes(fuse) {
+            inner.with_overlay(-1.0)
+        } else {
+            inner
+        });
+    }
+    out.push(
+        if baby {
+            plain(M::SulfurCubeSmallOuter, OUTER_SMALL)
+        } else {
+            plain(M::SulfurCubeOuter, OUTER)
+        }
+        .translucent(),
+    );
 }
 
 #[cfg(test)]

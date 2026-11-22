@@ -1,5 +1,6 @@
 //! `WitherBossModel`: three heads on a ribcage and a short tail. The armor
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -22,6 +23,11 @@ pub fn texture(invulnerable_ticks: f32) -> &'static str {
     } else {
         TEXTURE
     }
+}
+
+/// `WitherBoss.isPowered`: at half health or less it wears its armor.
+pub fn powered(health: f32, max_health: f32) -> bool {
+    health <= max_health / 2.0
 }
 
 pub fn armor_texture() -> &'static str {
@@ -124,6 +130,18 @@ pub fn setup_anim(
         tail.offset.y = 6.9 + angle::cos(rib_x) * 10.0;
         tail.offset.z = -0.5 + angle::sin(rib_x) * 10.0;
         tail.rotation.x = (TAIL_X_ROT_OFFSET + 0.1 * anim) * PI;
+    }
+}
+
+/// `WitherBossRenderer` and `WitherArmorLayer`. The armor is an
+/// `EnergySwirlLayer`, which scrolls and blends additively; Melon draws it
+/// as a plain layer.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Wither, texture(a.wither_invul as f32)));
+    if powered(a.health, entity.max_health) {
+        out.push(plain(M::WitherArmor, armor_texture()));
     }
 }
 

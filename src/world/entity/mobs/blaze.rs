@@ -1,5 +1,6 @@
 //! `BlazeModel`: a head and twelve rods circling it in three rings.
 
+use super::{LayerSpec, ModelId as M};
 use crate::math::angle;
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -95,6 +96,12 @@ pub fn setup_anim(parts: &BlazeParts, pose: &mut ModelPose, state: &LivingRender
         }
     }
     look(&mut pose[parts.head].pose, state);
+}
+
+/// `BlazeRenderer`.
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Blaze, "minecraft:entity/blaze/blaze"));
 }
 
 #[cfg(test)]

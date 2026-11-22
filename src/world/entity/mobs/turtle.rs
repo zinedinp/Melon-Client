@@ -2,6 +2,7 @@
 
 use crate::math::angle::HALF_PI as FRAC_PI_2;
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle;
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -160,6 +161,17 @@ pub fn setup_anim(
             root.pose.offset.y -= 1.0;
         }
     }
+}
+
+/// `TurtleRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    out.push(LayerSpec::aged(
+        baby,
+        (M::Turtle, "minecraft:entity/turtle/turtle"),
+        (M::TurtleBaby, "minecraft:entity/turtle/turtle_baby"),
+    ));
 }
 
 #[cfg(test)]

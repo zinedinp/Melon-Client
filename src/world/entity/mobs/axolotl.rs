@@ -2,6 +2,7 @@
 
 use crate::math::angle::{HALF_PI as FRAC_PI_2, PI, QUARTER_PI as FRAC_PI_4};
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle;
 use crate::world::entity::animations::baby_axolotl as baby_anim;
 use crate::world::entity::keyframe::AnimationDefinition;
@@ -462,6 +463,18 @@ fn mirror_legs(p: &AxolotlParts, pose: &mut ModelPose, factor: f32) {
         -lf.y * factor,
         -lf.z * factor,
     );
+}
+
+/// `AxolotlRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    let texture = texture(a.axolotl_variant, baby);
+    out.push(plain(
+        if baby { M::AxolotlBaby } else { M::Axolotl },
+        texture,
+    ));
 }
 
 #[cfg(test)]

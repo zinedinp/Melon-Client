@@ -1,5 +1,7 @@
 //! `NautilusModel`: a shell over a body with a mouth of three parts. It
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
+use crate::network::play::game::EquipmentSlot;
 use crate::world::entity::animations::nautilus::SWIMMING;
 use crate::world::entity::keyframe::{AnimationDefinition, KeyframeAnimation};
 use crate::world::entity::living::LivingRenderState;
@@ -210,6 +212,37 @@ pub fn setup_anim(
         2.0,
         3.0,
     );
+}
+
+/// `NautilusRenderer` and `ZombieNautilusRenderer` (whose warm variant
+/// grows corals).
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Nautilus => out.push(LayerSpec::aged(
+            baby,
+            (M::Nautilus, "minecraft:entity/nautilus/nautilus"),
+            (M::NautilusBaby, "minecraft:entity/nautilus/nautilus_baby"),
+        )),
+        EntityKind::ZombieNautilus => {
+            use pumpkin_data::zombie_nautilus_variant::ZombieNautilusVariant;
+            let variant = u8::try_from(a.thing.variant)
+                .ok()
+                .and_then(ZombieNautilusVariant::from_id)
+                .unwrap_or_default();
+            // `ZombieNautilusCoralModel`: the corals hide under armor.
+            let armored = !entity.equipment.get(EquipmentSlot::Body).is_empty();
+            let model = if variant.model() == Some("warm") && !armored {
+                M::ZombieNautilusCoral
+            } else {
+                M::Nautilus
+            };
+            out.push(plain(model, variant.asset_id()));
+        }
+        _ => {}
+    }
 }
 
 #[cfg(test)]

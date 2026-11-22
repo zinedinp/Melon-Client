@@ -1,5 +1,6 @@
 //! `SnowGolemModel`: three balls of snow, the head turning with the look
 
+use super::{LayerSpec, ModelId as M};
 use crate::math::angle;
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -78,6 +79,18 @@ pub fn setup_anim(parts: &SnowGolemParts, pose: &mut ModelPose, state: &LivingRe
     right.rotation.y = turn + crate::math::angle::PI;
     right.offset.x = -cos * 5.0;
     right.offset.z = sin * 5.0;
+}
+
+/// `SnowGolemHeadLayer`: the block on the head, if it has its pumpkin.
+pub const HEAD: &str = "minecraft:block/carved_pumpkin";
+
+/// `SnowGolemRenderer` (the pumpkin is [`HEAD`], a block).
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(
+        M::SnowGolem,
+        "minecraft:entity/snow_golem/snow_golem",
+    ));
 }
 
 #[cfg(test)]

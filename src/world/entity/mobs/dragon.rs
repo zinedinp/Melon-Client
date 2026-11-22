@@ -1,5 +1,6 @@
 //! `EnderDragonModel`: a head, five neck bones, a body with wings and
 
+use super::{LayerSpec, ModelId as M};
 use crate::math::angle::{self, DEG_TO_RAD, PI, wrap_degrees};
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::model_part::{Cube, Pose};
@@ -414,6 +415,13 @@ pub fn setup_anim(parts: &DragonParts, pose: &mut ModelPose, dragon: DragonPose)
         zz -= cy * cx * 10.0;
         xx -= sy * cx * 10.0;
     }
+}
+
+/// `EnderDragonRenderer`: the body and its eyes.
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Dragon, TEXTURE));
+    out.push(plain(M::Dragon, EYES_TEXTURE).glowing());
 }
 
 #[cfg(test)]

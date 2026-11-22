@@ -1,5 +1,6 @@
 //! `VexModel`: a small humanoid (head, body, two arms) with a pair of
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, DEG_TO_RAD, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -135,6 +136,13 @@ pub fn setup_anim(parts: &VexParts, pose: &mut ModelPose, state: &LivingRenderSt
     pose[parts.left_wing].pose.rotation.z = -0.47123888;
     pose[parts.right_wing].pose.rotation.x = 0.47123888;
     pose[parts.right_wing].pose.rotation.z = 0.47123888;
+}
+
+/// `VexRenderer`: charging or not.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Vex, texture(a.charging)));
 }
 
 #[cfg(test)]

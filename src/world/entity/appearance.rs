@@ -8,7 +8,7 @@ use pumpkin_data::tracked_data::{
     illusioner, living_entity, llama, mob, mooshroom, mule, panda, parrot, phantom, pig, piglin,
     pillager, polar_bear, primed_tnt, pufferfish, rabbit, salmon, sheep, shulker, skeleton, slime,
     sniffer, snow_golem, strider, trader_llama, tropical_fish, turtle, vex, villager, vindicator,
-    wither, wolf, zombie, zombie_villager,
+    warden, wither, wolf, zombie, zombie_villager,
 };
 use pumpkin_data::tracked_data::{
     abstract_arrow, abstract_minecart, arrow, cushion, end_crystal, experience_orb,
@@ -198,6 +198,11 @@ pub struct Appearance {
     pub creaking_active: bool,
     /// `CopperGolem.COPPER_GOLEM_STATE`.
     pub copper_state: i32,
+    /// `CopperGolem.DATA_WEATHER_STATE`: `WeatheringCopper.WeatherState`'s
+    /// ordinal, which picks the oxidised skin and eyes.
+    pub copper_weather: i32,
+    /// `Warden.CLIENT_ANGER_LEVEL`: speeds the heartbeat up.
+    pub warden_anger: i32,
     /// `WitherBoss.DATA_ID_INV`.
     pub wither_invul: i32,
     /// `ArmorStand.DATA_CLIENT_FLAGS`: small 1, arms 4, no base plate 8,
@@ -318,6 +323,8 @@ impl Default for Appearance {
             strider_cold: false,
             creaking_active: false,
             copper_state: 0,
+            copper_weather: 0,
+            warden_anger: 0,
             wither_invul: 0,
             stand_flags: 0,
             name_visible: false,
@@ -620,6 +627,12 @@ impl Appearance {
             }
             K::CopperGolem if i == index(copper_golem::COPPER_GOLEM_STATE) => {
                 self.copper_state = value.int().unwrap_or(self.copper_state);
+            }
+            K::CopperGolem if i == index(copper_golem::DATA_WEATHER_STATE) => {
+                self.copper_weather = value.int().unwrap_or(self.copper_weather);
+            }
+            K::Warden if i == index(warden::CLIENT_ANGER_LEVEL) => {
+                self.warden_anger = value.int().unwrap_or(self.warden_anger);
             }
             K::Wither if i == index(wither::DATA_ID_INV) => {
                 self.wither_invul = value.int().unwrap_or(self.wither_invul);

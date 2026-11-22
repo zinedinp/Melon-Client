@@ -1,5 +1,6 @@
 //! `RavagerModel`: a horned head on a thick neck, a jaw that opens for a
 
+use super::{LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -164,6 +165,12 @@ pub fn setup_anim(
     pose[parts.left_hind_leg].pose.rotation.x = angle::cos(position + PI) * leg_rot;
     pose[parts.right_front_leg].pose.rotation.x = angle::cos(position + PI) * leg_rot;
     pose[parts.left_front_leg].pose.rotation.x = angle::cos(position) * leg_rot;
+}
+
+/// `RavagerRenderer`.
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Ravager, TEXTURE));
 }
 
 #[cfg(test)]

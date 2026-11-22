@@ -329,7 +329,7 @@ impl InWorld {
                     _ => {}
                 }
             }
-            if let Some(model) = mobs::mushroom_model(entity) {
+            if let Some(model) = mobs::cow::mushroom_model(entity) {
                 assets.held.prepare_block(renderer, model);
             }
             if let Some(state) = shown_block(entity) {
@@ -340,7 +340,7 @@ impl InWorld {
                 });
             }
             if entity.kind == EntityKind::SnowGolem && entity.appearance.pumpkin {
-                assets.held.prepare_block(renderer, mobs::SNOW_GOLEM_HEAD);
+                assets.held.prepare_block(renderer, mobs::snow_golem::HEAD);
             }
             if entity.kind == EntityKind::IronGolem && entity.golem_pose(0.0).offer_flower > 0 {
                 assets
@@ -1393,7 +1393,7 @@ fn submit_mob(
             }
         }
     }
-    if let Some(model) = mobs::mushroom_model(entity)
+    if let Some(model) = mobs::cow::mushroom_model(entity)
         && let Some(Rig::Quadruped(parts)) = last.as_ref().map(|(_, mob, _)| &mob.rig)
         && let Some(Some(head)) = matrices.get(parts.head.0)
     {
@@ -1551,7 +1551,7 @@ fn submit_pumpkin(
     overlay: f32,
     out: &mut Vec<EntityDraw>,
 ) {
-    let parts: Vec<_> = assets.held.block(mobs::SNOW_GOLEM_HEAD).collect();
+    let parts: Vec<_> = assets.held.block(mobs::snow_golem::HEAD).collect();
     let model = head
         * Mat4::from_translation(Vec3::new(0.0, -0.34375, 0.0))
         * Mat4::rot_y_deg(180.0)

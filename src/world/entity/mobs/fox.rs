@@ -1,5 +1,6 @@
 //! `AdultFoxModel` and `BabyFoxModel`: a quadruped that sits, sleeps,
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::animations::fox_baby::FOX_BABY_WALK;
 use crate::world::entity::keyframe::AnimationDefinition;
@@ -311,6 +312,17 @@ fn sleep(parts: &FoxParts, pose: &mut ModelPose) {
         pose[parts.head].pose.rotation.y = -PI * 2.0 / 3.0;
         pose[parts.head].pose.rotation.z = 0.0;
     }
+}
+
+/// `FoxRenderer`: red or snow, awake or asleep.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    out.push(plain(
+        if baby { M::FoxBaby } else { M::Fox },
+        texture(a.fox_variant != 0, a.fox_flags & FLAG_SLEEPING != 0, baby),
+    ));
 }
 
 #[cfg(test)]

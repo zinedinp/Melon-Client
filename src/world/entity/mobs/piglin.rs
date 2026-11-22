@@ -1,5 +1,6 @@
 //! `PiglinModel` and `ZombifiedPiglinModel`: a humanoid with a snout and
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::animation::{animate_crossbow_charge, animate_crossbow_hold, bob_arms};
 use crate::world::entity::humanoid::HumanoidParts;
@@ -271,6 +272,32 @@ pub(super) fn swing_weapon_down(
         angle::cos(age_in_ticks * 0.19) * 0.5 + attack2 * 1.2 - attack * 0.4;
     let [right, left] = pose.get_two_mut(h.right_arm, h.left_arm);
     bob_arms(&mut right.pose, &mut left.pose, age_in_ticks);
+}
+
+/// `PiglinRenderer`: piglin, brute and zombified piglin.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Piglin => out.push(if baby {
+            plain(M::PiglinBaby, "minecraft:entity/piglin/piglin_baby")
+        } else {
+            plain(M::Piglin, "minecraft:entity/piglin/piglin")
+        }),
+        EntityKind::PiglinBrute => {
+            out.push(plain(M::Piglin, "minecraft:entity/piglin/piglin_brute"))
+        }
+        EntityKind::ZombifiedPiglin => out.push(if baby {
+            plain(
+                M::PiglinBaby,
+                "minecraft:entity/piglin/zombified_piglin_baby",
+            )
+        } else {
+            plain(M::Piglin, "minecraft:entity/piglin/zombified_piglin")
+        }),
+        _ => {}
+    }
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 //! `CreakingModel`: walk is a keyframe cycle while it can move; attack,
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::animations::creaking as anim;
 use crate::world::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
 use crate::world::entity::living::LivingRenderState;
@@ -137,6 +138,16 @@ pub fn tick_anim(
     anim[ATTACK].animate_when(attacking, tick);
     anim[INVULNERABLE].animate_when(invulnerable, tick);
     anim[DEATH].animate_when(tearing_down, tick);
+}
+
+/// `CreakingRenderer` and its eyes while it is active.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Creaking, texture()));
+    if eyes_glowing(a.creaking_active, false, false) {
+        out.push(plain(M::Creaking, eyes_texture()).glowing());
+    }
 }
 
 #[cfg(test)]

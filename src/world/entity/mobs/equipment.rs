@@ -274,3 +274,39 @@ fn trim_palette(
         material.palette_id()
     }
 }
+
+/// The harness's texture by its dye (`EquippableImpl`'s asset id).
+pub(super) fn harness_texture(stack: &ItemStack) -> Option<&'static str> {
+    macro_rules! harnesses {
+        ($($name:literal),*) => {
+            [$(($name, concat!("minecraft:entity/equipment/happy_ghast_body/", $name, "_harness"))),*]
+        };
+    }
+    const HARNESSES: [(&str, &str); 16] = harnesses!(
+        "white",
+        "orange",
+        "magenta",
+        "light_blue",
+        "yellow",
+        "lime",
+        "pink",
+        "gray",
+        "light_gray",
+        "cyan",
+        "purple",
+        "blue",
+        "brown",
+        "green",
+        "red",
+        "black"
+    );
+    let asset = stack
+        .get_data_component::<EquippableImpl>()?
+        .asset_id
+        .clone()?;
+    let name = asset.strip_prefix("minecraft:").unwrap_or(&asset);
+    let dye = name.strip_suffix("_harness")?;
+    HARNESSES
+        .iter()
+        .find_map(|(color, texture)| (*color == dye).then_some(*texture))
+}

@@ -1,5 +1,6 @@
 //! `VillagerModel` and what is built on it (`WitchModel`, the wandering
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI, Rotation, THIRD_PI};
 use crate::world::entity::humanoid;
 use crate::world::entity::living::LivingRenderState;
@@ -488,6 +489,148 @@ pub fn setup_anim(
         if witch.holding_item {
             nose.offset = glam::Vec3::new(0.0, 1.0, -1.5);
             nose.rotation.x = -0.9;
+        }
+    }
+}
+
+/// `VillagerRenderer`, `ZombieVillagerRenderer` (both with
+/// `VillagerProfessionLayer`), `WanderingTraderRenderer` and `WitchRenderer`.
+pub(super) fn push_layers(
+    entity: &ClientEntity,
+    hat: &dyn Fn(&str) -> Hat,
+    out: &mut Vec<LayerSpec>,
+) {
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Villager | EntityKind::ZombieVillager => villager_layers(entity, hat, out),
+        EntityKind::WanderingTrader => out.push(plain(
+            M::Villager,
+            "minecraft:entity/wandering_trader/wandering_trader",
+        )),
+        EntityKind::Witch => out.push(plain(M::Witch, "minecraft:entity/witch/witch")),
+        _ => {}
+    }
+}
+
+macro_rules! textures {
+    ($dir:literal, $kind:literal, [$($name:literal),*]) => {
+        [$(concat!("minecraft:entity/", $dir, "/", $kind, "/", $name)),*]
+    };
+}
+
+/// `VillagerType`'s and `VillagerProfession`'s names by registry id, and
+/// the badges by level: the textures of one renderer's clothes.
+macro_rules! clothes {
+    ($dir:literal) => {
+        Clothes {
+            base: concat!("minecraft:entity/", $dir, "/", $dir),
+            baby_base: concat!("minecraft:entity/", $dir, "/", $dir, "_baby"),
+            types: textures!(
+                $dir,
+                "type",
+                [
+                    "desert", "jungle", "plains", "savanna", "snow", "swamp", "taiga"
+                ]
+            ),
+            baby_types: textures!(
+                $dir,
+                "baby",
+                [
+                    "desert", "jungle", "plains", "savanna", "snow", "swamp", "taiga"
+                ]
+            ),
+            professions: textures!(
+                $dir,
+                "profession",
+                [
+                    "none",
+                    "armorer",
+                    "butcher",
+                    "cartographer",
+                    "cleric",
+                    "farmer",
+                    "fisherman",
+                    "fletcher",
+                    "leatherworker",
+                    "librarian",
+                    "mason",
+                    "nitwit",
+                    "shepherd",
+                    "toolsmith",
+                    "weaponsmith"
+                ]
+            ),
+            levels: textures!(
+                $dir,
+                "profession_level",
+                ["stone", "iron", "gold", "emerald", "diamond"]
+            ),
+        }
+    };
+}
+
+struct Clothes {
+    base: &'static str,
+    baby_base: &'static str,
+    types: [&'static str; 7],
+    baby_types: [&'static str; 7],
+    professions: [&'static str; 15],
+    levels: [&'static str; 5],
+}
+
+const VILLAGER_CLOTHES: Clothes = clothes!("villager");
+
+const ZOMBIE_VILLAGER_CLOTHES: Clothes = clothes!("zombie_villager");
+
+/// `VillagerProfession`'s `none` and `nitwit` ids.
+const PROFESSION_NONE: usize = 0;
+const PROFESSION_NITWIT: usize = 11;
+
+/// A villager's body and `VillagerProfessionLayer`: the biome's clothes,
+/// with or without the hat; then, for an adult with a job, the job's and,
+/// unless a nitwit, the level's badge.
+fn villager_layers(entity: &ClientEntity, hat: &dyn Fn(&str) -> Hat, out: &mut Vec<LayerSpec>) {
+    let zombie = entity.kind == EntityKind::ZombieVillager;
+    let (clothes, full, no_hat, baby_full, baby_no_hat) = if zombie {
+        (
+            &ZOMBIE_VILLAGER_CLOTHES,
+            M::ZombieVillager,
+            M::ZombieVillagerNoHat,
+            M::ZombieVillagerBaby,
+            M::ZombieVillagerBabyNoHat,
+        )
+    } else {
+        (
+            &VILLAGER_CLOTHES,
+            M::Villager,
+            M::VillagerNoHat,
+            M::VillagerBaby,
+            M::VillagerBabyNoHat,
+        )
+    };
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    let (kind, job, level) = a.villager;
+    let kind = usize::try_from(kind).ok().filter(|&k| k < 7).unwrap_or(2);
+    let job = usize::try_from(job).ok().filter(|&j| j < 15).unwrap_or(0);
+    out.push(if baby {
+        plain(baby_full, clothes.baby_base)
+    } else {
+        plain(full, clothes.base)
+    });
+    let hat_visible = hat(clothes.professions[job]).type_hat_visible(hat(clothes.types[kind]));
+    out.push(match (baby, hat_visible) {
+        (true, true) => plain(baby_full, clothes.baby_types[kind]),
+        (true, false) => plain(baby_no_hat, clothes.baby_types[kind]),
+        (false, true) => plain(full, clothes.types[kind]),
+        (false, false) => plain(no_hat, clothes.types[kind]),
+    });
+    if job != PROFESSION_NONE && !baby {
+        out.push(plain(full, clothes.professions[job]));
+        if job != PROFESSION_NITWIT {
+            let badge = usize::try_from(level.clamp(1, 5) - 1).unwrap_or(0);
+            out.push(plain(full, clothes.levels[badge]));
         }
     }
 }

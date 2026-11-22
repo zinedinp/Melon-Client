@@ -1,5 +1,6 @@
 //! `AdultBeeModel` and `BabyBeeModel`: a bone with a body, wings, three
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, DEG_TO_RAD, EIGHTH_PI, PI, QUARTER_PI};
 use crate::world::entity::animation::rot_lerp_rad;
 use crate::world::entity::living::LivingRenderState;
@@ -220,6 +221,30 @@ pub fn setup_anim(parts: &BeeParts, pose: &mut ModelPose, state: &LivingRenderSt
         let bone = &mut pose[parts.bone].pose.rotation;
         bone.x = rot_lerp_rad(bee.roll_amount, bone.x, 3.0915928);
     }
+}
+
+/// `BeeRenderer`: angry, with nectar, or without its stinger.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    out.push(plain(
+        if baby { M::BeeBaby } else { M::Bee },
+        texture(
+            BeePose {
+                roll_amount: if a.bee_flags & FLAG_ROLL != 0 {
+                    1.0
+                } else {
+                    0.0
+                },
+                has_stinger: a.bee_flags & FLAG_HAS_STUNG == 0,
+                on_ground: entity.on_ground,
+                angry: a.angry,
+                nectar: a.bee_flags & FLAG_HAS_NECTAR != 0,
+            },
+            baby,
+        ),
+    ));
 }
 
 #[cfg(test)]

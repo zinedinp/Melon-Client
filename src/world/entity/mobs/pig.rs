@@ -1,9 +1,11 @@
 //! `PigModel`, `ColdPigModel` and `BabyPigModel`: quadrupeds with a snout.
 
+use super::{ClientEntity, LayerSpec, ModelId as M, variant_body};
 use crate::math::angle::PI;
 use crate::world::entity::model::{LayerDefinition, PartDefinition};
 use crate::world::entity::quadruped;
 use crate::world::model_part::{Cube, Pose};
+use pumpkin_data::pig_variant::PigVariant;
 
 /// `PigModel.createBasePigModel`.
 fn base() -> PartDefinition {
@@ -79,4 +81,33 @@ pub fn baby() -> LayerDefinition {
         );
     }
     LayerDefinition::new(root, 32.0, 32.0)
+}
+
+/// `PigRenderer`: the variant's body (cold, temperate, warm).
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    debug_assert_eq!(PigVariant::Cold as i32, 0);
+    out.push(variant_body(
+        baby,
+        a.variant,
+        M::PigBaby,
+        [
+            (
+                M::PigCold,
+                "minecraft:entity/pig/pig_cold",
+                "minecraft:entity/pig/pig_cold_baby",
+            ),
+            (
+                M::Pig,
+                "minecraft:entity/pig/pig_temperate",
+                "minecraft:entity/pig/pig_temperate_baby",
+            ),
+            (
+                M::Pig,
+                "minecraft:entity/pig/pig_warm",
+                "minecraft:entity/pig/pig_warm_baby",
+            ),
+        ],
+    ));
 }

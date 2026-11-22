@@ -1,5 +1,6 @@
 //! `BatModel`: a body, a head with ears, wings of two parts and feet.
 
+use super::{LayerSpec, ModelId as M};
 use crate::world::entity::animations::bat::{BAT_FLYING, BAT_RESTING};
 use crate::world::entity::keyframe::AnimationDefinition;
 use crate::world::entity::living::LivingRenderState;
@@ -90,6 +91,12 @@ pub fn setup_anim(
     if resting {
         pose[parts.head].pose.rotation.y = state.y_rot.to_radians();
     }
+}
+
+/// `BatRenderer`.
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Bat, "minecraft:entity/bat/bat"));
 }
 
 #[cfg(test)]

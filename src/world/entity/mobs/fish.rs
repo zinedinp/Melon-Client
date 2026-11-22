@@ -6,6 +6,7 @@ use crate::math::angle;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::model_part::{Cube, Pose};
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, dye_tint};
 use crate::math::angle::QUARTER_PI as Q;
 
 /// A part with one box.
@@ -660,6 +661,58 @@ pub fn pattern_texture(large: bool, number: usize) -> &'static str {
 
 /// The default `DATA_ID_TYPE_VARIANT`: kob, orange on orange.
 pub const DEFAULT_TROPICAL: i32 = (1 << 16) | (1 << 24);
+
+/// `CodRenderer`, `SalmonRenderer` (by size), `PufferfishRenderer` (by
+/// puff), `TropicalFishRenderer` (with `TropicalFishPatternLayer`) and
+/// `TadpoleRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Cod => out.push(plain(M::Cod, "minecraft:entity/fish/cod")),
+        EntityKind::Salmon => {
+            let model = match a.salmon_variant {
+                0 => M::SalmonSmall,
+                2 => M::SalmonLarge,
+                _ => M::Salmon,
+            };
+            out.push(plain(model, "minecraft:entity/fish/salmon"));
+        }
+        EntityKind::Pufferfish => {
+            let model = match a.puff_state {
+                0 => M::PufferSmall,
+                1 => M::PufferMid,
+                _ => M::PufferBig,
+            };
+            out.push(plain(model, "minecraft:entity/fish/pufferfish"));
+        }
+        EntityKind::TropicalFish => {
+            let (large, number) = tropical_pattern(a.tropical_variant);
+            let dye = |shift: u32| {
+                dye_tint(pumpkin_data::dye_color::DyeColor::by_id_or_white(
+                    (a.tropical_variant >> shift) & 0xFF,
+                ))
+            };
+            let (base, pattern, texture) = if large {
+                (
+                    M::TropicalLarge,
+                    M::TropicalLargePattern,
+                    "minecraft:entity/fish/tropical_b",
+                )
+            } else {
+                (
+                    M::TropicalSmall,
+                    M::TropicalSmallPattern,
+                    "minecraft:entity/fish/tropical_a",
+                )
+            };
+            out.push(plain(base, texture).with_tint(dye(16)));
+            out.push(plain(pattern, pattern_texture(large, number)).with_tint(dye(24)));
+        }
+        EntityKind::Tadpole => out.push(plain(M::Tadpole, "minecraft:entity/tadpole/tadpole")),
+        _ => {}
+    }
+}
 
 #[cfg(test)]
 mod tests {

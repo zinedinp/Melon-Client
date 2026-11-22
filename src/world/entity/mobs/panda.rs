@@ -1,5 +1,6 @@
 //! `PandaModel` and `BabyPandaModel`: a quadruped that sits, lies, rolls,
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI, QUARTER_PI};
 use crate::world::entity::animation::rot_lerp_rad;
 use crate::world::entity::living::LivingRenderState;
@@ -260,6 +261,17 @@ fn animate_sitting(parts: &PandaParts, pose: &mut ModelPose, sit: f32) {
     pose[legs.left_front].pose.rotation.z = 0.27079642;
     pose[legs.right_hind].pose.rotation.z = 0.5707964;
     pose[legs.left_hind].pose.rotation.z = -0.5707964;
+}
+
+/// `PandaRenderer`: the visible gene's texture.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    out.push(plain(
+        if baby { M::PandaBaby } else { M::Panda },
+        texture(i32::from(a.panda_gene), baby),
+    ));
 }
 
 #[cfg(test)]

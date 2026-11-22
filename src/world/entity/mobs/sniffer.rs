@@ -1,5 +1,6 @@
 //! `SnifferModel` and `SniffletModel`: walk (or a searching walk) is a
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::animations::sniffer as anim;
 use crate::world::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
 use crate::world::entity::living::LivingRenderState;
@@ -278,6 +279,17 @@ pub fn tick_anim(anim: &mut [AnimationState], tick: i32, state: i32) {
         STATE_RISING => anim[STAND_UP].start_if_stopped(tick),
         _ => {}
     }
+}
+
+/// `SnifferRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    out.push(LayerSpec::aged(
+        baby,
+        (M::Sniffer, texture(false)),
+        (M::SnifferBaby, texture(true)),
+    ));
 }
 
 #[cfg(test)]

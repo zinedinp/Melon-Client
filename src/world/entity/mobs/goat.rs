@@ -1,5 +1,6 @@
 //! `GoatModel` and `BabyGoatModel`: a quadruped whose horns can be missing
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::EIGHTH_PI;
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -205,6 +206,17 @@ pub fn setup_anim(
     } else if parts.baby {
         pose[parts.quadruped.head].pose.rotation.x = EIGHTH_PI;
     }
+}
+
+/// `GoatRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    out.push(LayerSpec::aged(
+        baby,
+        (M::Goat, texture(false)),
+        (M::GoatBaby, texture(true)),
+    ));
 }
 
 #[cfg(test)]

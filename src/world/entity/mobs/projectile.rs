@@ -6,6 +6,7 @@
 
 use glam::{Mat3, Mat4, Quat, Vec3};
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, DEG_TO_RAD, PI, Rotation};
 use crate::world::entity::kind::EntityKind;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -477,6 +478,48 @@ pub fn snapped_yaw(y_rot: f32) -> f32 {
 /// at `0x26` alpha (`654311423` is `0x26FFFFFF`).
 pub const SHULKER_GLOW_SCALE: f32 = 1.5;
 pub const SHULKER_GLOW_ALPHA: f32 = 0x26 as f32 / 255.0;
+
+/// The projectiles and crystals: wind charges, skulls, bullets, spit,
+/// fangs, tridents, arrows and the end crystal.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Cushion => out.push(plain(M::Cushion, cushion_texture(a.thing.color))),
+        EntityKind::WitherSkull => out.push(plain(
+            M::WitherSkull,
+            if a.thing.dangerous {
+                WITHER_INVULNERABLE_TEXTURE
+            } else {
+                WITHER_TEXTURE
+            },
+        )),
+        EntityKind::ShulkerBullet => {
+            out.push(plain(M::ShulkerBullet, SHULKER_BULLET_TEXTURE));
+            out.push(plain(M::ShulkerBulletGlow, SHULKER_BULLET_TEXTURE).faded(SHULKER_GLOW_ALPHA));
+        }
+        EntityKind::LlamaSpit => out.push(plain(M::LlamaSpit, LLAMA_SPIT_TEXTURE)),
+        EntityKind::WindCharge => out.push(plain(M::WindCharge, WIND_CHARGE_TEXTURE).translucent()),
+        EntityKind::EvokerFangs => {
+            // `EvokerFangsRenderer`: nothing until the bite starts.
+            if entity.fangs_life.is_some() {
+                out.push(plain(M::EvokerFangs, EVOKER_FANGS_TEXTURE));
+            }
+        }
+        EntityKind::EndCrystal => out.push(plain(M::EndCrystal, END_CRYSTAL_TEXTURE)),
+        EntityKind::Trident => out.push(plain(M::Trident, TRIDENT_TEXTURE).with_foil(a.thing.foil)),
+        EntityKind::Arrow => out.push(plain(
+            M::Arrow,
+            if a.thing.arrow_color > 0 {
+                TIPPED_ARROW_TEXTURE
+            } else {
+                ARROW_TEXTURE
+            },
+        )),
+        EntityKind::SpectralArrow => out.push(plain(M::Arrow, SPECTRAL_ARROW_TEXTURE)),
+        _ => {}
+    }
+}
 
 #[cfg(test)]
 mod tests {

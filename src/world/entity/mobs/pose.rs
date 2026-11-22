@@ -352,3 +352,6 @@ pub fn root(entity: &ClientEntity, input: &PoseInput, partial: f32) -> glam::Mat
         _ => living::root_transform(&input.living, placement(entity, partial)),
     }
 }
+
+/// `CrossbowItem.getChargeDuration` without Quick Charge (1.25 seconds).
+pub(super) const CROSSBOW_CHARGE_TICKS: f32 = 25.0;

@@ -2,6 +2,7 @@
 
 use glam::Vec3;
 
+use super::{LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -67,4 +68,10 @@ pub fn white_flash(swelling: f32) -> f32 {
     }
     let progress = swelling.clamp(0.5, 1.0);
     (progress * 15.0).floor() / 15.0 * 0.75
+}
+
+/// `CreeperRenderer` (the charge is `CreeperPowerLayer`, not here).
+pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Creeper, "minecraft:entity/creeper/creeper"));
 }

@@ -2,6 +2,7 @@
 
 use glam::Vec3;
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::appearance::{
     Appearance, DEFAULT_STAND_POSE, STAND_ARMS, STAND_NO_BASE_PLATE, StandPose,
 };
@@ -196,6 +197,20 @@ pub fn setup_anim(parts: &ArmorStandParts, pose: &mut ModelPose, input: &StandPo
     }
     pose[parts.base_plate].visible = input.base_plate;
     pose[parts.base_plate].pose.rotation.y = -input.y_rot * (std::f32::consts::PI / 180.0);
+}
+
+/// `ArmorStandRenderer`: normal or small.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let plain = LayerSpec::plain;
+    out.push(plain(
+        if a.stand_small() {
+            M::ArmorStandSmall
+        } else {
+            M::ArmorStand
+        },
+        TEXTURE,
+    ));
 }
 
 #[cfg(test)]

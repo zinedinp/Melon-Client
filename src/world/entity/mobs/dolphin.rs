@@ -2,6 +2,7 @@
 
 use crate::math::angle::THIRD_PI as THIRD;
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle;
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -134,6 +135,17 @@ pub fn setup_anim(
         pose[parts.tail].pose.rotation.x = -0.1 * beat;
         pose[parts.tail_fin].pose.rotation.x = -0.2 * beat;
     }
+}
+
+/// `DolphinRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    out.push(LayerSpec::aged(
+        baby,
+        (M::Dolphin, "minecraft:entity/dolphin/dolphin"),
+        (M::DolphinBaby, "minecraft:entity/dolphin/dolphin_baby"),
+    ));
 }
 
 #[cfg(test)]

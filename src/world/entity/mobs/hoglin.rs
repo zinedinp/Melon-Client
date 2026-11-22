@@ -1,5 +1,6 @@
 //! `HoglinModel` and `BabyHoglinModel`: also used for a zoglin. The
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -211,6 +212,25 @@ fn animate_headbutt(parts: &HoglinParts, pose: &mut ModelPose, headbutt: f32) {
         DEFAULT_HEAD_X_ROT + (ATTACK_HEAD_X_ROT_END - DEFAULT_HEAD_X_ROT) * headbutt;
     if parts.baby {
         pose[parts.head].pose.offset.y += headbutt * 2.5;
+    }
+}
+
+/// `HoglinRenderer` and `ZoglinRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    match entity.kind {
+        EntityKind::Hoglin => out.push(LayerSpec::aged(
+            baby,
+            (M::Hoglin, texture(false, false)),
+            (M::HoglinBaby, texture(false, true)),
+        )),
+        EntityKind::Zoglin => out.push(LayerSpec::aged(
+            baby,
+            (M::Hoglin, texture(true, false)),
+            (M::HoglinBaby, texture(true, true)),
+        )),
+        _ => {}
     }
 }
 

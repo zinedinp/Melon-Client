@@ -4,6 +4,7 @@ use crate::math::angle::{EIGHTH_PI, HALF_PI as FRAC_PI_2, PI, QUARTER_PI as FRAC
 
 use glam::{Mat4, Vec3};
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, Rotation};
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::model_part::{Cube, Pose};
@@ -351,6 +352,30 @@ pub fn minecart_root(position: Vec3, yaw: f32, pitch: f32, shake: Shake) -> Mat4
         * Mat4::rot_z_deg(-pitch)
         * Mat4::rot_x_deg(shake.degrees())
         * Mat4::from_scale(Vec3::new(-1.0, -1.0, 1.0))
+}
+
+/// `BoatRenderer` and `RaftRenderer` (with the water patch while out of
+/// water), `MinecartRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Boat => {
+            if let Some((texture, raft, chest)) = boat_look(entity.ty.resource_name) {
+                let model = match (raft, chest) {
+                    (false, false) => M::Boat,
+                    (false, true) => M::ChestBoat,
+                    (true, false) => M::Raft,
+                    (true, true) => M::ChestRaft,
+                };
+                out.push(plain(model, texture));
+                if !entity.in_water {
+                    out.push(plain(M::BoatWaterPatch, texture).water_mask());
+                }
+            }
+        }
+        EntityKind::Minecart => out.push(plain(M::Minecart, MINECART_TEXTURE)),
+        _ => {}
+    }
 }
 
 #[cfg(test)]

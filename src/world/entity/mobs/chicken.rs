@@ -1,10 +1,12 @@
 //! `ChickenModel`: two legs and two flapping wings; the adult
 
+use super::{ClientEntity, LayerSpec, ModelId as M, variant_body};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::entity::quadruped::look;
 use crate::world::model_part::{Cube, Pose};
+use pumpkin_data::chicken_variant::ChickenVariant;
 
 /// `AdultChickenModel.createBaseChickenModel`.
 fn base() -> PartDefinition {
@@ -145,4 +147,33 @@ pub fn setup_anim(
     pose[parts.left_leg].pose.rotation.x = swing(PI);
     pose[parts.right_wing].pose.rotation.z = angle;
     pose[parts.left_wing].pose.rotation.z = -angle;
+}
+
+/// `ChickenRenderer`: the variant's body.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    debug_assert_eq!(ChickenVariant::Cold as i32, 0);
+    out.push(variant_body(
+        baby,
+        a.variant,
+        M::ChickenBaby,
+        [
+            (
+                M::ChickenCold,
+                "minecraft:entity/chicken/chicken_cold",
+                "minecraft:entity/chicken/chicken_cold_baby",
+            ),
+            (
+                M::Chicken,
+                "minecraft:entity/chicken/chicken_temperate",
+                "minecraft:entity/chicken/chicken_temperate_baby",
+            ),
+            (
+                M::Chicken,
+                "minecraft:entity/chicken/chicken_warm",
+                "minecraft:entity/chicken/chicken_warm_baby",
+            ),
+        ],
+    ));
 }

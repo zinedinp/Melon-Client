@@ -1,8 +1,10 @@
 //! `CowModel` and its cold, warm and baby forms.
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, variant_body};
 use crate::math::angle::PI;
 use crate::world::entity::model::{LayerDefinition, PartDefinition};
 use crate::world::model_part::{Cube, Pose};
+use pumpkin_data::cow_variant::CowVariant;
 
 const BODY_POSE: ((f32, f32, f32), (f32, f32, f32)) = ((0.0, 5.0, 2.0), (PI / 2.0, 0.0, 0.0));
 
@@ -129,4 +131,61 @@ pub fn baby() -> LayerDefinition {
         );
     }
     LayerDefinition::new(root, 64.0, 64.0)
+}
+
+/// `MushroomCow.Variant`'s block model, drawn on the back and head of an
+/// adult mooshroom (`MushroomCowMushroomLayer`).
+pub fn mushroom_model(entity: &ClientEntity) -> Option<&'static str> {
+    if entity.kind != EntityKind::Mooshroom || entity.appearance.baby {
+        return None;
+    }
+    Some(if entity.appearance.brown_mushrooms {
+        "minecraft:block/brown_mushroom"
+    } else {
+        "minecraft:block/red_mushroom"
+    })
+}
+
+/// `CowRenderer` (the variant's body) and `MushroomCowRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Mooshroom => {
+            let brown = a.brown_mushrooms;
+            out.push(match (baby, brown) {
+                (false, false) => plain(M::Cow, "minecraft:entity/cow/mooshroom_red"),
+                (false, true) => plain(M::Cow, "minecraft:entity/cow/mooshroom_brown"),
+                (true, false) => plain(M::CowBaby, "minecraft:entity/cow/mooshroom_red_baby"),
+                (true, true) => plain(M::CowBaby, "minecraft:entity/cow/mooshroom_brown_baby"),
+            });
+        }
+        EntityKind::Cow => {
+            debug_assert_eq!(CowVariant::Cold as i32, 0);
+            out.push(variant_body(
+                baby,
+                a.variant,
+                M::CowBaby,
+                [
+                    (
+                        M::CowCold,
+                        "minecraft:entity/cow/cow_cold",
+                        "minecraft:entity/cow/cow_cold_baby",
+                    ),
+                    (
+                        M::Cow,
+                        "minecraft:entity/cow/cow_temperate",
+                        "minecraft:entity/cow/cow_temperate_baby",
+                    ),
+                    (
+                        M::CowWarm,
+                        "minecraft:entity/cow/cow_warm",
+                        "minecraft:entity/cow/cow_warm_baby",
+                    ),
+                ],
+            ));
+        }
+        _ => {}
+    }
 }

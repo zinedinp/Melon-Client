@@ -1,5 +1,6 @@
 //! `SpiderModel`: a head, two body segments and eight legs that scuttle.
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -107,5 +108,24 @@ pub fn setup_anim(parts: &SpiderParts, pose: &mut ModelPose, state: &LivingRende
         let l = &mut pose[left].pose.rotation;
         l.y -= swing;
         l.z -= step;
+    }
+}
+
+/// `SpiderRenderer`, `CaveSpiderRenderer` and `SpiderEyesLayer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Spider | EntityKind::CaveSpider => {
+            out.push(plain(
+                M::Spider,
+                if entity.kind == EntityKind::Spider {
+                    "minecraft:entity/spider/spider"
+                } else {
+                    "minecraft:entity/spider/cave_spider"
+                },
+            ));
+            out.push(plain(M::Spider, "minecraft:entity/spider/spider_eyes").glowing());
+        }
+        _ => {}
     }
 }

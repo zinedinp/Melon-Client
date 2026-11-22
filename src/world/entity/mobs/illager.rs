@@ -1,5 +1,6 @@
 //! `IllagerModel`: pillager, vindicator and evoker. A villager's body with
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::animation::{
     animate_crossbow_charge, animate_crossbow_hold, animate_zombie_arms, bob_arms,
@@ -205,6 +206,23 @@ pub fn setup_anim(
     pose[parts.arms].visible = crossed;
     pose[h.left_arm].visible = !crossed;
     pose[h.right_arm].visible = !crossed;
+}
+
+/// `PillagerRenderer`, `VindicatorRenderer`, `EvokerRenderer` and
+/// `IllusionerRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Illusioner => {
+            out.push(plain(M::Illager, "minecraft:entity/illager/illusioner"));
+        }
+        EntityKind::Pillager => out.push(plain(M::Illager, "minecraft:entity/illager/pillager")),
+        EntityKind::Vindicator => {
+            out.push(plain(M::Illager, "minecraft:entity/illager/vindicator"));
+        }
+        EntityKind::Evoker => out.push(plain(M::Illager, "minecraft:entity/illager/evoker")),
+        _ => {}
+    }
 }
 
 #[cfg(test)]

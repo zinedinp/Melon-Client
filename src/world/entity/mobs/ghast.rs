@@ -1,5 +1,6 @@
 //! `GhastModel` and `HappyGhastModel`: a cube with nine tentacles under it,
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle;
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -229,6 +230,29 @@ impl GhastParts {
 /// `GhastModel.animateTentacles`: each sways with its own phase.
 pub fn setup_anim(parts: &GhastParts, pose: &mut ModelPose, state: &LivingRenderState) {
     sway(&parts.tentacles, pose, state);
+}
+
+/// `GhastRenderer` (shooting or not) and `HappyGhastRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Ghast => out.push(plain(
+            M::Ghast,
+            if a.charging {
+                "minecraft:entity/ghast/ghast_shooting"
+            } else {
+                "minecraft:entity/ghast/ghast"
+            },
+        )),
+        EntityKind::HappyGhast => out.push(LayerSpec::aged(
+            baby,
+            (M::HappyGhast, "minecraft:entity/ghast/happy_ghast"),
+            (M::HappyGhastBaby, "minecraft:entity/ghast/happy_ghast_baby"),
+        )),
+        _ => {}
+    }
 }
 
 #[cfg(test)]

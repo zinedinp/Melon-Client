@@ -1,5 +1,6 @@
 //! `PolarBearModel` and `BabyPolarBearModel`: a quadruped that rears when
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::PI;
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -107,6 +108,17 @@ pub fn setup_anim(
     pose[parts.quadruped.head].pose.offset.y -= stand * 24.0;
     pose[parts.quadruped.head].pose.offset.z += stand * 13.0;
     pose[parts.quadruped.head].pose.rotation.x += stand * PI * 0.15;
+}
+
+/// `PolarBearRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    out.push(LayerSpec::aged(
+        baby,
+        (M::PolarBear, "minecraft:entity/bear/polarbear"),
+        (M::PolarBearBaby, "minecraft:entity/bear/polarbear_baby"),
+    ));
 }
 
 #[cfg(test)]

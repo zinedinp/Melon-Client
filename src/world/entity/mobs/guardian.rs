@@ -1,5 +1,6 @@
 //! `GuardianModel`: a spiked head with an eye and a three-part tail. Its
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -213,6 +214,19 @@ impl Swim {
             spikes: self.old_spikes + (self.spikes - self.old_spikes) * partial,
             tail: self.old_tail + (self.tail - self.old_tail) * partial,
         }
+    }
+}
+
+/// `GuardianRenderer` and `ElderGuardianRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Guardian => out.push(plain(M::Guardian, "minecraft:entity/guardian/guardian")),
+        EntityKind::ElderGuardian => out.push(plain(
+            M::ElderGuardian,
+            "minecraft:entity/guardian/guardian_elder",
+        )),
+        _ => {}
     }
 }
 

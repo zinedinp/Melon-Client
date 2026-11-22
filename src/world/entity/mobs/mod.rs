@@ -76,14 +76,11 @@ pub use pose::*;
 use std::borrow::Cow;
 
 use glam::Vec3;
-use pumpkin_data::chicken_variant::ChickenVariant;
-use pumpkin_data::cow_variant::CowVariant;
 use pumpkin_data::data_component_impl::{
     ChargedProjectilesImpl, DyedColorImpl, EquippableImpl, TrimImpl,
 };
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
-use pumpkin_data::pig_variant::PigVariant;
 use pumpkin_data::tag::Taggable;
 
 use super::humanoid::{
@@ -92,7 +89,6 @@ use super::humanoid::{
 use super::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation, KeyframeSet};
 use super::kind::EntityKind;
 use super::living::{LivingRenderState, Placement};
-use super::magic_name::Magic;
 use super::model::{LayerDefinition, Model, ModelPose, PartId};
 use super::player::Arm;
 use super::quadruped::{self, QuadrupedParts};
@@ -1445,6 +1441,7 @@ impl MobModel {
 mod tests {
     use super::*;
     use crate::world::entity::living;
+    use crate::world::entity::magic_name::Magic;
     use pumpkin_data::entity::EntityType;
     use pumpkin_data::item_stack::ItemStack;
 
@@ -1614,6 +1611,86 @@ mod tests {
         assert_eq!(hurt.len(), 2);
         assert_eq!(hurt[1].model, ModelId::IronGolem);
         assert!(hurt[1].texture.ends_with("crackiness_medium"));
+    }
+
+    #[test]
+    fn cracks_follow_the_synced_max_health() {
+        let mut golem = spawned(&EntityType::IRON_GOLEM);
+        golem.max_health = 200.0;
+        golem.appearance.health = 100.0;
+        assert!(body(&golem)[1].texture.ends_with("crackiness_low"));
+    }
+
+    #[test]
+    fn a_copper_golem_shows_how_far_it_has_oxidised() {
+        let mut golem = spawned(&EntityType::COPPER_GOLEM);
+        assert!(body(&golem)[0].texture.ends_with("/copper_golem"));
+        golem.appearance.copper_weather = copper_golem::WEATHER_OXIDIZED;
+        let layers = body(&golem);
+        assert!(layers[0].texture.ends_with("copper_golem_oxidized"));
+        assert!(layers[1].texture.ends_with("copper_golem_eyes_oxidized"));
+    }
+
+    #[test]
+    fn a_wither_wears_its_armor_at_half_health_not_while_invulnerable() {
+        let mut wither = spawned(&EntityType::WITHER);
+        wither.max_health = 300.0;
+        wither.appearance.health = 300.0;
+        wither.appearance.wither_invul = 200;
+        assert_eq!(body(&wither).len(), 1);
+        wither.appearance.wither_invul = 0;
+        wither.appearance.health = 150.0;
+        let layers = body(&wither);
+        assert_eq!(layers.len(), 2);
+        assert_eq!(layers[1].model, ModelId::WitherArmor);
+    }
+
+    #[test]
+    fn a_llama_wears_its_carpet_and_a_trader_its_blanket_only_without_one() {
+        use crate::network::play::game::EquipmentSlot;
+        use pumpkin_data::item::Item;
+
+        let decor = |entity: &ClientEntity| {
+            body(entity)
+                .into_iter()
+                .filter(|l| matches!(l.model, ModelId::LlamaDecor | ModelId::LlamaBabyDecor))
+                .map(|l| l.texture.into_owned())
+                .collect::<Vec<_>>()
+        };
+        let mut trader = spawned(&EntityType::TRADER_LLAMA);
+        assert_eq!(
+            decor(&trader),
+            ["minecraft:entity/equipment/llama_body/trader_llama"]
+        );
+        trader
+            .equipment
+            .set(EquipmentSlot::Body, ItemStack::new(1, &Item::LIME_CARPET));
+        assert_eq!(
+            decor(&trader),
+            ["minecraft:entity/equipment/llama_body/lime"]
+        );
+
+        let mut llama = spawned(&EntityType::LLAMA);
+        assert!(decor(&llama).is_empty());
+        llama
+            .equipment
+            .set(EquipmentSlot::Body, ItemStack::new(1, &Item::WHITE_CARPET));
+        assert_eq!(
+            decor(&llama),
+            ["minecraft:entity/equipment/llama_body/white"]
+        );
+        // A young llama shows no carpet.
+        llama.appearance.baby = true;
+        assert!(decor(&llama).is_empty());
+    }
+
+    #[test]
+    fn a_camel_husk_has_no_young_form() {
+        let mut husk = spawned(&EntityType::CAMEL_HUSK);
+        husk.appearance.baby = true;
+        let layers = body(&husk);
+        assert_eq!(layers[0].model, ModelId::Camel);
+        assert_eq!(layers[0].texture, "minecraft:entity/camel/camel_husk");
     }
 
     #[test]

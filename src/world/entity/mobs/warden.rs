@@ -1,5 +1,6 @@
 //! `WardenModel`: walk, idle wobble and tendrils are procedural; emerge,
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI};
 use crate::world::entity::animations::warden as anim;
 use crate::world::entity::keyframe::{AnimationDefinition, AnimationState};
@@ -228,10 +229,81 @@ pub fn tick_anim(anim: &mut [AnimationState], tick: i32, pose: i32, attack: bool
     anim[SONIC].animate_when(sonic, tick);
 }
 
+/// `WardenRenderer`: the body, then its `LivingEntityEmissiveLayer`s in
+/// order, each translucent at full brightness and left out while its alpha
+/// is nought: the bioluminescent layer, the two sets of spots pulsing in
+/// turn, and the heart on each beat.
+///
+/// The tendrils' layer (the body texture on `WARDEN_TENDRILS`, at
+/// `tendrilAnimation`) is missing: the tendrils' twitch from event 61 is
+/// not tracked yet.
+pub(super) fn push_layers(entity: &ClientEntity, age_in_ticks: f32, out: &mut Vec<LayerSpec>) {
+    out.push(LayerSpec::plain(M::Warden, texture()));
+    let mut emissive = |texture, alpha: f32| {
+        if alpha > 1.0e-5 {
+            out.push(LayerSpec::plain(M::Warden, texture).glowing().faded(alpha));
+        }
+    };
+    emissive(bioluminescent_texture(), 1.0);
+    emissive(pulsating_spots_1_texture(), spots_alpha(age_in_ticks, 0.0));
+    emissive(pulsating_spots_2_texture(), spots_alpha(age_in_ticks, PI));
+    emissive(
+        heart_texture(),
+        heart_alpha(age_in_ticks, entity.appearance.warden_anger),
+    );
+}
+
+/// The spots' alpha: `max(0, cos(ageInTicks * 0.045 + phase) * 0.25)`.
+fn spots_alpha(age_in_ticks: f32, phase: f32) -> f32 {
+    (angle::cos(age_in_ticks * 0.045 + phase) * 0.25).max(0.0)
+}
+
+/// `Warden.getHeartAnimation`: 1 on the tick of a beat, fading over ten
+/// ticks. A beat comes on each tick that `getHeartBeatDelay` divides: every
+/// 40 ticks when calm, down to every 10 as `anger` reaches
+/// `AngerLevel.ANGRY` (80). Vanilla counts down from the last beat; this
+/// reads the same off the age, which differs only for the first beat after
+/// the anger changes the delay.
+pub fn heart_alpha(age_in_ticks: f32, anger: i32) -> f32 {
+    let delay = 40 - ((anger as f32 / 80.0).clamp(0.0, 1.0) * 30.0).floor() as i32;
+    let tick = age_in_ticks.floor();
+    let partial = age_in_ticks - tick;
+    let since = (tick as i32).rem_euclid(delay);
+    let before = (10 - since).max(0) as f32;
+    let now = (9 - since).max(0) as f32;
+    (before + partial * (now - before)) / 10.0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::world::entity::keyframe::KeyframeAnimation;
+
+    #[test]
+    fn the_heart_beats_faster_with_anger() {
+        // The tick of a beat, then fading: `lerp(partial, 10 - k, 9 - k) / 10`.
+        assert_eq!(heart_alpha(40.0, 0), 1.0);
+        assert!((heart_alpha(40.5, 0) - 0.95).abs() < 1e-6);
+        assert!((heart_alpha(45.0, 0) - 0.5).abs() < 1e-6);
+        assert_eq!(heart_alpha(50.0, 0), 0.0);
+        assert_eq!(heart_alpha(70.0, 0), 0.0);
+        // Angry: every 10 ticks, so it never quite goes out.
+        assert_eq!(heart_alpha(70.0, 80), 1.0);
+        assert!(heart_alpha(79.9, 80) > 0.0);
+        // Half way: `40 - floor(0.5 * 30)` = 25.
+        assert_eq!(heart_alpha(50.0, 40), 1.0);
+        assert_eq!(heart_alpha(40.0, 40), 0.0);
+    }
+
+    #[test]
+    fn the_spots_pulse_in_turn_and_never_together() {
+        for age in (0..400).map(|t| t as f32 * 0.5) {
+            let (one, two) = (spots_alpha(age, 0.0), spots_alpha(age, PI));
+            assert!(one <= 0.25 && two <= 0.25);
+            assert!(one == 0.0 || two == 0.0, "{age}: {one} {two}");
+        }
+        assert!((spots_alpha(0.0, 0.0) - 0.25).abs() < 1e-3);
+    }
 
     #[test]
     fn the_animations_bake_and_the_arms_reset() {

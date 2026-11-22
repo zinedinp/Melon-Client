@@ -1,5 +1,6 @@
 //! `ParrotModel`: a standing, flying, sitting, dancing or shoulder-perched
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI, SIXTH_PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -216,6 +217,13 @@ pub fn setup_anim(
             pose[parts.tail].pose.offset.y += y;
         }
     }
+}
+
+/// `ParrotRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let plain = LayerSpec::plain;
+    out.push(plain(M::Parrot, texture(a.parrot_variant)));
 }
 
 #[cfg(test)]

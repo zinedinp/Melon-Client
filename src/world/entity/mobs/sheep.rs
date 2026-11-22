@@ -2,7 +2,9 @@
 
 use pumpkin_data::dye_color::DyeColor;
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::PI;
+use crate::world::entity::magic_name::Magic;
 use crate::world::entity::model::{LayerDefinition, PartDefinition};
 use crate::world::entity::quadruped;
 use crate::world::model_part::{Cube, Pose};
@@ -103,6 +105,38 @@ pub fn jeb_tint(age_in_ticks: f32) -> [f32; 3] {
         );
         (a + (sub_step * (b - a) as f32).floor() as i32) as f32 / 255.0
     })
+}
+
+/// `SheepRenderer`: the body, `SheepWoolUndercoatLayer` and `SheepWoolLayer`;
+/// a jeb_ sheep cycles its colour with `age_in_ticks`.
+pub(super) fn push_layers(entity: &ClientEntity, age_in_ticks: f32, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    let jeb = a.magic == Magic::Jeb;
+    let tint = if jeb {
+        jeb_tint(age_in_ticks)
+    } else {
+        wool_tint(a.wool_color())
+    };
+    if baby {
+        out.push(plain(M::SheepBaby, "minecraft:entity/sheep/sheep_baby"));
+    } else {
+        out.push(plain(M::Sheep, "minecraft:entity/sheep/sheep"));
+        if jeb || a.wool_color() != pumpkin_data::dye_color::DyeColor::White {
+            out.push(
+                plain(M::Sheep, "minecraft:entity/sheep/sheep_wool_undercoat").with_tint(tint),
+            );
+        }
+    }
+    if !a.sheared() {
+        let (model, texture) = if baby {
+            (M::SheepBaby, "minecraft:entity/sheep/sheep_wool_baby")
+        } else {
+            (M::SheepFur, "minecraft:entity/sheep/sheep_wool")
+        };
+        out.push(plain(model, texture).with_tint(tint));
+    }
 }
 
 #[cfg(test)]

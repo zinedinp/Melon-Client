@@ -1,5 +1,6 @@
 //! `AdultCamelModel` and `BabyCamelModel`: walk, sit, dash and idle are
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::world::entity::animations::{camel as adult_anim, camel_baby as baby_anim};
 use crate::world::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
 use crate::world::entity::living::LivingRenderState;
@@ -290,6 +291,26 @@ impl CamelClock {
             anim[DASH].animate_when(dashing, tick);
             anim[STANDUP].animate_when(standing_up, tick);
         }
+    }
+}
+
+/// `CamelRenderer` and `CamelHuskRenderer`.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    match entity.kind {
+        EntityKind::Camel => out.push(LayerSpec::aged(
+            baby,
+            (M::Camel, "minecraft:entity/camel/camel"),
+            (M::CamelBaby, "minecraft:entity/camel/camel_baby"),
+        )),
+        // `CamelHuskRenderer`: only the adult model, and no
+        // `camel_husk_baby` texture exists.
+        EntityKind::CamelHusk => out.push(LayerSpec::plain(
+            M::Camel,
+            "minecraft:entity/camel/camel_husk",
+        )),
+        _ => {}
     }
 }
 

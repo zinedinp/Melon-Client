@@ -1,5 +1,6 @@
 //! `SkeletonModel`: a humanoid with thin limbs that draws its bow at a
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::animation::bob_arms;
 use crate::world::entity::humanoid::{self, HumanoidParts};
@@ -108,4 +109,33 @@ pub fn melee(parts: &HumanoidParts, pose: &mut ModelPose, swing: f32, age_in_tic
     pose[parts.left_arm].pose.rotation = glam::Vec3::new(x, y, 0.0);
     let [right, left] = pose.get_two_mut(parts.right_arm, parts.left_arm);
     bob_arms(&mut right.pose, &mut left.pose, age_in_ticks);
+}
+
+/// `SkeletonRenderer` and its kin: wither skeleton, stray and bogged (with
+/// `SkeletonClothingLayer`), parched.
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Bogged => {
+            out.push(plain(M::Bogged, "minecraft:entity/skeleton/bogged"));
+            out.push(plain(
+                M::BoggedClothes,
+                "minecraft:entity/skeleton/bogged_overlay",
+            ));
+        }
+        EntityKind::Skeleton => out.push(plain(M::Skeleton, "minecraft:entity/skeleton/skeleton")),
+        EntityKind::WitherSkeleton => out.push(plain(
+            M::Skeleton,
+            "minecraft:entity/skeleton/wither_skeleton",
+        )),
+        EntityKind::Stray => {
+            out.push(plain(M::Skeleton, "minecraft:entity/skeleton/stray"));
+            out.push(plain(
+                M::StrayClothes,
+                "minecraft:entity/skeleton/stray_overlay",
+            ));
+        }
+        EntityKind::Parched => out.push(plain(M::Skeleton, "minecraft:entity/skeleton/parched")),
+        _ => {}
+    }
 }

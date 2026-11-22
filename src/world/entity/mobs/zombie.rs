@@ -1,5 +1,6 @@
 //! `ZombieModel` (the humanoid, arms held out) and `BabyZombieModel`.
 
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::world::entity::humanoid;
 use crate::world::entity::model::{LayerDefinition, PartDefinition};
 use crate::world::model_part::{Cube, Pose};
@@ -66,4 +67,41 @@ pub fn baby_grown(g: f32) -> LayerDefinition {
         );
     }
     LayerDefinition::new(root, 64.0, 64.0)
+}
+
+/// `ZombieRenderer`, `HuskRenderer`, `GiantMobRenderer` and
+/// `DrownedRenderer` (with `DrownedOuterLayer`).
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let a = &entity.appearance;
+    let baby = a.baby;
+    let plain = LayerSpec::plain;
+    match entity.kind {
+        EntityKind::Zombie => out.push(if baby {
+            plain(M::ZombieBaby, "minecraft:entity/zombie/zombie_baby")
+        } else {
+            plain(M::Zombie, "minecraft:entity/zombie/zombie")
+        }),
+        EntityKind::Drowned => {
+            if baby {
+                out.push(plain(M::ZombieBaby, "minecraft:entity/zombie/drowned_baby"));
+                out.push(plain(
+                    M::DrownedBabyOuter,
+                    "minecraft:entity/zombie/drowned_outer_layer_baby",
+                ));
+            } else {
+                out.push(plain(M::Drowned, "minecraft:entity/zombie/drowned"));
+                out.push(plain(
+                    M::DrownedOuter,
+                    "minecraft:entity/zombie/drowned_outer_layer",
+                ));
+            }
+        }
+        EntityKind::Husk => out.push(if baby {
+            plain(M::ZombieBaby, "minecraft:entity/zombie/husk_baby")
+        } else {
+            plain(M::Zombie, "minecraft:entity/zombie/husk")
+        }),
+        EntityKind::Giant => out.push(plain(M::Zombie, "minecraft:entity/zombie/zombie")),
+        _ => {}
+    }
 }

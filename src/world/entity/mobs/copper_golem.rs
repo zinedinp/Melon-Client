@@ -1,5 +1,6 @@
 //! `CopperGolemModel`: walk (or a held-item walk) is a keyframe cycle;
 
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::animations::copper_golem as anim;
 use crate::world::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
 use crate::world::entity::living::LivingRenderState;
@@ -250,6 +251,15 @@ impl CopperGolemClock {
             _ => {}
         }
     }
+}
+
+/// `CopperGolemRenderer` and its eyes, both by how far it has oxidised
+/// (`DATA_WEATHER_STATE`).
+pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+    let weathering = entity.appearance.copper_weather;
+    let plain = LayerSpec::plain;
+    out.push(plain(M::CopperGolem, texture(weathering)));
+    out.push(plain(M::CopperGolem, eyes_texture(weathering)).glowing());
 }
 
 #[cfg(test)]
