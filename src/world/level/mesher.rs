@@ -151,6 +151,28 @@ impl Mesher {
     /// Meshes `jobs` before returning (`compileSync`), spread over the
     /// helpers and this thread.
     pub fn mesh_now(&self, jobs: Vec<Job>) -> Vec<Done> {
+        if std::env::var_os("AB_SCOPE").is_some() {
+            let threads = std::thread::available_parallelism().map_or(2, |n| n.get());
+            let per_thread = jobs.len().div_ceil(threads).max(1);
+            let build_all = |batch: &[Job]| {
+                batch
+                    .iter()
+                    .filter_map(|job| build(job, &self.models, self.fluids))
+                    .collect::<Vec<_>>()
+            };
+            let mut batches = jobs.chunks(per_thread);
+            let first = batches.next().unwrap_or_default();
+            return std::thread::scope(|scope| {
+                let others: Vec<_> = batches
+                    .map(|batch| scope.spawn(move || build_all(batch)))
+                    .collect();
+                let mut built = build_all(first);
+                for other in others {
+                    built.extend(other.join().unwrap_or_default());
+                }
+                built
+            });
+        }
         let Some(urgent) = &self.urgent else {
             return Vec::new();
         };
