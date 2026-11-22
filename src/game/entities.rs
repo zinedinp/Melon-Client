@@ -1269,7 +1269,14 @@ fn submit_dropped(
     let lift = item_drop::bob(age, bob_offs) - held.ground().0 + 0.0625;
     let base = Mat4::from_translation(feet + Vec3::Y * lift)
         * Mat4::from_rotation_y(item_drop::spin(age, bob_offs));
-    submit_held_cluster(assets, stack.stack(), held, base, placed, out);
+    submit_held_cluster(
+        assets,
+        (stack.stack(), stack.foil()),
+        held,
+        base,
+        placed,
+        out,
+    );
 }
 
 /// `ItemEntityRenderer.submitMultipleFromCount`: the stack drawn once per
@@ -1282,13 +1289,14 @@ pub(super) fn submit_item_cluster(
     out: &mut Vec<EntityDraw>,
 ) {
     if let Some(held) = assets.held.held(stack, false) {
-        submit_held_cluster(assets, stack, held, base, placed, out);
+        let foil = crate::world::glint::has_foil(stack);
+        submit_held_cluster(assets, (stack, foil), held, base, placed, out);
     }
 }
 
 fn submit_held_cluster(
     assets: &WorldResources,
-    stack: &ItemStack,
+    (stack, foil): (&ItemStack, bool),
     held: Held<'_>,
     base: Mat4,
     placed: Placed,
@@ -1297,7 +1305,7 @@ fn submit_held_cluster(
     let seed = i64::from(stack.item.id);
     for offset in item_drop::offsets(stack.item_count, held.ground().1, seed) {
         let at = base * Mat4::from_translation(offset);
-        submit_held(assets, stack, held.draws(HandPose::Ground), at, placed, out);
+        submit_held(assets, foil, held.draws(HandPose::Ground), at, placed, out);
     }
 }
 
@@ -1689,18 +1697,17 @@ pub(super) fn submit_item(
     out: &mut Vec<EntityDraw>,
 ) {
     let parts = assets.held.get(stack, pose, using);
-    submit_held(assets, stack.stack(), parts, at, placed, out);
+    submit_held(assets, stack.foil(), parts, at, placed, out);
 }
 
 fn submit_held(
     assets: &WorldResources,
-    stack: &ItemStack,
+    foil: bool,
     parts: impl Iterator<Item = (MeshId, TextureId, bool)>,
     at: Mat4,
     placed: Placed,
     out: &mut Vec<EntityDraw>,
 ) {
-    let foil = crate::world::glint::has_foil(stack);
     for (mesh, atlas, translucent) in parts {
         out.push(EntityDraw {
             scroll: None,

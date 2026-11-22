@@ -248,7 +248,9 @@ impl HeldItems {
         if stack.stack().is_empty() {
             return None;
         }
-        let head = HeadProfile::of_stack(stack.stack())
+        let head = (stack.has_head())
+            .then(|| HeadProfile::of_stack(stack.stack()))
+            .flatten()
             .and_then(|profile| {
                 self.heads
                     .get(&(profile.skin_key(), using == HeldUse::Using))

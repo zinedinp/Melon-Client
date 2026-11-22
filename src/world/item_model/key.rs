@@ -2,8 +2,9 @@
 //! components change about the model ([`Variant`]). Looked up for every
 //! drawn stack, every frame.
 
+use std::hash::{Hash, Hasher};
 use std::path::Path;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU8, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use pumpkin_data::data_component::DataComponent;
@@ -31,10 +32,20 @@ pub(super) fn resources_changed() {
     RESOURCES.fetch_add(1, Ordering::Relaxed);
 }
 
-/// A stack, and how to find its [`ItemKey`].
+/// A stack, and what drawing it asks of it every frame.
 pub trait StackKey {
     fn stack(&self) -> &ItemStack;
     fn item_key(&self, assets_root: &Path) -> ItemKey;
+
+    /// `ItemStack.hasFoil`.
+    fn foil(&self) -> bool {
+        crate::world::glint::has_foil(self.stack())
+    }
+
+    /// Whether it is a player head with a profile, drawn with its skin.
+    fn has_head(&self) -> bool {
+        crate::world::head_profile::HeadProfile::of_stack(self.stack()).is_some()
+    }
 }
 
 impl StackKey for ItemStack {
@@ -47,12 +58,35 @@ impl StackKey for ItemStack {
     }
 }
 
+/// A flag worked out on first use: 0 not yet, else `1 + value`.
+#[derive(Default)]
+struct LazyFlag(AtomicU8);
+
+impl LazyFlag {
+    fn get(&self, work_out: impl FnOnce() -> bool) -> bool {
+        match self.0.load(Ordering::Relaxed) {
+            0 => {
+                let value = work_out();
+                self.0.store(1 + u8::from(value), Ordering::Relaxed);
+                value
+            }
+            seen => seen == 2,
+        }
+    }
+
+    fn copy(&self) -> Self {
+        Self(AtomicU8::new(self.0.load(Ordering::Relaxed)))
+    }
+}
+
 /// A stack drawn every frame (slots, dropped, framed, displayed) with its
-/// [`ItemKey`], worked out once until the stack or the resources change.
-/// Any mutable access to the stack drops the key.
+/// [`ItemKey`], glint and head check, worked out once until the stack (or,
+/// for the key, the resources) change. Any mutable access to the stack drops them.
 pub struct KeyedStack {
     stack: ItemStack,
     key: Mutex<Option<(u32, ItemKey)>>,
+    foil: LazyFlag,
+    head: LazyFlag,
 }
 
 impl KeyedStack {
@@ -60,6 +94,8 @@ impl KeyedStack {
         Self {
             stack,
             key: Mutex::new(None),
+            foil: LazyFlag::default(),
+            head: LazyFlag::default(),
         }
     }
 
@@ -96,6 +132,8 @@ impl std::ops::Deref for KeyedStack {
 impl std::ops::DerefMut for KeyedStack {
     fn deref_mut(&mut self) -> &mut ItemStack {
         *self.key.get_mut().unwrap_or_else(PoisonError::into_inner) = None;
+        self.foil = LazyFlag::default();
+        self.head = LazyFlag::default();
         &mut self.stack
     }
 }
@@ -110,6 +148,8 @@ impl Clone for KeyedStack {
         Self {
             stack: self.stack.clone(),
             key: Mutex::new(key),
+            foil: self.foil.copy(),
+            head: self.head.copy(),
         }
     }
 }
@@ -130,6 +170,15 @@ impl StackKey for KeyedStack {
         let key = ItemKey::of(assets_root, &self.stack);
         *cached = Some((resources, key.clone()));
         key
+    }
+
+    fn foil(&self) -> bool {
+        self.foil.get(|| crate::world::glint::has_foil(&self.stack))
+    }
+
+    fn has_head(&self) -> bool {
+        self.head
+            .get(|| crate::world::head_profile::HeadProfile::of_stack(&self.stack).is_some())
     }
 }
 
@@ -156,7 +205,7 @@ impl ItemKey {
 }
 
 /// The components of a stack that pick its model.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Variant {
     /// The definition named by `item_model`, when it isn't the item's own.
     pub model: Option<String>,
@@ -174,6 +223,15 @@ pub struct Variant {
     pub patched: u128,
     /// `minecraft:trim` material (`SelectItemModel` `trim_material`).
     pub trim_material: Option<String>,
+    /// The fields' hash, taken once in [`Self::of`]: a lookup hashes this
+    /// instead of the strings and lists.
+    pub(super) hash: u64,
+}
+
+impl Hash for Variant {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64(self.hash);
+    }
 }
 
 impl Variant {
@@ -227,7 +285,27 @@ impl Variant {
             variant.strings.clone_from(&data.strings);
             variant.colors.clone_from(&data.colors);
         }
+        variant.hash = variant.content_hash();
         Some(variant)
+    }
+
+    /// Every field but `hash`.
+    fn content_hash(&self) -> u64 {
+        let mut hasher = rustc_hash::FxHasher::default();
+        (
+            &self.model,
+            &self.floats,
+            &self.flags,
+            &self.strings,
+            &self.colors,
+            self.dye,
+            self.broken,
+            self.present,
+            self.patched,
+            &self.trim_material,
+        )
+            .hash(&mut hasher);
+        hasher.finish()
     }
 
     /// `CustomModelData.getFloat`.
@@ -368,6 +446,40 @@ mod tests {
         assert_eq!(stack.item_key(root), ItemKey::of(root, &stack));
         resources_changed();
         assert_eq!(stack.item_key(root), ItemKey::of(root, &stack));
+    }
+
+    #[test]
+    fn equal_stacks_hash_their_variant_alike_and_others_apart() {
+        use std::hash::BuildHasher;
+        let dyed = |rgb| {
+            let mut stack = ItemStack::new(1, &Item::LEATHER_HELMET);
+            stack
+                .patch
+                .push(set(DataComponent::DyedColor, DyedColorImpl { rgb }));
+            stack
+        };
+        let hash = |stack: &ItemStack| {
+            rustc_hash::FxBuildHasher.hash_one(ItemKey::of(Path::new("no-assets"), stack))
+        };
+        assert_eq!(hash(&dyed(7)), hash(&dyed(7)));
+        assert_ne!(hash(&dyed(7)), hash(&dyed(8)));
+        let (a, b) = (Variant::of(&dyed(7)), Variant::of(&dyed(7)));
+        assert_eq!(a, b);
+        assert_ne!(a.map(|v| v.hash), Some(0));
+    }
+
+    #[test]
+    fn a_keyed_stack_forgets_its_glint_when_the_stack_changes() {
+        use pumpkin_data::data_component_impl::EnchantmentGlintOverrideImpl;
+        let mut stack = KeyedStack::new(ItemStack::new(1, &Item::DIAMOND_SWORD));
+        assert!(!stack.foil());
+        assert!(!stack.has_head());
+        stack.patch.push(set(
+            DataComponent::EnchantmentGlintOverride,
+            EnchantmentGlintOverrideImpl { glint: true },
+        ));
+        assert!(stack.foil());
+        assert!(stack.clone().foil());
     }
 
     #[test]

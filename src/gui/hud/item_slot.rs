@@ -49,8 +49,7 @@ impl ItemPainter<'_> {
             return;
         }
         if let Some(icon) = self.icons.get(keyed) {
-            let previous =
-                crate::world::glint::has_foil(stack).then(|| draw_list.set_program(Program::Glint));
+            let previous = keyed.foil().then(|| draw_list.set_program(Program::Glint));
             icon.draw(draw_list, x, y, 16.0, 16.0);
             if let Some(previous) = previous {
                 draw_list.set_program(previous);

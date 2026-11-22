@@ -377,6 +377,9 @@ impl WorldResources {
     ) {
         let using = using.into();
         self.held.prepare(renderer, stack, using);
+        if !stack.has_head() {
+            return;
+        }
         let stack = stack.stack();
         if let Some(profile) = HeadProfile::of_stack(stack) {
             self.players.request_head(&profile);
@@ -402,7 +405,7 @@ impl WorldResources {
         self.icons.prepare_batch(renderer, |visit| {
             stacks(&mut |stack| {
                 visit(stack);
-                if HeadProfile::of_stack(stack.stack()).is_some() {
+                if stack.has_head() {
                     heads.push(stack.stack().clone());
                 }
                 true

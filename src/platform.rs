@@ -381,6 +381,9 @@ pub fn create_centered_window(
         use winit::platform::windows::WindowAttributesExtWindows;
         attributes.with_taskbar_icon(window_icon())
     };
+    // TODO(macos): winit ignores window icons there, so the Dock shows none.
+    // Ship an `.app` bundle with an `.icns`, or set
+    // `NSApplication.applicationIconImage` at startup (`objc2-app-kit`).
     #[cfg(target_os = "linux")]
     let attributes = {
         use winit::platform::wayland::WindowAttributesExtWayland;

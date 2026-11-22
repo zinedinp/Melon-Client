@@ -211,8 +211,8 @@ impl ItemIcons {
     /// The icon, if [`Self::prepare`] managed to make it; a player head's
     /// own when [`Self::prepare_head`] made one.
     pub fn get(&self, keyed: &(impl StackKey + ?Sized)) -> Option<&Icon> {
-        let stack = keyed.stack();
-        if let Some(profile) = HeadProfile::of_stack(stack)
+        if keyed.has_head()
+            && let Some(profile) = HeadProfile::of_stack(keyed.stack())
             && let Some((_, Some(icon))) = self.heads.get(&profile.skin_key())
         {
             return Some(icon);
