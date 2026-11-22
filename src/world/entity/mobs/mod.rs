@@ -73,8 +73,6 @@ pub use layers::*;
 pub use placement::*;
 pub use pose::*;
 
-use std::borrow::Cow;
-
 use glam::Vec3;
 use pumpkin_data::data_component_impl::{ChargedProjectilesImpl, EquippableImpl, TrimImpl};
 use pumpkin_data::item::Item;
@@ -1711,7 +1709,7 @@ mod tests {
             body(entity)
                 .into_iter()
                 .filter(|l| matches!(l.model, ModelId::LlamaDecor | ModelId::LlamaBabyDecor))
-                .map(|l| l.texture.into_owned())
+                .map(|l| l.texture.to_string())
                 .collect::<Vec<_>>()
         };
         let mut trader = spawned(&EntityType::TRADER_LLAMA);

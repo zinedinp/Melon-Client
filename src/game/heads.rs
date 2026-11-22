@@ -201,7 +201,7 @@ pub(super) fn submit_worn_head(
 
 /// `HumanoidArmorLayer.shouldRender` for the head.
 fn worn_as_armor(stack: &ItemStack) -> bool {
-    !mobs::armor_textures(stack, ArmorSlot::Head, false).is_empty()
+    mobs::wears_as_armor(stack, ArmorSlot::Head)
 }
 
 /// Gets ready what [`submit_worn_head`] draws for `stack`.

@@ -50,6 +50,9 @@ pub fn install(assets_root: &Path) {
 }
 
 fn info(asset: &str) -> Arc<Info> {
+    if !asset.contains(':') {
+        return info(&with_namespace(asset));
+    }
     let mut store = STORE.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(info) = store.cache.get(asset) {
         return Arc::clone(info);
@@ -132,7 +135,7 @@ fn built_in(asset: &str) -> Info {
 }
 
 /// The equipment asset `stack` wears as (`Equippable.assetId`).
-pub fn asset_of(stack: &ItemStack) -> Option<String> {
+pub fn asset_of(stack: &ItemStack) -> Option<&str> {
     if stack.is_empty() {
         return None;
     }
@@ -140,37 +143,78 @@ pub fn asset_of(stack: &ItemStack) -> Option<String> {
         .get_data_component::<EquippableImpl>()?
         .asset_id
         .as_deref()
-        .map(str::to_owned)
 }
 
-/// `EquipmentLayerRenderer.renderLayers`'s textures and colours.
-pub fn textures(stack: &ItemStack, layer_type: &str) -> Vec<(String, [f32; 3])> {
+/// `EquipmentLayerRenderer.renderLayers`'s textures and colours, handed
+/// to `each` (pooled paths: nothing is allocated after the first frame).
+pub fn each_texture(stack: &ItemStack, layer_type: &str, each: impl FnMut(Arc<str>, [f32; 3])) {
     let Some(asset) = asset_of(stack) else {
-        return Vec::new();
+        return;
     };
     let dye = stack
         .get_data_component::<DyedColorImpl>()
         .map(|d| d.rgb as u32 & 0xFF_FFFF);
-    asset_textures(&asset, layer_type, dye)
+    each_asset_texture(asset, layer_type, dye, each);
 }
 
-/// [`textures`] of an asset worn without an item (a trader llama's blanket).
-pub fn asset_textures(asset: &str, layer_type: &str, dye: Option<u32>) -> Vec<(String, [f32; 3])> {
-    info(&with_namespace(asset))
+/// [`each_texture`] of an asset worn without an item (a trader llama's blanket).
+pub fn each_asset_texture(
+    asset: &str,
+    layer_type: &str,
+    dye: Option<u32>,
+    mut each: impl FnMut(Arc<str>, [f32; 3]),
+) {
+    for layer in info(asset).layers(layer_type) {
+        let rgb = match layer.dyeable {
+            None => 0xFF_FFFF,
+            Some(undyed) => match dye.or(undyed) {
+                Some(rgb) => rgb,
+                None => continue,
+            },
+        };
+        let (namespace, path) = crate::assets::split_id(&layer.texture);
+        let texture = crate::util::intern::intern(|s| {
+            for part in [namespace, ":entity/equipment/", layer_type, "/", path] {
+                s.push_str(part);
+            }
+        });
+        each(
+            texture,
+            [16, 8, 0].map(|shift| ((rgb >> shift) & 0xFF) as f32 / 255.0),
+        );
+    }
+}
+
+/// [`each_texture`] collected.
+pub fn textures(stack: &ItemStack, layer_type: &str) -> Vec<(Arc<str>, [f32; 3])> {
+    let mut out = Vec::new();
+    each_texture(stack, layer_type, |texture, tint| out.push((texture, tint)));
+    out
+}
+
+/// [`each_asset_texture`] collected.
+pub fn asset_textures(
+    asset: &str,
+    layer_type: &str,
+    dye: Option<u32>,
+) -> Vec<(Arc<str>, [f32; 3])> {
+    let mut out = Vec::new();
+    each_asset_texture(asset, layer_type, dye, |texture, tint| {
+        out.push((texture, tint));
+    });
+    out
+}
+
+/// Whether [`each_texture`] would hand anything over, without building a path.
+pub fn has_textures(stack: &ItemStack, layer_type: &str) -> bool {
+    let Some(asset) = asset_of(stack) else {
+        return false;
+    };
+    let dyed = stack.get_data_component::<DyedColorImpl>().is_some();
+    info(asset)
         .layers(layer_type)
         .iter()
-        .filter_map(|layer| {
-            let rgb = match layer.dyeable {
-                None => 0xFF_FFFF,
-                Some(undyed) => dye.or(undyed)?,
-            };
-            let (namespace, path) = crate::assets::split_id(&layer.texture);
-            Some((
-                format!("{namespace}:entity/equipment/{layer_type}/{path}"),
-                [16, 8, 0].map(|shift| ((rgb >> shift) & 0xFF) as f32 / 255.0),
-            ))
-        })
-        .collect()
+        .any(|layer| !matches!(layer.dyeable, Some(None)) || dyed)
 }
 
 #[cfg(test)]
@@ -208,6 +252,6 @@ mod tests {
     #[test]
     fn a_carpet_draws_its_dye_on_a_llama() {
         let carpet = asset_textures("minecraft:lime_carpet", "llama_body", None);
-        assert_eq!(carpet[0].0, "minecraft:entity/equipment/llama_body/lime");
+        assert_eq!(&*carpet[0].0, "minecraft:entity/equipment/llama_body/lime");
     }
 }

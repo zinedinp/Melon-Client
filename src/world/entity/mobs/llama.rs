@@ -190,9 +190,9 @@ pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
                 } else {
                     "minecraft:trader_llama"
                 };
-                for (texture, tint) in equipment_asset::asset_textures(asset, "llama_body", None) {
-                    out.push(LayerSpec::owned(decor, texture, tint));
-                }
+                equipment_asset::each_asset_texture(asset, "llama_body", None, |texture, tint| {
+                    out.push(LayerSpec::pooled(decor, texture, tint));
+                });
             }
         }
         _ => {}

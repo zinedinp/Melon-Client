@@ -234,7 +234,11 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
             if !p.removed {
                 let odds = p.age as f32 / p.lifetime.max(1) as f32;
                 if rng.next_float() > odds {
-                    out.push(Spawn::new(ParticleSpec::simple(Kind::Smoke), p.pos(), p.vel));
+                    out.push(Spawn::new(
+                        ParticleSpec::simple(Kind::Smoke),
+                        p.pos(),
+                        p.vel,
+                    ));
                 }
             }
         }

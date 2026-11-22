@@ -8,11 +8,48 @@ pub(super) fn dye_tint(color: pumpkin_data::dye_color::DyeColor) -> [f32; 3] {
     [16, 8, 0].map(|shift| ((rgb >> shift) & 0xFF) as f32 / 255.0)
 }
 
+/// A layer's texture id: a literal, or a path built from an item and
+/// pooled ([`crate::util::intern`]), so a frame's layers allocate nothing.
+#[derive(Clone, Debug)]
+pub enum TexturePath {
+    Static(&'static str),
+    Pooled(std::sync::Arc<str>),
+}
+
+impl std::ops::Deref for TexturePath {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        match self {
+            Self::Static(path) => path,
+            Self::Pooled(path) => path,
+        }
+    }
+}
+
+impl AsRef<str> for TexturePath {
+    fn as_ref(&self) -> &str {
+        self
+    }
+}
+
+impl PartialEq for TexturePath {
+    fn eq(&self, other: &Self) -> bool {
+        **self == **other
+    }
+}
+
+impl PartialEq<&str> for TexturePath {
+    fn eq(&self, other: &&str) -> bool {
+        &**self == *other
+    }
+}
+
 /// One model drawn for an entity, with its texture and how it is blended.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LayerSpec {
     pub model: ModelId,
-    pub texture: Cow<'static, str>,
+    pub texture: TexturePath,
     pub tint: [f32; 3],
     pub full_bright: bool,
     /// Blended over what is behind it (a slime's jelly).
@@ -45,10 +82,10 @@ impl LayerSpec {
     }
 
     /// An equipment texture whose path is built from the item.
-    pub(super) fn owned(model: ModelId, texture: String, tint: [f32; 3]) -> Self {
+    pub(super) fn pooled(model: ModelId, texture: std::sync::Arc<str>, tint: [f32; 3]) -> Self {
         Self {
             model,
-            texture: Cow::Owned(texture),
+            texture: TexturePath::Pooled(texture),
             tint,
             full_bright: false,
             translucent: false,
@@ -62,10 +99,14 @@ impl LayerSpec {
         }
     }
 
-    pub(super) fn humanoid_armor(model: ModelId, texture: String, tint: [f32; 3]) -> Self {
+    pub(super) fn humanoid_armor(
+        model: ModelId,
+        texture: std::sync::Arc<str>,
+        tint: [f32; 3],
+    ) -> Self {
         Self {
             copy_humanoid: true,
-            ..Self::owned(model, texture, tint)
+            ..Self::pooled(model, texture, tint)
         }
     }
 
@@ -105,7 +146,7 @@ impl LayerSpec {
     pub(super) const fn plain(model: ModelId, texture: &'static str) -> Self {
         Self {
             model,
-            texture: Cow::Borrowed(texture),
+            texture: TexturePath::Static(texture),
             tint: [1.0; 3],
             full_bright: false,
             translucent: false,

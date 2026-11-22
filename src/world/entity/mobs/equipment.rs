@@ -34,18 +34,21 @@ pub fn push_humanoid_armor(
         return;
     }
     for (slot, stack) in ArmorSlot::ALL.into_iter().zip(armor) {
-        let textures = armor_textures(stack, slot, baby && kind != EntityKind::ArmorStand);
+        if stack.is_empty() {
+            continue;
+        }
         // `EquipmentLayerRenderer.renderLayers`: the glint goes with the
         // first layer (the leather overlay above it shows none); with a
         // trim, vanilla glints the whole model after it, here the first
         // layer and the trim each where their texels are.
         let foil = crate::world::glint::has_foil(stack);
-        for (i, (texture, tint)) in textures.into_iter().enumerate() {
-            out.push(
-                LayerSpec::humanoid_armor(armor_model(kind, slot, baby), texture, tint)
-                    .with_foil(foil && i == 0),
-            );
-        }
+        let model = armor_model(kind, slot, baby);
+        let mut first = true;
+        let folder = armor_folder(slot, baby && kind != EntityKind::ArmorStand);
+        equipment_asset::each_texture(stack, folder, |texture, tint| {
+            out.push(LayerSpec::humanoid_armor(model, texture, tint).with_foil(foil && first));
+            first = false;
+        });
         if let Some(trim) = trim_overlay(stack, slot, baby) {
             out.push(
                 LayerSpec::humanoid_armor(armor_model(kind, slot, baby), trim, [1.0; 3])
@@ -110,11 +113,12 @@ pub(super) fn push_equipment_textures(
     folder: &str,
     out: &mut Vec<LayerSpec>,
 ) {
-    let textures = equipment_textures(stack, folder);
     let foil = crate::world::glint::has_foil(stack);
-    for (i, (texture, tint)) in textures.into_iter().enumerate() {
-        out.push(LayerSpec::owned(model, texture, tint).with_foil(foil && i == 0));
-    }
+    let mut first = true;
+    equipment_asset::each_texture(stack, folder, |texture, tint| {
+        out.push(LayerSpec::pooled(model, texture, tint).with_foil(foil && first));
+        first = false;
+    });
 }
 
 /// Armor posed like the wearer (`HumanoidArmorLayer.copyPropertiesTo`).
@@ -154,11 +158,6 @@ pub(super) fn saddle_look(kind: EntityKind, baby: bool) -> Option<(ModelId, &'st
     })
 }
 
-/// `EquipmentLayerRenderer` textures for `stack` in `folder`.
-pub(super) fn equipment_textures(stack: &ItemStack, folder: &str) -> Vec<(String, [f32; 3])> {
-    equipment_asset::textures(stack, folder)
-}
-
 /// The armor model for `slot` on an entity of this age.
 pub fn armor_model(kind: EntityKind, slot: ArmorSlot, baby: bool) -> ModelId {
     let style = match kind {
@@ -174,18 +173,32 @@ pub fn armor_model(kind: EntityKind, slot: ArmorSlot, baby: bool) -> ModelId {
     }
 }
 
-/// `EquipmentLayerRenderer`'s textures for `stack` worn in `slot`.
-pub fn armor_textures(stack: &ItemStack, slot: ArmorSlot, baby: bool) -> Vec<(String, [f32; 3])> {
-    let folder = match (baby, slot) {
+/// The equipment layer type armor in `slot` is drawn from.
+fn armor_folder(slot: ArmorSlot, baby: bool) -> &'static str {
+    match (baby, slot) {
         (true, _) => "humanoid_baby",
         (false, ArmorSlot::Legs) => "humanoid_leggings",
         (false, _) => "humanoid",
-    };
-    equipment_asset::textures(stack, folder)
+    }
+}
+
+/// `EquipmentLayerRenderer`'s textures for `stack` worn in `slot`.
+pub fn armor_textures(
+    stack: &ItemStack,
+    slot: ArmorSlot,
+    baby: bool,
+) -> Vec<(std::sync::Arc<str>, [f32; 3])> {
+    equipment_asset::textures(stack, armor_folder(slot, baby))
+}
+
+/// Whether `stack` has anything to draw as armor in `slot`
+/// (`HumanoidArmorLayer.shouldRender`), without building a path.
+pub fn wears_as_armor(stack: &ItemStack, slot: ArmorSlot) -> bool {
+    equipment_asset::has_textures(stack, armor_folder(slot, false))
 }
 
 /// `EquipmentLayerRenderer` trim overlay. Babies have none (`HUMANOID_BABY`).
-fn trim_overlay(stack: &ItemStack, slot: ArmorSlot, baby: bool) -> Option<String> {
+fn trim_overlay(stack: &ItemStack, slot: ArmorSlot, baby: bool) -> Option<std::sync::Arc<str>> {
     if baby {
         return None;
     }
@@ -196,11 +209,19 @@ fn trim_overlay(stack: &ItemStack, slot: ArmorSlot, baby: bool) -> Option<String
         ArmorSlot::Legs => "humanoid_leggings",
         _ => "humanoid",
     };
-    Some(format!(
-        "minecraft:trims/entity/{folder}/{}#{}",
-        pattern.to_name(),
-        trim_palette(stack, material)
-    ))
+    let palette = trim_palette(stack, material);
+    Some(crate::util::intern::intern(|s| {
+        for part in [
+            "minecraft:trims/entity/",
+            folder,
+            "/",
+            pattern.to_name(),
+            "#",
+            palette,
+        ] {
+            s.push_str(part);
+        }
+    }))
 }
 
 /// Same-material trims use the `*_darker` palette (`equipment/*.json` `trim_overrides`).

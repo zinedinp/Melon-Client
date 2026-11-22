@@ -786,13 +786,15 @@ impl InWorld {
         if !entity.appearance.glowing() {
             return None;
         }
-        let holder = match self.players.get(&entity.uuid) {
-            Some(player) if entity.kind == EntityKind::Player => player.name.clone(),
-            _ => entity.uuid.to_string(),
+        // The UUID as text on the stack: no string a frame per glowing entity.
+        let mut uuid_text = [0u8; uuid::fmt::Hyphenated::LENGTH];
+        let holder: &str = match self.players.get(&entity.uuid) {
+            Some(player) if entity.kind == EntityKind::Player => &player.name,
+            _ => entity.uuid.hyphenated().encode_lower(&mut uuid_text),
         };
         let color = self
             .scoreboard
-            .team_of(&holder)
+            .team_of(holder)
             .and_then(|(_, team)| team.look.color)
             .map_or([255, 255, 255], |c| {
                 c.named().rgb().map(|v| (v * 255.0).round() as u8)

@@ -371,7 +371,10 @@ impl PlayerModels {
             let path = body.strip_prefix("minecraft:").unwrap_or(body);
             if let Some(index) = (0..DEFAULT_SKINS.len()).find(|&i| {
                 let (name, model) = DEFAULT_SKINS[i];
-                path == format!("entity/player/{}/{name}", model.folder())
+                path.strip_prefix("entity/player/")
+                    .and_then(|rest| rest.strip_prefix(model.folder()))
+                    .and_then(|rest| rest.strip_prefix('/'))
+                    == Some(name)
             }) {
                 let (texture, image) = &self.skins[index];
                 look.texture = *texture;
@@ -449,9 +452,9 @@ pub struct MobModels {
     assets_root: std::path::PathBuf,
     models: Vec<(MobModel, ModelMeshes)>,
     /// By asset id; `None` for one that isn't there.
-    textures: HashMap<String, Option<TextureId>>,
+    textures: rustc_hash::FxHashMap<String, Option<TextureId>>,
     /// The `villager.hat` of the textures that say one.
-    hats: HashMap<String, Hat>,
+    hats: rustc_hash::FxHashMap<String, Hat>,
 }
 
 impl MobModels {
@@ -467,8 +470,8 @@ impl MobModels {
         Ok(Self {
             assets_root: assets.root().to_path_buf(),
             models,
-            textures: HashMap::new(),
-            hats: HashMap::new(),
+            textures: Default::default(),
+            hats: Default::default(),
         })
     }
 
