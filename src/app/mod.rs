@@ -324,6 +324,24 @@ impl RunningState {
                 self.screens.replace_top(screen, &ctx);
             }
             ScreenAction::SetLanguage(language) => self.set_language(language),
+            ScreenAction::OpenWorldOptions => {
+                if let Some(state) = self.world.as_ref().and_then(InWorld::world_options_state) {
+                    let ctx = self.env.ctx(self.scale());
+                    let screen =
+                        crate::gui::screens::ingame::world_options::WorldOptionsScreen::new(state);
+                    self.screens.push(Box::new(screen), &ctx);
+                }
+            }
+            ScreenAction::WorldOptions(change) => {
+                if let Some(world) = &mut self.world {
+                    world.apply_world_options(
+                        *change,
+                        &self.env.lang,
+                        &self.env.gui_assets.font,
+                    );
+                }
+                self.close_top_screen();
+            }
             ScreenAction::ChangeConfig(change) => {
                 let mut config = self.env.config.clone();
                 change(&mut config);

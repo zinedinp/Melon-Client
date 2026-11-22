@@ -35,5 +35,10 @@
   "melon.pumpkin.unsupported.world_type": "Pumpkin can only generate the Default world type yet, so this world can't be created.",
   "melon.pumpkin.unsupported.structures": "Pumpkin always generates structures; this can't be switched off yet.",
   "melon.pumpkin.unsupported.bonus_chest": "Pumpkin can't place a bonus chest at the spawn yet.",
-  "melon.pumpkin.unsupported.customize": "Pumpkin has no world type settings to customize yet."
+  "melon.pumpkin.unsupported.customize": "Pumpkin has no world type settings to customize yet.",
+  "melon.worldOptions.onlineMode": "Online Mode",
+  "melon.worldOptions.onlineMode.tooltip": "Guests must sign in with their Microsoft account (Java) or Xbox account (Bedrock). Off, anyone can join under any name.",
+  "melon.worldOptions.bedrock": "Bedrock Players",
+  "melon.worldOptions.bedrock.tooltip": "Lets Bedrock Edition players join over the LAN as well (UDP and TCP port 19132).",
+  "melon.worldOptions.unavailable.tooltip": "Not available in Melon yet."
 }

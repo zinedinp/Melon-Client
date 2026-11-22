@@ -41,6 +41,8 @@ enum Id {
     /// `addCustomDialogButtons`: the server's links or options.
     Custom,
     Options,
+    /// 26.3's `WorldOptionsScreen`, in a singleplayer world here.
+    WorldOptions,
     Disconnect,
 }
 
@@ -85,10 +87,19 @@ impl PauseScreen {
             ));
             widgets = widgets.with_button(Id::Custom, button);
         }
-        let widgets = widgets
+        let options_w = if local_server {
+            HALF_BUTTON_W
+        } else {
+            BUTTON_W
+        };
+        let mut widgets = widgets
             .with_button(
                 Id::Options,
-                Button::sized("menu.options", BUTTON_W, BUTTON_H),
+                Button::sized("menu.options", options_w, BUTTON_H),
+            )
+            .with_button(
+                Id::WorldOptions,
+                Button::sized("options.worldOptions.button", HALF_BUTTON_W, BUTTON_H),
             )
             .with_button(
                 Id::Disconnect,
@@ -102,6 +113,7 @@ impl PauseScreen {
                     BUTTON_H,
                 ),
             );
+        widgets.set_visible(Id::WorldOptions, local_server);
         Self {
             widgets,
             custom,
@@ -128,6 +140,7 @@ impl PauseScreen {
                 None => ScreenAction::None,
             },
             Id::Options => ScreenAction::open(OptionsScreen::new(ctx)),
+            Id::WorldOptions => ScreenAction::OpenWorldOptions,
             Id::Disconnect => ScreenAction::LeaveWorld,
             Id::Advancements | Id::Statistics | Id::Icon(_) => ScreenAction::None,
         }
@@ -158,12 +171,9 @@ impl Screen for PauseScreen {
             w.set_position(Id::Custom, left, row_y);
             row_y += BUTTON_H + PADDING;
         }
-        w.column(
-            &[Id::Options, Id::Disconnect],
-            left,
-            row_y,
-            BUTTON_H + PADDING,
-        );
+        w.set_position(Id::Options, left, row_y);
+        w.set_position(Id::WorldOptions, left + HALF_BUTTON_W + PADDING * 2.0, row_y);
+        w.set_position(Id::Disconnect, left, row_y + BUTTON_H + PADDING);
     }
 
     fn on_mouse_move(&mut self, x: f32, y: f32) {

@@ -47,6 +47,10 @@ pub enum ScreenAction {
     ReloadResources,
     /// A server dialog's button, link or Escape, or a dialog to open.
     Dialog(crate::gui::screens::dialog::DialogRequest),
+    /// The pause menu's World Options: opened by the app, which knows the world.
+    OpenWorldOptions,
+    /// World Options' Apply Changes, then back.
+    WorldOptions(Box<crate::gui::screens::ingame::world_options::WorldOptionsChange>),
 }
 
 impl ScreenAction {

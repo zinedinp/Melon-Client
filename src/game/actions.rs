@@ -77,6 +77,89 @@ impl InWorld {
         self.chat.add_client_message(text, font);
     }
 
+    /// What World Options starts from; `None` outside a singleplayer world.
+    pub fn world_options_state(
+        &self,
+    ) -> Option<crate::gui::screens::ingame::world_options::WorldOptionsState> {
+        let server = self.integrated_server()?;
+        let mode = |mode: pumpkin_util::GameMode| {
+            crate::world::game_mode::GameMode::from_id(mode as i32)
+        };
+        Some(
+            crate::gui::screens::ingame::world_options::WorldOptionsState {
+                default_game_mode: server
+                    .default_game_mode()
+                    .map_or(self.game_mode.current, mode),
+                personal_game_mode: server.personal_game_mode().map(mode),
+                allow_commands: server.allow_commands(),
+                hardcore: self.hardcore(),
+                permission_level: self.permission_level,
+                difficulty: self.level_settings.difficulty,
+                difficulty_locked: self.level_settings.difficulty_locked,
+                published: server.published(),
+                guest_command_access: server.guest_command_access(),
+                force_game_mode: server.force_game_mode(),
+            },
+        )
+    }
+
+    /// World Options' Apply Changes (`WorldOptionsScreen.applyChanges`).
+    pub fn apply_world_options(
+        &mut self,
+        change: crate::gui::screens::ingame::world_options::WorldOptionsChange,
+        lang: &crate::i18n::Lang,
+        font: &Font,
+    ) {
+        if let Some(difficulty) = change.difficulty {
+            self.joined.session.send_change_difficulty(difficulty);
+        }
+        if change.lock_difficulty {
+            self.joined.session.send_lock_difficulty(true);
+        }
+        let mode = |mode: crate::world::game_mode::GameMode| {
+            pumpkin_util::GameMode::try_from(i32::from(mode.id())).ok()
+        };
+        let mut messages = Vec::new();
+        if let Some(server) = self.joined.server.as_mut() {
+            if let Some(allow) = change.allow_commands {
+                server.set_allow_commands(allow);
+            }
+            if let Some(force) = change.force_game_mode {
+                server.set_force_game_mode(force);
+            }
+            if let Some(game_mode) = change.default_game_mode.and_then(mode) {
+                server.set_default_game_mode(game_mode);
+            }
+            if let Some(game_mode) = change.personal_game_mode.and_then(mode) {
+                server.set_personal_game_mode(game_mode);
+            }
+            if let Some(access) = change.guest_command_access {
+                server.set_guest_command_access(access);
+            }
+            // `changeMultiplayerScope`.
+            if let Some(publish) = change.publish {
+                if server.unpublish() {
+                    messages.push(lang.get("menu.multiplayerOptions.publish.stopped").to_owned());
+                }
+                if let Some(publish) = publish {
+                    messages.push(match server.publish(publish) {
+                        Ok(()) => lang.format(
+                            "menu.multiplayerOptions.publish.started.lan",
+                            &[&publish.port.to_string()],
+                        ),
+                        Err(error) => {
+                            crate::warn!("Not published: {error:#}");
+                            lang.get("commands.publish.failed").to_owned()
+                        }
+                    });
+                }
+            }
+        }
+        for message in messages {
+            self.show_client_message(StyledText::plain(&message), font);
+        }
+    }
+
     /// [`Self::debug_feedback`] for a message that is already text.
     pub fn debug_line(&mut self, lang: &Lang, font: &Font, message: &str) {
         let mut text = StyledText::default();
