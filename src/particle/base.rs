@@ -287,3 +287,22 @@ impl Particle {
         self.prev_offset = Vec3::ZERO;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn moving_keeps_where_it_was_and_far_away_it_interpolates_exactly() {
+        let far = DVec3::new(29_999_000.25, 70.5, -29_999_000.75);
+        let mut p = Particle::at(Kind::Flame, far, &mut JavaRandom::new(1));
+        p.set_pos(far + DVec3::new(0.5, -0.25, 0.125));
+        assert_eq!(p.prev(), far);
+        p.set_pos(p.pos() + DVec3::new(0.25, 0.0, 0.0));
+        assert_eq!(p.prev(), far);
+        assert_eq!(p.lerp_pos(0.0), far);
+        assert_eq!(p.lerp_pos(1.0), p.pos());
+        p.reset_prev();
+        assert_eq!(p.prev(), p.pos());
+    }
+}
