@@ -77,17 +77,15 @@ fn dirs_data() -> PathBuf {
         .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
-    #[cfg(target_os = "macos")]
-    {
-        return home.join("Library/Application Support");
-    }
-    #[cfg(windows)]
-    {
-        return std::env::var_os("APPDATA")
+    if cfg!(target_os = "macos") {
+        home.join("Library/Application Support")
+    } else if cfg!(windows) {
+        std::env::var_os("APPDATA")
             .map(PathBuf::from)
-            .unwrap_or(home);
+            .unwrap_or(home)
+    } else {
+        home.join(".local/share")
     }
-    home.join(".local/share")
 }
 
 /// Prepared vanilla tree next to `home` (tests and `MELON_HOME` layouts).

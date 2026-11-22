@@ -226,6 +226,7 @@ impl ThreadCounts {
     }
 
     /// `stat`'s fields 14 and 15 (`utime`, `stime`) and `schedstat`'s
+    #[cfg(any(target_os = "linux", test))]
     fn parse(stat: &str, sched: &str) -> Option<Self> {
         let rest = stat.get(stat.rfind(')')? + 1..)?;
         let mut fields = rest.split_whitespace().skip(11);

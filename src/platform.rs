@@ -2,6 +2,7 @@
 
 #[cfg(target_os = "linux")]
 use std::io::ErrorKind;
+#[cfg(target_os = "linux")]
 use std::process::Command;
 #[cfg(target_os = "linux")]
 use std::process::Output;
@@ -223,6 +224,42 @@ pub fn cpu_name() -> Option<String> {
     None
 }
 
+/// `PROCESS_MEMORY_COUNTERS` and `K32GetProcessMemoryInfo`, declared once.
+#[cfg(windows)]
+mod win_memory {
+    #[repr(C)]
+    #[derive(Default)]
+    pub struct ProcessMemoryCounters {
+        pub cb: u32,
+        pub page_fault_count: u32,
+        pub peak_working_set_size: usize,
+        pub working_set_size: usize,
+        pub quota: [usize; 4],
+        pub pagefile_usage: usize,
+        pub peak_pagefile_usage: usize,
+    }
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetCurrentProcess() -> isize;
+        fn K32GetProcessMemoryInfo(
+            process: isize,
+            counters: *mut ProcessMemoryCounters,
+            cb: u32,
+        ) -> i32;
+    }
+
+    /// This process's counters.
+    pub fn counters() -> Option<ProcessMemoryCounters> {
+        let mut c = ProcessMemoryCounters {
+            cb: std::mem::size_of::<ProcessMemoryCounters>() as u32,
+            ..Default::default()
+        };
+        let ok = unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut c, c.cb) };
+        (ok != 0).then_some(c)
+    }
+}
+
 /// Resident set size of this process: `/proc/self/statm` on Linux, the
 pub fn resident_set_bytes() -> Option<u64> {
     #[cfg(target_os = "linux")]
@@ -233,33 +270,7 @@ pub fn resident_set_bytes() -> Option<u64> {
     }
     #[cfg(windows)]
     {
-        #[repr(C)]
-        struct ProcessMemoryCounters {
-            cb: u32,
-            page_fault_count: u32,
-            peak_working_set_size: usize,
-            working_set_size: usize,
-            rest: [usize; 6],
-        }
-        #[link(name = "kernel32")]
-        unsafe extern "system" {
-            fn GetCurrentProcess() -> isize;
-            fn K32GetProcessMemoryInfo(
-                process: isize,
-                counters: *mut ProcessMemoryCounters,
-                cb: u32,
-            ) -> i32;
-        }
-        let mut counters = ProcessMemoryCounters {
-            cb: std::mem::size_of::<ProcessMemoryCounters>() as u32,
-            page_fault_count: 0,
-            peak_working_set_size: 0,
-            working_set_size: 0,
-            rest: [0; 6],
-        };
-        let ok =
-            unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut counters, counters.cb) };
-        (ok != 0).then_some(counters.working_set_size as u64)
+        win_memory::counters().map(|c| c.working_set_size as u64)
     }
     #[cfg(not(any(target_os = "linux", windows)))]
     None
@@ -292,36 +303,7 @@ pub fn memory_details() -> Option<MemoryDetails> {
     }
     #[cfg(windows)]
     {
-        #[repr(C)]
-        struct ProcessMemoryCounters {
-            cb: u32,
-            page_fault_count: u32,
-            peak_working_set_size: usize,
-            working_set_size: usize,
-            quota: [usize; 4],
-            pagefile_usage: usize,
-            peak_pagefile_usage: usize,
-        }
-        #[link(name = "kernel32")]
-        unsafe extern "system" {
-            fn GetCurrentProcess() -> isize;
-            fn K32GetProcessMemoryInfo(
-                process: isize,
-                counters: *mut ProcessMemoryCounters,
-                cb: u32,
-            ) -> i32;
-        }
-        let mut c = ProcessMemoryCounters {
-            cb: std::mem::size_of::<ProcessMemoryCounters>() as u32,
-            page_fault_count: 0,
-            peak_working_set_size: 0,
-            working_set_size: 0,
-            quota: [0; 4],
-            pagefile_usage: 0,
-            peak_pagefile_usage: 0,
-        };
-        let ok = unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut c, c.cb) };
-        return (ok != 0).then_some(MemoryDetails {
+        return win_memory::counters().map(|c| MemoryDetails {
             resident: c.working_set_size as u64,
             peak_resident: c.peak_working_set_size as u64,
             committed: c.pagefile_usage as u64,
