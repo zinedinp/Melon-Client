@@ -156,18 +156,18 @@ fn run_or_fallback(mut preferred: Command, mut fallback: Command) -> Option<Outp
 /// `Util.getPlatform().openUri`.
 pub fn open_url(url: &str) {
     if let Err(e) = open::that(url) {
-        eprintln!("Could not open {url}: {e:#}");
+        crate::warn!("Could not open {url}: {e:#}");
     }
 }
 
 /// Makes `path` if it is missing, then opens it in the file manager.
 pub fn open_dir(path: &std::path::Path) {
     if let Err(e) = std::fs::create_dir_all(path) {
-        eprintln!("Could not create {}: {e}", path.display());
+        crate::warn!("Could not create {}: {e}", path.display());
         return;
     }
     if let Err(e) = open::that(path) {
-        eprintln!("Could not open {}: {e}", path.display());
+        crate::warn!("Could not open {}: {e}", path.display());
     }
 }
 
@@ -177,7 +177,7 @@ pub fn copy_to_clipboard(text: &str) {
         Ok(mut clipboard) => {
             let _ = clipboard.set_text(text.to_owned());
         }
-        Err(e) => eprintln!("Clipboard unavailable: {e}"),
+        Err(e) => crate::warn!("Clipboard unavailable: {e}"),
     }
 }
 
@@ -355,6 +355,16 @@ mod memory_tests {
     }
 }
 
+#[cfg(test)]
+mod stack_tests {
+    #[test]
+    fn the_dropped_stack_is_the_one_cargo_sets() {
+        let config = include_str!("../.cargo/config.toml");
+        let line = format!("RUST_MIN_STACK = \"{}\"", super::CARGO_STACK);
+        assert!(config.contains(&line));
+    }
+}
+
 /// The program's name for the desktop: the `.desktop` file, the app id.
 #[cfg(target_os = "linux")]
 const APP_ID: &str = "melon";
@@ -397,6 +407,21 @@ pub fn create_centered_window(
 #[cfg(target_os = "linux")]
 const BACKGROUND_NICE: i32 = 10;
 
+/// `RUST_MIN_STACK`, as `.cargo/config.toml` sets it for rustc.
+const CARGO_STACK: &str = "268435456";
+
+/// Under `cargo run`, drops the compiler's 256 MiB `RUST_MIN_STACK`, so
+/// the game's threads get the default stacks a shipped build has. Call
+/// before any thread starts.
+pub fn drop_cargo_stack() {
+    if std::env::var_os("CARGO").is_some()
+        && std::env::var("RUST_MIN_STACK").is_ok_and(|size| size == CARGO_STACK)
+    {
+        // SAFETY: no other thread exists yet, so none reads the environment.
+        unsafe { std::env::remove_var("RUST_MIN_STACK") };
+    }
+}
+
 /// Lets the calling thread give way when the CPU is busy: background work
 pub fn lower_thread_priority() {
     #[cfg(target_os = "linux")]
@@ -411,7 +436,7 @@ pub fn lower_thread_priority() {
                 return;
             }
             if setpriority(PRIO_PROCESS, 0, BACKGROUND_NICE) != 0 {
-                eprintln!(
+                crate::warn!(
                     "Thread priority not lowered: {}",
                     std::io::Error::last_os_error()
                 );
@@ -476,7 +501,7 @@ mod host_tests {
         assert!(name.len() > 3, "{name:?}");
         #[cfg(any(windows, target_os = "linux"))]
         assert!(super::resident_set_bytes().is_some_and(|b| b > 1 << 20));
-        eprintln!("CPU: {name}");
+        crate::warn!("CPU: {name}");
     }
 }
 

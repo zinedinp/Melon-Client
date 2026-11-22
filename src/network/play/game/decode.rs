@@ -558,7 +558,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
         id::CB_PLAYER_INFO_UPDATE => match read_player_info(&mut r) {
             Ok(players) => GameEvent::PlayerInfo(players),
             Err(e) => {
-                eprintln!("Spielerliste unlesbar: {e:#}");
+                crate::warn!("Player list unreadable: {e:#}");
                 return Ok(None);
             }
         },
@@ -566,7 +566,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
             match crate::network::play::chat::commands::CommandTree::decode(body) {
                 Ok(tree) => GameEvent::Commands(tree),
                 Err(e) => {
-                    eprintln!("Befehlsbaum unlesbar: {e:#}");
+                    crate::warn!("Command tree unreadable: {e:#}");
                     return Ok(None);
                 }
             }
@@ -598,7 +598,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
                 Ok(Some(packet)) => return Ok(Some(GameEvent::Scores(packet))),
                 Ok(None) => {}
                 Err(e) => {
-                    eprintln!("Scoreboard-Paket {pid} unlesbar: {e:#}");
+                    crate::warn!("Scoreboard packet {pid} unreadable: {e:#}");
                     crate::probe::note("decode.error", format!("scoreboard packet {pid}"), || {
                         format!("{e:#}")
                     });
@@ -608,7 +608,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
             return Ok(match crate::network::play::chat::decode(pid, body) {
                 Ok(event) => event.map(GameEvent::Chat),
                 Err(e) => {
-                    eprintln!("Chat-Paket {pid} unlesbar: {e:#}");
+                    crate::warn!("Chat packet {pid} unreadable: {e:#}");
                     crate::probe::note("decode.error", format!("chat packet {pid}"), || {
                         format!("{e:#}")
                     });

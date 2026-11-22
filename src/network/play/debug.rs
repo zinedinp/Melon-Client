@@ -108,7 +108,7 @@ impl PacketDebug {
                     Some(id) => {
                         debug.traced.insert(id);
                     }
-                    None => eprintln!("MELON_PACKET_DEBUG: unbekanntes Paket \"{other}\""),
+                    None => eprintln!("MELON_PACKET_DEBUG: unknown packet \"{other}\""),
                 },
             }
         }
@@ -125,12 +125,12 @@ impl PacketDebug {
         if let Some(capture) = &mut self.capture
             && let Err(e) = record(capture, pid, body)
         {
-            eprintln!("[paket] Mitschnitt endet: {e}");
+            eprintln!("[packet] capture ends: {e}");
             self.capture = None;
         }
         if self.all || self.traced.contains(&pid) {
             eprintln!(
-                "[paket] <- {}  {} B{}",
+                "[packet] <- {}  {} B{}",
                 label(pid),
                 body.len(),
                 dump(body, self.traced.contains(&pid))
@@ -164,13 +164,13 @@ impl PacketDebug {
         if seen.count <= SHOWN {
             match &error {
                 Some(e) => eprintln!(
-                    "[paket] !! {}  {} B, nicht lesbar: {e}{}",
+                    "[packet] !! {}  {} B, unreadable: {e}{}",
                     label(pid),
                     body.len(),
                     dump(body, true)
                 ),
                 None => eprintln!(
-                    "[paket] ?? {}  {} B, kein Decoder{}",
+                    "[packet] ?? {}  {} B, no decoder{}",
                     label(pid),
                     body.len(),
                     dump(body, true)
@@ -187,14 +187,14 @@ impl PacketDebug {
         if self.seen.is_empty() {
             return;
         }
-        eprintln!("[paket] Zusammenfassung, nicht aufgeloeste Pakete:");
+        eprintln!("[packet] summary, packets not resolved:");
         for (&pid, seen) in &self.seen {
             let error = seen
                 .error
                 .as_deref()
                 .map_or(String::new(), |e| format!("  Fehler: {e}"));
             eprintln!(
-                "[paket]   {:<44} {:>6}x {:>9} B{error}",
+                "[packet]   {:<44} {:>6}x {:>9} B{error}",
                 label(pid),
                 seen.count,
                 seen.bytes
@@ -213,7 +213,7 @@ fn start_capture(path: &Path) -> Result<Capture> {
     let file = File::create(path).with_context(|| path.display().to_string())?;
     let mut out = BufWriter::new(file);
     out.write_all(MAGIC)?;
-    eprintln!("[paket] Mitschnitt nach {}", path.display());
+    eprintln!("[packet] capturing to {}", path.display());
     Ok(Capture {
         out,
         start: Instant::now(),
@@ -265,7 +265,7 @@ pub fn replay(path: &Path) -> Result<()> {
         kind.0 += 1;
         kind.1 += body.len() as u64;
         if let Err(e) = listener.handle(*pid, body) {
-            eprintln!("[paket] !! {} nicht lesbar: {e:#}", label(*pid));
+            eprintln!("[packet] !! {} unreadable: {e:#}", label(*pid));
         }
     }
     let seconds = packets.last().map_or(0, |p| p.0) / 1000;

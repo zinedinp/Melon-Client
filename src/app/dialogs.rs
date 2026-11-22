@@ -110,12 +110,12 @@ impl RunningState {
             ClickEvent::RunCommand { command } => match &self.world {
                 Some(world) => world.run_command(&command),
                 // `ClientConfigurationPacketListenerImpl`'s dialog access.
-                None => eprintln!("Befehle gehen in der Konfigurationsphase nicht: {command}"),
+                None => crate::warn!("No commands in the configuration phase: {command}"),
             },
             ClickEvent::ShowDialog { dialog } => {
                 match Dialog::reference(&dialog).and_then(|r| connection::resolve(&r)) {
                     Some(dialog) => self.show_dialog(dialog),
-                    None => eprintln!("Dialog nicht gefunden: {dialog}"),
+                    None => crate::warn!("Dialog not found: {dialog}"),
                 }
             }
             ClickEvent::OpenUrl { url } => {

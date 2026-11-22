@@ -390,9 +390,9 @@ fn memory_types(
 fn note_memory_fallback(flags: vk::MemoryPropertyFlags) {
     static NOTED: std::sync::Once = std::sync::Once::new();
     NOTED.call_once(|| {
-        eprintln!(
-            "Vulkan: bevorzugter Speicher ist voll (ein anderes Programm belegt die GPU?), \
-             weiche aus auf {flags:?}"
+        crate::warn!(
+            "vulkan: preferred memory full (another program using the GPU?), \
+             falling back to {flags:?}"
         );
     });
 }
@@ -421,6 +421,6 @@ pub(super) unsafe extern "system" fn debug_callback(
     _user_data: *mut std::ffi::c_void,
 ) -> vk::Bool32 {
     let message = CStr::from_ptr((*data).p_message).to_string_lossy();
-    eprintln!("[vulkan] {message}");
+    crate::warn!("[vulkan] {message}");
     vk::FALSE
 }

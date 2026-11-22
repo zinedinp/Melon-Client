@@ -98,7 +98,7 @@ fn trace_sent(id: i32, body: &[u8]) {
     });
     if on {
         let head: String = body.iter().take(24).map(|b| format!("{b:02x}")).collect();
-        eprintln!("[paket] -> 0x{id:02x} {} B {head}", body.len());
+        eprintln!("[packet] -> 0x{id:02x} {} B {head}", body.len());
     }
 }
 

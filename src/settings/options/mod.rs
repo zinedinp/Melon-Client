@@ -260,7 +260,7 @@ impl Config {
 
     pub fn save(&self, game_dir: &Path) {
         if let Err(e) = std::fs::write(Self::path(game_dir), self.serialize()) {
-            eprintln!("Konnte options.txt nicht schreiben: {e:#}");
+            crate::warn!("options.txt not written: {e:#}");
         }
     }
 }

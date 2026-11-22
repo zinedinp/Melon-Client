@@ -26,7 +26,7 @@ pub fn load(assets_root: &Path) -> (Vec<ChainSource>, Option<Compiled>) {
         match load_one(assets_root, id) {
             Ok(Some(chain)) => chains.push(chain),
             Ok(None) => {}
-            Err(e) => eprintln!("Post-Effekt {id}: {e:#}"),
+            Err(e) => crate::warn!("Post effect {id}: {e:#}"),
         }
     }
     (chains, blit(assets_root))
@@ -59,7 +59,7 @@ fn load_one(assets_root: &Path, id: &str) -> anyhow::Result<Option<ChainSource>>
                     Some(image) => {
                         textures.insert(location.clone(), image);
                     }
-                    None => eprintln!("Post-Effekt {id}: Textur {location} fehlt"),
+                    None => crate::warn!("Post effect {id}: texture {location} missing"),
                 }
             }
         }
@@ -91,7 +91,7 @@ fn blit(assets_root: &Path) -> Option<Compiled> {
     match shader::compile(assets_root, &pass) {
         Ok(compiled) => Some(compiled),
         Err(e) => {
-            eprintln!("Outline-Blit: {e:#}");
+            crate::warn!("Outline blit: {e:#}");
             None
         }
     }

@@ -18,7 +18,7 @@ pub fn confirm_delete_world(folder: String, world_name: &str, ctx: &ScreenContex
         .line(warning, WARNING_COLOR)
         .button("selectWorld.deleteButton", BUTTON_W, move |ctx| {
             if let Err(e) = singleplayer::delete_world(ctx.game_dir, &folder) {
-                eprintln!("Konnte Welt nicht loeschen ({folder}): {e:#}");
+                crate::warn!("World not deleted ({folder}): {e:#}");
             }
             ScreenAction::Back
         })

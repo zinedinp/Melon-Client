@@ -43,7 +43,7 @@ impl BenchRun {
         let device = renderer.device_info();
         self.gpu_monitor = GpuMonitor::start(&device.name);
         if self.gpu_monitor.is_none() {
-            println!("Bench: kein NVML (keine NVIDIA-GPU?), GPU-Auslastung fehlt");
+            println!("Bench: no NVML (no NVIDIA GPU?), no GPU load");
         }
         self.recorder = Some(Recorder::new(Setup {
             label: self.options.label.clone(),
@@ -55,7 +55,7 @@ impl BenchRun {
             present_mode: renderer.present_mode_name().to_owned(),
         }));
         println!(
-            "Bench '{}' ({}): {}{}, {}x{}, Sichtweite {}, FPS-Grenze {}",
+            "Bench '{}' ({}): {}{}, {}x{}, render distance {}, FPS limit {}",
             self.options.label,
             self.options.scene.name(),
             device.name,
@@ -86,7 +86,7 @@ impl BenchRun {
             let size = renderer.framebuffer_size();
             if size != recorder.resolution() {
                 println!(
-                    "Bench: Aufloesung jetzt {}x{} (war {}x{})",
+                    "Bench: resolution now {}x{} (was {}x{})",
                     size.0,
                     size.1,
                     recorder.resolution().0,
@@ -100,13 +100,13 @@ impl BenchRun {
             recorder.enter(phase, Snapshot::take(net, audio));
             self.phase = Some(phase);
             println!(
-                "Bench: Phase {} ({} Entities)",
+                "Bench: phase {} ({} entities)",
                 phase.name(),
                 world.entity_count()
             );
             if self.options.hold == Some(phase) {
                 println!(
-                    "Bench: --hold {}: die Phase wiederholt sich, bis das Fenster geschlossen wird (es wird nichts geschrieben)",
+                    "Bench: --hold {}: the phase repeats until the window closes (nothing is written)",
                     phase.name()
                 );
             }
@@ -139,14 +139,14 @@ impl BenchRun {
     /// Writes the files and prints the summary, and the comparison when
     pub fn finish(&self) {
         let Some(recorder) = &self.recorder else {
-            eprintln!("Bench: die Welt wurde nie betreten, nichts gemessen");
+            crate::warn!("Bench: the world was never entered, nothing measured");
             return;
         };
         let summary = recorder.summary();
         let dir = self.options.out.as_deref().unwrap_or(Path::new(OUT_DIR));
         match recorder.write(dir) {
-            Ok(path) => println!("Bench: {} (und .csv)", path.display()),
-            Err(e) => eprintln!("Bench: konnte nicht schreiben: {e:#}"),
+            Ok(path) => println!("Bench: {} (and .csv)", path.display()),
+            Err(e) => crate::warn!("Bench: not written: {e:#}"),
         }
         print!("{}", report::table(&summary));
         if let Some(path) = &self.options.compare {
@@ -155,10 +155,10 @@ impl BenchRun {
                 .and_then(|text| serde_json::from_str(&text).ok())
             {
                 Some(old) => {
-                    println!("Vergleich mit {}:", path.display());
+                    println!("Compared with {}:", path.display());
                     print!("{}", report::compare(&old, &summary));
                 }
-                None => eprintln!("Bench: {} nicht lesbar", path.display()),
+                None => crate::warn!("Bench: {} unreadable", path.display()),
             }
         }
     }
@@ -182,7 +182,7 @@ pub(super) fn fullscreen_on_largest(window: &winit::window::Window) {
     let largest = largest_monitor(window.available_monitors());
     if let Some(monitor) = &largest {
         println!(
-            "Bench: Vollbild auf {} ({}x{})",
+            "Bench: full screen on {} ({}x{})",
             monitor.name().unwrap_or_default(),
             monitor.size().width,
             monitor.size().height

@@ -110,9 +110,7 @@ fn grab_cursor(window: &Window) -> bool {
         .is_ok();
     window.set_cursor_visible(!grabbed);
     if !grabbed {
-        eprintln!(
-            "Hinweis: Cursor konnte nicht gesperrt werden - Maussteuerung evtl. eingeschraenkt."
-        );
+        crate::warn!("Cursor not grabbed: mouse look may be limited");
     }
     grabbed
 }

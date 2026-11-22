@@ -23,4 +23,5 @@ pub mod probe;
 pub mod renderer;
 pub mod settings;
 pub mod singleplayer;
+pub mod util;
 pub mod world;

@@ -128,7 +128,7 @@ impl Renderer {
             )
         };
         if let Err(e) = result {
-            eprintln!("Textur-Upload fehlgeschlagen: {e:#}");
+            crate::warn!("Texture upload failed: {e:#}");
         }
     }
 
@@ -259,7 +259,7 @@ impl Renderer {
         }
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
-                eprintln!("Warten auf die GPU fehlgeschlagen: {e}");
+                crate::warn!("Waiting for the GPU failed: {e}");
                 return;
             }
             self.destroy_retired(true);
@@ -283,7 +283,7 @@ impl Renderer {
                 }
             });
             if let Err(e) = result {
-                eprintln!("Textur-Deskriptoren nicht zusammengelegt: {e:#}");
+                crate::warn!("Texture descriptors not compacted: {e:#}");
             }
         }
     }
@@ -364,7 +364,7 @@ impl Renderer {
         let mut failed = Vec::new();
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
-                eprintln!("Warten auf die GPU fehlgeschlagen: {e}");
+                crate::warn!("Waiting for the GPU failed: {e}");
             }
             self.pipelines.ui.clear_pack(&self.device);
             for shader in shaders {

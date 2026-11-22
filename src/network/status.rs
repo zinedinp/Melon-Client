@@ -217,36 +217,11 @@ fn parse_legacy(body: &[u8], latency_ms: u128) -> Result<ServerStatus> {
 /// `ServerData.validateIcon`: a `data:image/png;base64,` URL holding a 64x64
 fn decode_favicon(url: &str) -> Option<RgbaImage> {
     let data = url.strip_prefix("data:image/png;base64,")?;
-    let png = decode_base64(data)?;
+    let png = crate::util::base64::decode(&data.replace('\n', ""))?;
     let image = image::load_from_memory_with_format(&png, image::ImageFormat::Png)
         .ok()?
         .to_rgba8();
     (image.dimensions() == (64, 64)).then_some(image)
-}
-
-/// Standard base64; the status JSON's only use of it, so no crate for it.
-fn decode_base64(text: &str) -> Option<Vec<u8>> {
-    let mut out = Vec::with_capacity(text.len() * 3 / 4);
-    let (mut bits, mut count) = (0u32, 0u32);
-    for c in text.bytes() {
-        let value = match c {
-            b'A'..=b'Z' => c - b'A',
-            b'a'..=b'z' => c - b'a' + 26,
-            b'0'..=b'9' => c - b'0' + 52,
-            b'+' => 62,
-            b'/' => 63,
-            b'=' | b'\n' | b'\r' => continue,
-            _ => return None,
-        };
-        bits = bits << 6 | u32::from(value);
-        count += 6;
-        if count >= 8 {
-            count -= 8;
-            out.push((bits >> count) as u8);
-            bits &= (1 << count) - 1;
-        }
-    }
-    Some(out)
 }
 
 #[cfg(test)]
@@ -322,20 +297,6 @@ mod tests {
     }
 
     #[test]
-    fn decodes_base64() {
-        assert_eq!(decode_base64("TWVsb24=").as_deref(), Some(&b"Melon"[..]));
-        assert_eq!(
-            decode_base64(
-                "TWVs
-b24"
-            )
-            .as_deref(),
-            Some(&b"Melon"[..])
-        );
-        assert_eq!(decode_base64("TW!s"), None);
-    }
-
-    #[test]
     fn favicons_must_be_64_square_pngs() {
         let encode = |size: u32| {
             let mut png = Vec::new();
@@ -356,6 +317,9 @@ b24"
             text
         };
         assert!(decode_favicon(&encode(64)).is_some());
+        let mut wrapped = encode(64);
+        wrapped.insert(40, '\n');
+        assert!(decode_favicon(&wrapped).is_some());
         assert!(decode_favicon(&encode(32)).is_none());
         assert!(decode_favicon("data:image/jpeg;base64,AAAA").is_none());
     }

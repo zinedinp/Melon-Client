@@ -95,7 +95,7 @@ impl Drop for IntegratedServer {
         if let Some(thread) = self.thread.take()
             && thread.join().is_err()
         {
-            eprintln!("Der integrierte Server ist abgestuerzt");
+            crate::warn!("The integrated server crashed");
         }
     }
 }
@@ -133,7 +133,7 @@ pub fn start(options: Options) -> Result<(IntegratedServer, ClientPipe)> {
     crate::instances::ensure_dirs(&options.game_dir);
     pumpkin::data::set_data_dir(crate::home::dir().join("cache").join("server"));
     if let Err(error) = prepare_new_world(&options) {
-        eprintln!("Konnte die Datenpakete der Welt nicht vorbereiten: {error}");
+        crate::warn!("World data packs not prepared: {error}");
     }
     let (client_rx, server_tx) = tokio::io::simplex(TO_CLIENT_BYTES);
     let (server_rx, client_tx) = tokio::io::simplex(TO_SERVER_BYTES);

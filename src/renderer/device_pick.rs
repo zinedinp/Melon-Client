@@ -91,7 +91,7 @@ pub(super) unsafe fn pick(
             });
         let usable = has_swapchain && props.api_version >= vk::API_VERSION_1_1;
         let Some(family) = family.filter(|_| usable) else {
-            eprintln!("vulkan: {name} unbrauchbar (kein Present/Swapchain/Vulkan 1.1)");
+            crate::warn!("vulkan: {name} unusable (no present, swapchain or Vulkan 1.1)");
             continue;
         };
         let memory = unsafe { instance.get_physical_device_memory_properties(pd) };
@@ -109,7 +109,7 @@ pub(super) unsafe fn pick(
         devices.push((pd, family));
     }
     for (i, c) in candidates.iter().enumerate() {
-        eprintln!(
+        crate::info!(
             "vulkan: GPU {i}: {} ({:?}, {} MiB)",
             c.name,
             c.device_type,
@@ -121,13 +121,13 @@ pub(super) unsafe fn pick(
         .and_then(|setting| {
             let found = forced(&candidates, &setting);
             if found.is_none() {
-                eprintln!("vulkan: MELON_GPU={setting} passt auf keine GPU, waehle automatisch");
+                crate::warn!("vulkan: MELON_GPU={setting} matches no GPU, choosing one");
             }
             found
         })
         .or_else(|| best(&candidates))
         .ok_or_else(|| anyhow::anyhow!("keine passende Vulkan-GPU gefunden"))?;
-    eprintln!("vulkan: benutze GPU {choice}: {}", candidates[choice].name);
+    crate::info!("vulkan: using GPU {choice}: {}", candidates[choice].name);
     Ok(devices[choice])
 }
 

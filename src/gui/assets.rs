@@ -105,7 +105,7 @@ impl GuiAssets {
             match renderer.load_texture(&blank) {
                 Ok(id) => self.font_textures.push(id),
                 Err(e) => {
-                    eprintln!("font: Seite fuer Unifont-Zeichen: {e:#}");
+                    crate::warn!("font: Unifont page: {e:#}");
                     self.font_textures.push(self.white);
                 }
             }

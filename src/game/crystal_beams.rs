@@ -42,7 +42,7 @@ impl BeamMeshes {
         match renderer.upload_mesh(&crystal_beam::vertices(delta, time_in_ticks)) {
             Ok(new) => *mesh = Some(new),
             Err(e) => {
-                eprintln!("Crystal beam mesh failed: {e:#}");
+                crate::warn!("Crystal beam mesh failed: {e:#}");
                 return;
             }
         }

@@ -333,7 +333,7 @@ impl Post {
         if self.extent.width > 0 {
             let extent = self.extent;
             if let Err(e) = self.bind_all(device, mem_props, extent) {
-                eprintln!("Post-Effekte: {e:#}");
+                crate::warn!("Post effects: {e:#}");
             }
         }
         self.needs_init.set(true);

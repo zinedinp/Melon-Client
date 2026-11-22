@@ -76,7 +76,7 @@ impl DescriptorPools {
             live: 0,
         });
         let total: u32 = inner.pools.iter().map(|p| p.capacity).sum();
-        eprintln!("Textur-Deskriptoren: Pool um {capacity} erweitert, {total} insgesamt");
+        crate::info!("Texture descriptors: pool grown by {capacity}, {total} in all");
         let set = allocate_one(device, handle, layout)?;
         let index = inner.pools.len() - 1;
         Ok(inner.record(set, index))

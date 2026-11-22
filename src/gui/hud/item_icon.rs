@@ -255,7 +255,7 @@ impl ItemIcons {
         let strip = icon.strip();
         let texture = renderer
             .load_texture(&strip)
-            .map_err(|e| eprintln!("Item-Icon {name} nicht hochgeladen: {e:#}"))
+            .map_err(|e| crate::warn!("Item icon {name} not uploaded: {e:#}"))
             .ok()?;
         Some(Icon {
             look: Look::Sprite(GuiSprite::with_meta(

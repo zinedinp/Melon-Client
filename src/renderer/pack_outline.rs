@@ -313,7 +313,7 @@ impl Renderer {
     pub fn set_outline_pack_shader(&mut self, shader: Option<&Shader>) -> Option<anyhow::Error> {
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
-                eprintln!("Warten auf die GPU fehlgeschlagen: {e}");
+                crate::warn!("Waiting for the GPU failed: {e}");
             }
             if let Some(mut pack) = self.pack_outline.take() {
                 pack.destroy(&self.device);

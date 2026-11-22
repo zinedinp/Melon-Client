@@ -54,7 +54,7 @@ impl FishingMeshes {
         if self.sprite.is_none() {
             match renderer.upload_mesh(&sprite_quads()) {
                 Ok(mesh) => self.sprite = Some(mesh),
-                Err(e) => eprintln!("Bobber mesh failed: {e:#}"),
+                Err(e) => crate::warn!("Bobber mesh failed: {e:#}"),
             }
         }
         self.sprite
@@ -84,7 +84,7 @@ impl FishingMeshes {
             let quads = fishing::line_quads(from.0, from.1, from.2, kept.origin.as_vec3(), from.3);
             match renderer.upload_mesh(&quads) {
                 Ok(mesh) => kept.mesh = Some(mesh),
-                Err(e) => eprintln!("Fishing line mesh failed: {e:#}"),
+                Err(e) => crate::warn!("Fishing line mesh failed: {e:#}"),
             }
         }
         if let Some(mesh) = kept.mesh {

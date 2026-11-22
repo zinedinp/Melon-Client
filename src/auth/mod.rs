@@ -174,7 +174,7 @@ pub fn load_or_refresh(game_dir: &Path) -> Option<Account> {
     {
         Ok(fresh) => Some(Account::Microsoft(fresh)),
         Err(e) => {
-            eprintln!("Microsoft-Sitzung konnte nicht erneuert werden: {e:#}");
+            crate::warn!("Microsoft session not refreshed: {e:#}");
             Some(selected)
         }
     }

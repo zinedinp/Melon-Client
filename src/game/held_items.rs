@@ -123,7 +123,7 @@ impl HeldItems {
         )
         .and_then(|held| {
             upload(renderer, &self.sheets, held)
-                .map_err(|e| eprintln!("Item {name} in der Hand nicht hochgeladen: {e:#}"))
+                .map_err(|e| crate::warn!("Held item {name} not uploaded: {e:#}"))
                 .ok()
         });
         self.items.insert(key, held);
@@ -152,7 +152,7 @@ impl HeldItems {
                 })
                 .and_then(|held| {
                     upload(renderer, &self.sheets, held)
-                        .map_err(|e| eprintln!("Kopf in der Hand nicht hochgeladen: {e:#}"))
+                        .map_err(|e| crate::warn!("Held head not uploaded: {e:#}"))
                         .ok()
                 });
         if let Some((_, Some(old))) = self.heads.insert(key, (own_skin, held)) {
@@ -169,7 +169,7 @@ impl HeldItems {
             .and_then(|item| item.held(&self.assets_root, &|id| self.sheets.find(id)))
             .and_then(|held| {
                 upload(renderer, &self.sheets, held)
-                    .map_err(|e| eprintln!("Block {model} nicht hochgeladen: {e:#}"))
+                    .map_err(|e| crate::warn!("Block {model} not uploaded: {e:#}"))
                     .ok()
             });
         self.blocks.insert(model, held);

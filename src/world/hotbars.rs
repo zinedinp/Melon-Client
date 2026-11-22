@@ -31,7 +31,7 @@ impl Hotbars {
             let mut reader = pumpkin_nbt::deserializer::NbtReadHelperJava::new(&mut cursor);
             match pumpkin_nbt::Nbt::read(&mut reader) {
                 Ok(nbt) => hotbars.read(&nbt.root_tag),
-                Err(e) => eprintln!("hotbar.nbt unlesbar: {e}"),
+                Err(e) => crate::warn!("hotbar.nbt unreadable: {e}"),
             }
         }
         hotbars
@@ -74,7 +74,7 @@ impl Hotbars {
         }
         let bytes = pumpkin_nbt::Nbt::new(String::new(), root).write();
         if let Err(e) = std::fs::write(&self.path, bytes) {
-            eprintln!("Konnte hotbar.nbt nicht schreiben: {e:#}");
+            crate::warn!("hotbar.nbt not written: {e:#}");
         }
     }
 }

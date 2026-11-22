@@ -290,7 +290,7 @@ impl Renderer {
             self.swapchain.extent,
         );
         if let Err(e) = &made {
-            eprintln!("Blur nicht verfuegbar: {e:#}");
+            crate::warn!("Blur unavailable: {e:#}");
             self.swapchain.can_copy = false;
         }
         made.is_ok()

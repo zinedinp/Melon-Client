@@ -12,9 +12,9 @@ use crate::world::chunk::Chunk;
 use crate::world::culling::occlusion::SectionPos;
 use crate::world::dimension::Height;
 use crate::world::fluid::FluidSprites;
-use crate::world::terrain::{self, MeshContext, SectionMesh};
+use crate::world::terrain::{self, SectionMesh};
 
-use super::mesher::{self, Job, Mesher};
+use super::mesher::{Job, Mesher};
 use super::{AROUND, LoadedChunk, MeshStats};
 
 /// Chunks this close to the camera (squared, in chunks) are meshed without
@@ -27,9 +27,6 @@ const MAX_RECOMPILE_QUOTA: u8 = 2;
 const MAX_SECTIONS: i32 = 32;
 
 type Chunks = ChunkMap<LoadedChunk>;
-
-/// A section to mesh now: where, its version and its neighbourhood.
-type SyncJob = (SectionPos, u64, [Option<Arc<Chunk>>; 9]);
 
 /// A loaded section's meshing state.
 #[derive(Default)]
@@ -255,7 +252,15 @@ impl MeshQueue {
             }
             let distance = distance_sq(pos, eye, height.min_y);
             if builds_now(self.chunk_builder, dirty.player, distance) {
-                sync.push((pos, versions.current, neighborhood_of(chunks, column)));
+                sync.push(Job {
+                    pos,
+                    version: versions.current,
+                    chunks: neighborhood_of(chunks, column),
+                    smooth_lighting: !self.flat_lighting,
+                    cardinal,
+                    camera,
+                    tints: tints.clone(),
+                });
             } else if versions.meshed == 0 {
                 initial.push((distance, pos));
             } else {
@@ -280,24 +285,16 @@ impl MeshQueue {
             self.accept(pos, version, mesh, true, &mut finished);
         }
 
-        let context = MeshContext {
-            smooth_lighting: !self.flat_lighting,
-            models,
-            fluids: &fluids,
-            min_y: height.min_y,
-            cardinal,
-            tints,
-        };
-        for (pos, _, _) in &sync {
-            self.dirty.remove(pos);
+        for job in &sync {
+            self.dirty.remove(&job.pos);
         }
-        for (pos, version, mesh) in mesh_now(sync, &context, camera) {
-            self.accept(pos, version, mesh, true, &mut finished);
-        }
-
         let mesher = self
             .mesher
             .get_or_insert_with(|| Mesher::new(Arc::clone(models), fluids));
+        for done in mesher.mesh_now(sync) {
+            self.accept(done.pos, done.version, done.mesh, true, &mut finished);
+        }
+        let mesher = self.mesher.as_mut().expect("started above");
         for done in mesher.finished() {
             if let Some(versions) = self.versions.get_mut(&done.pos)
                 && versions.job == Some(done.version)
@@ -424,39 +421,6 @@ fn distance_sq((x, s, z): SectionPos, eye: IVec3, min_y: i32) -> i64 {
     );
     let d = (centre - eye).as_i64vec3();
     d.dot(d)
-}
-
-/// Meshes `jobs` before returning: an edit on a section's edge or corner
-fn mesh_now(
-    jobs: Vec<SyncJob>,
-    context: &MeshContext,
-    camera: Vec3,
-) -> Vec<(SectionPos, u64, SectionMesh)> {
-    if jobs.is_empty() {
-        return Vec::new();
-    }
-    let threads = std::thread::available_parallelism().map_or(2, |n| n.get());
-    let per_thread = jobs.len().div_ceil(threads);
-    let build = |batch: &[SyncJob]| {
-        batch
-            .iter()
-            .filter_map(|(pos, version, chunks)| {
-                mesher::mesh(chunks, *pos, context, camera).map(|mesh| (*pos, *version, mesh))
-            })
-            .collect::<Vec<_>>()
-    };
-    let mut batches = jobs.chunks(per_thread);
-    let first = batches.next().unwrap_or_default();
-    std::thread::scope(|scope| {
-        let others: Vec<_> = batches
-            .map(|batch| scope.spawn(move || build(batch)))
-            .collect();
-        let mut built = build(first);
-        for other in others {
-            built.extend(other.join().unwrap_or_default());
-        }
-        built
-    })
 }
 
 /// The chunk at `key` and the eight around it.

@@ -42,7 +42,7 @@ fn load_font_stack(
         let Ok(value) = serde_json::from_slice::<serde_json::Value>(
             crate::assets::packs::meta::strip_bom(bytes),
         ) else {
-            eprintln!("font: {id} ist kein gueltiges JSON, ueberspringe");
+            crate::warn!("{id} is not valid JSON, skipped");
             continue;
         };
         let providers = value
@@ -80,13 +80,13 @@ fn load_providers(
         match provider_type {
             "bitmap" => {
                 if let Err(e) = load_bitmap(assets, &provider, pages, page_index_by_path, glyphs) {
-                    eprintln!("font: {e:#}");
+                    crate::warn!("{e:#}");
                 }
             }
             "space" => load_space(&provider, glyphs),
             "unihex" => match load_unihex(assets, &provider) {
                 Ok(provider) => unihex.push(provider),
-                Err(e) => eprintln!("font: {e:#}"),
+                Err(e) => crate::warn!("{e:#}"),
             },
             "reference" => {
                 if let Some(ref_id) = provider.get("id").and_then(|v| v.as_str()) {
@@ -102,8 +102,8 @@ fn load_providers(
                 }
             }
             other => {
-                eprintln!(
-                    "font: Provider-Typ '{other}' wird noch nicht unterstuetzt, ueberspringe (siehe notes/Assets.md)"
+                crate::warn!(
+                    "provider type '{other}' not supported yet, skipped (see notes/Assets.md)"
                 );
             }
         }

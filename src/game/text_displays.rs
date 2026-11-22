@@ -284,7 +284,7 @@ impl InWorld {
                         texture,
                         solid,
                     }),
-                    Err(e) => eprintln!("Text display mesh failed: {e:#}"),
+                    Err(e) => crate::warn!("Text display mesh failed: {e:#}"),
                 }
             }
             self.entity_meshes.text_displays.kept.insert(

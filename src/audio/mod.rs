@@ -193,7 +193,7 @@ impl Loader {
                 });
             match spawned {
                 Ok(_) => started += 1,
-                Err(e) => eprintln!("Audio: kein Lade-Thread: {e}"),
+                Err(e) => crate::warn!("no loader thread: {e}"),
             }
         }
         Self {
@@ -234,7 +234,7 @@ impl AudioEngine {
         let hrtf = directional.then(hrtf::HrtfStore::default_set).flatten();
         let stream = open_output(device, if hrtf.is_some() { Some(2) } else { channels });
         if stream.is_none() {
-            eprintln!("Audio-Ausgabe nicht verfuegbar, Sounds bleiben stumm");
+            crate::warn!("no output device, sounds stay silent");
         }
         let mixer = stream.as_ref().map(|s| s.mixer().clone());
         let layout = layout_of(stream.as_ref());
@@ -365,7 +365,7 @@ impl AudioEngine {
     pub fn set_directional(&mut self, on: bool) {
         self.hrtf = on.then(hrtf::HrtfStore::default_set).flatten();
         if on && self.hrtf.is_none() {
-            eprintln!("Audio: HRTF-Daten nicht lesbar, Richtungsaudio bleibt aus");
+            crate::warn!("HRTF data unreadable, directional audio stays off");
         }
         self.reopen();
     }
@@ -514,7 +514,7 @@ impl AudioEngine {
                 }
             });
         if let Err(e) = spawned {
-            eprintln!("Audio: kein Stream-Thread fuer {}: {e}", instance.event);
+            crate::warn!("no stream thread for {}: {e}", instance.event);
             return false;
         }
         true
@@ -588,7 +588,7 @@ fn load_buffer(cache: &Cache, name: &Arc<str>, stats: &AudioStats) -> Option<Pcm
     let mut decoded = cache.decoded.lock().ok()?;
     let entry = decoded.entry(Arc::clone(name)).or_insert_with(|| {
         if buffer.is_none() {
-            eprintln!("Audio: {name}.ogg fehlt oder ist unlesbar");
+            crate::warn!("{name}.ogg missing or unreadable");
         }
         buffer
     });
@@ -605,7 +605,7 @@ fn open_output(name: &str, channels: Option<u16>) -> Option<MixerDeviceSink> {
             Some(count) => builder.with_channels(count).open_stream(),
             None => builder.open_stream(),
         }
-        .inspect_err(|e| eprintln!("Audio: Ausgabe nicht offen ({e})"))
+        .inspect_err(|e| crate::warn!("output not open ({e})"))
         .ok()
     };
     let wanted = channels.and_then(rodio::ChannelCount::new);
@@ -629,7 +629,7 @@ fn decode(assets_root: &Path, name: &str) -> Option<PcmBuffer> {
     let decoder = Decoder::new(std::io::Cursor::new(bytes)).ok()?;
     let (channels, sample_rate) = (decoder.channels(), decoder.sample_rate());
     if channels.get() > 2 {
-        eprintln!("Audio: {name}.ogg hat {channels} Kanaele, nur Mono und Stereo gehen");
+        crate::warn!("{name}.ogg has {channels} channels, only mono and stereo play");
         return None;
     }
     Some(PcmBuffer::from_samples(channels, sample_rate, decoder))
@@ -641,7 +641,7 @@ fn open_stream(assets_root: &Path, sound: &Sound) -> Option<Decoder<std::io::Cur
     match Decoder::new(std::io::Cursor::new(bytes)) {
         Ok(decoder) => Some(decoder),
         Err(e) => {
-            eprintln!("Audio: {}.ogg nicht abspielbar: {e}", sound.name);
+            crate::warn!("{}.ogg unplayable: {e}", sound.name);
             None
         }
     }

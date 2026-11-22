@@ -52,7 +52,7 @@ impl IconAtlas {
         let slot = self.find(w, h).or_else(|| {
             let texture = renderer
                 .load_texture(&RgbaImage::new(self.side, self.side))
-                .map_err(|e| eprintln!("Icon-Seite nicht angelegt: {e:#}"))
+                .map_err(|e| crate::warn!("Icon page not created: {e:#}"))
                 .ok()?;
             self.pages.push(Page {
                 texture,

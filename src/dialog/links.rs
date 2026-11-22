@@ -94,7 +94,7 @@ pub fn read(body: &[u8]) -> Result<Vec<ServerLink>> {
         if is_trusted_url(&url) {
             links.push(ServerLink { kind, url });
         } else {
-            eprintln!("Server-Link mit ungueltiger Adresse verworfen: {url}");
+            crate::warn!("Server link with an invalid address dropped: {url}");
         }
     }
     Ok(links)

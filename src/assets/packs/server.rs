@@ -334,7 +334,7 @@ pub fn active_packs() -> Vec<Arc<Pack>> {
                         entry.reporting = true;
                     }
                     Err(e) => {
-                        eprintln!("Server-Ressourcenpaket {} kaputt: {e:#}", entry.id);
+                        crate::warn!("Server resource pack {} broken: {e:#}", entry.id);
                         entry.state = State::Failed;
                         failed.push(entry.id);
                     }
@@ -453,7 +453,7 @@ fn finish_download(id: Uuid, url: &str, result: anyhow::Result<PathBuf>) {
             m.send(id, Status::Downloaded);
         }
         Err(e) => {
-            eprintln!("Server-Ressourcenpaket {url} nicht geladen: {e:#}");
+            crate::warn!("Server resource pack {url} not loaded: {e:#}");
             crate::probe::note("pack.server", format!("{url} FAILED"), || format!("{e:#}"));
             entry.state = State::Failed;
             m.send(id, Status::FailedDownload);

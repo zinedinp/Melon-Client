@@ -409,7 +409,7 @@ pub fn write_report() {
         let _ = std::fs::create_dir_all(parent);
     }
     if let Err(e) = std::fs::write(&state.path, text) {
-        eprintln!("Tester: {} nicht geschrieben: {e}", state.path.display());
+        crate::warn!("Tester: {} not written: {e}", state.path.display());
     }
 }
 

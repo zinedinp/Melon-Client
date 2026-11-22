@@ -64,7 +64,7 @@ pub fn record_play(game_dir: &Path, key: &str, secs: u64) {
     let mut accounts = Accounts::load(game_dir);
     accounts.record_play(key, secs, now_secs());
     if let Err(e) = accounts.save(game_dir) {
-        eprintln!("accounts.json konnte nicht gespeichert werden: {e}");
+        crate::warn!("accounts.json not saved: {e}");
     }
 }
 

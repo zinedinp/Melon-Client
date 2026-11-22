@@ -99,7 +99,7 @@ fn migrate_legacy(main: &Path, melon: &Path) {
             continue;
         }
         if let Err(e) = std::fs::rename(&from, &to) {
-            eprintln!("{} konnte nicht verschoben werden: {e}", from.display());
+            crate::warn!("{} not moved: {e}", from.display());
         }
     }
 }
@@ -326,10 +326,7 @@ pub fn logs_dir(game_dir: &Path) -> PathBuf {
 pub fn ensure_dirs(game_dir: &Path) {
     for name in GAME_DIRS {
         if let Err(e) = std::fs::create_dir_all(game_dir.join(name)) {
-            eprintln!(
-                "{} konnte nicht angelegt werden: {e}",
-                game_dir.join(name).display()
-            );
+            crate::warn!("{} not created: {e}", game_dir.join(name).display());
         }
     }
 }
@@ -353,7 +350,7 @@ pub fn apply_global_options(main: &Path, instance: &Instance) {
         return;
     }
     if let Err(e) = std::fs::copy(&src, instance.path.join("options.txt")) {
-        eprintln!("Globale options.txt konnte nicht kopiert werden: {e}");
+        crate::warn!("Global options.txt not copied: {e}");
     }
 }
 
@@ -373,7 +370,7 @@ pub fn collect_global_options(main: &Path, instance_id: Option<&str>) {
         return;
     }
     if let Err(e) = std::fs::copy(&src, dir(main, MELON).join("options.txt")) {
-        eprintln!("Globale options.txt konnte nicht zurückgeschrieben werden: {e}");
+        crate::warn!("Global options.txt not written back: {e}");
     }
 }
 
@@ -466,7 +463,7 @@ impl LauncherSettings {
 
     pub fn save(&self, main: &Path) {
         if let Err(e) = crate::json_file::save(&main.join("launcher.json"), self) {
-            eprintln!("launcher.json konnte nicht gespeichert werden: {e}");
+            crate::warn!("launcher.json not saved: {e}");
         }
     }
 
@@ -586,7 +583,7 @@ pub fn quick_join(instance: &Instance) -> Option<String> {
 
 pub fn save_last_server(game_dir: &Path, address: &str) {
     if let Err(e) = std::fs::write(game_dir.join("last_server.txt"), address) {
-        eprintln!("last_server.txt konnte nicht gespeichert werden: {e}");
+        crate::warn!("last_server.txt not saved: {e}");
     }
 }
 
@@ -647,7 +644,7 @@ impl Store {
 
     fn save(&self, main: &Path) {
         if let Err(e) = crate::json_file::save(&main.join(FILE), self) {
-            eprintln!("{FILE} konnte nicht gespeichert werden: {e}");
+            crate::warn!("{FILE} not saved: {e}");
         }
     }
 }

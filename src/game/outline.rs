@@ -98,7 +98,7 @@ impl BlockOutline {
                 }
                 match renderer.upload_mesh(&vertices) {
                     Ok(mesh) => self.meshes.push((mesh, style)),
-                    Err(e) => eprintln!("Umriss-Mesh fehlgeschlagen: {e:#}"),
+                    Err(e) => crate::warn!("Outline mesh failed: {e:#}"),
                 }
             }
         }

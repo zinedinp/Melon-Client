@@ -67,7 +67,7 @@ impl DebugView {
             advanced_tooltips: crate::gui::hud::item_slot::advanced_tooltips(),
         };
         if let Err(e) = crate::json_file::save(path, &settings) {
-            eprintln!("F3-Einstellungen nicht gespeichert: {e}");
+            crate::warn!("F3 settings not saved: {e}");
         }
     }
 

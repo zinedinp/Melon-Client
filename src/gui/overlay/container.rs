@@ -75,7 +75,7 @@ impl ContainerTextures {
             nautilus: assets.texture(renderer, "minecraft:gui/container/nautilus.png")?,
             menus: MenuSprites::load(renderer, assets)?,
             recipe_book: RecipeBookSprites::load(renderer, assets)
-                .map_err(|e| eprintln!("Rezeptbuch: {e:#}"))
+                .map_err(|e| crate::warn!("Recipe book: {e:#}"))
                 .ok(),
         })
     }

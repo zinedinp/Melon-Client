@@ -416,7 +416,7 @@ impl PackSelectionScreen {
             Id::OpenFolder => {
                 let _ = std::fs::create_dir_all(&self.pack_dir);
                 if let Err(e) = open::that(&self.pack_dir) {
-                    eprintln!("Paketordner nicht geoeffnet: {e}");
+                    crate::warn!("Pack folder not opened: {e}");
                 }
                 ScreenAction::None
             }
@@ -802,7 +802,7 @@ fn drop_confirm(paths: Vec<PathBuf>, pack_dir: PathBuf) -> ScreenAction {
             let _ = std::fs::create_dir_all(&pack_dir);
             for path in &paths {
                 if let Err(e) = copy_pack(path, &pack_dir) {
-                    eprintln!("Paket {path:?} nicht kopiert: {e}");
+                    crate::warn!("Pack {path:?} not copied: {e}");
                 }
             }
             ScreenAction::Back

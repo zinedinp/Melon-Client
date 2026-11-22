@@ -387,7 +387,7 @@ impl CreateWorldScreen {
         if let Some(source) = &self.source_packs
             && let Err(e) = data_packs::copy_into(source, &dir)
         {
-            eprintln!("Datenpakete der Welt nicht kopiert: {e}");
+            crate::warn!("World data packs not copied: {e}");
         }
         let _ = std::fs::create_dir_all(&dir);
         self.temp_packs = Some(dir.clone());
@@ -527,17 +527,17 @@ impl CreateWorldScreen {
             data_packs: self.packs.borrow().clone(),
         };
         if let Err(e) = singleplayer::save_world(ctx.game_dir, &folder, &settings) {
-            eprintln!("Konnte Welt nicht speichern ({folder}): {e:#}");
+            crate::warn!("World not saved ({folder}): {e:#}");
             return ScreenAction::Back;
         }
         let world_dir = singleplayer::world_dir(ctx.game_dir, &folder);
         if let Err(e) = rules::write_changes(&world_dir, &self.rules.borrow()) {
-            eprintln!("Konnte Spielregeln nicht speichern ({folder}): {e:#}");
+            crate::warn!("Game rules not saved ({folder}): {e:#}");
         }
         if let Some(temp) = &self.temp_packs
             && let Err(e) = data_packs::copy_into(temp, &data_packs::folder(&world_dir))
         {
-            eprintln!("Konnte Datenpakete nicht kopieren ({folder}): {e:#}");
+            crate::warn!("Data packs not copied ({folder}): {e:#}");
         }
         let target = Target::World {
             save_path: world_dir,

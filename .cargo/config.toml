@@ -1,5 +1,6 @@
 # Pumpkin's generated data tables can overflow rustc's default stack when
-# they are optimized.
+# they are optimized. Only rustc needs it: `cargo run` hands it to the game
+# too, and `main` drops it there (`melon::platform::drop_cargo_stack`).
 [env]
 RUST_MIN_STACK = "268435456"
 

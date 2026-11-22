@@ -81,7 +81,7 @@ impl BlockMeshes {
         } else {
             renderer
                 .upload_mesh(&vertices)
-                .map_err(|e| eprintln!("Block {state} nicht hochgeladen: {e:#}"))
+                .map_err(|e| crate::warn!("Block {state} not uploaded: {e:#}"))
                 .ok()
         };
         entry.meshes.push((rgb, mesh));

@@ -32,7 +32,7 @@ pub(super) unsafe fn create(
         .any(|l| CStr::from_ptr(l.layer_name.as_ptr()) == validation_layer);
     let use_validation = enable_validation && validation_available;
     if enable_validation && !validation_available {
-        eprintln!("vulkan: VK_LAYER_KHRONOS_validation not found, going on without validation");
+        crate::warn!("vulkan: VK_LAYER_KHRONOS_validation not found, going on without validation");
     }
     // Debug utils also name the passes for GPU profilers (Nsight Graphics,
     // RenderDoc), so they are on whenever the driver offers them.

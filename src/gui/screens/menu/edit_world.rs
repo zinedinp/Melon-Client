@@ -79,7 +79,7 @@ impl EditWorldScreen {
             return ScreenAction::None;
         }
         if let Err(e) = singleplayer::rename_world(ctx.game_dir, &self.folder, &name) {
-            eprintln!("Konnte Welt nicht umbenennen ({}): {e:#}", self.folder);
+            crate::warn!("World not renamed ({}): {e:#}", self.folder);
         }
         ScreenAction::Back
     }
@@ -139,7 +139,7 @@ impl EditWorldScreen {
 
 fn open_folder(path: &std::path::Path) {
     if let Err(e) = open::that(path) {
-        eprintln!("Ordner nicht geoeffnet ({}): {e}", path.display());
+        crate::warn!("Folder not opened ({}): {e}", path.display());
     }
 }
 

@@ -172,7 +172,7 @@ impl App {
         let gui_assets = match GuiAssets::load(&mut renderer, &assets) {
             Ok(gui_assets) => gui_assets,
             Err(e) => {
-                eprintln!("Ressourcenpakete nicht ladbar, nutze Standard: {e:#}");
+                crate::warn!("Resource packs not loaded, using the defaults: {e:#}");
                 let mut stack = crate::assets::packs::ResourceStack::default();
                 stack
                     .packs
@@ -255,13 +255,13 @@ fn load_panorama(renderer: &mut Renderer, assets: &Assets) -> Option<Panorama> {
     match Panorama::load(renderer, assets) {
         Ok(Some(panorama)) => Some(panorama),
         Ok(None) => {
-            eprintln!(
-                "Hinweis: keine Panorama-Cubemap gefunden (assets/.../title/background/panorama_0..5.png) - nutze den Farbverlauf-Hintergrund, siehe notes/Assets.md."
+            crate::warn!(
+                "No panorama (assets/.../title/background/panorama_0..5.png): using the gradient, see notes/Assets.md"
             );
             None
         }
         Err(e) => {
-            eprintln!("Panorama konnte nicht geladen werden: {e:#}");
+            crate::warn!("Panorama not loaded: {e:#}");
             None
         }
     }
@@ -447,7 +447,7 @@ impl RunningState {
     }
 
     fn show_failure(&mut self, reason: String) {
-        eprintln!("Verbindung verloren: {reason}");
+        crate::warn!("Connection lost: {reason}");
         if self.screens.is_empty() {
             return;
         }
@@ -470,7 +470,7 @@ impl ApplicationHandler for App {
         if self.state.is_none()
             && let Err(e) = self.init(event_loop)
         {
-            eprintln!("Initialisierung fehlgeschlagen: {e:#}");
+            crate::warn!("Start-up failed: {e:#}");
             event_loop.exit();
         }
     }
@@ -511,7 +511,7 @@ impl ApplicationHandler for App {
             WindowEvent::Resized(size) => {
                 let started = Instant::now();
                 if let Err(e) = state.renderer.resize(size.width, size.height) {
-                    eprintln!("Resize fehlgeschlagen: {e:#}");
+                    crate::warn!("Resize failed: {e:#}");
                 }
                 state.resize_gui();
                 state.count_event(started);

@@ -187,7 +187,7 @@ impl QuadSets {
         if let Some(i) = self.sets.iter().position(|&(b, _)| b == buffer) {
             let (_, set) = self.sets.swap_remove(i);
             if let Err(e) = device.free_descriptor_sets(self.pool, &[set]) {
-                eprintln!("Mesh-Deskriptor nicht freigegeben: {e}");
+                crate::warn!("Mesh descriptor not freed: {e}");
             }
         }
     }

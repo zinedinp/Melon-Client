@@ -44,8 +44,8 @@ impl Renderer {
                 || (modes.contains(mode)
                     && (*mode != FIFO_LATEST_READY || self.swapchain.latest_ready));
             if !offered {
-                eprintln!(
-                    "vulkan: Present-Modus {} nicht verfuegbar ({:?}), automatisch",
+                crate::warn!(
+                    "vulkan: present mode {} unavailable ({:?}), choosing one",
                     mode_name(*mode),
                     modes
                 );

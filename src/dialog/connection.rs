@@ -94,7 +94,7 @@ pub fn read_registry(body: &[u8]) -> Result<()> {
             let json = read_json(&mut r)?;
             let parsed = json.as_ref().and_then(Dialog::from_json).map(Arc::new);
             if parsed.is_none() {
-                eprintln!("Dialog {name} aus der Registry nicht lesbar");
+                crate::warn!("Dialog {name} from the registry unreadable");
             }
             parsed
         } else {
@@ -146,7 +146,7 @@ pub fn read_show(body: &[u8], play: bool) -> Result<()> {
     };
     match dialog {
         Some(dialog) => with(|state| state.requests.push_back(Request::Show(dialog))),
-        None => eprintln!("Dialog vom Server nicht lesbar, nicht gezeigt"),
+        None => crate::warn!("Dialog from the server unreadable, not shown"),
     }
     Ok(())
 }
@@ -276,7 +276,7 @@ pub fn send_custom(id: &str, payload: Option<&NbtTag>) {
     let sender = state().as_ref().and_then(|s| s.sender.clone());
     match sender {
         Some(send) => send(id, payload),
-        None => eprintln!("Benutzerdefinierte Aktion {id} ohne Verbindung"),
+        None => crate::warn!("Custom action {id} without a connection"),
     }
 }
 

@@ -23,7 +23,7 @@ impl RunningState {
             PresentMode::FifoLatestReady => Some(FIFO_LATEST_READY),
         };
         if let Err(e) = self.renderer.set_present(self.env.config.vsync, requested) {
-            eprintln!("Present-Modus konnte nicht umgestellt werden: {e:#}");
+            crate::warn!("Present mode not changed: {e:#}");
         }
         let fullscreen = self
             .env

@@ -30,7 +30,7 @@ impl Renderer {
         };
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
-                eprintln!("Warten auf die GPU fehlgeschlagen: {e}");
+                crate::warn!("Waiting for the GPU failed: {e}");
             }
             let mut prepared = Vec::new();
             for source in sources {
@@ -51,7 +51,7 @@ impl Renderer {
                 .post
                 .set_blit(&self.device, self.passes.clear, blit.as_ref())
             {
-                eprintln!("Outline-Blit: {e:#}");
+                crate::warn!("Outline blit: {e:#}");
             }
             let wanted = self.post.is_active();
             let (w, h) = (self.swapchain.extent.width, self.swapchain.extent.height);
@@ -62,7 +62,7 @@ impl Renderer {
                 self.resize_post()
             };
             if let Err(e) = result {
-                eprintln!("Post-Effekte: {e:#}");
+                crate::warn!("Post effects: {e:#}");
             }
         }
         failed

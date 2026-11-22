@@ -244,7 +244,7 @@ impl ParticleMeshes {
                         glint: crate::renderer::Glint::None,
                     });
                 }
-                Err(e) => eprintln!("Particle mesh failed: {e:#}"),
+                Err(e) => crate::warn!("Particle mesh failed: {e:#}"),
             }
         }
         self.batches.retain(|_, batch| !batch.vertices.is_empty());

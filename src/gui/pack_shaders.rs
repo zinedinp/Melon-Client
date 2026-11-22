@@ -69,7 +69,7 @@ pub fn compile(assets_root: &Path) -> Vec<GuiShader> {
         .filter_map(|pipeline| match compile_one(assets_root, pipeline) {
             Ok(shader) => shader,
             Err(e) => {
-                eprintln!(
+                crate::warn!(
                     "Shader core/{} from a resource pack dropped: {e:#}",
                     pipeline.shader
                 );

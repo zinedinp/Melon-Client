@@ -202,7 +202,7 @@ impl Font {
                 &mut unihex,
             )
         {
-            eprintln!("font: unifont_pua: {e:#}");
+            crate::warn!("unifont_pua: {e:#}");
         }
         let mut faces = HashMap::new();
         if root_id == DEFAULT_FONT {
@@ -220,7 +220,7 @@ impl Font {
                     &mut face.glyphs,
                     &mut own_unihex,
                 ) {
-                    eprintln!("font: {id}: {e:#}");
+                    crate::warn!("{id}: {e:#}");
                     continue;
                 }
                 face.unihex = !own_unihex.is_empty();

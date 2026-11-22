@@ -31,6 +31,9 @@ pub(super) struct Job {
     pub tints: TintSettings,
 }
 
+/// A [`Job`] for [`Mesher::mesh_now`], and where its mesh goes.
+type Urgent = (Job, Sender<Option<Done>>);
+
 pub(super) struct Done {
     pub pos: SectionPos,
     pub version: u64,
@@ -63,6 +66,11 @@ pub(super) fn mesh(
 pub(super) struct Mesher {
     jobs: Option<Sender<Job>>,
     results: Receiver<Done>,
+    /// [`Mesher::mesh_now`]'s jobs, taken by the helpers and the caller.
+    urgent: Option<Sender<Urgent>>,
+    urgent_rx: Receiver<Urgent>,
+    models: Arc<BlockModels>,
+    fluids: FluidSprites,
     workers: Vec<JoinHandle<()>>,
     /// Set when the mesher is dropped: the workers leave the jobs still
     stop: Arc<AtomicBool>,
@@ -78,8 +86,9 @@ impl Mesher {
             .clamp(1, 8);
         let (jobs, job_rx) = crossbeam_channel::unbounded::<Job>();
         let (done_tx, results) = crossbeam_channel::unbounded();
+        let (urgent, urgent_rx) = crossbeam_channel::unbounded::<Urgent>();
         let stop = Arc::new(AtomicBool::new(false));
-        let workers = (0..count)
+        let mut workers = (0..count)
             .filter_map(|i| {
                 let job_rx = job_rx.clone();
                 let stop = Arc::clone(&stop);
@@ -92,9 +101,29 @@ impl Mesher {
             })
             .collect::<Vec<_>>();
         let limit = workers.len() * 32;
+        // The caller meshes too, so one thread fewer than there are cores.
+        let helpers = std::thread::available_parallelism()
+            .map_or(1, |n| n.get() - 1)
+            .clamp(1, 7);
+        workers.extend((0..helpers).filter_map(|i| {
+            let urgent_rx = urgent_rx.clone();
+            let models = Arc::clone(&models);
+            std::thread::Builder::new()
+                .name(format!("chunk-mesher-now-{i}"))
+                .spawn(move || {
+                    for (job, reply) in &urgent_rx {
+                        let _ = reply.send(build(&job, &models, fluids));
+                    }
+                })
+                .ok()
+        }));
         Self {
             jobs: Some(jobs),
             results,
+            urgent: Some(urgent),
+            urgent_rx,
+            models,
+            fluids,
             workers,
             stop,
             in_flight: 0,
@@ -119,6 +148,23 @@ impl Mesher {
         true
     }
 
+    /// Meshes `jobs` before returning (`compileSync`), spread over the
+    /// helpers and this thread.
+    pub fn mesh_now(&self, jobs: Vec<Job>) -> Vec<Done> {
+        let Some(urgent) = &self.urgent else {
+            return Vec::new();
+        };
+        let (reply, replies) = crossbeam_channel::unbounded();
+        for job in jobs {
+            let _ = urgent.send((job, reply.clone()));
+        }
+        drop(reply);
+        while let Ok((job, reply)) = self.urgent_rx.try_recv() {
+            let _ = reply.send(build(&job, &self.models, self.fluids));
+        }
+        replies.iter().flatten().collect()
+    }
+
     /// The meshes finished since the last call.
     pub fn finished(&mut self) -> Vec<Done> {
         let done: Vec<Done> = self.results.try_iter().collect();
@@ -140,21 +186,8 @@ fn work(
         if stop.load(Ordering::Relaxed) {
             return;
         }
-        let context = MeshContext {
-            smooth_lighting: job.smooth_lighting,
-            models,
-            fluids: &fluids,
-            min_y: 0,
-            cardinal: job.cardinal,
-            tints: &job.tints,
-        };
-        let Some(mesh) = mesh(&job.chunks, job.pos, &context, job.camera) else {
+        let Some(result) = build(&job, models, fluids) else {
             continue;
-        };
-        let result = Done {
-            pos: job.pos,
-            version: job.version,
-            mesh,
         };
         if done.send(result).is_err() {
             return;
@@ -162,10 +195,28 @@ fn work(
     }
 }
 
+/// Meshes one job; `None` without its centre chunk.
+fn build(job: &Job, models: &BlockModels, fluids: FluidSprites) -> Option<Done> {
+    let context = MeshContext {
+        smooth_lighting: job.smooth_lighting,
+        models,
+        fluids: &fluids,
+        min_y: 0,
+        cardinal: job.cardinal,
+        tints: &job.tints,
+    };
+    Some(Done {
+        pos: job.pos,
+        version: job.version,
+        mesh: mesh(&job.chunks, job.pos, &context, job.camera)?,
+    })
+}
+
 impl Drop for Mesher {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Relaxed);
         self.jobs = None;
+        self.urgent = None;
         for worker in self.workers.drain(..) {
             let _ = worker.join();
         }

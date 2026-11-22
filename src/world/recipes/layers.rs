@@ -101,7 +101,7 @@ impl Layer {
                     Ok(json) => {
                         self.read(&json);
                     }
-                    Err(e) => eprintln!("[rezepte] {}: {e}", file.display()),
+                    Err(e) => crate::warn!("Recipes: {}: {e}", file.display()),
                 }
             }
         }

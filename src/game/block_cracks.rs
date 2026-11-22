@@ -105,7 +105,7 @@ impl BlockCracks {
                         state,
                         mesh,
                     }),
-                    Err(e) => eprintln!("Block cracks not uploaded: {e:#}"),
+                    Err(e) => crate::warn!("Block cracks not uploaded: {e:#}"),
                 }
             }
         }

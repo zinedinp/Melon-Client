@@ -82,8 +82,8 @@ impl RunningState {
             match &mut self.world {
                 Some(world) => world.show_client_message(text, &self.env.gui_assets.font),
                 None => match saved {
-                    Ok(file) => eprintln!("Screenshot: {}", file.display()),
-                    Err(e) => eprintln!("Screenshot nicht gespeichert: {e}"),
+                    Ok(file) => crate::info!("Screenshot: {}", file.display()),
+                    Err(e) => crate::warn!("Screenshot not saved: {e}"),
                 },
             }
         }
@@ -342,7 +342,7 @@ impl RunningState {
             if let Some(image) = self.renderer.take_capture()
                 && let Err(e) = image.save(&path)
             {
-                eprintln!("Tester: {} nicht geschrieben: {e}", path.display());
+                crate::warn!("Tester: {} not written: {e}", path.display());
             }
         } else if let Some(path) = icon_path
             && let Some(image) = self.renderer.take_capture()
@@ -380,13 +380,13 @@ impl RunningState {
 /// Reports a frame that failed; whether the device is lost for good.
 fn render_failed(e: &anyhow::Error) -> bool {
     if crate::renderer::is_device_lost(e) {
-        eprintln!(
-            "Render-Fehler: Die GPU hat das Vulkan-Geraet verloren ({e:#}). \
-             Melon verlaesst die Welt und beendet sich; siehe `journalctl -k` (Xid) fuer die Ursache."
+        crate::warn!(
+            "Render error: the GPU lost the Vulkan device ({e:#}). \
+             Melon leaves the world and quits; `journalctl -k` (Xid) has the cause."
         );
         return true;
     }
-    eprintln!("Render-Fehler (Frame uebersprungen): {e:#}");
+    crate::warn!("Render error, frame skipped: {e:#}");
     false
 }
 

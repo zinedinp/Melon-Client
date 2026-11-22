@@ -22,7 +22,7 @@ pub(super) fn activate_packs(assets: &Assets, config: &Config) {
         .extend(repository::discover_mods(assets.game_dir()));
     if !stack.packs.is_empty() {
         let ids: Vec<&str> = stack.packs.iter().map(|p| p.id.as_str()).collect();
-        eprintln!("Resource packs: {}", ids.join(", "));
+        crate::info!("Resource packs: {}", ids.join(", "));
     }
     packs::activate(stack);
     crate::world::entity::equipment_asset::install(assets.root());
@@ -34,23 +34,23 @@ pub(super) fn activate_packs(assets: &Assets, config: &Config) {
 pub(super) fn apply_gui_shaders(renderer: &mut Renderer, assets: &Assets) {
     let shaders = crate::gui::pack_shaders::compile(assets.root());
     for shader in &shaders {
-        eprintln!("GUI shader from a resource pack: {:?}", shader.program);
+        crate::info!("GUI shader from a resource pack: {:?}", shader.program);
     }
     for (program, e) in renderer.set_gui_shaders(&shaders) {
-        eprintln!("GUI shader {program:?} unusable: {e:#}");
+        crate::warn!("GUI shader {program:?} unusable: {e:#}");
     }
     match crate::renderer::pack_outline::compile(assets.root()) {
         Ok(Some(shader)) => {
-            eprintln!("World shader from a resource pack: rendertype_outline");
+            crate::info!("World shader from a resource pack: rendertype_outline");
             if let Some(e) = renderer.set_outline_pack_shader(Some(&shader)) {
-                eprintln!("World shader rendertype_outline unusable: {e:#}");
+                crate::warn!("World shader rendertype_outline unusable: {e:#}");
             }
         }
         Ok(None) => {
             renderer.set_outline_pack_shader(None);
         }
         Err(e) => {
-            eprintln!("World shader rendertype_outline dropped: {e:#}");
+            crate::warn!("World shader rendertype_outline dropped: {e:#}");
             renderer.set_outline_pack_shader(None);
         }
     }
@@ -60,10 +60,10 @@ pub(super) fn apply_gui_shaders(renderer: &mut Renderer, assets: &Assets) {
 pub(super) fn apply_post_chains(renderer: &mut Renderer, assets: &Assets) {
     let (chains, blit) = crate::renderer::post::load::load(assets.root());
     for chain in &chains {
-        eprintln!("Post effect: {}", chain.id);
+        crate::info!("Post effect: {}", chain.id);
     }
     for (id, e) in renderer.set_post_chains(chains, blit) {
-        eprintln!("Post effect {id} unusable: {e:#}");
+        crate::warn!("Post effect {id} unusable: {e:#}");
     }
 }
 
@@ -88,7 +88,7 @@ impl RunningState {
                 self.env.gui_textures = textures;
             }
             Err(e) => {
-                eprintln!("GUI textures not reloaded: {e:#}");
+                crate::warn!("GUI textures not reloaded: {e:#}");
                 ok = false;
                 let mut kept = textures;
                 kept.extend(self.renderer.end_texture_reuse(false));
@@ -121,7 +121,7 @@ impl RunningState {
                     }
                     Err(failed) => {
                         let (old, e) = *failed;
-                        eprintln!("World resources not reloaded: {e:#}");
+                        crate::warn!("World resources not reloaded: {e:#}");
                         ok = false;
                         self.world_resources = Some(old);
                     }
@@ -136,7 +136,7 @@ impl RunningState {
         }
         self.resize_gui();
         server::reload_finished(ok);
-        eprintln!("Resources reloaded in {:.2?}", started.elapsed());
+        crate::info!("Resources reloaded in {:.2?}", started.elapsed());
     }
 
     /// Carries out what the server's resource packs need: the prompt, a

@@ -454,7 +454,7 @@ impl LevelMeshes {
         let meshes = match SectionMeshes::upload(pos, mesh, sink) {
             Ok(meshes) => meshes,
             Err(e) => {
-                eprintln!("Section-Mesh konnte nicht hochgeladen werden: {e:#}");
+                crate::warn!("Section mesh not uploaded: {e:#}");
                 SectionMeshes::default()
             }
         };
@@ -607,7 +607,7 @@ impl LevelMeshes {
                     mesh,
                 )));
             }
-            Err(e) => eprintln!("Translucent-Mesh konnte nicht neu sortiert werden: {e:#}"),
+            Err(e) => crate::warn!("Translucent mesh not resorted: {e:#}"),
         }
         let (bytes, mesh) = (
             std::mem::size_of_val(translucent.faces.vertices.as_slice()),
@@ -930,7 +930,7 @@ impl ChangingMesh {
                 match renderer.upload_mesh(&self.uploaded) {
                     Ok(mesh) => self.mesh = Some(mesh),
                     Err(e) => {
-                        eprintln!("Block-Entity-Mesh fehlgeschlagen: {e:#}");
+                        crate::warn!("Block entity mesh failed: {e:#}");
                         self.uploaded.clear();
                     }
                 }

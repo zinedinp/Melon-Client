@@ -207,7 +207,7 @@ fn custom_action_sender(writer: &SharedWriter) -> crate::dialog::connection::Sen
                 .ok_or_else(|| anyhow::anyhow!("payload too large"))
         });
         if let Err(e) = sent {
-            eprintln!("Benutzerdefinierte Aktion {action} nicht gesendet: {e:#}");
+            crate::warn!("Custom action {action} not sent: {e:#}");
         }
     })
 }

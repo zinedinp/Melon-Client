@@ -124,7 +124,7 @@ impl SoundEvents {
         for namespace in crate::assets::namespaces(assets_root) {
             for json in crate::assets::resource_stack(assets_root, &namespace, "sounds.json") {
                 if events.merge(&namespace, &json).is_none() {
-                    eprintln!("Audio: {namespace}:sounds.json nicht lesbar");
+                    crate::warn!("{namespace}:sounds.json unreadable");
                 }
             }
         }

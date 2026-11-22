@@ -7,6 +7,7 @@ use melon::network;
 use melon::settings::options::Config;
 
 fn main() -> anyhow::Result<()> {
+    melon::platform::drop_cargo_stack();
     // The CPU's vector unit, probed once: every SIMD kernel runs on it.
     melon::math::simd::init();
     let args: Vec<String> = std::env::args().collect();
@@ -90,7 +91,7 @@ fn connect(address: &str, assets: &Assets) -> anyhow::Result<()> {
     let mut session = match joining.join().expect("join thread") {
         Ok(session) => session,
         Err(e) => {
-            eprintln!("Verbindung fehlgeschlagen: {e:#}");
+            eprintln!("Connection failed: {e:#}");
             std::process::exit(1);
         }
     };
@@ -265,7 +266,7 @@ fn start_probe(args: &[String], assets: &Assets) -> Option<ProbeGuard> {
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
     let path = melon::instances::logs_dir(assets.game_dir()).join(format!("probe-{stamp}.md"));
-    eprintln!("Tester an: Bericht in {}", path.display());
+    eprintln!("Tester on: report in {}", path.display());
     melon::probe::enable(path);
     Some(ProbeGuard)
 }
@@ -276,7 +277,7 @@ impl Drop for ProbeGuard {
     fn drop(&mut self) {
         melon::probe::write_report();
         if let Some(path) = melon::probe::report_path() {
-            eprintln!("Tester: Bericht in {}", path.display());
+            eprintln!("Tester: report in {}", path.display());
         }
     }
 }

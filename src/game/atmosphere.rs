@@ -196,7 +196,7 @@ fn replace_mesh(
             Some(mesh)
         }
         Err(e) => {
-            eprintln!("Atmosphere mesh failed: {e:#}");
+            crate::warn!("Atmosphere mesh failed: {e:#}");
             None
         }
     }

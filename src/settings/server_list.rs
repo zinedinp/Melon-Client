@@ -46,7 +46,7 @@ pub fn load(game_dir: &Path) -> Vec<ServerEntry> {
 
 pub fn save(game_dir: &Path, servers: &[ServerEntry]) {
     if let Err(e) = crate::json_file::save(&path(game_dir), servers) {
-        eprintln!("Serverliste konnte nicht gespeichert werden: {e}");
+        crate::warn!("Server list not saved: {e}");
     }
 }
 

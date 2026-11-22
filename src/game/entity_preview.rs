@@ -145,9 +145,7 @@ impl InWorld {
                         target
                     }
                     Err(e) => {
-                        eprintln!(
-                            "Spielervorschau nicht auf der GPU, zeichne sie auf der CPU: {e:#}"
-                        );
+                        crate::warn!("Player preview not on the GPU, drawing it on the CPU: {e:#}");
                         self.preview.cpu_only = true;
                         return false;
                     }
@@ -209,7 +207,7 @@ impl InWorld {
                     texture
                 }
                 Err(e) => {
-                    eprintln!("Spielervorschau nicht hochgeladen: {e:#}");
+                    crate::warn!("Player preview not uploaded: {e:#}");
                     previews.current = None;
                     return;
                 }

@@ -59,7 +59,7 @@ pub fn fetch_skin(uuid: &str) -> anyhow::Result<DownloadedSkin> {
         .properties
         .iter()
         .find(|p| p.name == "textures")
-        .context("Profil ohne Skin-Eintrag")?
+        .context("profile without a textures property")?
         .value
         .as_str();
     skin_from_textures(value)
@@ -84,12 +84,12 @@ pub fn fetch_skin_by_name(name: &str) -> anyhow::Result<DownloadedSkin> {
 
 /// The skin a profile's `textures` property (Base64 JSON, as Mojang and
 pub fn skin_from_textures(value: &str) -> anyhow::Result<DownloadedSkin> {
-    let decoded = base64_decode(value).context("Skin-Eintrag ist kein Base64")?;
+    let decoded = crate::util::base64::decode(value).context("textures property is not base64")?;
     let textures: Textures = serde_json::from_slice(&decoded).with_context(|| {
         let start: String = String::from_utf8_lossy(&decoded).chars().take(60).collect();
-        format!("Skin-Eintrag nicht lesbar, beginnt mit {start:?}")
+        format!("textures property unreadable, starts with {start:?}")
     })?;
-    let skin = textures.textures.skin.context("kein eigener Skin")?;
+    let skin = textures.textures.skin.context("no custom skin")?;
     let slim = skin
         .metadata
         .and_then(|m| m.model)
@@ -202,31 +202,6 @@ pub fn head_from_skin(skin: &RgbaImage) -> Option<RgbaImage> {
     Some(head)
 }
 
-/// Standard base64 (with or without padding); `None` on a bad character.
-pub fn base64_decode(text: &str) -> Option<Vec<u8>> {
-    let mut out = Vec::with_capacity(text.len() * 3 / 4);
-    let (mut bits, mut count) = (0u32, 0);
-    for byte in text.bytes() {
-        let value = match byte {
-            b'A'..=b'Z' => byte - b'A',
-            b'a'..=b'z' => byte - b'a' + 26,
-            b'0'..=b'9' => byte - b'0' + 52,
-            b'+' | b'-' => 62,
-            b'/' | b'_' => 63,
-            b'=' | b'\n' | b'\r' | b' ' => continue,
-            _ => return None,
-        };
-        bits = (bits << 6) | u32::from(value);
-        count += 6;
-        if count >= 8 {
-            count -= 8;
-            out.push((bits >> count) as u8);
-            bits &= (1 << count) - 1;
-        }
-    }
-    Some(out)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -250,15 +225,6 @@ mod tests {
             "https://textures.minecraft.net@evil.com/x"
         ));
         assert!(!allowed_texture_url("https://localhost:8080/x"));
-    }
-
-    #[test]
-    fn base64_decodes_with_and_without_padding() {
-        assert_eq!(base64_decode("TWFu").unwrap(), b"Man");
-        assert_eq!(base64_decode("TWE=").unwrap(), b"Ma");
-        assert_eq!(base64_decode("TWE").unwrap(), b"Ma");
-        assert_eq!(base64_decode("").unwrap(), b"");
-        assert!(base64_decode("T!E").is_none());
     }
 
     #[test]

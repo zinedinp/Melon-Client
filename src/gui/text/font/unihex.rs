@@ -66,13 +66,13 @@ impl Lazy {
             .get_or_init(|| {
                 let (namespace, path) = crate::assets::split_id(&self.file);
                 let Some(zip) = crate::assets::resource_top(&self.root, namespace, path) else {
-                    eprintln!("font: Hex-Datei {} fehlt (Launcher: Prepare)", self.file);
+                    crate::warn!("hex file {} missing (launcher: Prepare)", self.file);
                     return None;
                 };
                 match Unihex::from_zip(&zip, &self.overrides) {
                     Ok(unihex) => Some(unihex),
                     Err(e) => {
-                        eprintln!("font: Hex-Datei {}: {e:#}", self.file);
+                        crate::warn!("hex file {}: {e:#}", self.file);
                         None
                     }
                 }
