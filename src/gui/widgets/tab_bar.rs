@@ -88,27 +88,19 @@ impl TabBar {
     pub fn draw(&self, ui: &mut Ui) {
         let separator_y = self.y + HEIGHT - 2.0;
         let right = self.x + self.tab_w * self.titles.len() as f32;
-        if !ui.assets.launcher {
-            let separator = ui.assets.header_separator;
-            ui.draw_list.push_rect_tiled_x(
-                separator,
-                0.0,
-                separator_y,
-                self.x,
-                2.0,
-                32.0,
-                [1.0; 4],
-            );
-            ui.draw_list.push_rect_tiled_x(
-                separator,
-                right,
-                separator_y,
-                (ui.width - right).max(0.0),
-                2.0,
-                32.0,
-                [1.0; 4],
-            );
-        }
+        let separator = ui.assets.header_separator;
+        ui.draw_list
+            .push_rect_tiled_x(separator, 0.0, separator_y, self.x, 2.0, 32.0, [1.0; 4]);
+        ui.draw_list.push_rect_tiled_x(
+            separator,
+            right,
+            separator_y,
+            (ui.width - right).max(0.0),
+            2.0,
+            32.0,
+            [1.0; 4],
+        );
+
         for index in 0..self.titles.len() {
             self.draw_tab(ui, index);
         }
@@ -122,31 +114,21 @@ impl TabBar {
         let hovered = self.hovered == Some(index);
         let title = ui.tr(self.titles[index]);
         let assets = ui.assets;
-        if assets.launcher {
-            let color = match (selected, hovered) {
-                (true, _) => [0.22, 0.32, 0.18, 1.0],
-                (false, true) => [0.28, 0.28, 0.30, 1.0],
-                _ => [0.16, 0.16, 0.18, 1.0],
-            };
-            ui.fill(Rect::new(x, self.y, w, HEIGHT), color);
-        } else {
-            assets
-                .tab_textures
-                .get(selected, hovered)
-                .draw(ui.draw_list, x, self.y, w, HEIGHT);
-        }
+        assets
+            .tab_textures
+            .get(selected, hovered)
+            .draw(ui.draw_list, x, self.y, w, HEIGHT);
 
         if selected {
-            if !assets.launcher {
-                crate::gui::background::push_menu_overlay_rect(
-                    ui.draw_list,
-                    assets.white,
-                    x + 2.0,
-                    self.y + 2.0,
-                    w - 4.0,
-                    HEIGHT - 2.0,
-                );
-            }
+            crate::gui::background::push_menu_overlay_rect(
+                ui.draw_list,
+                assets.white,
+                x + 2.0,
+                self.y + 2.0,
+                w - 4.0,
+                HEIGHT - 2.0,
+            );
+
             let underline_w = ui.text_width(title).min(w - UNDERLINE_MARGIN_X);
             ui.fill(
                 Rect::new(

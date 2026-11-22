@@ -86,8 +86,6 @@ pub struct GuiAssets {
     pub pack_selected_row: RowIconSprites,
     pub font: Font,
     pub font_textures: Vec<TextureId>,
-    /// Fill plates instead of vanilla nine-slices (the standalone launcher).
-    pub launcher: bool,
     /// Where the textures of `object` sprites are looked up.
     assets_root: Option<std::path::PathBuf>,
 }
@@ -242,93 +240,7 @@ impl GuiAssets {
             pack_selected_row,
             font,
             font_textures,
-            launcher: false,
             assets_root: Some(assets.root().to_path_buf()),
-        })
-    }
-
-    /// Chrome the launcher can draw with no `assets/minecraft`.
-    pub fn launcher(renderer: &mut Renderer) -> anyhow::Result<Self> {
-        let white = renderer.white_texture();
-        let solid = GuiSprite::from(white);
-        let page = crate::gui::ascii8::atlas();
-        let mut font = crate::gui::ascii8::font(page.clone());
-        font.white = white;
-        let font_textures = vec![renderer.load_texture(&page)?];
-        let logo = match image::load_from_memory(include_bytes!("../../packaging/melon.png")) {
-            Ok(img) => renderer.load_texture(&img.to_rgba8()).unwrap_or(white),
-            Err(_) => white,
-        };
-        let arrows = || RowIconSprites {
-            primary: Arrow {
-                normal: solid,
-                highlighted: solid,
-            },
-            up: None,
-            down: None,
-        };
-        Ok(Self {
-            button_textures: ButtonTextures {
-                normal: solid,
-                highlighted: solid,
-                disabled: solid,
-            },
-            logo,
-            edition: white,
-            language_icon: solid,
-            accessibility_icon: solid,
-            friends_icon: solid,
-            bug_icon: solid,
-            feedback_icon: solid,
-            player_reporting_icon: solid,
-            realms_trial_icon: solid,
-            white,
-            text_field: solid,
-            text_field_highlighted: solid,
-            list_background: white,
-            header_separator: white,
-            footer_separator: white,
-            scroller: solid,
-            scroller_background: solid,
-            tooltip: None,
-            tab_textures: TabTextures {
-                normal: solid,
-                highlighted: solid,
-                selected: solid,
-                selected_highlighted: solid,
-            },
-            slider_textures: SliderTextures {
-                track: solid,
-                track_highlighted: solid,
-                handle: solid,
-                handle_highlighted: solid,
-            },
-            checkbox: TabTextures {
-                normal: solid,
-                highlighted: solid,
-                selected: solid,
-                selected_highlighted: solid,
-            },
-            dialog_warning: ButtonTextures {
-                normal: solid,
-                highlighted: solid,
-                disabled: solid,
-            },
-            server_list: ServerListSprites {
-                ping: [solid; 5],
-                pinging: [solid; 5],
-                incompatible: solid,
-                unreachable: solid,
-                row: arrows(),
-                unknown_server: white,
-            },
-            world_row: arrows(),
-            pack_row: arrows(),
-            pack_selected_row: arrows(),
-            font,
-            font_textures,
-            launcher: true,
-            assets_root: None,
         })
     }
 }

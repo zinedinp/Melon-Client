@@ -127,8 +127,6 @@ fn push_resource(out: &mut Vec<u8>, kind: u16, name: u16, data: &[u8]) {
 
 fn main() {
     let out_dir = std::env::var("OUT_DIR").unwrap();
-    println!("cargo:rerun-if-env-changed=MELON_MS_CLIENT_ID");
-    println!("cargo:rerun-if-changed=discover.json");
     emit_rustc_version();
     embed_windows_icon(&out_dir);
     // UI (2D quads) and sky (3D cubemap) are separate pipelines.

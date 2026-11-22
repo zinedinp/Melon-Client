@@ -316,9 +316,8 @@ impl Assets {
 
     /// Plays in the instance `name` (see [`crate::instances`]).
     pub fn with_instance(mut self, name: &str) -> anyhow::Result<Self> {
-        let instance = crate::instances::find(self.launcher_dir(), name)
-            .ok_or_else(|| anyhow::anyhow!("ungueltiger Instanzname: {name}"))?;
-        let dir = instance.path;
+        let dir = crate::instances::find(self.launcher_dir(), name)
+            .ok_or_else(|| anyhow::anyhow!("no instance named {name}"))?;
         std::fs::create_dir_all(&dir)?;
         self.instance_dir = Some(dir);
         Ok(self)

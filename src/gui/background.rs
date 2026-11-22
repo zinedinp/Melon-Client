@@ -8,27 +8,6 @@ use crate::renderer::quad::DrawList;
 /// Render-pass clear color. Hidden once a cubemap scene is present.
 pub const CLEAR_COLOR: [f32; 4] = [0.02, 0.02, 0.04, 1.0];
 
-/// Flat launcher chrome: one dark green-grey, no white list plates.
-pub const LAUNCHER: [f32; 4] = [0.12, 0.14, 0.13, 1.0];
-/// Column panels (instances, middle, accounts).
-pub const LAUNCHER_PANEL: [f32; 4] = [0.09, 0.11, 0.10, 1.0];
-pub const LAUNCHER_EDGE: [f32; 4] = [0.34, 0.42, 0.32, 1.0];
-/// Selected / hovered launcher rows: a light veil, not an opaque tile.
-pub const LAUNCHER_SELECT: [f32; 4] = [1.0, 1.0, 1.0, 0.10];
-pub const LAUNCHER_HOVER: [f32; 4] = [1.0, 1.0, 1.0, 0.06];
-
-pub fn push_launcher(draw_list: &mut DrawList, white: TextureId, width: f32, height: f32) {
-    draw_list.push_rect(
-        white,
-        0.0,
-        0.0,
-        width,
-        height,
-        [0.0, 0.0, 1.0, 1.0],
-        LAUNCHER,
-    );
-}
-
 pub fn push_gradient(draw_list: &mut DrawList, white: TextureId, width: f32, height: f32) {
     draw_list.push_vgradient(
         white,
@@ -97,9 +76,6 @@ pub fn push_list_background(
     bottom: f32,
     width: f32,
 ) {
-    if assets.launcher {
-        return;
-    }
     let height = (bottom - top).max(0.0);
     draw_list.push_rect(
         assets.list_background,

@@ -323,14 +323,7 @@ impl ScrollList {
             if !self.row_visible(&rect) {
                 continue;
             }
-            if ui.assets.launcher {
-                let hovered = self.row_at(self.mouse.0, self.mouse.1) == Some(index);
-                if self.selected == Some(index) {
-                    ui.fill(rect, crate::gui::background::LAUNCHER_SELECT);
-                } else if hovered {
-                    ui.fill(rect, crate::gui::background::LAUNCHER_HOVER);
-                }
-            } else if self.selected == Some(index) {
+            if self.selected == Some(index) {
                 let outline = if self.focused {
                     OUTLINE_FOCUSED
                 } else {
@@ -355,17 +348,6 @@ impl ScrollList {
         }
         let x = self.scrollbar_x();
         let assets = ui.assets;
-        if assets.launcher {
-            ui.fill(
-                Rect::new(x, self.top, SCROLLBAR_W, self.viewport_height()),
-                [0.18, 0.20, 0.19, 1.0],
-            );
-            ui.fill(
-                Rect::new(x, self.scroller_y(), SCROLLBAR_W, self.scroller_height()),
-                [0.38, 0.48, 0.28, 1.0],
-            );
-            return;
-        }
         assets.scroller_background.draw(
             ui.draw_list,
             x,

@@ -151,24 +151,6 @@ impl<'a> Ui<'a> {
         )
     }
 
-    /// [`Self::text`] scaled about its top-left (launcher UUID / play-time).
-    pub fn text_scaled(&mut self, text: &str, x: f32, y: f32, color: [f32; 4], scale: f32) -> f32 {
-        if (scale - 1.0).abs() < 0.01 {
-            return self.text(text, x, y, color);
-        }
-        let start = self.draw_list.vertices_len();
-        let w = self.assets.font.push_text(
-            self.draw_list,
-            &self.assets.font_textures,
-            text,
-            x / scale,
-            y / scale,
-            color,
-        );
-        self.draw_list.scale_since(start, scale);
-        w * scale
-    }
-
     /// `text` cut with `...` so its width is at most `max_w`.
     pub fn ellipsize(&self, text: &str, max_w: f32) -> String {
         if self.text_width(text) <= max_w {
@@ -189,15 +171,6 @@ impl<'a> Ui<'a> {
         }
         out.push_str(dots);
         out
-    }
-
-    /// A 1px framed panel (launcher columns).
-    pub fn panel(&mut self, rect: Rect, fill: [f32; 4], edge: [f32; 4]) {
-        self.fill(rect, fill);
-        self.fill(Rect::new(rect.x, rect.y, rect.w, 1.0), edge);
-        self.fill(Rect::new(rect.x, rect.bottom() - 1.0, rect.w, 1.0), edge);
-        self.fill(Rect::new(rect.x, rect.y, 1.0, rect.h), edge);
-        self.fill(Rect::new(rect.right() - 1.0, rect.y, 1.0, rect.h), edge);
     }
 
     /// The width of styled text: bold glyphs are a pixel wider.

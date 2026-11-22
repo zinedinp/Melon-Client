@@ -1,6 +1,5 @@
 //! UI layer: widgets, screens, text. Emits `renderer::quad::DrawList` only;
 
-pub mod ascii8;
 pub mod assets;
 pub mod background;
 pub mod effects;

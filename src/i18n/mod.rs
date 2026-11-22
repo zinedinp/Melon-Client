@@ -33,8 +33,7 @@ pub struct Lang {
     unescaped: Strings,
 }
 
-/// Baked into the launcher (and the game overlay) so a published binary has English and German
-/// without assets.
+/// Melon's own texts, baked in so a published binary has English and German.
 const EMBEDDED_EN: &str = include_str!("../../lang/en_us.json");
 const EMBEDDED_DE: &str = include_str!("../../lang/de_de.json");
 
@@ -120,20 +119,6 @@ fn merge_extracted_lang_dir(dir: &Path, code: &str, strings: &mut Strings) {
 }
 
 impl Lang {
-    /// Melon overlay only: baked `lang/*.json`, no Mojang files required.
-    pub fn launcher(language: Language) -> Self {
-        let mut strings = HashMap::new();
-        if let Some(overlay) = project_lang("en_us") {
-            strings.extend(overlay);
-        }
-        if language != Language::EnUs
-            && let Some(overlay) = project_lang(language.code())
-        {
-            strings.extend(overlay);
-        }
-        Self::from_strings(language, strings)
-    }
-
     /// `en_us` baseline, then `code` on top. Vanilla English fallback for missing keys.
     pub fn load(assets: &Assets, language: Language) -> Self {
         let mut strings = HashMap::new();
@@ -255,25 +240,6 @@ fn fill(pattern: &str, args: &[&str]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::i18n::languages::Language;
-
-    #[test]
-    fn launcher_strings_are_baked_in() {
-        let lang = Lang::launcher(Language::EnUs);
-        assert_eq!(lang.get("melon.launcher.play"), "Play");
-        assert_eq!(lang.get("melon.launcher.download"), "Download");
-        assert_eq!(
-            lang.get("melon.launcher.setting.global"),
-            "Global options: %s"
-        );
-        assert_eq!(
-            lang.get("melon.launcher.download.title"),
-            "Downloading Melon"
-        );
-        let de = Lang::launcher(Language::DeDe);
-        assert_eq!(de.get("melon.launcher.play"), "Spielen");
-        assert_eq!(de.get("melon.launcher.download"), "Herunterladen");
-    }
 
     #[test]
     fn fills_placeholders_like_string_format() {

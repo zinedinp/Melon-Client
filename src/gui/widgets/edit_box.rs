@@ -147,21 +147,12 @@ impl Widget for EditBox {
 
     fn draw(&self, ui: &mut Ui) {
         let assets = ui.assets;
-        if assets.launcher {
-            let color = if self.focused {
-                [0.18, 0.22, 0.17, 1.0]
-            } else {
-                [0.16, 0.18, 0.17, 1.0]
-            };
-            ui.fill(self.rect(), color);
+        let sprite = if self.focused {
+            assets.text_field_highlighted
         } else {
-            let sprite = if self.focused {
-                assets.text_field_highlighted
-            } else {
-                assets.text_field
-            };
-            sprite.draw(ui.draw_list, self.x, self.y, self.w, self.h);
-        }
+            assets.text_field
+        };
+        sprite.draw(ui.draw_list, self.x, self.y, self.w, self.h);
 
         let text_x = self.text_x();
         let text_y = (self.y + (self.h - 8.0) / 2.0).round();
