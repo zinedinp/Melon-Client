@@ -16,7 +16,7 @@ use crate::renderer::{MeshId, Renderer, TextureId};
 use crate::world::block_models::BlockModels;
 use crate::world::head_profile::HeadProfile;
 use crate::world::item_model::{
-    self, Count, HandPose, HeldAnimation, HeldItem, HeldUse, ItemKey, ItemModel, Sheet,
+    self, Count, HandPose, HeldAnimation, HeldItem, HeldUse, ItemKey, ItemModel, Sheet, StackKey,
 };
 use crate::world::transparency::AlphaMap;
 
@@ -77,7 +77,7 @@ pub struct HeldItems {
     assets_root: PathBuf,
     sheets: Sheets,
     /// `None` for an item with nothing to draw in hand; by item and use.
-    items: HashMap<(ItemKey, HeldUse), Option<Uploaded>>,
+    items: rustc_hash::FxHashMap<(ItemKey, HeldUse), Option<Uploaded>>,
     /// Blocks drawn by a mob (a mooshroom's mushrooms), by model id.
     blocks: HashMap<&'static str, Option<Uploaded>>,
     /// Player heads with a profile, by [`HeadProfile::skin_key`] and use:
@@ -89,7 +89,7 @@ impl HeldItems {
         Self {
             assets_root: assets_root.to_path_buf(),
             sheets,
-            items: HashMap::new(),
+            items: Default::default(),
             blocks: HashMap::new(),
             heads: HashMap::new(),
         }
@@ -99,19 +99,19 @@ impl HeldItems {
     pub fn prepare(
         &mut self,
         renderer: &mut Renderer,
-        stack: &ItemStack,
+        stack: &impl StackKey,
         using: impl Into<HeldUse>,
     ) {
         // Most hands are empty: no key for them (it takes a lock and a
         // hash of the item's name).
-        if stack.is_empty() {
+        if stack.stack().is_empty() {
             return;
         }
-        let key = (ItemKey::of(&self.assets_root, stack), using.into());
+        let key = (stack.item_key(&self.assets_root), using.into());
         if self.items.contains_key(&key) {
             return;
         }
-        let name = stack.item.registry_key;
+        let name = stack.stack().item.registry_key;
         let held = ItemModel::held_poses(
             &self.assets_root,
             name,
@@ -232,23 +232,23 @@ impl HeldItems {
 
     pub fn get(
         &self,
-        stack: &ItemStack,
+        stack: &impl StackKey,
         pose: HandPose,
         using: impl Into<HeldUse>,
     ) -> impl Iterator<Item = (MeshId, TextureId, bool)> + '_ {
         draws(self.uploaded(stack, using.into()), pose)
     }
 
-    /// The lowest point and the depth of `stack`'s model on the ground.
-    pub fn ground_bounds(&self, stack: &ItemStack) -> Option<(f32, f32)> {
-        Some(self.uploaded(stack, HeldUse::Idle)?.ground)
+    /// `stack`'s prepared item in `using`, looked up once for several draws.
+    pub fn held(&self, stack: &impl StackKey, using: impl Into<HeldUse>) -> Option<Held<'_>> {
+        self.uploaded(stack, using.into()).map(Held)
     }
 
-    fn uploaded(&self, stack: &ItemStack, using: HeldUse) -> Option<&Uploaded> {
-        if stack.is_empty() {
+    fn uploaded(&self, stack: &impl StackKey, using: HeldUse) -> Option<&Uploaded> {
+        if stack.stack().is_empty() {
             return None;
         }
-        let head = HeadProfile::of_stack(stack)
+        let head = HeadProfile::of_stack(stack.stack())
             .and_then(|profile| {
                 self.heads
                     .get(&(profile.skin_key(), using == HeldUse::Using))
@@ -258,10 +258,26 @@ impl HeldItems {
             Some(head) => head,
             None => self
                 .items
-                .get(&(ItemKey::of(&self.assets_root, stack), using))?
+                .get(&(stack.item_key(&self.assets_root), using))?
                 .as_ref()?,
         };
         Some(uploaded)
+    }
+}
+
+/// A prepared item, from [`HeldItems::held`].
+#[derive(Clone, Copy)]
+pub struct Held<'a>(&'a Uploaded);
+
+impl<'a> Held<'a> {
+    /// The lowest point and the depth of its model on the ground.
+    pub fn ground(self) -> (f32, f32) {
+        self.0.ground
+    }
+
+    /// Its meshes and textures in `pose`, as [`HeldItems::get`].
+    pub fn draws(self, pose: HandPose) -> impl Iterator<Item = (MeshId, TextureId, bool)> + 'a {
+        draws(Some(self.0), pose)
     }
 }
 

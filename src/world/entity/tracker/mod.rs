@@ -26,6 +26,7 @@ use crate::math::wrap_degrees;
 use crate::network::play::game::{
     AddEntity, EVENT_DEATH, EntityPacket, EquipmentSlot, MoveEntity, SetPosition, relative,
 };
+use crate::world::item_model::KeyedStack;
 use crate::world::level::Level;
 use crate::world::physics::{self, Aabb};
 use crate::world::player::hands::{Hand, SwingState};
@@ -230,7 +231,7 @@ pub struct ClientEntity {
     name_pending: bool,
     pub equipment: Equipment,
     /// `ItemEntity.DATA_ITEM`: the dropped stack.
-    pub item: ItemStack,
+    pub item: KeyedStack,
     /// A display entity's data and easing, for those.
     pub display: Option<Box<display::DisplayState>>,
     /// An `Interaction`'s synced box and response flag.
@@ -396,7 +397,7 @@ impl ClientEntity {
                 ..Appearance::default()
             },
             equipment: Equipment::default(),
-            item: ItemStack::EMPTY.clone(),
+            item: KeyedStack::new(ItemStack::EMPTY.clone()),
             display: None,
             interaction: None,
             hang: add.data,
@@ -460,7 +461,7 @@ impl ClientEntity {
                     };
                     if holds_item && let crate::network::play::game::DataValue::Item(stack) = value
                     {
-                        self.item = (**stack).clone();
+                        self.item.set((**stack).clone());
                     }
                     if let Some(mannequin) = &mut self.mannequin {
                         use pumpkin_data::tracked_data::mannequin as m;
@@ -481,7 +482,7 @@ impl ClientEntity {
                     if self.kind.is_item_frame() {
                         match (index, value) {
                             (9, crate::network::play::game::DataValue::Item(stack)) => {
-                                self.item = (**stack).clone();
+                                self.item.set((**stack).clone());
                             }
                             (10, v) => self.frame_turn = v.int().unwrap_or(0),
                             _ => {}

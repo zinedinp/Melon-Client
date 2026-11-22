@@ -53,7 +53,7 @@ impl Entities {
             return;
         }
         self.pickups.push(Pickup {
-            stack: entity.item.clone(),
+            stack: (*entity.item).clone(),
             bob_offs: entity.bob_offs,
             age: entity.age_in_ticks(1.0),
             from: entity.pos,
@@ -66,7 +66,7 @@ impl Entities {
         if left <= 0 {
             self.remove(item);
         } else {
-            entity.item.item_count = left as u8;
+            entity.item.set_count(left as u8);
         }
     }
 

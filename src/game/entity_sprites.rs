@@ -206,7 +206,7 @@ pub fn submit(
             };
             let (scale, _) = thrown_look(entity.ty);
             let m = at * Mat4::from_scale(Vec3::splat(scale)) * facing(view);
-            submit_item(assets, &stack, HandPose::Ground, false, m, placed, out);
+            submit_item(assets, &*stack, HandPose::Ground, false, m, placed, out);
         }
         EntityKind::FireworkRocket => {
             let Some(stack) = shown_item(entity) else {
@@ -216,7 +216,7 @@ pub fn submit(
             if entity.appearance.thing.shot_at_angle {
                 m = m * Mat4::rot_z_deg(180.0) * Mat4::rot_y_deg(180.0) * Mat4::rot_x_deg(90.0);
             }
-            submit_item(assets, &stack, HandPose::Ground, false, m, placed, out);
+            submit_item(assets, &*stack, HandPose::Ground, false, m, placed, out);
         }
         EntityKind::OminousItemSpawner => {
             let Some(stack) = shown_item(entity) else {

@@ -79,7 +79,7 @@ pub struct ItemIcons {
     assets_root: PathBuf,
     sheet: ItemSheet,
     atlas: IconAtlas,
-    icons: HashMap<ItemKey, Option<Icon>>,
+    icons: rustc_hash::FxHashMap<ItemKey, Option<Icon>>,
     /// Player heads with a profile, by [`HeadProfile::skin_key`]: whether
     /// the skin was the owner's own, and the icon.
     heads: HashMap<uuid::Uuid, (bool, Option<Icon>)>,
@@ -91,7 +91,7 @@ impl ItemIcons {
             assets_root: assets_root.to_path_buf(),
             sheet,
             atlas: IconAtlas::new(max_texture_side),
-            icons: HashMap::new(),
+            icons: Default::default(),
             heads: HashMap::new(),
         }
     }

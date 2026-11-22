@@ -77,6 +77,8 @@ impl ChunkLayer {
 
 /// The baked quads of every block state, and the atlas they sample.
 pub struct BlockModels {
+    /// Per state. States with one model share its slice; each multipart
+    /// combination has its own.
     by_state: Vec<StateModel<BakedQuad>>,
     /// Per state, what the mesher asks of every block.
     flags: Vec<MeshFlags>,

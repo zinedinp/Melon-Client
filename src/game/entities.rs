@@ -7,11 +7,12 @@ use pumpkin_data::item_stack::ItemStack;
 use super::InWorld;
 use super::entity_models::{DrawStyle, PlayerLook};
 use super::entity_sprites;
+use super::held_items::Held;
 use super::shadows::OWN;
 use super::world_resources::WorldResources;
 use crate::math::angle::Rotation;
 use crate::network::play::game::EntityPacket;
-use crate::renderer::{EntityDraw, Glint, RenderLayer, Renderer};
+use crate::renderer::{EntityDraw, Glint, MeshId, RenderLayer, Renderer, TextureId};
 use crate::world::block_tint::TintKind;
 use crate::world::culling::Culler;
 use crate::world::culling::occlusion::SectionPos;
@@ -24,7 +25,7 @@ use crate::world::entity::player::{self as player_model, Arm, AvatarRenderState,
 use crate::world::entity::pose_cache::PoseCache;
 use crate::world::entity::tracker::{ClientEntity, Entities};
 use crate::world::item_model::HandPose;
-use crate::world::item_model::HeldUse;
+use crate::world::item_model::{HeldUse, StackKey};
 use crate::world::lightmap::{self, LightmapParams};
 use crate::world::player::ArmPoses;
 use crate::world::player::hands::{Hand, ItemUse};
@@ -263,7 +264,7 @@ impl InWorld {
                 assets.prepare_held(renderer, &entity.item, false);
             }
             if let Some(stack) = entity_sprites::shown_item(entity) {
-                assets.prepare_held(renderer, &stack, false);
+                assets.prepare_held(renderer, &*stack, false);
             }
             match entity.kind {
                 EntityKind::ExperienceOrb => {
@@ -1254,21 +1255,21 @@ fn submit_item_entity(
 /// A dropped `stack` at `feet`, `age` ticks old.
 fn submit_dropped(
     assets: &WorldResources,
-    stack: &ItemStack,
+    stack: &impl StackKey,
     feet: glam::DVec3,
     age: f32,
     bob_offs: f32,
     placed: Placed,
     out: &mut Vec<EntityDraw>,
 ) {
-    let Some((min_y, _)) = assets.held.ground_bounds(stack) else {
+    let Some(held) = assets.held.held(stack, false) else {
         return;
     };
     let feet = from_block(feet, placed.origin);
-    let lift = item_drop::bob(age, bob_offs) - min_y + 0.0625;
+    let lift = item_drop::bob(age, bob_offs) - held.ground().0 + 0.0625;
     let base = Mat4::from_translation(feet + Vec3::Y * lift)
         * Mat4::from_rotation_y(item_drop::spin(age, bob_offs));
-    submit_item_cluster(assets, stack, base, placed, out);
+    submit_held_cluster(assets, stack.stack(), held, base, placed, out);
 }
 
 /// `ItemEntityRenderer.submitMultipleFromCount`: the stack drawn once per
@@ -1280,13 +1281,23 @@ pub(super) fn submit_item_cluster(
     placed: Placed,
     out: &mut Vec<EntityDraw>,
 ) {
-    let Some((_, depth)) = assets.held.ground_bounds(stack) else {
-        return;
-    };
+    if let Some(held) = assets.held.held(stack, false) {
+        submit_held_cluster(assets, stack, held, base, placed, out);
+    }
+}
+
+fn submit_held_cluster(
+    assets: &WorldResources,
+    stack: &ItemStack,
+    held: Held<'_>,
+    base: Mat4,
+    placed: Placed,
+    out: &mut Vec<EntityDraw>,
+) {
     let seed = i64::from(stack.item.id);
-    for offset in item_drop::offsets(stack.item_count, depth, seed) {
+    for offset in item_drop::offsets(stack.item_count, held.ground().1, seed) {
         let at = base * Mat4::from_translation(offset);
-        submit_item(assets, stack, HandPose::Ground, false, at, placed, out);
+        submit_held(assets, stack, held.draws(HandPose::Ground), at, placed, out);
     }
 }
 
@@ -1668,15 +1679,27 @@ fn submit_worn(
 /// `ItemInHandLayer`: `stack` held in `arm`, placed by `at`.
 pub(super) fn submit_item(
     assets: &WorldResources,
-    stack: &ItemStack,
+    stack: &impl StackKey,
     pose: HandPose,
     using: impl Into<HeldUse>,
     at: Mat4,
     placed: Placed,
     out: &mut Vec<EntityDraw>,
 ) {
-    let parts: Vec<_> = assets.held.get(stack, pose, using).collect();
-    for &(mesh, atlas, translucent) in &parts {
+    let parts = assets.held.get(stack, pose, using);
+    submit_held(assets, stack.stack(), parts, at, placed, out);
+}
+
+fn submit_held(
+    assets: &WorldResources,
+    stack: &ItemStack,
+    parts: impl Iterator<Item = (MeshId, TextureId, bool)>,
+    at: Mat4,
+    placed: Placed,
+    out: &mut Vec<EntityDraw>,
+) {
+    let foil = crate::world::glint::has_foil(stack);
+    for (mesh, atlas, translucent) in parts {
         out.push(EntityDraw {
             scroll: None,
             alpha: 1.0,
@@ -1688,10 +1711,7 @@ pub(super) fn submit_item(
             blend: crate::renderer::Blending::of(translucent),
             light: Some(placed.light),
             overlay: 0.0,
-            glint: Glint::entity(
-                crate::world::glint::has_foil(stack),
-                assets.held.glint_texels(atlas),
-            ),
+            glint: Glint::entity(foil, assets.held.glint_texels(atlas)),
         });
     }
 }

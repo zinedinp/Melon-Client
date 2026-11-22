@@ -2,9 +2,9 @@
 //! components change about the model ([`Variant`]). Looked up for every
 //! drawn stack, every frame.
 
-use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use pumpkin_data::data_component::DataComponent;
 use pumpkin_data::data_component_impl::{DamageImpl, MaxDamageImpl};
@@ -22,6 +22,90 @@ pub struct ItemKey {
     /// The stack size as far as the item's model tells sizes apart.
     pub count: u8,
     pub max_stack: u8,
+}
+
+/// Bumped when the count cuts are forgotten: every cached key goes stale.
+static RESOURCES: AtomicU32 = AtomicU32::new(0);
+
+pub(super) fn resources_changed() {
+    RESOURCES.fetch_add(1, Ordering::Relaxed);
+}
+
+/// A stack, and how to find its [`ItemKey`].
+pub trait StackKey {
+    fn stack(&self) -> &ItemStack;
+    fn item_key(&self, assets_root: &Path) -> ItemKey;
+}
+
+impl StackKey for ItemStack {
+    fn stack(&self) -> &ItemStack {
+        self
+    }
+
+    fn item_key(&self, assets_root: &Path) -> ItemKey {
+        ItemKey::of(assets_root, self)
+    }
+}
+
+/// A stack drawn every frame (dropped, framed, displayed) with its
+/// [`ItemKey`], worked out once until the stack or the resources change.
+pub struct KeyedStack {
+    stack: ItemStack,
+    key: Mutex<Option<(u32, ItemKey)>>,
+}
+
+impl KeyedStack {
+    pub fn new(stack: ItemStack) -> Self {
+        Self {
+            stack,
+            key: Mutex::new(None),
+        }
+    }
+
+    pub fn set(&mut self, stack: ItemStack) {
+        *self = Self::new(stack);
+    }
+
+    pub fn set_count(&mut self, count: u8) {
+        let stack = ItemStack {
+            item_count: count,
+            ..std::mem::replace(&mut self.stack, ItemStack::EMPTY.clone())
+        };
+        self.set(stack);
+    }
+}
+
+impl std::ops::Deref for KeyedStack {
+    type Target = ItemStack;
+
+    fn deref(&self) -> &ItemStack {
+        &self.stack
+    }
+}
+
+impl Clone for KeyedStack {
+    fn clone(&self) -> Self {
+        Self::new(self.stack.clone())
+    }
+}
+
+impl StackKey for KeyedStack {
+    fn stack(&self) -> &ItemStack {
+        &self.stack
+    }
+
+    fn item_key(&self, assets_root: &Path) -> ItemKey {
+        let resources = RESOURCES.load(Ordering::Relaxed);
+        let mut cached = self.key.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some((seen, key)) = &*cached
+            && *seen == resources
+        {
+            return key.clone();
+        }
+        let key = ItemKey::of(assets_root, &self.stack);
+        *cached = Some((resources, key.clone()));
+        key
+    }
 }
 
 impl ItemKey {
@@ -127,8 +211,8 @@ impl Variant {
     }
 }
 
-/// TODO(perf): a lock and a SipHash of the item's name per call. Items
-/// without an `item_model` of their own could be looked up by item id.
+/// A lock and a hash of the item's name per call: stacks drawn every
+/// frame keep their key ([`KeyedStack`]).
 fn model_count(
     assets_root: &Path,
     stack: &ItemStack,
@@ -137,7 +221,7 @@ fn model_count(
 ) -> u8 {
     let definition_key = definition_id(stack.item.registry_key, variant);
     let mut known = COUNT_CUTS.lock().unwrap_or_else(|e| e.into_inner());
-    let known = known.get_or_insert_with(HashMap::new);
+    let known = known.get_or_insert_with(Default::default);
     let count = i32::from(stack.item_count);
     let pick = |cuts: &[i32]| {
         cuts.iter()
@@ -241,6 +325,24 @@ mod tests {
         data: impl DataComponentImpl + 'static,
     ) -> (DataComponent, Option<Box<dyn DataComponentImpl>>) {
         (component, Some(Box::new(data)))
+    }
+
+    #[test]
+    fn a_keyed_stack_keeps_its_key_until_it_or_the_resources_change() {
+        let root = Path::new("no-assets");
+        let mut stack = KeyedStack::new(ItemStack::new(1, &Item::DIAMOND_SWORD));
+        let first = stack.item_key(root);
+        assert_eq!(first, ItemKey::of(root, &stack));
+        assert_eq!(stack.item_key(root), first);
+        let mut damaged = ItemStack::new(1, &Item::DIAMOND_SWORD);
+        damaged
+            .patch
+            .push(set(DataComponent::Damage, DamageImpl { damage: 3 }));
+        stack.set(damaged);
+        assert_ne!(stack.item_key(root), first);
+        assert_eq!(stack.item_key(root), ItemKey::of(root, &stack));
+        resources_changed();
+        assert_eq!(stack.item_key(root), ItemKey::of(root, &stack));
     }
 
     #[test]

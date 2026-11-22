@@ -8,6 +8,7 @@ use pumpkin_data::item_stack::ItemStack;
 use super::kind::EntityKind;
 use crate::component::Component;
 use crate::network::play::game::DataValue;
+use crate::world::item_model::KeyedStack;
 
 /// `Display.DATA_*`: the entity data indices after `Entity`'s 0-7.
 mod index {
@@ -106,7 +107,7 @@ pub struct DisplayState {
     pub height: f32,
     /// `glow_color_override`, `-1` for none.
     pub glow_color: i32,
-    pub item: ItemStack,
+    pub item: KeyedStack,
     /// `ItemDisplayContext` by id.
     pub item_context: u8,
     pub block_state: u16,
@@ -157,7 +158,7 @@ impl Default for DisplayState {
             width: 0.0,
             height: 0.0,
             glow_color: -1,
-            item: ItemStack::EMPTY.clone(),
+            item: KeyedStack::new(ItemStack::EMPTY.clone()),
             item_context: 0,
             block_state: 0,
             text: Component::empty(),
@@ -269,7 +270,9 @@ impl DisplayState {
                 }
             }
             index::CONTENT => match (kind, value) {
-                (EntityKind::ItemDisplay, DataValue::Item(stack)) => self.item = (**stack).clone(),
+                (EntityKind::ItemDisplay, DataValue::Item(stack)) => {
+                    self.item.set((**stack).clone());
+                }
                 (EntityKind::BlockDisplay, _) => {
                     self.block_state = int().and_then(|s| u16::try_from(s).ok()).unwrap_or(0);
                 }

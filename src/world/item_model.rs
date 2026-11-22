@@ -19,7 +19,7 @@ use crate::world::{block_entity, geometry, model_part};
 
 mod key;
 
-pub use key::{ItemKey, Variant};
+pub use key::{ItemKey, KeyedStack, StackKey, Variant};
 
 /// `grass_block`'s and other `minecraft:grass` tints away from any biome.
 const GRASS_TINT: [u8; 3] = [124, 189, 107];
@@ -46,11 +46,12 @@ impl Count {
 }
 
 /// The counts at which an item's model changes (`minecraft:count` range dispatch), by item.
-static COUNT_CUTS: Mutex<Option<HashMap<String, Vec<i32>>>> = Mutex::new(None);
+static COUNT_CUTS: Mutex<Option<rustc_hash::FxHashMap<String, Vec<i32>>>> = Mutex::new(None);
 
 /// Drops what is known of the items' count thresholds.
 pub fn forget_count_cuts() {
     *COUNT_CUTS.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    key::resources_changed();
 }
 
 /// The stack sizes from which a `minecraft:count` dispatch in `model`

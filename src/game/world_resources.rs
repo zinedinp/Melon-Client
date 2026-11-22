@@ -372,11 +372,12 @@ impl WorldResources {
     pub fn prepare_held(
         &mut self,
         renderer: &mut Renderer,
-        stack: &ItemStack,
+        stack: &impl crate::world::item_model::StackKey,
         using: impl Into<HeldUse>,
     ) {
         let using = using.into();
         self.held.prepare(renderer, stack, using);
+        let stack = stack.stack();
         if let Some(profile) = HeadProfile::of_stack(stack) {
             self.players.request_head(&profile);
             let own = self.players.has_head_skin(&profile);
