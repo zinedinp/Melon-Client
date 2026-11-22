@@ -133,7 +133,9 @@ fn read_data_layers(r: &mut Reader) -> Result<Vec<LightSection>> {
     if count < 0 {
         bail!("negative light-array count");
     }
-    let mut arrays = Vec::with_capacity(count as usize);
+    // Only the up-front reservation is capped (vanilla: `Math.min(count, 65536)`);
+    // a lying count still fails on the first missing array.
+    let mut arrays = Vec::with_capacity((count as usize).min(4096));
     for _ in 0..count {
         let len = r.var_int()?;
         if !(0..=LIGHT_NIBBLES as i32).contains(&len) {

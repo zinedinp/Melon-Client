@@ -57,7 +57,7 @@ regex = { version = "1.13.2", default-features = false, features = ["std", "perf
 # system's shaderc library, from the same install `glslc` comes from.
 shaderc = "0.10.1"
 zip = { version = "9.8.1", default-features = false, features = ["deflate-flate2"] }
-miraculix = "0.5.7-beta"
+miraculix = "0.5.8-beta"
 
 [profile.dev]
 opt-level = 1
