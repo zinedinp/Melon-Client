@@ -262,8 +262,7 @@ macro_rules! wolf_set {
     };
 }
 
-/// `WolfVariant` in registry order: ashen, black, chestnut, pale (the
-/// default, plain `wolf`), rusty, snowy, spotted, striped, woods.
+/// `WolfVariant` in registry order.
 const TEXTURES: [[[&str; 3]; 2]; 9] = [
     wolf_set!("wolf_ashen"),
     wolf_set!("wolf_black"),
@@ -276,8 +275,7 @@ const TEXTURES: [[[&str; 3]; 2]; 9] = [
     wolf_set!("wolf_woods"),
 ];
 
-/// `WolfRenderer`: the variant's wild, tame or angry body and
-/// `WolfCollarLayer`.
+/// `WolfRenderer` and `WolfCollarLayer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

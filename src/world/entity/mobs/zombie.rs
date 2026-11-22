@@ -69,8 +69,7 @@ pub fn baby_grown(g: f32) -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 64.0)
 }
 
-/// `ZombieRenderer`, `HuskRenderer`, `GiantMobRenderer` and
-/// `DrownedRenderer` (with `DrownedOuterLayer`).
+/// The zombie renderers.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

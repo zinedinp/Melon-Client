@@ -109,6 +109,7 @@ impl PaintingMeshes {
                 continue;
             };
             out.push(EntityDraw {
+                scroll: None,
                 alpha: 1.0,
                 mesh,
                 atlas,

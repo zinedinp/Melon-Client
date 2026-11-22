@@ -109,7 +109,7 @@ pub fn setup_anim(parts: &MagmaParts, pose: &mut ModelPose, squish: f32) {
     }
 }
 
-/// `SlimeRenderer` (with `SlimeOuterLayer`) and `MagmaCubeRenderer`.
+/// `SlimeRenderer` and `MagmaCubeRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let plain = LayerSpec::plain;
     match entity.kind {

@@ -253,8 +253,7 @@ impl CopperGolemClock {
     }
 }
 
-/// `CopperGolemRenderer` and its eyes, both by how far it has oxidised
-/// (`DATA_WEATHER_STATE`).
+/// `CopperGolemRenderer` and its eyes.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let weathering = entity.appearance.copper_weather;
     let plain = LayerSpec::plain;

@@ -140,7 +140,7 @@ pub fn tick_anim(
     anim[DEATH].animate_when(tearing_down, tick);
 }
 
-/// `CreakingRenderer` and its eyes while it is active.
+/// `CreakingRenderer` and its eyes.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let plain = LayerSpec::plain;

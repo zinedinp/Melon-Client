@@ -133,15 +133,17 @@ pub fn setup_anim(
     }
 }
 
-/// `WitherBossRenderer` and `WitherArmorLayer`. The armor is an
-/// `EnergySwirlLayer`, which scrolls and blends additively; Melon draws it
-/// as a plain layer.
-pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
+/// `WitherBossRenderer` and `WitherArmorLayer`.
+pub(super) fn push_layers(entity: &ClientEntity, age_in_ticks: f32, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let plain = LayerSpec::plain;
     out.push(plain(M::Wither, texture(a.wither_invul as f32)));
     if powered(a.health, entity.max_health) {
-        out.push(plain(M::WitherArmor, armor_texture()));
+        let t = age_in_ticks;
+        out.push(
+            plain(M::WitherArmor, armor_texture())
+                .energy_swirl(angle::cos(t * 0.02) * 3.0, t * 0.01),
+        );
     }
 }
 

@@ -417,7 +417,7 @@ pub fn setup_anim(parts: &DragonParts, pose: &mut ModelPose, dragon: DragonPose)
     }
 }
 
-/// `EnderDragonRenderer`: the body and its eyes.
+/// `EnderDragonRenderer`.
 pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
     let plain = LayerSpec::plain;
     out.push(plain(M::Dragon, TEXTURE));

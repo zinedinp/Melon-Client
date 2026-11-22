@@ -134,7 +134,7 @@ pub fn setup_anim(
     head.rotation.y = (state.y_rot - 180.0).to_radians();
 }
 
-/// `ShulkerRenderer`: the colour's texture.
+/// `ShulkerRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let plain = LayerSpec::plain;

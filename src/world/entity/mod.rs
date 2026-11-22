@@ -6,6 +6,7 @@ pub mod appearance;
 pub mod boat_sim;
 pub mod crystal_beam;
 pub mod display;
+pub mod equipment_asset;
 pub mod fishing;
 pub mod horse_sim;
 pub mod humanoid;

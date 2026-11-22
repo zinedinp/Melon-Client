@@ -81,6 +81,7 @@ impl ModelMeshes {
                 })
                 .filter_map(|((_, mesh), matrix)| Some(((*mesh)?, (*matrix)?)))
                 .map(|(mesh, model)| EntityDraw {
+                    scroll: None,
                     alpha: 1.0,
                     mesh,
                     atlas: style.texture,
@@ -112,6 +113,7 @@ impl ModelMeshes {
                 .filter(|((index, _), _)| skip.iter().all(|p| p.0 != *index))
                 .filter_map(|((_, mesh), matrix)| Some(((*mesh)?, (*matrix)?)))
                 .map(|(mesh, model)| EntityDraw {
+                    scroll: None,
                     alpha: 1.0,
                     mesh,
                     atlas: style.texture,

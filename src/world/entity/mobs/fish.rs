@@ -662,9 +662,7 @@ pub fn pattern_texture(large: bool, number: usize) -> &'static str {
 /// The default `DATA_ID_TYPE_VARIANT`: kob, orange on orange.
 pub const DEFAULT_TROPICAL: i32 = (1 << 16) | (1 << 24);
 
-/// `CodRenderer`, `SalmonRenderer` (by size), `PufferfishRenderer` (by
-/// puff), `TropicalFishRenderer` (with `TropicalFishPatternLayer`) and
-/// `TadpoleRenderer`.
+/// The fish renderers and `TadpoleRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let plain = LayerSpec::plain;

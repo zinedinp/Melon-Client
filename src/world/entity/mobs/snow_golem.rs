@@ -84,7 +84,7 @@ pub fn setup_anim(parts: &SnowGolemParts, pose: &mut ModelPose, state: &LivingRe
 /// `SnowGolemHeadLayer`: the block on the head, if it has its pumpkin.
 pub const HEAD: &str = "minecraft:block/carved_pumpkin";
 
-/// `SnowGolemRenderer` (the pumpkin is [`HEAD`], a block).
+/// `SnowGolemRenderer`; the pumpkin is [`HEAD`].
 pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
     let plain = LayerSpec::plain;
     out.push(plain(

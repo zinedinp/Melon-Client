@@ -89,6 +89,7 @@ impl FishingMeshes {
         }
         if let Some(mesh) = kept.mesh {
             out.push(EntityDraw {
+                scroll: None,
                 alpha: 1.0,
                 mesh,
                 atlas: white,
@@ -224,6 +225,7 @@ impl InWorld {
             if let (Some(mesh), Some(texture)) = (sprite, texture) {
                 let facing = display::orientation(3, (0.0, 0.0), view.angles);
                 out.push(EntityDraw {
+                    scroll: None,
                     alpha: 1.0,
                     mesh,
                     atlas: texture,

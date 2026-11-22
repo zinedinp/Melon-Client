@@ -126,6 +126,8 @@ pub struct EntityDraw {
     /// Multiplies the texels' alpha: a model drawn with a colour whose
     /// alpha is below one (a shulker bullet's glow, an experience orb).
     pub alpha: f32,
+    /// `OffsetTextureTransform`; additive draws are energy swirls.
+    pub scroll: Option<[f32; 2]>,
 }
 
 /// How an [`EntityDraw`] meets what is drawn already. In the order they are
@@ -366,6 +368,7 @@ impl WorldDraw {
             fog: crate::renderer::pipeline::world::FogInput::None,
             overlay: 0.0,
             glint_scale: 0.0,
+            scroll: None,
         }
     }
 }

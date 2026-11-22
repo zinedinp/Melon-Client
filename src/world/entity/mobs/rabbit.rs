@@ -310,7 +310,7 @@ impl RabbitClock {
     }
 }
 
-/// `RabbitRenderer`: the coat, or Toast's.
+/// `RabbitRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

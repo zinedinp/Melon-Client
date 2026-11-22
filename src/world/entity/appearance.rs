@@ -59,6 +59,8 @@ pub struct Appearance {
     pub shared_flags: u8,
     /// `Entity.DATA_NO_GRAVITY`: a server holds an item in the air with it.
     pub no_gravity: bool,
+    /// `Entity.DATA_SILENT`.
+    pub silent: bool,
     pub mob_flags: u8,
     /// `DATA_LIVING_ENTITY_FLAGS`: using an item, in which hand.
     pub living_flags: u8,
@@ -198,10 +200,9 @@ pub struct Appearance {
     pub creaking_active: bool,
     /// `CopperGolem.COPPER_GOLEM_STATE`.
     pub copper_state: i32,
-    /// `CopperGolem.DATA_WEATHER_STATE`: `WeatheringCopper.WeatherState`'s
-    /// ordinal, which picks the oxidised skin and eyes.
+    /// `CopperGolem.DATA_WEATHER_STATE`.
     pub copper_weather: i32,
-    /// `Warden.CLIENT_ANGER_LEVEL`: speeds the heartbeat up.
+    /// `Warden.CLIENT_ANGER_LEVEL`.
     pub warden_anger: i32,
     /// `WitherBoss.DATA_ID_INV`.
     pub wither_invul: i32,
@@ -246,6 +247,7 @@ impl Default for Appearance {
         Self {
             shared_flags: 0,
             no_gravity: false,
+            silent: false,
             mob_flags: 0,
             living_flags: 0,
             pose: 0,
@@ -351,6 +353,9 @@ impl Appearance {
                 if let Some(b) = byte() {
                     self.shared_flags = b;
                 }
+            }
+            _ if i == index(entity::DATA_SILENT) => {
+                self.silent = value.bool().unwrap_or(self.silent);
             }
             _ if i == index(entity::DATA_NO_GRAVITY) => {
                 if let Some(v) = value.bool() {

@@ -1,8 +1,4 @@
-//! Which layers a mob shows and with which texture: variants, coats,
-//! collars and other render layers. [`layers`] sends each mob to its
-//! family's `push_layers`, which sits in the family's file beside its model
-//! and animation; this file keeps what they share ([`LayerSpec`] and the
-//! variant helpers).
+//! Which layers a mob shows; each family's `push_layers` sits beside its model.
 
 use super::*;
 
@@ -12,8 +8,7 @@ pub(super) fn dye_tint(color: pumpkin_data::dye_color::DyeColor) -> [f32; 3] {
     [16, 8, 0].map(|shift| ((rgb >> shift) & 0xFF) as f32 / 255.0)
 }
 
-/// One model drawn for an entity: with which texture (an asset id), its
-/// tint and how it is blended.
+/// One model drawn for an entity, with its texture and how it is blended.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LayerSpec {
     pub model: ModelId,
@@ -22,8 +17,7 @@ pub struct LayerSpec {
     pub full_bright: bool,
     /// Blended over what is behind it (a slime's jelly).
     pub translucent: bool,
-    /// Writes only the depth, no colour (`RenderTypes.waterMask`): the
-    /// patch that keeps water out of a boat.
+    /// `RenderTypes.waterMask`: depth only.
     pub water_mask: bool,
     /// Humanoid armor: posed by copying the wearer, not `setupAnim`.
     pub copy_humanoid: bool,
@@ -33,6 +27,10 @@ pub struct LayerSpec {
     pub overlay: Option<f32>,
     /// The colour's alpha it is drawn with (a shulker bullet's glow).
     pub alpha: f32,
+    /// `OffsetTextureTransform`: the texture slid this far.
+    pub scroll: Option<[f32; 2]>,
+    /// Added onto what is behind it (`RenderTypes.energySwirl`).
+    pub additive: bool,
 }
 
 impl LayerSpec {
@@ -59,6 +57,8 @@ impl LayerSpec {
             foil: false,
             overlay: None,
             alpha: 1.0,
+            scroll: None,
+            additive: false,
         }
     }
 
@@ -114,6 +114,8 @@ impl LayerSpec {
             foil: false,
             overlay: None,
             alpha: 1.0,
+            scroll: None,
+            additive: false,
         }
     }
 
@@ -121,6 +123,29 @@ impl LayerSpec {
     pub(super) fn with_overlay(self, overlay: f32) -> Self {
         Self {
             overlay: Some(overlay),
+            ..self
+        }
+    }
+
+    /// `RenderTypes.energySwirl`, coloured `0xFF808080`. Keeps the faces' baked
+    /// shade, which vanilla's `NO_CARDINAL_LIGHTING` leaves off.
+    pub(super) fn energy_swirl(self, u: f32, v: f32) -> Self {
+        Self {
+            scroll: Some([u % 1.0, v % 1.0]),
+            additive: true,
+            full_bright: true,
+            tint: [128.0 / 255.0; 3],
+            overlay: Some(0.0),
+            ..self
+        }
+    }
+
+    /// `RenderTypes.breezeWind`; the faces' shade stays, as for [`Self::energy_swirl`].
+    pub(super) fn scrolled(self, u: f32, v: f32) -> Self {
+        Self {
+            scroll: Some([u % 1.0, v % 1.0]),
+            translucent: true,
+            overlay: Some(0.0),
             ..self
         }
     }
@@ -135,8 +160,7 @@ impl LayerSpec {
     }
 }
 
-/// The `variant`'s entry of a cold, temperate, warm `table`; an unknown id
-/// falls back to temperate.
+/// The `variant`'s entry of a cold, temperate, warm `table`.
 pub(super) fn by_variant<T: Copy>(variant: i32, table: [T; 3]) -> T {
     table[usize::try_from(variant)
         .ok()
@@ -144,8 +168,7 @@ pub(super) fn by_variant<T: Copy>(variant: i32, table: [T; 3]) -> T {
         .unwrap_or(1)]
 }
 
-/// A variant mob's body: the model and textures of its variant, or the
-/// shared `young` model with the variant's baby texture.
+/// A variant mob's body, or the shared `young` model for a baby.
 pub(super) fn variant_body(
     baby: bool,
     variant: i32,
@@ -156,16 +179,15 @@ pub(super) fn variant_body(
     LayerSpec::aged(baby, (model, adult), (young, baby_texture))
 }
 
-/// The body layers of `entity`, the first one the main body, then what it
-/// wears (`equipment_layers`), into `out`. Each family's renderer is its
-/// file's `push_layers`, next to its model and animation.
+/// The layers of `entity`, the main body first, then what it wears.
 pub fn layers(
     entity: &ClientEntity,
-    age_in_ticks: f32,
+    partial: f32,
     hat: &dyn Fn(&str) -> villager::Hat,
     out: &mut Vec<LayerSpec>,
 ) {
     use EntityKind as K;
+    let age_in_ticks = entity.age_in_ticks(partial);
     match entity.kind {
         K::Pig => pig::push_layers(entity, out),
         K::Horse | K::Donkey | K::Mule | K::SkeletonHorse | K::ZombieHorse => {
@@ -178,7 +200,7 @@ pub fn layers(
         K::Sheep => sheep::push_layers(entity, age_in_ticks, out),
         K::Rabbit => rabbit::push_layers(entity, out),
         K::Bat => bat::push_layers(out),
-        K::Creeper => creeper::push_layers(out),
+        K::Creeper => creeper::push_layers(entity, age_in_ticks, out),
         K::Enderman => enderman::push_layers(out),
         K::Blaze => blaze::push_layers(out),
         K::SnowGolem => snow_golem::push_layers(out),
@@ -213,12 +235,12 @@ pub fn layers(
         K::Allay => allay::push_layers(out),
         K::Strider => strider::push_layers(entity, out),
         K::Ravager => ravager::push_layers(out),
-        K::Wither => wither::push_layers(entity, out),
+        K::Wither => wither::push_layers(entity, age_in_ticks, out),
         K::EnderDragon => dragon::push_layers(out),
         K::Shulker => shulker::push_layers(entity, out),
         K::Sniffer => sniffer::push_layers(entity, out),
-        K::Warden => warden::push_layers(entity, age_in_ticks, out),
-        K::Breeze => breeze::push_layers(out),
+        K::Warden => warden::push_layers(entity, partial, out),
+        K::Breeze => breeze::push_layers(age_in_ticks, out),
         K::Creaking => creaking::push_layers(entity, out),
         K::CopperGolem => copper_golem::push_layers(entity, out),
         K::Dolphin => dolphin::push_layers(entity, out),

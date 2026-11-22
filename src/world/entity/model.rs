@@ -69,6 +69,16 @@ impl PartDefinition {
         }
     }
 
+    /// `retainExactParts`: only the parts named in `keep` keep their boxes.
+    pub fn retain_exact_cubes(&mut self, keep: &[&str]) {
+        if !keep.contains(&self.name) {
+            self.cubes.clear();
+        }
+        for child in &mut self.children {
+            child.retain_exact_cubes(keep);
+        }
+    }
+
     /// `clearRecursively`: no boxes here or below.
     pub fn clear_cubes(&mut self) {
         self.cubes.clear();

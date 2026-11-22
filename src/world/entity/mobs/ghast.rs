@@ -232,7 +232,7 @@ pub fn setup_anim(parts: &GhastParts, pose: &mut ModelPose, state: &LivingRender
     sway(&parts.tentacles, pose, state);
 }
 
-/// `GhastRenderer` (shooting or not) and `HappyGhastRenderer`.
+/// `GhastRenderer` and `HappyGhastRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

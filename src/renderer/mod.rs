@@ -205,6 +205,10 @@ struct Pipelines {
     translucent_terrain: pipeline::Pass,
     /// Added on: lightning bolts.
     lightning: pipeline::Pass,
+    /// Slid and added on: charged creepers, the wither's armor.
+    energy_swirl: pipeline::Pass,
+    /// Slid and blended: the breeze's wind.
+    scrolled: pipeline::Pass,
     /// Text displays: blended, depth written.
     text: pipeline::Pass,
     /// Fancy clouds: blended, no back-face cull.
@@ -438,6 +442,8 @@ impl Drop for Renderer {
             self.pipelines.translucent.destroy(&self.device);
             self.pipelines.translucent_terrain.destroy(&self.device);
             self.pipelines.lightning.destroy(&self.device);
+            self.pipelines.energy_swirl.destroy(&self.device);
+            self.pipelines.scrolled.destroy(&self.device);
             self.pipelines.text.destroy(&self.device);
             self.pipelines.clouds.destroy(&self.device);
             self.pipelines.weather.destroy(&self.device);

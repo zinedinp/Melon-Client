@@ -175,12 +175,12 @@ pub fn tick_anim(anim: &mut [AnimationState], tick: i32, pose: i32) {
     anim[IDLE].start_if_stopped(tick);
 }
 
-/// `BreezeRenderer`, `BreezeWindLayer` and `BreezeEyesLayer`.
-pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
+/// `BreezeRenderer` and its layers.
+pub(super) fn push_layers(age_in_ticks: f32, out: &mut Vec<LayerSpec>) {
     let plain = LayerSpec::plain;
     out.push(plain(M::Breeze, texture()));
-    out.push(plain(M::BreezeWind, wind_texture()));
-    out.push(plain(M::Breeze, eyes_texture()).glowing());
+    out.push(plain(M::BreezeWind, wind_texture()).scrolled(age_in_ticks * 0.02, 0.0));
+    out.push(plain(M::Breeze, eyes_texture()).glowing().translucent());
 }
 
 #[cfg(test)]

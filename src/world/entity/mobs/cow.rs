@@ -133,8 +133,7 @@ pub fn baby() -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 64.0)
 }
 
-/// `MushroomCow.Variant`'s block model, drawn on the back and head of an
-/// adult mooshroom (`MushroomCowMushroomLayer`).
+/// `MushroomCowMushroomLayer`'s block model.
 pub fn mushroom_model(entity: &ClientEntity) -> Option<&'static str> {
     if entity.kind != EntityKind::Mooshroom || entity.appearance.baby {
         return None;
@@ -146,7 +145,7 @@ pub fn mushroom_model(entity: &ClientEntity) -> Option<&'static str> {
     })
 }
 
-/// `CowRenderer` (the variant's body) and `MushroomCowRenderer`.
+/// `CowRenderer` and `MushroomCowRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

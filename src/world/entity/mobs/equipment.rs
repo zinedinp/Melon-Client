@@ -1,6 +1,7 @@
 //! What a mob wears and holds: armor, saddles and other equipment layers
 
 use super::*;
+use crate::world::entity::equipment_asset;
 
 /// Whether the item in hand is drawn: each illager shows it only in its
 pub fn shows_held_item(entity: &ClientEntity) -> bool {
@@ -82,14 +83,15 @@ pub fn push_equipment(
                 push_equipment_textures(ModelId::HorseArmor, body, "horse_body", out);
             }
             EntityKind::HappyGhast => {
-                if let Some(texture) = harness_texture(body) {
-                    let model = if baby {
-                        ModelId::HappyGhastBabyHarness
-                    } else {
-                        ModelId::HappyGhastHarness
-                    };
-                    out.push(LayerSpec::plain(model, texture));
-                }
+                let model = if baby {
+                    ModelId::HappyGhastBabyHarness
+                } else {
+                    ModelId::HappyGhastHarness
+                };
+                push_equipment_textures(model, body, "happy_ghast_body", out);
+            }
+            EntityKind::Nautilus | EntityKind::ZombieNautilus if !baby => {
+                push_equipment_textures(ModelId::NautilusArmor, body, "nautilus_body", out);
             }
             _ => {}
         }
@@ -102,7 +104,7 @@ pub fn push_equipment(
     }
 }
 
-fn push_equipment_textures(
+pub(super) fn push_equipment_textures(
     model: ModelId,
     stack: &ItemStack,
     folder: &str,
@@ -145,43 +147,16 @@ pub(super) fn saddle_look(kind: EntityKind, baby: bool) -> Option<(ModelId, &'st
         EntityKind::Strider => (ModelId::Strider, "strider_saddle"),
         EntityKind::Camel => (ModelId::CamelSaddle, "camel_saddle"),
         EntityKind::CamelHusk => (ModelId::CamelSaddle, "camel_husk_saddle"),
-        EntityKind::Nautilus => (ModelId::NautilusSaddle, "nautilus_saddle"),
+        EntityKind::Nautilus | EntityKind::ZombieNautilus => {
+            (ModelId::NautilusSaddle, "nautilus_saddle")
+        }
         _ => return None,
     })
 }
 
 /// `EquipmentLayerRenderer` textures for `stack` in `folder`.
 pub(super) fn equipment_textures(stack: &ItemStack, folder: &str) -> Vec<(String, [f32; 3])> {
-    if stack.is_empty() {
-        return Vec::new();
-    }
-    let Some(asset) = stack
-        .get_data_component::<EquippableImpl>()
-        .and_then(|e| e.asset_id.clone())
-    else {
-        return Vec::new();
-    };
-    let name = asset.strip_prefix("minecraft:").unwrap_or(&asset);
-    let texture = |name: &str| format!("minecraft:entity/equipment/{folder}/{name}");
-    if let Some(dyed) = stack.get_data_component::<DyedColorImpl>() {
-        let rgb = dyed.rgb as u32;
-        let tint = [16, 8, 0].map(|shift| ((rgb >> shift) & 0xFF) as f32 / 255.0);
-        if name == "leather" {
-            return vec![
-                (texture("leather"), tint),
-                (texture("leather_overlay"), [1.0; 3]),
-            ];
-        }
-        return vec![(texture(name), tint)];
-    }
-    if name == "leather" {
-        let tint = [16, 8, 0].map(|shift| ((0xA0_6540_u32 >> shift) & 0xFF) as f32 / 255.0);
-        return vec![
-            (texture("leather"), tint),
-            (texture("leather_overlay"), [1.0; 3]),
-        ];
-    }
-    vec![(texture(name), [1.0; 3])]
+    equipment_asset::textures(stack, folder)
 }
 
 /// The armor model for `slot` on an entity of this age.
@@ -199,36 +174,14 @@ pub fn armor_model(kind: EntityKind, slot: ArmorSlot, baby: bool) -> ModelId {
     }
 }
 
-/// `EquipmentLayerRenderer`'s textures for `stack` worn in `slot`, with
+/// `EquipmentLayerRenderer`'s textures for `stack` worn in `slot`.
 pub fn armor_textures(stack: &ItemStack, slot: ArmorSlot, baby: bool) -> Vec<(String, [f32; 3])> {
-    if stack.is_empty() {
-        return Vec::new();
-    }
-    let Some(asset) = stack
-        .get_data_component::<EquippableImpl>()
-        .and_then(|e| e.asset_id.clone())
-    else {
-        return Vec::new();
-    };
-    let name = asset.strip_prefix("minecraft:").unwrap_or(&asset);
     let folder = match (baby, slot) {
         (true, _) => "humanoid_baby",
         (false, ArmorSlot::Legs) => "humanoid_leggings",
         (false, _) => "humanoid",
     };
-    let texture = |name: &str| format!("minecraft:entity/equipment/{folder}/{name}");
-    if name == "leather" {
-        let rgb = stack
-            .get_data_component::<DyedColorImpl>()
-            .map_or(0xA0_6540, |dyed| dyed.rgb as u32);
-        let tint = [16, 8, 0].map(|shift| ((rgb >> shift) & 0xFF) as f32 / 255.0);
-        vec![
-            (texture("leather"), tint),
-            (texture("leather_overlay"), [1.0; 3]),
-        ]
-    } else {
-        vec![(texture(name), [1.0; 3])]
-    }
+    equipment_asset::textures(stack, folder)
 }
 
 /// `EquipmentLayerRenderer` trim overlay. Babies have none (`HUMANOID_BABY`).
@@ -273,40 +226,4 @@ fn trim_palette(
     } else {
         material.palette_id()
     }
-}
-
-/// The harness's texture by its dye (`EquippableImpl`'s asset id).
-pub(super) fn harness_texture(stack: &ItemStack) -> Option<&'static str> {
-    macro_rules! harnesses {
-        ($($name:literal),*) => {
-            [$(($name, concat!("minecraft:entity/equipment/happy_ghast_body/", $name, "_harness"))),*]
-        };
-    }
-    const HARNESSES: [(&str, &str); 16] = harnesses!(
-        "white",
-        "orange",
-        "magenta",
-        "light_blue",
-        "yellow",
-        "lime",
-        "pink",
-        "gray",
-        "light_gray",
-        "cyan",
-        "purple",
-        "blue",
-        "brown",
-        "green",
-        "red",
-        "black"
-    );
-    let asset = stack
-        .get_data_component::<EquippableImpl>()?
-        .asset_id
-        .clone()?;
-    let name = asset.strip_prefix("minecraft:").unwrap_or(&asset);
-    let dye = name.strip_suffix("_harness")?;
-    HARNESSES
-        .iter()
-        .find_map(|(color, texture)| (*color == dye).then_some(*texture))
 }

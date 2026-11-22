@@ -304,8 +304,7 @@ pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
             (M::Camel, "minecraft:entity/camel/camel"),
             (M::CamelBaby, "minecraft:entity/camel/camel_baby"),
         )),
-        // `CamelHuskRenderer`: only the adult model, and no
-        // `camel_husk_baby` texture exists.
+        // `CamelHuskRenderer`: adult only.
         EntityKind::CamelHusk => out.push(LayerSpec::plain(
             M::Camel,
             "minecraft:entity/camel/camel_husk",

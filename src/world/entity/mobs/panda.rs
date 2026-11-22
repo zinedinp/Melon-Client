@@ -263,7 +263,7 @@ fn animate_sitting(parts: &PandaParts, pose: &mut ModelPose, sit: f32) {
     pose[legs.left_hind].pose.rotation.z = -0.5707964;
 }
 
-/// `PandaRenderer`: the visible gene's texture.
+/// `PandaRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

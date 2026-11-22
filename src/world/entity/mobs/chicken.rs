@@ -149,7 +149,7 @@ pub fn setup_anim(
     pose[parts.left_wing].pose.rotation.z = -angle;
 }
 
-/// `ChickenRenderer`: the variant's body.
+/// `ChickenRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

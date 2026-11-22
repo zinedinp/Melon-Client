@@ -13,6 +13,7 @@ const TERRAIN_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/terrai
 const TERRAIN_INDIRECT_VERT_SPV: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/terrain_indirect.vert.spv"));
 const FRAG_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/world.frag.spv"));
+const SCROLL_FRAG_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/world_scroll.frag.spv"));
 const SKY_DISC_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/skydisc.vert.spv"));
 const SKY_DISC_FRAG_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/skydisc.frag.spv"));
 /// `world.frag` without `discard`.
@@ -74,6 +75,8 @@ pub struct DrawLight {
     pub overlay: f32,
     /// `TextureTransform` scale for the glint overlay pass; 0 skips it.
     pub glint_scale: f32,
+    /// `OffsetTextureTransform`, sent in the lightmap's place (unread there).
+    pub scroll: Option<[f32; 2]>,
 }
 
 impl DrawLight {
@@ -85,6 +88,7 @@ impl DrawLight {
             fog: FogInput::None,
             overlay: 0.0,
             glint_scale: 0.0,
+            scroll: None,
         }
     }
 
@@ -97,6 +101,12 @@ impl DrawLight {
     /// The same, with an entity overlay (see [`Self::overlay`]).
     pub const fn overlaid(mut self, overlay: f32) -> Self {
         self.overlay = overlay;
+        self
+    }
+
+    /// The same, its texture slid by `scroll`.
+    pub const fn scrolled(mut self, scroll: Option<[f32; 2]>) -> Self {
+        self.scroll = scroll;
         self
     }
 
@@ -121,6 +131,10 @@ pub fn push_bytes(view_proj: &glam::Mat4, light: &DrawLight) -> [f32; 24] {
     data[16..20].copy_from_slice(&light.ambient);
     data[20..23].copy_from_slice(&light.lightmap.sky);
     data[23] = light.lightmap.gamma;
+    if let Some([u, v]) = light.scroll {
+        data[20] = u;
+        data[21] = v;
+    }
     data
 }
 
@@ -169,6 +183,10 @@ pub enum Mode {
     /// `RenderPipelines.LIGHTNING`: added on (`BlendFunction.LIGHTNING`),
     /// the default depth test and write.
     Lightning,
+    /// `RenderPipelines.ENERGY_SWIRL`.
+    EnergySwirl,
+    /// `RenderPipelines.BREEZE_WIND`.
+    Scrolled,
 }
 
 impl Mode {
@@ -297,6 +315,30 @@ pub unsafe fn create(
                 .src_alpha_blend_factor(vk::BlendFactor::SRC_ALPHA)
                 .dst_alpha_blend_factor(vk::BlendFactor::ONE)
                 .alpha_blend_op(vk::BlendOp::ADD),
+        ),
+        Mode::EnergySwirl => (
+            vk::CullModeFlags::NONE,
+            vk::PipelineDepthStencilStateCreateInfo::default()
+                .depth_test_enable(true)
+                .depth_write_enable(true)
+                .depth_compare_op(vk::CompareOp::GREATER_OR_EQUAL),
+            vk::PipelineColorBlendAttachmentState::default()
+                .color_write_mask(vk::ColorComponentFlags::RGBA)
+                .blend_enable(true)
+                .src_color_blend_factor(vk::BlendFactor::ONE)
+                .dst_color_blend_factor(vk::BlendFactor::ONE)
+                .color_blend_op(vk::BlendOp::ADD)
+                .src_alpha_blend_factor(vk::BlendFactor::ONE)
+                .dst_alpha_blend_factor(vk::BlendFactor::ONE)
+                .alpha_blend_op(vk::BlendOp::ADD),
+        ),
+        Mode::Scrolled => (
+            vk::CullModeFlags::NONE,
+            vk::PipelineDepthStencilStateCreateInfo::default()
+                .depth_test_enable(true)
+                .depth_write_enable(true)
+                .depth_compare_op(vk::CompareOp::GREATER_OR_EQUAL),
+            translucent_blend(),
         ),
         Mode::Celestial => (
             vk::CullModeFlags::NONE,
@@ -450,6 +492,7 @@ pub unsafe fn create(
             Mode::Outline => OUTLINE_FRAG_SPV,
             Mode::WaterMask => WATER_MASK_FRAG_SPV,
             Mode::Glint => GLINT_FRAG_SPV,
+            Mode::EnergySwirl | Mode::Scrolled => SCROLL_FRAG_SPV,
             _ => FRAG_SPV,
         },
         push_constant_size: PUSH_CONSTANT_SIZE,

@@ -107,8 +107,7 @@ pub fn jeb_tint(age_in_ticks: f32) -> [f32; 3] {
     })
 }
 
-/// `SheepRenderer`: the body, `SheepWoolUndercoatLayer` and `SheepWoolLayer`;
-/// a jeb_ sheep cycles its colour with `age_in_ticks`.
+/// `SheepRenderer` with its wool layers.
 pub(super) fn push_layers(entity: &ClientEntity, age_in_ticks: f32, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

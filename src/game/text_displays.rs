@@ -395,6 +395,7 @@ impl InWorld {
                 (origin.as_vec3() + model.transform_point3(kept.centre)).distance_squared(camera);
             for part in &kept.parts {
                 let draw = EntityDraw {
+                    scroll: None,
                     alpha: 1.0,
                     mesh: part.mesh,
                     atlas: part.texture,

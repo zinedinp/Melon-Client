@@ -315,7 +315,7 @@ pub fn pose_input(entity: &ClientEntity, partial: f32) -> PoseInput {
         },
         phantom_flap: phantom::flap_time(entity.id, living.age_in_ticks),
         sniffer_searching: a.sniffer_state == sniffer::STATE_SEARCHING,
-        warden_tendril: 0.0,
+        warden_tendril: entity.warden.tendril(partial),
         creaking_move: a.creaking_active,
         copper_holding: entity.kind == EntityKind::CopperGolem && !main_hand.is_empty(),
         armor_stand: armor_stand::StandPoseInput::of(a, entity.yaw_degrees(partial)),

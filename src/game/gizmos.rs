@@ -265,6 +265,7 @@ impl Slot {
 
     fn draw(&self, atlas: TextureId, layer: RenderLayer, blend: Blending) -> Option<EntityDraw> {
         Some(EntityDraw {
+            scroll: None,
             alpha: 1.0,
             mesh: self.mesh?,
             atlas,

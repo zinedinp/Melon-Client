@@ -497,8 +497,7 @@ const MARKINGS: [[&str; 2]; 4] = {
     markings!("white", "whitefield", "whitedots", "blackdots")
 };
 
-/// `HorseRenderer` (coat and `HorseMarkingLayer`), `DonkeyRenderer` and
-/// `UndeadHorseRenderer`.
+/// `HorseRenderer`, `DonkeyRenderer`, `UndeadHorseRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

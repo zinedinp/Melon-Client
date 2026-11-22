@@ -267,6 +267,8 @@ impl Renderer {
         let translucent_pass = world(Mode::Translucent, Geometry::Vertices)?;
         let translucent_terrain_pass = world(Mode::TranslucentTerrain, Geometry::Vertices)?;
         let lightning_pass = world(Mode::Lightning, Geometry::Vertices)?;
+        let energy_swirl_pass = world(Mode::EnergySwirl, Geometry::Vertices)?;
+        let scrolled_pass = world(Mode::Scrolled, Geometry::Vertices)?;
         let text_pass = world(Mode::Text, Geometry::Vertices)?;
         let clouds_pass = world(Mode::Clouds, Geometry::Vertices)?;
         let weather_pass = world(Mode::Weather, Geometry::Vertices)?;
@@ -468,6 +470,8 @@ impl Renderer {
                 translucent: translucent_pass,
                 translucent_terrain: translucent_terrain_pass,
                 lightning: lightning_pass,
+                energy_swirl: energy_swirl_pass,
+                scrolled: scrolled_pass,
                 text: text_pass,
                 clouds: clouds_pass,
                 weather: weather_pass,

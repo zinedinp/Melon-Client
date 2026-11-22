@@ -314,7 +314,7 @@ fn sleep(parts: &FoxParts, pose: &mut ModelPose) {
     }
 }
 
-/// `FoxRenderer`: red or snow, awake or asleep.
+/// `FoxRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

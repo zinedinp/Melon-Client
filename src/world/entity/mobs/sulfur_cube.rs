@@ -116,7 +116,7 @@ pub fn core_flashes(fuse: f32) -> bool {
     fuse > 0.0 && tnt::is_lit(fuse)
 }
 
-/// `SulfurCubeRenderer`: the core (unless it holds a block) and the shell.
+/// `SulfurCubeRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

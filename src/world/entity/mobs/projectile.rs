@@ -479,8 +479,7 @@ pub fn snapped_yaw(y_rot: f32) -> f32 {
 pub const SHULKER_GLOW_SCALE: f32 = 1.5;
 pub const SHULKER_GLOW_ALPHA: f32 = 0x26 as f32 / 255.0;
 
-/// The projectiles and crystals: wind charges, skulls, bullets, spit,
-/// fangs, tridents, arrows and the end crystal.
+/// The projectile and end crystal renderers.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let plain = LayerSpec::plain;

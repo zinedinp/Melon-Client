@@ -244,6 +244,7 @@ pub fn submit(
             };
             let tint = orb_tint(age);
             out.push(EntityDraw {
+                scroll: None,
                 alpha: 128.0 / 255.0,
                 mesh,
                 atlas: texture,
@@ -264,6 +265,7 @@ pub fn submit(
                 return;
             };
             out.push(EntityDraw {
+                scroll: None,
                 alpha: 1.0,
                 mesh,
                 atlas: renderer.white_texture(),
@@ -284,6 +286,7 @@ pub fn submit(
                 return;
             };
             out.push(EntityDraw {
+                scroll: None,
                 alpha: 1.0,
                 mesh,
                 atlas: texture,

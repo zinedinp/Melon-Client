@@ -22,9 +22,18 @@ pub struct Entities {
     /// Items flying into hands, and the sounds of them being taken.
     pub(super) pickups: Vec<super::pickup::Pickup>,
     pub(super) pickup_sounds: Vec<super::pickup::PickupSound>,
+    /// Sounds entities made themselves (`Level.playLocalSound`).
+    own_sounds: Vec<OwnSound>,
     /// `TickRateManager.isEntityFrozen` as of the last tick: the entities a
     /// frozen level holds still.
     frozen: HashSet<i32>,
+}
+
+/// A sound an entity played itself, where it stood.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OwnSound {
+    pub event: &'static str,
+    pub at: DVec3,
 }
 
 /// A rider's id, its new seat and the body turn it follows.
@@ -118,11 +127,22 @@ impl Entities {
                 entity.appearance.zombifying = entity.appearance.piglin_converting(zombify);
             }
             entity.tick();
+            for event in entity.sounds.drain(..) {
+                self.own_sounds.push(OwnSound {
+                    event,
+                    at: entity.pos,
+                });
+            }
         }
         self.position_riders();
         if runs_normally {
             self.check_crystals();
         }
+    }
+
+    /// The sounds entities made themselves since the last call.
+    pub fn take_own_sounds(&mut self) -> Vec<OwnSound> {
+        std::mem::take(&mut self.own_sounds)
     }
 
     /// Whether the level holds `id` still: it is drawn where it is, as

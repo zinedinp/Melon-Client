@@ -214,6 +214,12 @@ impl Renderer {
                             }
                         }
                         let (mode, pass) = match entity.blend {
+                            Blending::Additive if entity.scroll.is_some() => {
+                                (Mode::EnergySwirl, &self.pipelines.energy_swirl)
+                            }
+                            _ if entity.scroll.is_some() => {
+                                (Mode::Scrolled, &self.pipelines.scrolled)
+                            }
                             Blending::Translucent if writes_depth => {
                                 (Mode::Text, &self.pipelines.text)
                             }
@@ -238,6 +244,7 @@ impl Renderer {
                                 .light([r, g, b, entity.alpha])
                                 .fogged(fog)
                                 .overlaid(entity.overlay)
+                                .scrolled(entity.scroll)
                         };
                         if self.bind_world_pass(cmd, entity.atlas, mode) {
                             self.draw_world_mesh(cmd, pass.layout, entity.mesh, at, &light, None);
@@ -517,6 +524,8 @@ impl Renderer {
             Mode::Opaque => &self.pipelines.world,
             Mode::Translucent => &self.pipelines.translucent,
             Mode::Lightning => &self.pipelines.lightning,
+            Mode::EnergySwirl => &self.pipelines.energy_swirl,
+            Mode::Scrolled => &self.pipelines.scrolled,
             Mode::TranslucentTerrain => &self.pipelines.translucent_terrain,
             Mode::Text => &self.pipelines.text,
             Mode::Clouds => &self.pipelines.clouds,
@@ -621,6 +630,8 @@ impl Renderer {
             Mode::Opaque => &self.pipelines.terrain[1],
             Mode::Translucent
             | Mode::Lightning
+            | Mode::EnergySwirl
+            | Mode::Scrolled
             | Mode::Text
             | Mode::TranslucentTerrain
             | Mode::Clouds

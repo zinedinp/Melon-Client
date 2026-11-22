@@ -216,6 +216,7 @@ impl InWorld {
                             let pose = HandPose::first_person(arm);
                             for (mesh, atlas, translucent) in assets.held.get(stack, pose, using) {
                                 entities.push(EntityDraw {
+                                    scroll: None,
                                     alpha: 1.0,
                                     mesh,
                                     atlas,
@@ -338,6 +339,7 @@ impl InWorld {
                 .into_iter()
                 .flatten()
                 .map(|(mesh, origin)| EntityDraw {
+                    scroll: None,
                     alpha: 1.0,
                     mesh,
                     atlas: assets.atlas,

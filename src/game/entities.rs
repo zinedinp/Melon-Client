@@ -179,6 +179,15 @@ impl InWorld {
                 places.iter().find(|(i, _)| *i == id).map(|&(_, at)| at)
             }
         });
+        // `Warden.tick`'s heartbeat: volume 5, `getVoicePitch`.
+        for sound in self.entities.take_own_sounds() {
+            let mut instance = crate::audio::SoundInstance::of(sound.event)
+                .on(crate::audio::source::SoundSource::Hostile)
+                .at([sound.at.x, sound.at.y, sound.at.z]);
+            instance.volume = 5.0;
+            instance.pitch = (rand::random::<f32>() - rand::random::<f32>()) * 0.2 + 1.0;
+            self.audio.push(instance);
+        }
         for sound in self.entities.take_pickup_sounds() {
             let mut instance = crate::audio::SoundInstance::of("entity.item.pickup")
                 .at([sound.at.x, sound.at.y, sound.at.z]);
@@ -232,12 +241,7 @@ impl InWorld {
             } else {
                 layers.clear();
                 if !entity.kind.is_block() {
-                    mobs::layers(
-                        entity,
-                        entity.age_in_ticks(0.0),
-                        &|id| assets.mobs.hat(id),
-                        &mut layers,
-                    );
+                    mobs::layers(entity, 0.0, &|id| assets.mobs.hat(id), &mut layers);
                 }
                 for layer in &layers {
                     assets.mobs.prepare_texture(renderer, &layer.texture);
@@ -500,12 +504,7 @@ impl InWorld {
                 };
                 layers.clear();
                 if !entity.kind.is_block() {
-                    mobs::layers(
-                        entity,
-                        entity.age_in_ticks(partial),
-                        &|id| assets.mobs.hat(id),
-                        &mut layers,
-                    );
+                    mobs::layers(entity, partial, &|id| assets.mobs.hat(id), &mut layers);
                 }
                 let at = block_at(entity);
                 if entity.kind.is_sprite() {
@@ -676,6 +675,7 @@ impl InWorld {
                     .mesh(state.block_state, |kind| self.level.tint_at(kind, at))
                 {
                     out.push(EntityDraw {
+                        scroll: None,
                         alpha: 1.0,
                         mesh,
                         atlas: assets.atlas,
@@ -732,6 +732,7 @@ impl InWorld {
         let frame = assets.held.block(model);
         for (mesh, atlas, translucent) in frame.filter(|_| !entity.appearance.invisible()) {
             out.push(EntityDraw {
+                scroll: None,
                 alpha: 1.0,
                 mesh,
                 atlas,
@@ -1117,6 +1118,7 @@ fn submit_block_entity(
         )
     };
     out.push(EntityDraw {
+        scroll: None,
         alpha: 1.0,
         mesh,
         atlas: assets.atlas,
@@ -1168,6 +1170,7 @@ fn submit_minecart_block(
     };
     let swell = (tnt && fuse > -1.0 && fuse < 10.0).then(|| tnt::swell_amount(fuse));
     out.push(EntityDraw {
+        scroll: None,
         alpha: 1.0,
         mesh,
         atlas: assets.atlas,
@@ -1213,6 +1216,7 @@ fn submit_swallowed_block(
         mobs::overlay(entity, &input.living, partial)
     };
     out.push(EntityDraw {
+        scroll: None,
         alpha: 1.0,
         mesh,
         atlas: assets.atlas,
@@ -1351,7 +1355,7 @@ fn submit_mob(
             }
         }
         let light = if layer.full_bright {
-            [1.0; 3]
+            layer.tint
         } else {
             tinted(placed.light, layer.tint)
         };
@@ -1366,6 +1370,8 @@ fn submit_mob(
                 texture,
                 layer: if layer.water_mask {
                     RenderLayer::WaterMask
+                } else if layer.scroll.is_some() {
+                    placed.layer
                 } else if layer.translucent {
                     RenderLayer::Shadows
                 } else {
@@ -1390,6 +1396,16 @@ fn submit_mob(
         if layer.alpha < 1.0 {
             for draw in &mut out[first..] {
                 draw.alpha = layer.alpha;
+            }
+        }
+        if let Some(scroll) = layer.scroll {
+            for draw in &mut out[first..] {
+                draw.scroll = Some(scroll);
+                draw.blend = if layer.additive {
+                    crate::renderer::Blending::Additive
+                } else {
+                    crate::renderer::Blending::Translucent
+                };
             }
         }
     }
@@ -1425,6 +1441,7 @@ fn submit_mob(
         && let Some(mesh) = assets.blocks.mesh(state, tint)
     {
         out.push(EntityDraw {
+            scroll: None,
             alpha: 1.0,
             mesh,
             atlas: assets.atlas,
@@ -1529,6 +1546,7 @@ fn submit_flower(assets: &WorldResources, arm: Mat4, placed: Placed, out: &mut V
         * Mat4::rot_x_deg(-90.0);
     for &(mesh, atlas, translucent) in &parts {
         out.push(EntityDraw {
+            scroll: None,
             alpha: 1.0,
             mesh,
             atlas,
@@ -1558,6 +1576,7 @@ fn submit_pumpkin(
         * Mat4::from_scale(Vec3::new(0.625, -0.625, -0.625));
     for &(mesh, atlas, translucent) in &parts {
         out.push(EntityDraw {
+            scroll: None,
             alpha: 1.0,
             mesh,
             atlas,
@@ -1596,6 +1615,7 @@ fn submit_mushrooms(
     for model in places {
         for &(mesh, atlas, translucent) in &parts {
             out.push(EntityDraw {
+                scroll: None,
                 alpha: 1.0,
                 mesh,
                 atlas,
@@ -1658,6 +1678,7 @@ pub(super) fn submit_item(
     let parts: Vec<_> = assets.held.get(stack, pose, using).collect();
     for &(mesh, atlas, translucent) in &parts {
         out.push(EntityDraw {
+            scroll: None,
             alpha: 1.0,
             mesh,
             atlas,

@@ -138,6 +138,14 @@ fn main() {
         "world_water_mask.frag",
         &["WATER_MASK"],
     );
+    // A texture slid by an offset (`APPLY_TEXTURE_MATRIX`).
+    compile_variant(
+        "shaders/world.frag",
+        &out_dir,
+        "fragment",
+        "world_scroll.frag",
+        &["SCROLL"],
+    );
     // A glowing entity's flat outline colour (`core/rendertype_outline`).
     compile_variant(
         "shaders/world.frag",

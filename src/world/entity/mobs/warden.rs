@@ -219,59 +219,129 @@ fn animate_idle(parts: &WardenParts, pose: &mut ModelPose, age_in_ticks: f32) {
     pose[parts.body].pose.rotation.x += 0.025 * cosine;
 }
 
-/// Emerge, dig, roar and sniff follow `Pose`; attack and sonic boom are
-pub fn tick_anim(anim: &mut [AnimationState], tick: i32, pose: i32, attack: bool, sonic: bool) {
+/// Emerge, dig, roar and sniff follow `Pose`.
+pub fn tick_anim(anim: &mut [AnimationState], tick: i32, pose: i32) {
     anim[EMERGE].animate_when(pose == POSE_EMERGING, tick);
     anim[DIG].animate_when(pose == POSE_DIGGING, tick);
     anim[ROAR].animate_when(pose == POSE_ROARING, tick);
     anim[SNIFF].animate_when(pose == POSE_SNIFFING, tick);
-    anim[ATTACK].animate_when(attack, tick);
-    anim[SONIC].animate_when(sonic, tick);
 }
 
-/// `WardenRenderer`: the body, then its `LivingEntityEmissiveLayer`s in
-/// order, each translucent at full brightness and left out while its alpha
-/// is nought: the bioluminescent layer, the two sets of spots pulsing in
-/// turn, and the heart on each beat.
-///
-/// The tendrils' layer (the body texture on `WARDEN_TENDRILS`, at
-/// `tendrilAnimation`) is missing: the tendrils' twitch from event 61 is
-/// not tracked yet.
-pub(super) fn push_layers(entity: &ClientEntity, age_in_ticks: f32, out: &mut Vec<LayerSpec>) {
+/// `Warden`'s client tendril and heart countdowns, with last tick's.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct WardenClock {
+    tendril: (i32, i32),
+    heart: (i32, i32),
+}
+
+impl WardenClock {
+    /// `Warden.handleEntityEvent`.
+    pub fn event(&mut self, event: u8, anim: &mut [AnimationState], tick: i32) {
+        match event {
+            EVENT_ATTACK => {
+                anim[ROAR].stop();
+                anim[ATTACK].start(tick);
+            }
+            EVENT_TENDRIL => self.tendril.1 = 10,
+            EVENT_SONIC => anim[SONIC].start(tick),
+            _ => {}
+        }
+    }
+
+    /// `Warden.tick` on the client; true on a heartbeat.
+    pub fn tick(&mut self, tick: i32, anger: i32) -> bool {
+        let beat = tick % heart_beat_delay(anger) == 0;
+        if beat {
+            self.heart.1 = 10;
+        }
+        for (old, now) in [&mut self.tendril, &mut self.heart] {
+            *old = *now;
+            *now = (*now - 1).max(0);
+        }
+        beat
+    }
+
+    /// `getTendrilAnimation`.
+    pub fn tendril(&self, partial: f32) -> f32 {
+        lerp(partial, self.tendril) / 10.0
+    }
+
+    /// `getHeartAnimation`.
+    pub fn heart(&self, partial: f32) -> f32 {
+        lerp(partial, self.heart) / 10.0
+    }
+}
+
+fn lerp(partial: f32, (old, now): (i32, i32)) -> f32 {
+    old as f32 + partial * (now - old) as f32
+}
+
+/// `getHeartBeatDelay`: 40 ticks, down to 10 at `AngerLevel.ANGRY` (80).
+fn heart_beat_delay(anger: i32) -> i32 {
+    40 - ((anger as f32 / 80.0).clamp(0.0, 1.0) * 30.0).floor() as i32
+}
+
+/// `WardenModel.createTendrilsLayer`.
+pub fn tendrils() -> LayerDefinition {
+    only(&["left_tendril", "right_tendril"])
+}
+
+/// `WardenModel.createHeartLayer`.
+pub fn heart() -> LayerDefinition {
+    only(&["body"])
+}
+
+/// `WardenModel.createBioluminescentLayer`.
+pub fn bioluminescent() -> LayerDefinition {
+    only(&["head", "left_arm", "right_arm", "left_leg", "right_leg"])
+}
+
+/// `WardenModel.createPulsatingSpotsLayer`.
+pub fn pulsating_spots() -> LayerDefinition {
+    only(&[
+        "body",
+        "head",
+        "left_arm",
+        "right_arm",
+        "left_leg",
+        "right_leg",
+    ])
+}
+
+fn only(parts: &[&str]) -> LayerDefinition {
+    let mut layer = layer();
+    layer.root.retain_exact_cubes(parts);
+    layer
+}
+
+/// `WardenRenderer` and its `LivingEntityEmissiveLayer`s.
+pub(super) fn push_layers(entity: &ClientEntity, partial: f32, out: &mut Vec<LayerSpec>) {
+    let age = entity.age_in_ticks(partial);
+    let clock = &entity.warden;
     out.push(LayerSpec::plain(M::Warden, texture()));
-    let mut emissive = |texture, alpha: f32| {
+    let mut emissive = |model, texture, alpha: f32| {
         if alpha > 1.0e-5 {
-            out.push(LayerSpec::plain(M::Warden, texture).glowing().faded(alpha));
+            out.push(LayerSpec::plain(model, texture).glowing().faded(alpha));
         }
     };
-    emissive(bioluminescent_texture(), 1.0);
-    emissive(pulsating_spots_1_texture(), spots_alpha(age_in_ticks, 0.0));
-    emissive(pulsating_spots_2_texture(), spots_alpha(age_in_ticks, PI));
+    emissive(M::WardenBioluminescent, bioluminescent_texture(), 1.0);
     emissive(
-        heart_texture(),
-        heart_alpha(age_in_ticks, entity.appearance.warden_anger),
+        M::WardenPulsatingSpots,
+        pulsating_spots_1_texture(),
+        spots_alpha(age, 0.0),
     );
+    emissive(
+        M::WardenPulsatingSpots,
+        pulsating_spots_2_texture(),
+        spots_alpha(age, PI),
+    );
+    emissive(M::WardenTendrils, texture(), clock.tendril(partial));
+    emissive(M::WardenHeart, heart_texture(), clock.heart(partial));
 }
 
 /// The spots' alpha: `max(0, cos(ageInTicks * 0.045 + phase) * 0.25)`.
 fn spots_alpha(age_in_ticks: f32, phase: f32) -> f32 {
     (angle::cos(age_in_ticks * 0.045 + phase) * 0.25).max(0.0)
-}
-
-/// `Warden.getHeartAnimation`: 1 on the tick of a beat, fading over ten
-/// ticks. A beat comes on each tick that `getHeartBeatDelay` divides: every
-/// 40 ticks when calm, down to every 10 as `anger` reaches
-/// `AngerLevel.ANGRY` (80). Vanilla counts down from the last beat; this
-/// reads the same off the age, which differs only for the first beat after
-/// the anger changes the delay.
-pub fn heart_alpha(age_in_ticks: f32, anger: i32) -> f32 {
-    let delay = 40 - ((anger as f32 / 80.0).clamp(0.0, 1.0) * 30.0).floor() as i32;
-    let tick = age_in_ticks.floor();
-    let partial = age_in_ticks - tick;
-    let since = (tick as i32).rem_euclid(delay);
-    let before = (10 - since).max(0) as f32;
-    let now = (9 - since).max(0) as f32;
-    (before + partial * (now - before)) / 10.0
 }
 
 #[cfg(test)]
@@ -281,18 +351,63 @@ mod tests {
 
     #[test]
     fn the_heart_beats_faster_with_anger() {
-        // The tick of a beat, then fading: `lerp(partial, 10 - k, 9 - k) / 10`.
-        assert_eq!(heart_alpha(40.0, 0), 1.0);
-        assert!((heart_alpha(40.5, 0) - 0.95).abs() < 1e-6);
-        assert!((heart_alpha(45.0, 0) - 0.5).abs() < 1e-6);
-        assert_eq!(heart_alpha(50.0, 0), 0.0);
-        assert_eq!(heart_alpha(70.0, 0), 0.0);
-        // Angry: every 10 ticks, so it never quite goes out.
-        assert_eq!(heart_alpha(70.0, 80), 1.0);
-        assert!(heart_alpha(79.9, 80) > 0.0);
-        // Half way: `40 - floor(0.5 * 30)` = 25.
-        assert_eq!(heart_alpha(50.0, 40), 1.0);
-        assert_eq!(heart_alpha(40.0, 40), 0.0);
+        let beats = |anger| {
+            let mut clock = WardenClock::default();
+            (1..=120)
+                .filter(|&t| clock.tick(t, anger))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(beats(0), [40, 80, 120]);
+        assert_eq!(beats(80).len(), 12);
+        // `40 - floor(0.5 * 30)`.
+        assert_eq!(beats(40), [25, 50, 75, 100]);
+    }
+
+    #[test]
+    fn the_heart_fades_over_ten_ticks_after_a_beat() {
+        let mut clock = WardenClock::default();
+        for t in 1..=40 {
+            clock.tick(t, 0);
+        }
+        // On the beat's tick: from 10 to 9.
+        assert_eq!(clock.heart(0.0), 1.0);
+        assert!((clock.heart(0.5) - 0.95).abs() < 1e-6);
+        for t in 41..=49 {
+            clock.tick(t, 0);
+        }
+        assert!((clock.heart(0.0) - 0.1).abs() < 1e-6);
+        clock.tick(50, 0);
+        assert_eq!(clock.heart(0.5), 0.0);
+    }
+
+    #[test]
+    fn event_61_twitches_the_tendrils_and_4_starts_the_attack() {
+        let mut anim: [AnimationState; 6] = Default::default();
+        let mut clock = WardenClock::default();
+        clock.event(EVENT_TENDRIL, &mut anim, 5);
+        clock.tick(6, 0);
+        assert_eq!(clock.tendril(0.0), 1.0);
+        clock.event(EVENT_ATTACK, &mut anim, 6);
+        assert!(anim[ATTACK].is_started());
+        for t in 7..=20 {
+            clock.tick(t, 0);
+        }
+        assert_eq!(clock.tendril(1.0), 0.0);
+    }
+
+    #[test]
+    fn the_layer_models_keep_only_their_boxes() {
+        let tendrils = Model::bake(&tendrils());
+        assert!(tendrils.part_vertices(tendrils.part("body")).is_empty());
+        assert!(
+            !tendrils
+                .part_vertices(tendrils.part("left_tendril"))
+                .is_empty()
+        );
+        let spots = Model::bake(&pulsating_spots());
+        assert!(!spots.part_vertices(spots.part("head")).is_empty());
+        assert!(!spots.part_vertices(spots.part("body")).is_empty());
+        assert!(spots.part_vertices(spots.part("left_tendril")).is_empty());
     }
 
     #[test]

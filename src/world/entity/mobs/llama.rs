@@ -1,14 +1,13 @@
 //! `LlamaModel` and `BabyLlamaModel`: a long-necked quadruped that can
 
-use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
+use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, push_equipment_textures};
 use crate::math::angle::HALF_PI;
 use crate::network::play::game::EquipmentSlot;
+use crate::world::entity::equipment_asset;
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::entity::quadruped::{self, QuadrupedParts};
 use crate::world::model_part::{Cube, Pose};
-use pumpkin_data::data_component_impl::EquippableImpl;
-use pumpkin_data::item_stack::ItemStack;
 
 /// `Llama.Variant` ids: creamy, white, brown, gray.
 pub fn texture(variant: i32, baby: bool) -> &'static str {
@@ -29,28 +28,6 @@ pub fn texture(variant: i32, baby: bool) -> &'static str {
         .filter(|&i| i < 4)
         .unwrap_or(0);
     if baby { BABY[i] } else { ADULT[i] }
-}
-
-/// A carpet's `llama_body` texture: `equipment/<dye>_carpet.json` names
-/// `<dye>`. `None` for anything else in the body slot.
-pub fn carpet_texture(stack: &ItemStack) -> Option<String> {
-    let asset = stack
-        .get_data_component::<EquippableImpl>()?
-        .asset_id
-        .clone()?;
-    let name = asset.strip_prefix("minecraft:").unwrap_or(&asset);
-    let dye = name.strip_suffix("_carpet")?;
-    pumpkin_data::dye_color::DyeColor::by_name(dye)?;
-    Some(format!("minecraft:entity/equipment/llama_body/{dye}"))
-}
-
-/// `EquipmentAssets.TRADER_LLAMA` / `TRADER_LLAMA_BABY` body layer.
-pub fn trader_texture(baby: bool) -> &'static str {
-    if baby {
-        "minecraft:entity/equipment/llama_body/trader_llama_baby"
-    } else {
-        "minecraft:entity/equipment/llama_body/trader_llama"
-    }
 }
 
 fn adult_root(g: f32) -> PartDefinition {
@@ -187,8 +164,7 @@ pub fn setup_anim(
     pose[parts.left_chest].visible = has_chest;
 }
 
-/// `LlamaRenderer` and `LlamaDecorLayer`: the carpet an adult wears or, with
-/// none, a trader llama's blanket.
+/// `LlamaRenderer` and `LlamaDecorLayer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;
@@ -206,15 +182,17 @@ pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
                 M::LlamaDecor
             };
             let carpet = entity.equipment.get(EquipmentSlot::Body);
-            match carpet_texture(carpet).filter(|_| !baby) {
-                Some(texture) => out.push(
-                    LayerSpec::owned(decor, texture, [1.0; 3])
-                        .with_foil(crate::world::glint::has_foil(carpet)),
-                ),
-                None if entity.kind == EntityKind::TraderLlama => {
-                    out.push(plain(decor, trader_texture(baby)));
+            if equipment_asset::asset_of(carpet).is_some() && !baby {
+                push_equipment_textures(decor, carpet, "llama_body", out);
+            } else if entity.kind == EntityKind::TraderLlama {
+                let asset = if baby {
+                    "minecraft:trader_llama_baby"
+                } else {
+                    "minecraft:trader_llama"
+                };
+                for (texture, tint) in equipment_asset::asset_textures(asset, "llama_body", None) {
+                    out.push(LayerSpec::owned(decor, texture, tint));
                 }
-                None => {}
             }
         }
         _ => {}

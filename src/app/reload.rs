@@ -25,6 +25,7 @@ pub(super) fn activate_packs(assets: &Assets, config: &Config) {
         eprintln!("Ressourcenpakete: {}", ids.join(", "));
     }
     packs::activate(stack);
+    crate::world::entity::equipment_asset::install(assets.root());
     crate::world::creative_tabs::apply_from_game_dir(assets.game_dir());
     crate::probe::describe_packs(assets.root());
 }

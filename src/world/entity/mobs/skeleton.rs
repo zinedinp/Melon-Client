@@ -111,8 +111,7 @@ pub fn melee(parts: &HumanoidParts, pose: &mut ModelPose, swing: f32, age_in_tic
     bob_arms(&mut right.pose, &mut left.pose, age_in_ticks);
 }
 
-/// `SkeletonRenderer` and its kin: wither skeleton, stray and bogged (with
-/// `SkeletonClothingLayer`), parched.
+/// The skeleton renderers.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let plain = LayerSpec::plain;
     match entity.kind {

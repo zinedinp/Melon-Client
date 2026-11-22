@@ -208,8 +208,7 @@ pub fn setup_anim(
     pose[h.right_arm].visible = !crossed;
 }
 
-/// `PillagerRenderer`, `VindicatorRenderer`, `EvokerRenderer` and
-/// `IllusionerRenderer`.
+/// The illager renderers.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let plain = LayerSpec::plain;
     match entity.kind {

@@ -110,6 +110,7 @@ impl BlockCracks {
             }
         }
         out.extend(self.overlays.iter().map(|overlay| EntityDraw {
+            scroll: None,
             alpha: 1.0,
             mesh: overlay.mesh,
             atlas: stages[usize::from(overlay.stage)],

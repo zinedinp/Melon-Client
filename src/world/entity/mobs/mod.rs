@@ -76,9 +76,7 @@ pub use pose::*;
 use std::borrow::Cow;
 
 use glam::Vec3;
-use pumpkin_data::data_component_impl::{
-    ChargedProjectilesImpl, DyedColorImpl, EquippableImpl, TrimImpl,
-};
+use pumpkin_data::data_component_impl::{ChargedProjectilesImpl, EquippableImpl, TrimImpl};
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 use pumpkin_data::tag::Taggable;
@@ -261,6 +259,14 @@ pub enum ModelId {
     Trident,
     Arrow,
     Cushion,
+    /// `CREEPER_ARMOR`.
+    CreeperArmor,
+    NautilusArmor,
+    /// The warden's emissive layers.
+    WardenTendrils,
+    WardenHeart,
+    WardenBioluminescent,
+    WardenPulsatingSpots,
 }
 
 /// Whose armor models a wearer has: the models differ in their boxes.
@@ -276,7 +282,7 @@ pub enum ArmorStyle {
 }
 
 impl ModelId {
-    pub const ALL: [Self; 184] = {
+    pub const ALL: [Self; 190] = {
         use ArmorSlot::{Chest, Feet, Head, Legs};
         use ArmorStyle::{Humanoid, Piglin, ZombieVillager};
         [
@@ -464,6 +470,12 @@ impl ModelId {
             Self::Arrow,
             Self::Cushion,
             Self::ShulkerBulletGlow,
+            Self::CreeperArmor,
+            Self::NautilusArmor,
+            Self::WardenTendrils,
+            Self::WardenHeart,
+            Self::WardenBioluminescent,
+            Self::WardenPulsatingSpots,
         ]
     };
 
@@ -630,6 +642,12 @@ impl ModelId {
             Self::Arrow => 181,
             Self::Cushion => 182,
             Self::ShulkerBulletGlow => 183,
+            Self::CreeperArmor => 184,
+            Self::NautilusArmor => 185,
+            Self::WardenTendrils => 186,
+            Self::WardenHeart => 187,
+            Self::WardenBioluminescent => 188,
+            Self::WardenPulsatingSpots => 189,
         }
     }
 
@@ -646,7 +664,11 @@ impl ModelId {
             Self::Armadillo => &armadillo::ANIMATIONS,
             Self::ArmadilloBaby => &armadillo::BABY_ANIMATIONS,
             Self::Sniffer | Self::SnifferBaby => &sniffer::ANIMATIONS,
-            Self::Warden => &warden::ANIMATIONS,
+            Self::Warden
+            | Self::WardenTendrils
+            | Self::WardenHeart
+            | Self::WardenBioluminescent
+            | Self::WardenPulsatingSpots => &warden::ANIMATIONS,
             Self::Breeze | Self::BreezeWind => &breeze::ANIMATIONS,
             Self::Creaking => &creaking::ANIMATIONS,
             Self::CopperGolem => &copper_golem::ANIMATIONS,
@@ -830,6 +852,12 @@ impl ModelId {
             Self::Arrow => projectile::arrow(),
             Self::Cushion => projectile::cushion(),
             Self::ShulkerBulletGlow => projectile::shulker_bullet_glow(),
+            Self::CreeperArmor => creeper::armor(),
+            Self::NautilusArmor => nautilus::armor(),
+            Self::WardenTendrils => warden::tendrils(),
+            Self::WardenHeart => warden::heart(),
+            Self::WardenBioluminescent => warden::bioluminescent(),
+            Self::WardenPulsatingSpots => warden::pulsating_spots(),
         }
     }
 }
@@ -933,7 +961,7 @@ impl Rig {
             M::Chicken | M::ChickenCold | M::ChickenBaby => {
                 Self::Chicken(chicken::ChickenParts::find(model))
             }
-            M::Creeper => Self::Creeper(creeper::CreeperParts::find(model)),
+            M::Creeper | M::CreeperArmor => Self::Creeper(creeper::CreeperParts::find(model)),
             M::Spider => Self::Spider(spider::SpiderParts::find(model)),
             M::Bat => Self::Bat(bat::BatParts::find(model)),
             M::Rabbit | M::RabbitBaby => Self::Rabbit(rabbit::RabbitParts::find(model)),
@@ -967,9 +995,11 @@ impl Rig {
             M::Turtle | M::TurtleBaby => Self::Turtle(turtle::TurtleParts::find(model)),
             M::Guardian | M::ElderGuardian => Self::Guardian(guardian::GuardianParts::find(model)),
             M::Tadpole => Self::Fish(fish::FishRig::tadpole(model)),
-            M::Nautilus | M::NautilusBaby | M::NautilusSaddle | M::ZombieNautilusCoral => {
-                Self::Nautilus(nautilus::NautilusParts::find(model))
-            }
+            M::Nautilus
+            | M::NautilusBaby
+            | M::NautilusSaddle
+            | M::NautilusArmor
+            | M::ZombieNautilusCoral => Self::Nautilus(nautilus::NautilusParts::find(model)),
             M::Axolotl => Self::Axolotl(axolotl::AxolotlParts::find(model)),
             M::Fox => Self::Fox(fox::FoxParts::find(model, false)),
             M::FoxBaby => Self::Fox(fox::FoxParts::find(model, true)),
@@ -1006,7 +1036,11 @@ impl Rig {
             M::Dragon => Self::Dragon(dragon::DragonParts::find(model)),
             M::Shulker => Self::Shulker(shulker::ShulkerParts::find(model)),
             M::Sniffer | M::SnifferBaby => Self::Sniffer(sniffer::SnifferParts::find(model)),
-            M::Warden => Self::Warden(warden::WardenParts::find(model)),
+            M::Warden
+            | M::WardenTendrils
+            | M::WardenHeart
+            | M::WardenBioluminescent
+            | M::WardenPulsatingSpots => Self::Warden(warden::WardenParts::find(model)),
             M::Creaking => Self::Creaking(creaking::CreakingParts::find(model)),
             M::CopperGolem => Self::CopperGolem(copper_golem::CopperGolemParts::find(model)),
             M::ArmorStand | M::ArmorStandSmall => {
@@ -1159,11 +1193,12 @@ impl MobModel {
         let animations = KeyframeSet::bake(&model, id.animations())
             .unwrap_or_else(|missing| panic!("{id:?}: {missing}"));
         let walk = match id {
-            ModelId::Nautilus | ModelId::NautilusBaby | ModelId::NautilusSaddle => {
-                KeyframeAnimation::bake(&model, nautilus::WALK_ANIMATION)
-                    .ok()
-                    .map(|a| (a, usize::MAX))
-            }
+            ModelId::Nautilus
+            | ModelId::NautilusBaby
+            | ModelId::NautilusSaddle
+            | ModelId::NautilusArmor => KeyframeAnimation::bake(&model, nautilus::WALK_ANIMATION)
+                .ok()
+                .map(|a| (a, usize::MAX)),
             ModelId::AxolotlBaby => KeyframeAnimation::bake(&model, axolotl::WALK_FLOOR)
                 .ok()
                 .map(|a| (a, axolotl::WALK)),
@@ -1682,6 +1717,59 @@ mod tests {
         // A young llama shows no carpet.
         llama.appearance.baby = true;
         assert!(decor(&llama).is_empty());
+    }
+
+    #[test]
+    fn a_charged_creeper_and_a_powered_wither_wear_a_swirl() {
+        let mut creeper = spawned(&EntityType::CREEPER);
+        assert_eq!(body(&creeper).len(), 1);
+        creeper.appearance.powered = true;
+        let swirl = &body(&creeper)[1];
+        assert_eq!(swirl.model, ModelId::CreeperArmor);
+        assert!(swirl.additive && swirl.scroll.is_some());
+        assert_eq!(swirl.overlay, Some(0.0));
+
+        let mut wither = spawned(&EntityType::WITHER);
+        wither.max_health = 300.0;
+        wither.appearance.health = 100.0;
+        let armor = &body(&wither)[1];
+        assert!(armor.additive);
+        // `cos(0) * 3 % 1`: the swirl starts slid by nothing.
+        assert_eq!(armor.scroll, Some([0.0, 0.0]));
+    }
+
+    #[test]
+    fn the_breeze_wind_slides_and_its_eyes_blend() {
+        let breeze = spawned(&EntityType::BREEZE);
+        let layers = body(&breeze);
+        assert_eq!(layers[1].model, ModelId::BreezeWind);
+        assert!(layers[1].scroll.is_some() && !layers[1].additive && layers[1].translucent);
+        assert!(layers[2].full_bright && layers[2].translucent);
+    }
+
+    #[test]
+    fn a_nautilus_wears_armor_and_a_zombie_nautilus_a_saddle() {
+        use crate::network::play::game::EquipmentSlot;
+        use pumpkin_data::item::Item;
+
+        let mut nautilus = spawned(&EntityType::ZOMBIE_NAUTILUS);
+        nautilus.equipment.set(
+            EquipmentSlot::Body,
+            ItemStack::new(1, &Item::IRON_NAUTILUS_ARMOR),
+        );
+        nautilus
+            .equipment
+            .set(EquipmentSlot::Saddle, ItemStack::new(1, &Item::SADDLE));
+        let layers = body(&nautilus);
+        let armor = layers
+            .iter()
+            .find(|l| l.model == ModelId::NautilusArmor)
+            .unwrap();
+        assert_eq!(
+            armor.texture,
+            "minecraft:entity/equipment/nautilus_body/iron"
+        );
+        assert!(layers.iter().any(|l| l.model == ModelId::NautilusSaddle));
     }
 
     #[test]

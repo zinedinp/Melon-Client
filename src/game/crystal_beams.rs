@@ -48,6 +48,7 @@ impl BeamMeshes {
         }
         let origin = from.floor().as_ivec3();
         out.push(EntityDraw {
+            scroll: None,
             mesh: mesh.expect("just uploaded"),
             atlas: texture,
             model: Mat4::from_translation((from - origin.as_dvec3()).as_vec3()),

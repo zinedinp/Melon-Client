@@ -493,8 +493,7 @@ pub fn setup_anim(
     }
 }
 
-/// `VillagerRenderer`, `ZombieVillagerRenderer` (both with
-/// `VillagerProfessionLayer`), `WanderingTraderRenderer` and `WitchRenderer`.
+/// The villager renderers and `WitchRenderer`.
 pub(super) fn push_layers(
     entity: &ClientEntity,
     hat: &dyn Fn(&str) -> Hat,
@@ -518,8 +517,7 @@ macro_rules! textures {
     };
 }
 
-/// `VillagerType`'s and `VillagerProfession`'s names by registry id, and
-/// the badges by level: the textures of one renderer's clothes.
+/// One renderer's clothes, by type, profession and level.
 macro_rules! clothes {
     ($dir:literal) => {
         Clothes {
@@ -586,9 +584,7 @@ const ZOMBIE_VILLAGER_CLOTHES: Clothes = clothes!("zombie_villager");
 const PROFESSION_NONE: usize = 0;
 const PROFESSION_NITWIT: usize = 11;
 
-/// A villager's body and `VillagerProfessionLayer`: the biome's clothes,
-/// with or without the hat; then, for an adult with a job, the job's and,
-/// unless a nitwit, the level's badge.
+/// A villager's body and `VillagerProfessionLayer`.
 fn villager_layers(entity: &ClientEntity, hat: &dyn Fn(&str) -> Hat, out: &mut Vec<LayerSpec>) {
     let zombie = entity.kind == EntityKind::ZombieVillager;
     let (clothes, full, no_hat, baby_full, baby_no_hat) = if zombie {

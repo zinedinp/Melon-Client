@@ -237,7 +237,7 @@ fn animate_bristle(pose: &mut ModelPose, bristles: [PartId; 3], flow: f32, age: 
     add(&mut pose[bristles[2]].pose, 0.05 * angle::sin(age * -0.4));
 }
 
-/// `StriderRenderer`: warm or cold.
+/// `StriderRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

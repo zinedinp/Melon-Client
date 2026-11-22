@@ -138,7 +138,7 @@ pub fn setup_anim(parts: &VexParts, pose: &mut ModelPose, state: &LivingRenderSt
     pose[parts.right_wing].pose.rotation.z = 0.47123888;
 }
 
-/// `VexRenderer`: charging or not.
+/// `VexRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let plain = LayerSpec::plain;

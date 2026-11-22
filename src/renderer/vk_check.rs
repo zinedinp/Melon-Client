@@ -288,6 +288,8 @@ fn validation_layers_accept_every_pipeline() {
             Mode::Opaque,
             Mode::Translucent,
             Mode::Lightning,
+            Mode::EnergySwirl,
+            Mode::Scrolled,
             Mode::Text,
             Mode::TranslucentTerrain,
             Mode::Clouds,

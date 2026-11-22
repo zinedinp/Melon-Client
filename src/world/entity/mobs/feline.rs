@@ -366,7 +366,7 @@ const TEXTURES: [[&str; 2]; 11] = {
     )
 };
 
-/// `CatRenderer` (with `CatCollarLayer`) and `OcelotRenderer`.
+/// `CatRenderer` and `OcelotRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

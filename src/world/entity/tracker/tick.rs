@@ -89,13 +89,13 @@ impl ClientEntity {
                 );
             }
             EntityKind::Warden => {
-                warden::tick_anim(
-                    &mut self.anim,
-                    self.age as i32,
-                    self.appearance.pose,
-                    false,
-                    false,
-                );
+                warden::tick_anim(&mut self.anim, self.age as i32, self.appearance.pose);
+                let beat = self
+                    .warden
+                    .tick(self.age as i32, self.appearance.warden_anger);
+                if beat && !self.appearance.silent {
+                    self.sounds.push("entity.warden.heartbeat");
+                }
             }
             EntityKind::Breeze => {
                 breeze::tick_anim(&mut self.anim, self.age as i32, self.appearance.pose);

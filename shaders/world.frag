@@ -74,6 +74,18 @@ void main() {
     out_color = apply_fog(drop, frag_fog);
     return;
 #endif
+#ifdef SCROLL
+    // `APPLY_TEXTURE_MATRIX` with an `OffsetTextureTransform` (energy swirl,
+    // breeze wind). The offset rides in `pc.params.xy`: these meshes are
+    // sentinel-lit and read no lightmap. Wrapped by hand, the sampler clamps.
+    vec4 slid = texture(atlas_sampler, fract(frag_uv + pc.params.xy));
+    if (slid.a < 0.1) {
+        discard;
+    }
+    slid *= frag_color;
+    out_color = apply_fog(vec4(slid.rgb * pc.ambient.rgb, slid.a), frag_fog);
+    return;
+#endif
 #ifdef CRUMBLING
     // Vanilla `core/rendertype_crumbling.fsh`: the texture times the vertex
     // colour, its clear parts dropped; the blend multiplies it in.

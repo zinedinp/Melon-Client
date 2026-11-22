@@ -223,7 +223,7 @@ pub fn setup_anim(parts: &BeeParts, pose: &mut ModelPose, state: &LivingRenderSt
     }
 }
 
-/// `BeeRenderer`: angry, with nectar, or without its stinger.
+/// `BeeRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

@@ -189,6 +189,10 @@ pub struct ClientEntity {
     pub anim: [AnimationState; mobs::ANIMATION_SLOTS],
     /// An iron golem's arm swing and flower offer, in ticks left.
     golem: (i32, i32),
+    /// A warden's tendrils and heartbeat.
+    pub warden: mobs::warden::WardenClock,
+    /// Sounds the entity makes itself this tick (a warden's heartbeat).
+    pub(super) sounds: Vec<&'static str>,
     swell: i32,
     prev_swell: i32,
     /// `Chicken.flap`, `flapSpeed` and `flapping`, with last tick's.
@@ -358,6 +362,8 @@ impl ClientEntity {
             camel_seen_tick: 0,
             anim: Default::default(),
             golem: (0, 0),
+            warden: Default::default(),
+            sounds: Vec::new(),
             swell: 0,
             prev_swell: 0,
             flap: 0.0,
@@ -552,6 +558,9 @@ impl ClientEntity {
                 }
                 if self.kind == EntityKind::Rabbit && event == mobs::rabbit::EVENT_JUMP {
                     self.rabbit.jump();
+                }
+                if self.kind == EntityKind::Warden {
+                    self.warden.event(event, &mut self.anim, self.age as i32);
                 }
                 if self.kind == EntityKind::IronGolem {
                     match event {

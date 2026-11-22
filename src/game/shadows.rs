@@ -77,6 +77,7 @@ impl ShadowMeshes {
         }
         if let Some(mesh) = shadow.mesh {
             out.push(EntityDraw {
+                scroll: None,
                 alpha: 1.0,
                 mesh,
                 atlas: texture,

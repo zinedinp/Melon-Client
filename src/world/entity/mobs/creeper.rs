@@ -2,7 +2,7 @@
 
 use glam::Vec3;
 
-use super::{LayerSpec, ModelId as M};
+use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
@@ -10,18 +10,28 @@ use crate::world::entity::quadruped::{Legs, look};
 use crate::world::model_part::{Cube, Pose};
 
 pub fn layer() -> LayerDefinition {
+    body(0.0)
+}
+
+/// `CREEPER_ARMOR`.
+pub fn armor() -> LayerDefinition {
+    body(2.0)
+}
+
+/// `CreeperModel.createBodyLayer(deformation)`.
+fn body(g: f32) -> LayerDefinition {
     let mut root = PartDefinition::root();
     root.add_or_replace_child(
         "head",
-        vec![Cube::new((0.0, 0.0), (-4.0, -8.0, -4.0), (8.0, 8.0, 8.0))],
+        vec![Cube::new((0.0, 0.0), (-4.0, -8.0, -4.0), (8.0, 8.0, 8.0)).grown(g)],
         Pose::offset(0.0, 6.0, 0.0),
     );
     root.add_or_replace_child(
         "body",
-        vec![Cube::new((16.0, 16.0), (-4.0, 0.0, -2.0), (8.0, 12.0, 4.0))],
+        vec![Cube::new((16.0, 16.0), (-4.0, 0.0, -2.0), (8.0, 12.0, 4.0)).grown(g)],
         Pose::offset(0.0, 6.0, 0.0),
     );
-    let leg = || vec![Cube::new((0.0, 16.0), (-2.0, 0.0, -2.0), (4.0, 6.0, 4.0))];
+    let leg = || vec![Cube::new((0.0, 16.0), (-2.0, 0.0, -2.0), (4.0, 6.0, 4.0)).grown(g)];
     root.add_or_replace_child("right_hind_leg", leg(), Pose::offset(-2.0, 18.0, 4.0));
     root.add_or_replace_child("left_hind_leg", leg(), Pose::offset(2.0, 18.0, 4.0));
     root.add_or_replace_child("right_front_leg", leg(), Pose::offset(-2.0, 18.0, -4.0));
@@ -70,8 +80,17 @@ pub fn white_flash(swelling: f32) -> f32 {
     (progress * 15.0).floor() / 15.0 * 0.75
 }
 
-/// `CreeperRenderer` (the charge is `CreeperPowerLayer`, not here).
-pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
-    let plain = LayerSpec::plain;
-    out.push(plain(M::Creeper, "minecraft:entity/creeper/creeper"));
+/// `CreeperRenderer` and `CreeperPowerLayer`.
+pub(super) fn push_layers(entity: &ClientEntity, age_in_ticks: f32, out: &mut Vec<LayerSpec>) {
+    out.push(LayerSpec::plain(
+        M::Creeper,
+        "minecraft:entity/creeper/creeper",
+    ));
+    if entity.appearance.powered {
+        let t = age_in_ticks * 0.01;
+        out.push(
+            LayerSpec::plain(M::CreeperArmor, "minecraft:entity/creeper/creeper_armor")
+                .energy_swirl(t, t),
+        );
+    }
 }

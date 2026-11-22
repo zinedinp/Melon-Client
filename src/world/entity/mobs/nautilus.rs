@@ -109,6 +109,21 @@ pub fn zombie_coral() -> LayerDefinition {
     layer
 }
 
+/// `NautilusArmorModel.createBodyLayer`.
+pub fn armor() -> LayerDefinition {
+    let mut layer = adult();
+    layer.root.child_mut("root").add_or_replace_child(
+        "shell",
+        vec![
+            Cube::new((0.0, 0.0), (-7.0, -10.0, -7.0), (14.0, 10.0, 16.0)).grown(0.01),
+            Cube::new((0.0, 26.0), (-7.0, 0.0, -7.0), (14.0, 8.0, 20.0)).grown(0.01),
+            Cube::new((48.0, 26.0), (-7.0, 0.0, 6.0), (14.0, 8.0, 0.0)),
+        ],
+        Pose::offset(0.0, -13.0, 5.0),
+    );
+    layer
+}
+
 /// `NautilusSaddleModel.createSaddleLayer`: the shell grown by 0.2.
 pub fn saddle() -> LayerDefinition {
     let mut r = PartDefinition::root();
@@ -214,8 +229,7 @@ pub fn setup_anim(
     );
 }
 
-/// `NautilusRenderer` and `ZombieNautilusRenderer` (whose warm variant
-/// grows corals).
+/// `NautilusRenderer` and `ZombieNautilusRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

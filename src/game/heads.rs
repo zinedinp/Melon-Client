@@ -178,6 +178,7 @@ pub(super) fn submit_worn_head(
     let lift = -0.25 + wearer.transforms.y_offset;
     for &(mesh, atlas, translucent) in &parts {
         out.push(EntityDraw {
+            scroll: None,
             alpha: 1.0,
             mesh,
             atlas,

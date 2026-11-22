@@ -274,7 +274,7 @@ pub(super) fn swing_weapon_down(
     bob_arms(&mut right.pose, &mut left.pose, age_in_ticks);
 }
 
-/// `PiglinRenderer`: piglin, brute and zombified piglin.
+/// The piglin renderers.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

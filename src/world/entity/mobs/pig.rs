@@ -83,7 +83,7 @@ pub fn baby() -> LayerDefinition {
     LayerDefinition::new(root, 32.0, 32.0)
 }
 
-/// `PigRenderer`: the variant's body (cold, temperate, warm).
+/// `PigRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let a = &entity.appearance;
     let baby = a.baby;

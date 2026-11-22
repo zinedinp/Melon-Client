@@ -354,8 +354,7 @@ pub fn minecart_root(position: Vec3, yaw: f32, pitch: f32, shake: Shake) -> Mat4
         * Mat4::from_scale(Vec3::new(-1.0, -1.0, 1.0))
 }
 
-/// `BoatRenderer` and `RaftRenderer` (with the water patch while out of
-/// water), `MinecartRenderer`.
+/// `BoatRenderer`, `RaftRenderer`, `MinecartRenderer`.
 pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
     let plain = LayerSpec::plain;
     match entity.kind {
