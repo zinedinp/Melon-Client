@@ -2,6 +2,7 @@
 
 //!
 
+pub mod lan;
 pub mod login;
 pub mod play;
 pub(crate) mod protocol;

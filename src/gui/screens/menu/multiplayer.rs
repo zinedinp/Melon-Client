@@ -26,6 +26,7 @@ use crate::gui::widgets::scroll_list::{ListClick, ScrollList};
 use crate::gui::widgets::set::{KeyResult, WidgetSet};
 use crate::gui::widgets::{Rect, Ui};
 use crate::join::Target;
+use crate::network::lan::{LanDetector, LanServer};
 use crate::network::status::{self, CannotResolve, ServerStatus};
 use crate::renderer::TextureId;
 use crate::settings::server_list::{self, ServerEntry};
@@ -71,6 +72,18 @@ pub struct MultiplayerScreen {
     assets_root: PathBuf,
     /// Drives the "pinging" animation.
     opened: Instant,
+    /// `lanServerDetector`, while the screen is open; `None` without a network.
+    lan: Option<LanDetector>,
+    /// The worlds heard on the LAN, listed under the saved servers.
+    lan_servers: Vec<LanServer>,
+}
+
+/// What a row of the list is: the saved servers, then the LAN's header and worlds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Entry {
+    Saved(usize),
+    LanHeader,
+    Lan(usize),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -107,6 +120,8 @@ impl MultiplayerScreen {
             mouse: (-1.0, -1.0),
             assets_root: ctx.assets_root.to_path_buf(),
             opened: Instant::now(),
+            lan: LanDetector::start(),
+            lan_servers: Vec::new(),
         };
         screen.reload(ctx);
         screen
@@ -121,7 +136,7 @@ impl MultiplayerScreen {
             .filter_map(|(server, row)| Some((server.ip.clone(), row.icon?)))
             .collect();
         self.servers = server_list::load(ctx.game_dir);
-        self.list.set_len(self.servers.len());
+        self.update_len();
         self.generation += 1;
         self.rows.clear();
         for server in &self.servers {
@@ -146,21 +161,41 @@ impl MultiplayerScreen {
         self.update_buttons();
     }
 
+    /// The list's rows: the saved servers, the LAN header, the LAN's worlds.
+    fn update_len(&mut self) {
+        self.list
+            .set_len(self.servers.len() + 1 + self.lan_servers.len());
+    }
+
+    fn entry(&self, index: usize) -> Entry {
+        let saved = self.servers.len();
+        match index {
+            i if i < saved => Entry::Saved(i),
+            i if i == saved => Entry::LanHeader,
+            i => Entry::Lan(i - saved - 1),
+        }
+    }
+
     fn update_buttons(&mut self) {
-        let selected = self.list.selected().is_some();
-        for id in [Id::Join, Id::Edit, Id::Delete] {
-            self.widgets.set_enabled(id, selected);
+        let selected = self.list.selected().map(|i| self.entry(i));
+        let saved = matches!(selected, Some(Entry::Saved(_)));
+        let joinable = saved || matches!(selected, Some(Entry::Lan(_)));
+        self.widgets.set_enabled(Id::Join, joinable);
+        for id in [Id::Edit, Id::Delete] {
+            self.widgets.set_enabled(id, saved);
         }
     }
 
     fn join_server(&self, index: usize, ctx: &ScreenContext) -> ScreenAction {
-        let Some(server) = self.servers.get(index) else {
+        let address = match self.entry(index) {
+            Entry::Saved(i) => self.servers.get(i).map(|s| s.ip.clone()),
+            Entry::Lan(i) => self.lan_servers.get(i).map(|s| s.address.clone()),
+            Entry::LanHeader => None,
+        };
+        let Some(address) = address else {
             return ScreenAction::None;
         };
-        ScreenAction::open(ConnectingScreen::new(
-            Target::Server(server.ip.clone()),
-            ctx,
-        ))
+        ScreenAction::open(ConnectingScreen::new(Target::Server(address), ctx))
     }
 
     fn join_selected(&self, ctx: &ScreenContext) -> ScreenAction {
@@ -189,10 +224,10 @@ impl MultiplayerScreen {
             (Id::Join, _) => self.join_selected(ctx),
             (Id::Direct, _) => ScreenAction::open(DirectConnectScreen::new(ctx)),
             (Id::Add, _) => ScreenAction::open(EditServerScreen::new_add(ctx)),
-            (Id::Edit, Some(i)) => {
+            (Id::Edit, Some(i)) if i < self.servers.len() => {
                 ScreenAction::open(EditServerScreen::new_edit(i, &self.servers[i]))
             }
-            (Id::Delete, Some(i)) => {
+            (Id::Delete, Some(i)) if i < self.servers.len() => {
                 ScreenAction::open(confirm_delete_server(i, &self.servers[i].name, ctx))
             }
             (Id::Refresh, _) => {
@@ -200,7 +235,7 @@ impl MultiplayerScreen {
                 ScreenAction::None
             }
             (Id::Back, _) => ScreenAction::Back,
-            (Id::Edit | Id::Delete, None) => ScreenAction::None,
+            (Id::Edit | Id::Delete, _) => ScreenAction::None,
         }
     }
 
@@ -223,9 +258,12 @@ impl MultiplayerScreen {
         Moves::of(index, self.servers.len())
     }
 
-    /// The zone under the mouse, in the row under the mouse.
+    /// The zone under the mouse, in the row under the mouse (a saved server's).
     fn hovered_zone(&self) -> Option<(usize, Zone)> {
-        let index = self.list.row_at(self.mouse.0, self.mouse.1)?;
+        let index = self
+            .list
+            .row_at(self.mouse.0, self.mouse.1)
+            .filter(|&i| i < self.servers.len())?;
         let zone = row_icon::zone(
             self.icon_rect(index),
             self.mouse,
@@ -254,6 +292,11 @@ impl Screen for MultiplayerScreen {
     }
 
     fn tick(&mut self) {
+        // `JoinMultiplayerScreen.tick`: the LAN's worlds, when one is new.
+        if let Some(servers) = self.lan.as_ref().and_then(LanDetector::take_dirty) {
+            self.lan_servers = servers;
+            self.update_len();
+        }
         while let Ok((generation, id, result)) = self.ping_rx.try_recv() {
             if generation != self.generation {
                 continue;
@@ -380,7 +423,11 @@ impl Screen for MultiplayerScreen {
         let title = ui.tr("multiplayer.title");
         ui.title(title, ((LAYOUT.header - LINE_HEIGHT) / 2.0).round());
         self.list
-            .draw(ui, |ui, index, rect| self.draw_row(ui, index, rect));
+            .draw(ui, |ui, index, rect| match self.entry(index) {
+                Entry::Saved(i) => self.draw_row(ui, i, rect),
+                Entry::LanHeader => self.draw_lan_header(ui, rect),
+                Entry::Lan(i) => self.draw_lan_row(ui, i, rect),
+            });
         self.widgets.draw(ui);
         self.draw_tooltip(ui);
     }

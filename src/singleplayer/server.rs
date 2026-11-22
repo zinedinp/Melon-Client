@@ -51,6 +51,8 @@ const MAX_PLAYERS: u32 = 8;
 pub struct Host {
     pub uuid: uuid::Uuid,
     pub name: String,
+    /// Signed in: its skin is looked up for the guests to see.
+    pub online: bool,
 }
 
 /// How the world is opened to others.
@@ -302,6 +304,49 @@ impl IntegratedServer {
     }
 }
 
+/// How long the host's skin waits for its player to be on the server.
+const SKIN_WAIT: std::time::Duration = std::time::Duration::from_secs(60);
+
+/// `getSingleplayerProfile`'s properties: the host logs in over its pipe
+/// without them, so its signed `textures` are fetched on a thread and put on
+/// its player once it is there, for guests to see its skin.
+fn give_host_its_skin(server: std::sync::Weak<Server>, uuid: uuid::Uuid) {
+    let spawned = thread::Builder::new()
+        .name("host-skin".to_owned())
+        .spawn(move || {
+            let properties = match crate::auth::skin::fetch_signed_properties(&uuid.to_string()) {
+                Ok(properties) => properties,
+                Err(error) => {
+                    crate::warn!("The host's skin not fetched: {error:#}");
+                    return;
+                }
+            };
+            let properties: Vec<pumpkin_protocol::Property> = properties
+                .into_iter()
+                .map(|p| pumpkin_protocol::Property {
+                    name: p.name.into(),
+                    value: p.value.into(),
+                    signature: p.signature.map(Into::into),
+                })
+                .collect();
+            let started = std::time::Instant::now();
+            while started.elapsed() < SKIN_WAIT {
+                let Some(server) = server.upgrade() else {
+                    return;
+                };
+                if let Some(player) = server.get_player_by_uuid(uuid) {
+                    player.gameprofile.properties.store(Arc::new(properties));
+                    return;
+                }
+                drop(server);
+                thread::sleep(std::time::Duration::from_millis(200));
+            }
+        });
+    if let Err(error) = spawned {
+        crate::warn!("No thread for the host's skin: {error}");
+    }
+}
+
 /// Takes in the Java clients of a published world until `stop`.
 async fn accept_java(
     server: Arc<Server>,
@@ -391,6 +436,7 @@ pub fn start(options: Options) -> Result<(IntegratedServer, ClientPipe)> {
     if let Err(error) = migrate_offline_host(&options.save_path, &options.host) {
         crate::warn!("The host's player data not moved to its account: {error}");
     }
+    let host_online = options.host.online;
     let (client_rx, server_tx) = tokio::io::simplex(TO_CLIENT_BYTES);
     let (server_rx, client_tx) = tokio::io::simplex(TO_SERVER_BYTES);
 
@@ -438,6 +484,9 @@ pub fn start(options: Options) -> Result<(IntegratedServer, ClientPipe)> {
     server.pumpkin = pumpkin;
     server.handle = Some(handle.clone());
     server.tasks = tasks;
+    if host_online {
+        give_host_its_skin(server.pumpkin.clone(), server.host.uuid);
+    }
     let pipe = ClientPipe {
         rx: SyncIoBridge::new_with_handle(client_rx, handle.clone()),
         tx: SyncIoBridge::new_with_handle(client_tx, handle),
@@ -700,6 +749,7 @@ mod tests {
             host: Host {
                 uuid: uuid::Uuid::from_u128(7),
                 name: "Steve".to_owned(),
+                online: false,
             },
         }
     }
@@ -749,6 +799,7 @@ mod tests {
         let host = Host {
             uuid: uuid::Uuid::from_u128(0x1234),
             name: "Steve".to_owned(),
+            online: true,
         };
         let offline = pumpkin::net::offline_uuid("Steve").unwrap();
         let data = dir.join("players").join("data");

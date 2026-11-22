@@ -78,6 +78,7 @@ fn main() -> anyhow::Result<()> {
             }
             .uuid(),
             name: "Perf".into(),
+            online: false,
         },
     })?;
     let mut session = network::join_stream(

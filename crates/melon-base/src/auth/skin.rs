@@ -105,6 +105,31 @@ pub fn fetch_head_from(source: &SkinSource, uuid: &str) -> anyhow::Result<RgbaIm
     head_from_skin(&skin.image).context("the skin has no face")
 }
 
+/// A profile property as a server hands it on: `textures`, with the service's signature.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct SignedProperty {
+    pub name: String,
+    pub value: String,
+    pub signature: Option<String>,
+}
+
+/// The account `uuid`'s properties with their signatures
+/// (`session/minecraft/profile/<uuid>?unsigned=false`), from the service
+/// skins come from: what a server sends other players so they see its skin.
+pub fn fetch_signed_properties(uuid: &str) -> anyhow::Result<Vec<SignedProperty>> {
+    #[derive(Deserialize)]
+    struct Signed {
+        properties: Vec<SignedProperty>,
+    }
+    let uuid = uuid.replace('-', "");
+    let url = format!(
+        "{}/session/minecraft/profile/{uuid}?unsigned=false",
+        source().session
+    );
+    let profile: Signed = http::json("Profile", http::get(&url).call())?;
+    Ok(profile.properties)
+}
+
 /// The skin of the account `uuid` (with or without dashes), made a 64x64 image.
 pub fn fetch_skin(uuid: &str) -> anyhow::Result<DownloadedSkin> {
     fetch_skin_from(&source(), uuid)

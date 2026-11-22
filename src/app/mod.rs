@@ -334,11 +334,7 @@ impl RunningState {
             }
             ScreenAction::WorldOptions(change) => {
                 if let Some(world) = &mut self.world {
-                    world.apply_world_options(
-                        *change,
-                        &self.env.lang,
-                        &self.env.gui_assets.font,
-                    );
+                    world.apply_world_options(*change, &self.env.lang, &self.env.gui_assets.font);
                 }
                 self.close_top_screen();
             }

@@ -172,7 +172,11 @@ impl Screen for PauseScreen {
             row_y += BUTTON_H + PADDING;
         }
         w.set_position(Id::Options, left, row_y);
-        w.set_position(Id::WorldOptions, left + HALF_BUTTON_W + PADDING * 2.0, row_y);
+        w.set_position(
+            Id::WorldOptions,
+            left + HALF_BUTTON_W + PADDING * 2.0,
+            row_y,
+        );
         w.set_position(Id::Disconnect, left, row_y + BUTTON_H + PADDING);
     }
 

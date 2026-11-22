@@ -88,6 +88,7 @@ pub fn join(
                 host: server::Host {
                     uuid: identity.uuid(),
                     name: identity.username().to_owned(),
+                    online: matches!(identity, Identity::Online { .. }),
                 },
             })?;
             let session = network::join_stream(pipe, identity, client, Box::new(|| {}))?;

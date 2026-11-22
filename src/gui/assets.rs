@@ -146,12 +146,18 @@ impl GuiAssets {
 
         let mut lock = |name: &str| -> anyhow::Result<[GuiSprite; 3]> {
             Ok([
-                load(renderer, &format!("minecraft:gui/sprites/widget/{name}.png"))?,
+                load(
+                    renderer,
+                    &format!("minecraft:gui/sprites/widget/{name}.png"),
+                )?,
                 load(
                     renderer,
                     &format!("minecraft:gui/sprites/widget/{name}_highlighted.png"),
                 )?,
-                load(renderer, &format!("minecraft:gui/sprites/widget/{name}_disabled.png"))?,
+                load(
+                    renderer,
+                    &format!("minecraft:gui/sprites/widget/{name}_disabled.png"),
+                )?,
             ])
         };
         let lock_icons = [lock("locked_button")?, lock("unlocked_button")?];

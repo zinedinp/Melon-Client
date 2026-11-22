@@ -399,12 +399,14 @@ impl WorldOptionsScreen {
 
     fn on_off(ui: &Ui, key: &'static str, on: bool) -> String {
         let value = ui.tr(if on { "options.on" } else { "options.off" });
-        ui.lang.format("options.generic_value", &[ui.tr(key), value])
+        ui.lang
+            .format("options.generic_value", &[ui.tr(key), value])
     }
 
     fn mode_label(ui: &Ui, key: &'static str, mode: GameMode) -> String {
         let value = ui.lang.get(mode.translation_key());
-        ui.lang.format("options.generic_value", &[ui.tr(key), value])
+        ui.lang
+            .format("options.generic_value", &[ui.tr(key), value])
     }
 
     fn label(&self, id: Id, ui: &Ui) -> Option<String> {
@@ -419,9 +421,13 @@ impl WorldOptionsScreen {
             ),
             Id::AllowCommands => Self::on_off(ui, "selectWorld.allowCommands", self.allow_commands),
             Id::Difficulty => {
-                let value = ui.lang.get(DIFFICULTIES[usize::from(self.difficulty.min(3))]);
-                ui.lang
-                    .format("options.generic_value", &[ui.tr("options.difficulty"), value])
+                let value = ui
+                    .lang
+                    .get(DIFFICULTIES[usize::from(self.difficulty.min(3))]);
+                ui.lang.format(
+                    "options.generic_value",
+                    &[ui.tr("options.difficulty"), value],
+                )
             }
             Id::Lan => Self::on_off(ui, "menu.multiplayerOptions.lan", self.lan),
             Id::GuestCommands => Self::on_off(
@@ -538,7 +544,11 @@ impl WorldOptionsScreen {
     fn header_ys(&self) -> (f32, f32) {
         let frame = HeaderFooter::DEFAULT;
         let general = frame.top() + SECTION_PAD - self.scroll + 4.0;
-        let rows = if self.personal_game_mode.is_some() { 4.0 } else { 3.0 };
+        let rows = if self.personal_game_mode.is_some() {
+            4.0
+        } else {
+            3.0
+        };
         let multiplayer = general
             + HEADER_H
             + ROW_GAP
@@ -777,10 +787,16 @@ mod tests {
         assert_eq!(parse_port("", None, free), Ok(None));
         assert_eq!(parse_port(" 25565 ", None, free), Ok(Some(25565)));
         assert_eq!(parse_port("80", None, free), Err("lanServer.port.invalid"));
-        assert_eq!(parse_port("70000", None, free), Err("lanServer.port.invalid"));
+        assert_eq!(
+            parse_port("70000", None, free),
+            Err("lanServer.port.invalid")
+        );
         assert_eq!(parse_port("abc", None, free), Err("lanServer.port.invalid"));
         let taken = |_| false;
-        assert_eq!(parse_port("25565", None, taken), Err("lanServer.port.unavailable"));
+        assert_eq!(
+            parse_port("25565", None, taken),
+            Err("lanServer.port.unavailable")
+        );
         // The port the world is published on is its own.
         assert_eq!(parse_port("25565", Some(25565), taken), Ok(Some(25565)));
     }
@@ -833,7 +849,9 @@ mod tests {
         screen.press(Id::Lock);
         assert!(matches!(screen.press(Id::Apply), ScreenAction::None));
         assert!(screen.confirming);
-        assert!(matches!(screen.press(Id::Yes), ScreenAction::WorldOptions(c) if c.lock_difficulty));
+        assert!(
+            matches!(screen.press(Id::Yes), ScreenAction::WorldOptions(c) if c.lock_difficulty)
+        );
     }
 
     #[test]

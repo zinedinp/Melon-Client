@@ -34,6 +34,7 @@ impl TestWorld {
                 }
                 .uuid(),
                 name: username.to_owned(),
+                online: false,
             },
         })
         .expect("the world should open");
@@ -1616,4 +1617,62 @@ fn a_swapped_block_keeps_what_hangs_on_it() {
 fn block_name(state: u16) -> &'static str {
     pumpkin_data::BlockStateId::new(state)
         .map_or("", |id| pumpkin_data::Block::from_state_id(id).name)
+}
+
+/// World Options' LAN: published, a guest joins over TCP; unpublished, it is
+/// sent off, while the host plays on over its pipe.
+#[test]
+#[ignore = "starts an integrated server and listens on a local port"]
+fn a_published_world_takes_a_lan_guest_and_sends_it_off() {
+    let mut world = TestWorld::open("integrated-lan", WorldSettings::default(), 2, "Host");
+    let port = std::net::TcpListener::bind(("127.0.0.1", 0))
+        .and_then(|listener| listener.local_addr())
+        .expect("a free port")
+        .port();
+    let server = world.server.as_mut().expect("the server runs");
+    server
+        .publish(server::Publish {
+            port,
+            online_mode: false,
+            bedrock: false,
+        })
+        .expect("publishing should work");
+    assert!(server.published().is_some());
+    // The world is announced on the LAN as vanilla's `LanServerPinger` does.
+    let detector = melon::network::lan::LanDetector::start().expect("joins the LAN group");
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    let heard = loop {
+        if let Some(servers) = detector.take_dirty()
+            && let Some(server) = servers
+                .into_iter()
+                .find(|s| s.address.ends_with(&format!(":{port}")))
+        {
+            break server;
+        }
+        assert!(std::time::Instant::now() < deadline, "the LAN broadcast was not heard");
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    };
+    assert!(heard.motd.starts_with("Host - "), "{}", heard.motd);
+    let guest = Identity::Offline {
+        username: "Guest".to_owned(),
+    };
+    let mut session =
+        melon::network::join_server(&format!("127.0.0.1:{port}"), &guest, &Default::default())
+            .expect("the guest should join over the LAN");
+    let joined = session.poll();
+    assert!(
+        joined.iter().any(|e| matches!(e, WorldEvent::Teleport(_))),
+        "the guest spawns"
+    );
+
+    assert!(world.server.as_mut().unwrap().unpublish());
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while session.ended().is_none() && std::time::Instant::now() < deadline {
+        let _ = session.poll();
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    assert!(session.ended().is_some(), "the guest is sent off");
+    // The host is still in.
+    let _ = world.session.poll();
+    assert!(world.session.ended().is_none());
 }

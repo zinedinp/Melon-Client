@@ -82,9 +82,8 @@ impl InWorld {
         &self,
     ) -> Option<crate::gui::screens::ingame::world_options::WorldOptionsState> {
         let server = self.integrated_server()?;
-        let mode = |mode: pumpkin_util::GameMode| {
-            crate::world::game_mode::GameMode::from_id(mode as i32)
-        };
+        let mode =
+            |mode: pumpkin_util::GameMode| crate::world::game_mode::GameMode::from_id(mode as i32);
         Some(
             crate::gui::screens::ingame::world_options::WorldOptionsState {
                 default_game_mode: server
@@ -139,7 +138,10 @@ impl InWorld {
             // `changeMultiplayerScope`.
             if let Some(publish) = change.publish {
                 if server.unpublish() {
-                    messages.push(lang.get("menu.multiplayerOptions.publish.stopped").to_owned());
+                    messages.push(
+                        lang.get("menu.multiplayerOptions.publish.stopped")
+                            .to_owned(),
+                    );
                 }
                 if let Some(publish) = publish {
                     messages.push(match server.publish(publish) {

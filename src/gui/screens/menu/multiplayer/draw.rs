@@ -2,7 +2,42 @@
 
 use super::*;
 
+/// `LoadingDotsWidget`'s frames.
+const DOTS: [&str; 4] = ["O o o", "o O o", "o o O", "o O o"];
+/// `LoadingDotsWidget`: the dots step every 300 ms.
+const DOTS_STEP_MS: u128 = 300;
+
 impl MultiplayerScreen {
+    /// `ServerSelectionList.LANHeader`: "Scanning for games on your local
+    /// network" over `LoadingDotsWidget`'s dots, centred in the row.
+    pub(super) fn draw_lan_header(&self, ui: &mut Ui, rect: Rect) {
+        let content = Self::content(rect);
+        let middle = content.x + content.w / 2.0;
+        let label = ui.tr("lanServer.scanning");
+        ui.centered(label, middle, content.y, [1.0; 4]);
+        let step = (self.opened.elapsed().as_millis() / DOTS_STEP_MS) as usize % DOTS.len();
+        ui.centered(
+            DOTS[step],
+            middle,
+            content.y + LINE_HEIGHT,
+            [GREY[0], GREY[1], GREY[2], 1.0],
+        );
+    }
+
+    /// `ServerSelectionList.NetworkServerEntry`: a world opened to the LAN.
+    pub(super) fn draw_lan_row(&self, ui: &mut Ui, index: usize, rect: Rect) {
+        let Some(server) = self.lan_servers.get(index) else {
+            return;
+        };
+        let content = Self::content(rect);
+        let x = content.x + ICON + 3.0;
+        let title = ui.tr("lanServer.title");
+        ui.text(title, x, content.y + 1.0, [1.0; 4]);
+        let grey = [GREY[0], GREY[1], GREY[2], 1.0];
+        ui.text(&server.motd, x, content.y + 12.0, grey);
+        ui.text(&server.address, x, content.y + 12.0 + 11.0, grey);
+    }
+
     /// One `ServerSelectionList.OnlineServerEntry`.
     pub(super) fn draw_row(&self, ui: &mut Ui, index: usize, rect: Rect) {
         let server = &self.servers[index];
@@ -109,7 +144,11 @@ impl MultiplayerScreen {
     /// The tooltip of what the mouse is on.
     pub(super) fn draw_tooltip(&self, ui: &mut Ui) {
         let (mouse_x, mouse_y) = self.mouse;
-        let Some(index) = self.list.row_at(mouse_x, mouse_y) else {
+        let Some(index) = self
+            .list
+            .row_at(mouse_x, mouse_y)
+            .filter(|&i| i < self.servers.len())
+        else {
             return;
         };
         let row = &self.rows[index];

@@ -421,6 +421,7 @@ fn receive_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec
             }
             .uuid(),
             name: "Bench".into(),
+            online: false,
         },
     })?;
     let mut session = network::join_stream(

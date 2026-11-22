@@ -127,6 +127,7 @@ fn gather(dir: &str) -> anyhow::Result<Sets> {
             }
             .uuid(),
             name: "Walk".into(),
+            online: false,
         },
     })?;
     let client = ClientInfo {
