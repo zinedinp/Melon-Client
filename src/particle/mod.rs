@@ -52,7 +52,7 @@ pub struct EntityBox {
 }
 
 impl EntityBox {
-    /// `Entity.getRandomX(1)`, `getRandomY()`, `getRandomZ(1)`: a point
+    /// `Entity.getRandomX(1)`, `getRandomY()`, `getRandomZ(1)`.
     pub fn random_point(&self, rng: &mut JavaRandom) -> DVec3 {
         let w = f64::from(self.width);
         let x = self.pos.x + w * (2.0 * rng.next_double() - 1.0);
@@ -103,11 +103,11 @@ pub struct World<'a> {
     pub nearest_player: NearestPlayer<'a>,
     /// `isRainingAt`: it rains, the block sees the sky and its biome rains.
     pub raining_at: &'a dyn Fn(glam::IVec3) -> bool,
-    /// `minecraft:gameplay/sky_light_level`: how bright the sky counts now
+    /// `minecraft:gameplay/sky_light_level`.
     pub sky_light: f32,
     /// What an entity holds and wears.
     pub equipment: EquipmentAt<'a>,
-    /// `getMarkerParticleTarget`: the block a creative player holding a
+    /// `getMarkerParticleTarget`.
     pub marker: Option<&'static str>,
     /// See [`TickCtx::scoping_eye`].
     pub scoping_eye: Option<DVec3>,
@@ -134,7 +134,7 @@ impl<'a> World<'a> {
         }
     }
 
-    /// `getMaxLocalRawBrightness`: block light, or the sky's as far as it
+    /// `getMaxLocalRawBrightness`.
     pub fn raw_brightness(&self, pos: glam::IVec3) -> u8 {
         let (block, sky) = self.level.light_at(pos.x, pos.y, pos.z);
         let darken = (15.0 - self.sky_light).round().clamp(0.0, 15.0) as i32;
@@ -155,7 +155,7 @@ impl<'a> World<'a> {
     }
 }
 
-/// A particle asked for (`level.addParticle`): kept apart from making it,
+/// A particle asked for (`level.addParticle`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Spawn {
     pub spec: ParticleSpec,
@@ -195,7 +195,7 @@ impl Spawn {
     }
 }
 
-/// The textures particles are drawn from: the block models (for block
+/// The textures particles are drawn from.
 #[derive(Clone)]
 pub struct Looks {
     pub models: Arc<BlockModels>,
@@ -291,7 +291,7 @@ impl ParticleEngine {
         self.explosions = Default::default();
     }
 
-    /// `calculateParticleLevel`: the setting, sometimes one step up for an
+    /// `calculateParticleLevel`.
     fn particle_level(&mut self, always_show: bool) -> ParticleStatus {
         let mut level = self.status;
         if always_show && level == ParticleStatus::Minimal && self.rng.next_int(10) == 0 {
@@ -334,7 +334,7 @@ impl ParticleEngine {
         self.requests = requests;
     }
 
-    /// `ParticleEngine.add`: queued for the next tick, past any limit. A
+    /// `ParticleEngine.add`: queued for the next tick, past any limit.
     pub fn add(&mut self, p: Particle) {
         if p.kind == Kind::SporeBlossomAir {
             if self.spore_blossoms >= SPORE_BLOSSOM_LIMIT {
@@ -345,7 +345,7 @@ impl ParticleEngine {
         self.pending.push(p);
     }
 
-    /// Makes particles directly, through the world's looks: for spawners
+    /// Makes particles directly, through the world's looks.
     pub fn with_ctx<R>(
         &mut self,
         world: &World,
@@ -356,7 +356,7 @@ impl ParticleEngine {
         Some(f(&ctx, self))
     }
 
-    /// `ParticleEngine.tick`: every particle a tick older, the dead
+    /// `ParticleEngine.tick`.
     pub fn tick(&mut self, world: &World) {
         let mut debris = Vec::new();
         self.explosions
@@ -410,7 +410,7 @@ impl ParticleEngine {
     }
 }
 
-/// `ParticleGroup.add`: full at [`MAX_PER_GROUP`]; in the last quarter a
+/// `ParticleGroup.add`.
 fn admit_to_group(size: usize, rng: &mut JavaRandom) -> bool {
     if size >= MAX_PER_GROUP {
         return false;

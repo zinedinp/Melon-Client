@@ -1,4 +1,4 @@
-//! What blocks do to the motion of what moves over them, shared by the
+//! What blocks do to the motion of what moves over them, shared by the player and the entities.
 
 use crate::world::level::Level;
 use crate::world::physics;
@@ -6,7 +6,7 @@ use glam::DVec3;
 use pumpkin_data::tag::{self, Taggable};
 use pumpkin_data::{Block, BlockStateId};
 
-/// How far under the feet the block that affects movement is
+/// How far under the feet the block that affects movement is.
 pub const BELOW: f64 = 0.500_001;
 
 /// The block at the cell holding `at`; air outside loaded chunks.
@@ -68,7 +68,7 @@ pub fn block_below_supported(
     block_on(level, feet, supporting, BELOW)
 }
 
-/// `Entity.getOnPosLegacy` (`getOnPos(0.2F)`): the block a landing is
+/// `Entity.getOnPosLegacy` (`getOnPos(0.2F)`).
 pub fn block_underfoot(
     level: &Level,
     feet: DVec3,
@@ -77,7 +77,7 @@ pub fn block_underfoot(
     block_on(level, feet, supporting, f64::from(0.2_f32))
 }
 
-/// `Properties.bounceRestitution` of the blocks that have one: slime 1.0,
+/// `Properties.bounceRestitution` of the blocks that have one.
 pub fn bounciness(block: &Block) -> f32 {
     let name = block.name;
     if name == "slime_block" {
@@ -89,7 +89,7 @@ pub fn bounciness(block: &Block) -> f32 {
     }
 }
 
-/// What a move that hit something leaves of the velocity
+/// What a move that hit something leaves of the velocity.
 #[allow(clippy::too_many_arguments)]
 pub fn restituted(
     current: DVec3,
@@ -132,7 +132,7 @@ pub fn restituted(
     after
 }
 
-/// `Entity.getBlockSpeedFactor` / `getBlockJumpFactor` with `pick` the
+/// `Entity.getBlockSpeedFactor` / `getBlockJumpFactor`, `pick` choosing which.
 pub fn factor(
     level: &Level,
     feet: DVec3,

@@ -1,4 +1,4 @@
-//! The wire: packet IDs, VarInts, length-prefixed packets, and the stream
+//! The wire.
 
 pub mod compression;
 pub mod connection;

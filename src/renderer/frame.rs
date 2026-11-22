@@ -1,4 +1,4 @@
-//! Contract between the three layers: the only path world and UI take into the
+//! Contract between the three layers.
 
 use glam::Mat4;
 
@@ -13,7 +13,7 @@ pub struct Frame<'a> {
     /// GUI coordinate system of the `ui` vertices (`gui::screen::virtual_size`).
     pub ui_size: (f32, f32),
     pub clear_color: [f32; 4],
-    /// Blur what was drawn before a point in the UI list, then draw the rest
+    /// Blur what was drawn before a point in the UI list, then draw the rest over it.
     pub blur: Option<Blur>,
     /// Drawn before everything else, into their own textures, which `ui`
     /// shows.
@@ -25,15 +25,15 @@ pub struct Frame<'a> {
 pub struct Blur {
     /// The box width in pixels (`Options.menuBackgroundBlurriness`).
     pub radius: f32,
-    /// The scene and the UI calls before this index are blurred; the calls
+    /// The scene and the UI calls before this index are blurred.
     pub ui_split: usize,
 }
 
-/// World snapshot for one frame: sky first (background, no depth), then
+/// World snapshot for one frame.
 pub struct SceneFrame {
     pub sky: Option<Sky>,
     pub world: Option<WorldDraw>,
-    /// Extra meshes drawn with the same camera as `world` (terrain), each
+    /// Extra meshes drawn with the same camera as `world` (terrain).
     pub entities: Vec<EntityDraw>,
     /// Cloud boxes, camera-relative, white texture, vertex colour.
     pub clouds: Option<CloudDraw>,
@@ -44,9 +44,9 @@ pub struct SceneFrame {
     /// `textures/misc/enchanted_glint_{item,armor}.png`, for the overlay.
     pub glint_item: Option<TextureId>,
     pub glint_armor: Option<TextureId>,
-    /// The entities (indices into [`Self::entities`]) that glow, with the
+    /// The entities (indices into [`Self::entities`]) that glow, with their colour.
     pub glowing: Vec<(usize, [u8; 3])>,
-    /// Post effect chains the scene asks for (`creeper`, `invert`...), by
+    /// Post effect chains the scene asks for (`creeper`, `invert`...), by id.
     pub post_effects: Vec<String>,
 }
 
@@ -112,12 +112,12 @@ pub struct EntityDraw {
     pub atlas: TextureId,
     /// From the mesh to world space less [`Self::origin`].
     pub model: Mat4,
-    /// The block `model` is relative to. Far from the world's origin a
+    /// The block `model` is relative to.
     pub origin: glam::IVec3,
     /// [`RenderLayer::Entities`] or [`RenderLayer::Hand`].
     pub layer: RenderLayer,
     pub blend: Blending,
-    /// The light on this draw (`EntityRenderer.getPackedLightCoords` at
+    /// The light on this draw (`EntityRenderer.getPackedLightCoords` at the entity).
     pub light: Option<[f32; 3]>,
     /// Hurt red or creeper white, see [`DrawLight::overlay`](crate::renderer::pipeline::world::DrawLight::overlay).
     pub overlay: f32,
@@ -159,7 +159,7 @@ impl Blending {
     }
 }
 
-/// Which enchanted-glint overlay a draw wants (`TextureTransform` scale
+/// Which enchanted-glint overlay a draw wants (`TextureTransform` scale).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Glint {
     #[default]
@@ -218,7 +218,7 @@ impl Glint {
     }
 }
 
-/// The world's draw order, vanilla's (`LevelRenderer.renderLevel`, then
+/// The world's draw order, vanilla's (`LevelRenderer.renderLevel`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum RenderLayer {
     /// The cubemap or sky, behind everything, no depth.
@@ -235,7 +235,7 @@ pub enum RenderLayer {
     WaterMask,
     /// Water, glass and ice: blended over everything solid, far to near.
     Translucent,
-    /// Particles (`ParticleEngine.extract`): after the translucent
+    /// Particles (`ParticleEngine.extract`).
     Particles,
     /// Clouds and rain/snow, over the translucent terrain.
     Atmosphere,
@@ -257,12 +257,12 @@ impl RenderLayer {
         RenderLayer::Hand,
     ];
 
-    /// `renderItemInHand` clears the depth buffer first, so terrain the
+    /// `renderItemInHand` clears the depth buffer first, so terrain never covers the hand.
     pub const fn clears_depth(self) -> bool {
         matches!(self, RenderLayer::Hand)
     }
 
-    /// Whether the layer has a projection FOV of its own: the hand keeps
+    /// Whether the layer has a projection FOV of its own.
     pub const fn has_own_fov(self) -> bool {
         matches!(self, RenderLayer::Hand)
     }
@@ -270,7 +270,7 @@ impl RenderLayer {
 
 /// Cubemap sky around the camera (vanilla `CubeMap.render`).
 pub struct Sky {
-    /// Title-screen panorama. In a world the sky colour is the clear colour
+    /// Title-screen panorama.
     pub cubemap: Option<CubeMapId>,
     /// Camera orientation, no translation: the cubemap sits at infinity.
     pub view: Mat4,
@@ -282,21 +282,21 @@ pub struct Sky {
 /// How a [`CelestialDraw`] is drawn.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SkyKind {
-    /// The sky's flat colour (`tint`'s rgb), faded into the fog
+    /// The sky's flat colour (`tint`'s rgb), faded into the fog.
     Disc,
-    /// Over the sky colour, blended like `BlendFunction.TRANSLUCENT`: the
+    /// Over the sky colour, blended like `BlendFunction.TRANSLUCENT`.
     Glow,
     /// Sun, moon and stars (`BlendFunction.OVERLAY`).
     Celestial,
 }
 
-/// One mesh of the sky, camera-local (`SkyRenderer`): the disc, the glow
+/// One mesh of the sky, camera-local (`SkyRenderer`).
 pub struct CelestialDraw {
     pub kind: SkyKind,
     pub mesh: MeshId,
     pub atlas: TextureId,
     pub model: Mat4,
-    /// Vertex colour multiplier: rain fade on the sun/moon, star
+    /// Vertex colour multiplier.
     pub tint: [f32; 4],
 }
 
@@ -309,26 +309,26 @@ pub struct WorldDraw {
     /// Their translucent layer, far to near.
     pub translucent: Vec<ChunkDraw>,
     pub atlas: TextureId,
-    /// Translate by `-cam_pos` then rotate (vanilla `Camera` order), unlike
+    /// Translate by `-cam_pos` then rotate (vanilla `Camera` order).
     pub view: Mat4,
-    /// The camera position the view translates by. The renderer moves each
+    /// The camera position the view translates by.
     pub eye: glam::DVec3,
     pub fov_y_degrees: f32,
-    /// The hand's: 70 degrees, narrowed while dying or in a fluid
+    /// The hand's.
     pub hand_fov_y_degrees: f32,
     /// Far plane distance in blocks (vanilla `GameRenderer.depthFar`).
     pub far: f32,
-    /// The lightmap colour at the player's eye, multiplied onto entity
+    /// The lightmap colour at the player's eye, multiplied onto entity draws.
     pub ambient: [f32; 3],
-    /// Time of day and brightness option, applied at draw time so day and
+    /// Time of day and brightness option, applied at draw time.
     pub lightmap: crate::world::lightmap::LightmapParams,
     /// The fog every drawn thing but the sky bodies is mixed into.
     pub fog: crate::world::fog::FogData,
-    /// The dimension's shading of faces by direction (down, up, north,
+    /// The dimension's shading of faces by direction (down, up, north, south, west, east).
     pub cardinal: [f32; 6],
-    /// The warp the nether portal and nausea put on the view, applied to
+    /// The warp the nether portal and nausea put on the view.
     pub distortion: Mat4,
-    /// `GameRenderer.bobView`: the walking sway, in view space, for the
+    /// `GameRenderer.bobView`.
     pub bob: Mat4,
 }
 
@@ -342,12 +342,12 @@ impl WorldDraw {
         }
     }
 
-    /// A chunk's `origin` relative to the camera's block, worked out in
+    /// A chunk's `origin` relative to the camera's block, worked out in `f64`.
     pub fn offset(&self, origin: glam::IVec3) -> glam::Vec3 {
         (origin.as_dvec3() - self.eye.floor()).as_vec3()
     }
 
-    /// `model`, relative to the block `origin`, made relative to the
+    /// `model`, relative to the block `origin`, made relative to the camera's block.
     pub fn relative_to(&self, model: Mat4, origin: glam::IVec3) -> Mat4 {
         let blocks = (origin - self.eye.floor().as_ivec3()).as_vec3();
         let mut relative = model;
@@ -355,12 +355,12 @@ impl WorldDraw {
         relative
     }
 
-    /// Where the camera is within its block: the part of the view's
+    /// Where the camera is within its block.
     pub fn eye_fraction(&self) -> glam::Vec3 {
         (self.eye - self.eye.floor()).as_vec3()
     }
 
-    /// This frame's light for a world draw, with `ambient` for its
+    /// This frame's light for a world draw, with `ambient` for its sentinel-lit vertices.
     pub fn light(&self, ambient: [f32; 4]) -> crate::renderer::pipeline::world::DrawLight {
         crate::renderer::pipeline::world::DrawLight {
             ambient,
@@ -373,13 +373,13 @@ impl WorldDraw {
     }
 }
 
-/// A run of one chunk mesh - one or more neighbouring sections the culling
+/// A run of one chunk mesh: one or more neighbouring sections the culling let through.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChunkDraw {
     pub mesh: TerrainMesh,
     /// Where the chunk-local mesh starts in the world, in blocks.
     pub origin: glam::IVec3,
-    /// Quads of a [`TerrainMesh::Quads`] mesh, vertices of a
+    /// Quads of a [`TerrainMesh::Quads`] mesh, vertices of a vertex mesh.
     pub range: std::ops::Range<u32>,
 }
 
@@ -394,14 +394,14 @@ impl ChunkDraw {
     }
 }
 
-/// A chunk mesh: block faces as [`TerrainQuad`]s, or fluids as plain
+/// A chunk mesh.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TerrainMesh {
     Quads(QuadMeshId),
     Vertices(MeshId),
 }
 
-/// Light and ambient occlusion at one corner of a [`TerrainQuad`], in the
+/// Light and ambient occlusion at one corner of a [`TerrainQuad`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CornerLight {
     pub block: u8,
@@ -425,7 +425,7 @@ impl CornerLight {
     }
 }
 
-/// One block face of a terrain mesh: which baked quad it is (an index into
+/// One block face of a terrain mesh.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TerrainQuad(pub [u32; 5]);
@@ -436,7 +436,7 @@ impl TerrainQuad {
     /// Block heights the 12-bit y reaches.
     pub const MAX_HEIGHT: u32 = 1 << 12;
 
-    /// `index` into the quad table; `pos` chunk-local x, z (`0..16`) and y
+    /// `index` into the quad table; `pos` chunk-local x, z (`0..16`) and y.
     #[inline]
     pub fn new(index: u32, [x, y, z]: [u32; 3], corners: [CornerLight; 4], offset: u16) -> Self {
         debug_assert!(index < Self::MAX_QUADS && x < 16 && z < 16 && y < Self::MAX_HEIGHT);
@@ -455,7 +455,7 @@ impl TerrainQuad {
         ])
     }
 
-    /// [`Self::new`] with a biome colour the shader multiplies onto the
+    /// [`Self::new`] with a biome colour the shader multiplies onto the shade.
     pub fn tinted(
         index: u32,
         pos: [u32; 3],
@@ -503,18 +503,18 @@ impl TerrainQuad {
 
 const _: () = assert!(std::mem::size_of::<TerrainQuad>() == 20);
 
-/// One vertex of a terrain or entity mesh: an atlas UV, a colour (the
+/// One vertex of a terrain or entity mesh.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WorldVertex {
     pub pos: [f32; 3],
     /// Atlas or wrapping weather UV.
     pub uv: [f32; 2],
-    /// RGB as unsigned normalized bytes; alpha is 255 for terrain, the
+    /// RGB as unsigned normalized bytes; alpha is 255 for terrain.
     pub color: [u8; 4],
-    /// Block then sky in vanilla's light-coordinate units (`UV2`): level
+    /// Block then sky in vanilla's light-coordinate units (`UV2`).
     pub light: [u8; 2],
-    /// The direction (`Direction` ordinal, `0..6`) a baked block quad's
+    /// The direction (`Direction` ordinal, `0..6`) a baked block quad's shade was taken for.
     pub face: u8,
     pub _pad: u8,
 }
@@ -600,7 +600,7 @@ fn octahedron_encode(v: glam::Vec3) -> [f32; 2] {
 
 const _: () = assert!(std::mem::size_of::<WorldVertex>() == 28);
 
-/// A baked quad corner in the quad table `terrain.vert` reads: a
+/// A baked quad corner in the quad table `terrain.vert` reads.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct QuadCorner {
@@ -697,7 +697,7 @@ const _: () = assert!(std::mem::size_of::<QuadCorner>() == 24);
 /// The world camera's near plane, in blocks (vanilla `GameRenderer.PROJECTION_Z_NEAR`).
 pub const WORLD_Z_NEAR: f32 = 0.05;
 
-/// The world camera's projection (Vulkan clip space: depth `0..1`, Y down),
+/// The world camera's projection (Vulkan clip space.
 pub fn world_projection(fov_y_degrees: f32, aspect: f32, far: f32) -> Mat4 {
     glam::camera::rh::proj::vulkan::perspective(
         fov_y_degrees.to_radians(),

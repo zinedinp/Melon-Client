@@ -1,4 +1,4 @@
-//! Leads and the knots on fences (`LeashFeatureRenderer`,
+//! Leads and the knots on fences (`LeashFeatureRenderer`).
 
 use std::collections::HashMap;
 
@@ -26,7 +26,7 @@ struct Kept {
     seen: bool,
 }
 
-/// The leads drawn last frame, by the leashed entity's id: about 60 bytes
+/// The leads drawn last frame, by the leashed entity's id.
 #[derive(Default)]
 pub struct LeadMeshes {
     by_entity: HashMap<i32, Kept, ChunkHash>,
@@ -126,7 +126,7 @@ impl InWorld {
     }
 }
 
-/// Every lead whose ends, or the space between, the camera may see
+/// Every lead whose ends, or the space between, the camera may see.
 pub(super) fn visible_leads(
     entities: &Entities,
     level: &Level,

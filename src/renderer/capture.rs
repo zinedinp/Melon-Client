@@ -25,7 +25,7 @@ const COLOR: vk::ImageSubresourceRange = vk::ImageSubresourceRange {
 };
 
 impl Renderer {
-    /// Copies the next frame out. Does nothing if the swapchain images
+    /// Copies the next frame out.
     pub fn request_capture(&mut self) {
         self.capture.requested = true;
     }
@@ -35,7 +35,7 @@ impl Renderer {
         self.capture.image.take()
     }
 
-    /// Whether this frame is to be copied: asked for, and the format is one
+    /// Whether this frame is to be copied.
     pub(super) fn capturing(&mut self) -> bool {
         if !std::mem::take(&mut self.capture.requested) {
             return false;
@@ -50,7 +50,7 @@ impl Renderer {
             )
     }
 
-    /// Records the copy of the swapchain image (`PRESENT_SRC` on entry and
+    /// Records the copy of the swapchain image (`PRESENT_SRC` on entry and exit).
     pub(super) unsafe fn record_capture(
         &self,
         cmd: vk::CommandBuffer,
@@ -133,7 +133,7 @@ impl Renderer {
         Some(Readback { buffer, memory })
     }
 
-    /// Reads the copy once the GPU finished it (the caller waited on the
+    /// Reads the copy once the GPU finished it.
     pub(super) unsafe fn finish_capture(&mut self, readback: Readback) {
         let extent = self.swapchain.extent;
         let len = extent.width as usize * extent.height as usize * 4;

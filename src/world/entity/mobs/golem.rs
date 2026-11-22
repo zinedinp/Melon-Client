@@ -78,7 +78,7 @@ pub fn layer() -> LayerDefinition {
     LayerDefinition::new(root, 128.0, 128.0)
 }
 
-/// What the golem's pose reads besides the walk: the arm swing in ticks
+/// What the golem's pose reads besides the walk.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct GolemPose {
     pub attack: f32,
@@ -116,7 +116,7 @@ pub fn triangle_wave(index: f32, period: f32) -> f32 {
     ((index % period - period * 0.5).abs() - period * 0.25) / (period * 0.25)
 }
 
-/// `IronGolemRenderer.setupRotations`: it rocks from foot to foot while
+/// `IronGolemRenderer.setupRotations`.
 pub fn roll(walk_position: f32, walk_speed: f32) -> f32 {
     if walk_speed < 0.01 {
         0.0
@@ -125,7 +125,7 @@ pub fn roll(walk_position: f32, walk_speed: f32) -> f32 {
     }
 }
 
-/// `IronGolemModel.setupAnim`: arms up for an attack or the flower,
+/// `IronGolemModel.setupAnim`.
 pub fn setup_anim(
     parts: &GolemParts,
     pose: &mut ModelPose,

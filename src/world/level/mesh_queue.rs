@@ -1,4 +1,5 @@
 //! Which sections need a new mesh, and getting them built, as vanilla's
+//! `SectionRenderDispatcher` does.
 
 use std::sync::Arc;
 
@@ -17,11 +18,12 @@ use crate::world::terrain::{self, SectionMesh};
 use super::mesher::{Job, Mesher};
 use super::{AROUND, LoadedChunk, MeshStats};
 
-/// Chunks this close to the camera (squared, in chunks) are meshed without
+/// Chunks this close to the camera (squared, in chunks) are meshed without waiting for their
+/// neighbours.
 const NEAR_CHUNKS_SQ: i32 = 2;
-/// `LevelRenderer.compileSections`: a section whose centre is nearer the
+/// `LevelRenderer.compileSections`.
 const NEARBY_SQ: i64 = 768;
-/// `SectionTaskDynamicQueue.MAX_RECOMPILE_QUOTA`: rebuilds handed out in a
+/// `SectionTaskDynamicQueue.MAX_RECOMPILE_QUOTA`.
 const MAX_RECOMPILE_QUOTA: u8 = 2;
 /// Sections per column at most: the masks the renderer keeps are `u32`.
 const MAX_SECTIONS: i32 = 32;
@@ -31,7 +33,8 @@ type Chunks = ChunkMap<LoadedChunk>;
 /// A loaded section's meshing state.
 #[derive(Default)]
 struct Versions {
-    /// Bumped (from [`MeshQueue::next_version`]) whenever the blocks this
+    /// Bumped (from [`MeshQueue::next_version`]) whenever the blocks this section's mesh shows
+    /// change.
     current: u64,
     /// The version the current mesh was built from.
     meshed: u64,
@@ -63,7 +66,7 @@ impl Dirty {
 pub(super) struct Built {
     pub pos: SectionPos,
     pub mesh: SectionMesh,
-    /// Built on this thread for the frame now: shown before the meshes
+    /// Built on this thread for the frame now.
     pub sync: bool,
 }
 
@@ -83,17 +86,17 @@ pub(super) struct MeshQueue {
     parked_at: Option<((i32, i32), u64)>,
     /// Started on the first [`MeshQueue::run`].
     mesher: Option<Mesher>,
-    /// The block models `mesher`'s workers build with: a reload of the
+    /// The block models `mesher`'s workers build with.
     mesher_models: Option<Arc<BlockModels>>,
     /// Source of versions, never reused.
     next_version: u64,
-    /// Dirty sections that could be meshed, as of the last
+    /// Dirty sections that could be meshed, as of the last [`MeshQueue::run`].
     ready_count: usize,
     /// The "Smooth Lighting" option is off: faces are lit flat.
     flat_lighting: bool,
     /// The "Chunk Builder" option.
     chunk_builder: ChunkBuilder,
-    /// Rebuilds handed out in a row (`SectionTaskDynamicQueue`'s quota,
+    /// Rebuilds handed out in a row (`SectionTaskDynamicQueue`'s quota).
     recompiles: u8,
     /// `Options.biomeBlendRadius` last applied: a change remeshes.
     biome_blend: u8,
@@ -118,7 +121,7 @@ impl MeshQueue {
         self.parked.remove(&key);
     }
 
-    /// The "Smooth Lighting" option: on a change every section is
+    /// The "Smooth Lighting" option.
     pub fn set_smooth_lighting(&mut self, on: bool) {
         if self.flat_lighting != on {
             return;
@@ -135,7 +138,7 @@ impl MeshQueue {
         self.chunk_builder = builder;
     }
 
-    /// `Options.biomeBlendRadius`: a change remeshes every section, as
+    /// `Options.biomeBlendRadius`.
     pub fn set_biome_blend(&mut self, radius: u8) {
         if self.biome_blend == radius {
             return;
@@ -161,7 +164,7 @@ impl MeshQueue {
         }
     }
 
-    /// Marks a loaded section for a remesh; `player` if the player's own
+    /// Marks a loaded section for a remesh; `player` if the player's own edit caused it.
     pub fn queue(&mut self, pos: SectionPos, player: bool) {
         let Some(versions) = self.versions.get_mut(&pos) else {
             return;
@@ -187,7 +190,7 @@ impl MeshQueue {
         }
     }
 
-    /// Builds the sections the Chunk Builder wants now, takes what the
+    /// Builds the sections the Chunk Builder wants now and takes what the workers finished.
     #[allow(clippy::too_many_arguments)]
     pub fn run(
         &mut self,
@@ -382,7 +385,7 @@ impl MeshQueue {
     }
 }
 
-/// `LevelRenderer.compileSections`: whether a waiting section is built on
+/// `LevelRenderer.compileSections`.
 fn builds_now(builder: ChunkBuilder, player: bool, distance_sq: i64) -> bool {
     match builder {
         ChunkBuilder::Nearby => player || distance_sq < NEARBY_SQ,
@@ -391,7 +394,7 @@ fn builds_now(builder: ChunkBuilder, player: bool, distance_sq: i64) -> bool {
     }
 }
 
-/// `SectionTaskDynamicQueue.poll` over two lists sorted nearest first: the
+/// `SectionTaskDynamicQueue.poll` over two lists sorted nearest first.
 fn poll<T>(
     initial: &mut std::iter::Peekable<impl Iterator<Item = (i64, T)>>,
     rebuild: &mut std::iter::Peekable<impl Iterator<Item = (i64, T)>>,
@@ -412,7 +415,7 @@ fn poll<T>(
     next.map(|(_, item)| item)
 }
 
-/// Squared distance from the camera's block to a section's centre, as
+/// Squared distance from the camera's block to a section's centre.
 fn distance_sq((x, s, z): SectionPos, eye: IVec3, min_y: i32) -> i64 {
     let centre = IVec3::new(
         x * SECTION_SIZE + 8,
@@ -433,7 +436,7 @@ fn neighborhood_of(chunks: &Chunks, key: (i32, i32)) -> [Option<Arc<Chunk>>; 9] 
     })
 }
 
-/// Whether a chunk's sections may be meshed: all neighbours there, or near
+/// Whether a chunk's sections may be meshed.
 fn ready(chunks: &Chunks, key: (i32, i32), center: (i32, i32)) -> bool {
     let (dx, dz) = (key.0 - center.0, key.1 - center.1);
     dx * dx + dz * dz <= NEAR_CHUNKS_SQ

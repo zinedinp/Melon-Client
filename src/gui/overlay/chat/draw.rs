@@ -1,4 +1,4 @@
-//! `ChatComponent.extractRenderState` and its hit tests: the lines above
+//! `ChatComponent.extractRenderState` and its hit tests.
 
 use super::{BOTTOM_MARGIN, Chat, Line, Tag};
 use crate::gui::text::font::Font;
@@ -27,7 +27,7 @@ impl Chat {
             .collect()
     }
 
-    /// `ChatComponent.extractRenderState`: the lines above the hotbar, the
+    /// `ChatComponent.extractRenderState`.
     #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &self,
@@ -183,7 +183,7 @@ impl Chat {
         }
     }
 
-    /// The run under the mouse at `(x, y)` on a `screen_height` screen,
+    /// The run under the mouse at `(x, y)` on a `screen_height` screen, if any.
     pub fn style_at(&self, font: &Font, screen_height: f32, x: f32, y: f32) -> Option<TextStyle> {
         let scale = self.scale();
         if scale <= 0.0 {
@@ -228,7 +228,7 @@ impl Chat {
             })
     }
 
-    /// Whether the mouse is over the queue line, which shows the next
+    /// Whether the mouse is over the queue line, which shows the next delayed message.
     pub fn is_over_queue(&self, screen_height: f32, x: f32, y: f32) -> bool {
         let scale = self.scale();
         if self.delayed.is_empty() || scale <= 0.0 {

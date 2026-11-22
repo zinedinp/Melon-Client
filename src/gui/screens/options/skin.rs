@@ -1,4 +1,4 @@
-//! Vanilla `SkinCustomizationScreen`: an on/off button per
+//! Vanilla `SkinCustomizationScreen`.
 
 use crate::gui::screen::{ConfigChange, ScreenContext};
 use crate::gui::screens::options::{on_off_label, value_label};

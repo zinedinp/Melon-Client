@@ -1,4 +1,4 @@
-//! What a mob's pose reads each frame ([`PoseInput`]) and the transform
+//! What a mob's pose reads each frame ([`PoseInput`]).
 
 use super::*;
 
@@ -322,7 +322,7 @@ pub fn pose_input(entity: &ClientEntity, partial: f32) -> PoseInput {
     }
 }
 
-/// From model space to the world: a vehicle sits on its own turn, a living
+/// From model space to the world.
 pub fn root(entity: &ClientEntity, input: &PoseInput, partial: f32) -> glam::Mat4 {
     use crate::world::entity::living;
     let position = input.living.position;

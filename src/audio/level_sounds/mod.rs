@@ -1,4 +1,4 @@
-//! What each level event sounds like (`LevelEventHandler.levelEvent`): the
+//! What each level event sounds like (`LevelEventHandler.levelEvent`).
 
 mod data;
 

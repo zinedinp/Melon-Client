@@ -1,4 +1,4 @@
-//! How particles look over their life: the sprite sets of
+//! How particles look over their life.
 
 use std::path::Path;
 
@@ -19,7 +19,7 @@ pub struct SpriteSets {
 }
 
 impl SpriteSets {
-    /// The atlas ids every set needs (`minecraft:particle/generic_0`...),
+    /// The atlas ids every set needs (`minecraft:particle/generic_0`...).
     pub fn texture_ids(assets_root: &Path) -> Vec<String> {
         let mut ids: Vec<String> = kind::all()
             .flat_map(|kind| textures_of(assets_root, kind))
@@ -29,7 +29,8 @@ impl SpriteSets {
         ids
     }
 
-    /// The sets, with each texture's place from `sprite` (an atlas lookup
+    /// The sets, with each texture's place from `sprite` (an atlas lookup), `missing` for one
+    /// not found.
     pub fn load(assets_root: &Path, sprite: impl Fn(&str) -> Option<Rect>, missing: Rect) -> Self {
         let sets = (0..kind::COUNT)
             .map(|id| {
@@ -44,7 +45,7 @@ impl SpriteSets {
         Self { sets, missing }
     }
 
-    /// The sprites of `kind`; empty for a type drawn without any (a
+    /// The sprites of `kind`; empty for a type drawn without any.
     pub fn set(&self, kind: Kind) -> &[Rect] {
         self.sets
             .get(usize::from(kind.to_id()))
@@ -56,7 +57,7 @@ impl SpriteSets {
         self.set(kind).first().copied().unwrap_or(self.missing)
     }
 
-    /// `SpriteSet.get(age, lifetime)`: the sprite for this point of the
+    /// `SpriteSet.get(age, lifetime)`.
     pub fn from_age(&self, kind: Kind, age: i32, lifetime: i32) -> Rect {
         let set = self.set(kind);
         match set.len() {
@@ -84,7 +85,7 @@ pub fn sprite_index(age: i32, lifetime: i32, n: usize) -> usize {
     (age.clamp(0, lifetime) * last / lifetime).clamp(0, last) as usize
 }
 
-/// Particle types registered without a sprite set (`ParticleEngine` gives
+/// Particle types registered without a sprite set (`ParticleEngine` gives them none).
 const SPRITELESS: &[&str] = &[
     "block",
     "block_crumble",

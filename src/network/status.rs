@@ -1,4 +1,4 @@
-//! Vanilla `ServerStatusPinger`: the server list's query. Handshake with
+//! Vanilla `ServerStatusPinger`: the server list's query.
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -14,7 +14,7 @@ use crate::gui::text::font::{SPRITE_COUNT, sprite_char};
 
 const TIMEOUT: Duration = Duration::from_secs(5);
 
-/// The hostname did not resolve (`UnknownHostException`): the server list
+/// The hostname did not resolve (`UnknownHostException`).
 #[derive(Debug)]
 pub struct CannotResolve;
 
@@ -38,7 +38,7 @@ pub struct ServerStatus {
     pub version_name: String,
     pub protocol: i32,
     pub latency_ms: u128,
-    /// The textures (`textures/<id>.png`) of the sprites in the
+    /// The textures (`textures/<id>.png`) of the sprites in the description.
     pub sprites: Vec<String>,
     /// `favicon`: the server's 64x64 icon.
     pub favicon: Option<RgbaImage>,
@@ -109,7 +109,7 @@ fn modern_ping(mut stream: TcpStream, host: &str, port: u16) -> Result<ServerSta
     })
 }
 
-/// `ServerStatusPinger.sanitizeDescription`, for the components Melon can
+/// `ServerStatusPinger.sanitizeDescription`, for the components Melon can show.
 fn sanitize_description(component: &Value, depth: u32, sprites: &mut Vec<String>) -> Value {
     const CONTENT: [&str; 6] = ["text", "translate", "keybind", "selector", "score", "nbt"];
     if depth >= 16 {
@@ -158,7 +158,7 @@ fn sanitize_description(component: &Value, depth: u32, sprites: &mut Vec<String>
     }
 }
 
-/// `LegacyServerPinger`: the pre-1.7 ping (`0xFE 0x01 0xFA MC|PingHost`),
+/// `LegacyServerPinger`.
 fn legacy_ping(mut stream: TcpStream, host: &str, port: u16) -> Result<ServerStatus> {
     let utf16 =
         |text: &str| -> Vec<u8> { text.encode_utf16().flat_map(u16::to_be_bytes).collect() };
@@ -214,7 +214,7 @@ fn parse_legacy(body: &[u8], latency_ms: u128) -> Result<ServerStatus> {
     })
 }
 
-/// `ServerData.validateIcon`: a `data:image/png;base64,` URL holding a 64x64
+/// `ServerData.validateIcon`.
 fn decode_favicon(url: &str) -> Option<RgbaImage> {
     let data = url.strip_prefix("data:image/png;base64,")?;
     let png = crate::util::base64::decode(&data.replace('\n', ""))?;

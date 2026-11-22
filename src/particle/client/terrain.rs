@@ -1,4 +1,4 @@
-//! A block's crumbs: `ClientLevel.addDestroyBlockEffect` when it breaks,
+//! A block's crumbs.
 
 use glam::DVec3;
 
@@ -6,7 +6,7 @@ use super::super::{Kind, ParticleEngine, ParticleSpec, World, provider};
 use crate::world::block::direction::Direction;
 use crate::world::physics::Aabb;
 
-/// `getShape`'s boxes of `state` at `pos`, block-relative; a full cube for
+/// `getShape`'s boxes of `state` at `pos`, block-relative.
 fn shape_boxes(world: &World, pos: [i32; 3]) -> Vec<Aabb> {
     let origin = DVec3::new(f64::from(pos[0]), f64::from(pos[1]), f64::from(pos[2]));
     let boxes: Vec<Aabb> =
@@ -26,7 +26,7 @@ fn shape_boxes(world: &World, pos: [i32; 3]) -> Vec<Aabb> {
     }
 }
 
-/// `addDestroyBlockEffect`: a grid of crumbs over every box of the shape,
+/// `addDestroyBlockEffect`.
 pub fn destroy(engine: &mut ParticleEngine, world: &World, pos: [i32; 3], state: u16) {
     if state == 0 {
         return;

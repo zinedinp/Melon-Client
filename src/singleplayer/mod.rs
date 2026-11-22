@@ -1,4 +1,4 @@
-//! Melon-only world sidecar until a chunk engine exists. Folder layout matches
+//! Melon-only world sidecar until a chunk engine exists.
 
 pub mod creation;
 pub mod data_packs;

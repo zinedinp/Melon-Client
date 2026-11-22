@@ -13,7 +13,7 @@ use pumpkin_protocol::ser::NetworkReadSliceExt;
 use std::sync::Arc;
 
 const BIOMES_PER_SECTION: usize = 4 * 4 * 4;
-/// `Strategy.createForBlockStates`: bits 1..=8 stay indirect (palette +
+/// `Strategy.createForBlockStates`.
 const BLOCK_INDIRECT_MAX_BITS: u32 = 8;
 /// `Strategy.createForBiomes`: bits 1..=3 stay indirect.
 const BIOME_INDIRECT_MAX_BITS: u32 = 3;
@@ -75,7 +75,7 @@ pub fn decode(body: &[u8], height: Height) -> Result<Chunk> {
     Ok(chunk)
 }
 
-/// `ClientboundChunksBiomesPacket` (`/fillbiome`): for each listed column
+/// `ClientboundChunksBiomesPacket` (`/fillbiome`).
 pub fn decode_biomes(body: &[u8], height: Height) -> Result<Vec<(i32, i32, ChunkBiomes)>> {
     let mut r = Reader::new(body);
     let count = r.var_int()?;
@@ -101,7 +101,7 @@ pub fn decode_biomes(body: &[u8], height: Height) -> Result<Vec<(i32, i32, Chunk
     Ok(columns)
 }
 
-/// `ClientboundLightUpdatePacketData`: four `BitSet`s then two lists of
+/// `ClientboundLightUpdatePacketData`.
 pub fn decode_light(r: &mut Reader) -> Result<LightUpdate> {
     Ok(LightUpdate {
         sky_mask: read_bit_set(r)?,
@@ -127,7 +127,7 @@ fn read_bit_set(r: &mut Reader) -> Result<Vec<u64>> {
     Ok(words)
 }
 
-/// Each array straight into its [`LightSection`]: all-dark ones never
+/// Each array straight into its [`LightSection`].
 fn read_data_layers(r: &mut Reader) -> Result<Vec<LightSection>> {
     let count = r.var_int()?;
     if count < 0 {
@@ -146,7 +146,7 @@ fn read_data_layers(r: &mut Reader) -> Result<Vec<LightSection>> {
     Ok(arrays)
 }
 
-/// `ClientboundLevelChunkPacketData.BlockEntityInfo` list: count, then
+/// `ClientboundLevelChunkPacketData.BlockEntityInfo` list.
 fn read_block_entities(r: &mut Reader, chunk: &Chunk) -> Result<Vec<([i32; 3], HeadProfile)>> {
     let count = r.var_int()?;
     if count < 0 {
@@ -287,7 +287,7 @@ fn read_paletted(
     Ok(true)
 }
 
-/// `SimpleBitStorage`: values packed `bits_per_entry` bits apiece into
+/// `SimpleBitStorage`.
 fn read_packed_indices(
     r: &mut Reader,
     out: &mut [u16],
@@ -365,7 +365,7 @@ mod tests {
         body_of(OVERWORLD_SECTIONS)
     }
 
-    /// A body of `sections` sections with no heightmaps whose sections are
+    /// A body of `sections` sections with no heightmaps.
     fn body_of(sections: usize) -> Vec<u8> {
         let mut data = Vec::new();
         for section in 0..sections {
@@ -435,7 +435,7 @@ mod tests {
         assert!(decode(&nether, Height::OVERWORLD).is_err());
     }
 
-    /// One section of `blocks` as a `bits`-per-entry container: 0 single
+    /// One section of `blocks` as a `bits`-per-entry container.
     fn write_section(data: &mut Vec<u8>, bits: u32, blocks: &[u16; BLOCKS_PER_SECTION]) {
         data.extend_from_slice(&0i16.to_be_bytes());
         data.extend_from_slice(&0i16.to_be_bytes());

@@ -1,4 +1,4 @@
-//! `Hud.extractHearts`: the containers, the health over them, absorption
+//! `Hud.extractHearts`.
 
 use super::Layout;
 use crate::gui::hud::{ICON, JavaRandom, PlayerStatus};
@@ -109,12 +109,12 @@ impl Sprites {
     }
 }
 
-/// `max(MAX_HEALTH, displayed, current)`: the server's number, or what is
+/// `max(MAX_HEALTH, displayed, current)`.
 pub fn max_health(status: &PlayerStatus) -> f32 {
     status.max_health.max(status.health.ceil())
 }
 
-/// The blink after a change in health (`Hud.healthBlinkTime` and
+/// The blink after a change in health (`Hud.healthBlinkTime`).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Blink {
     last: i32,

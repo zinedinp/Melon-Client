@@ -1,4 +1,4 @@
-//! `AbstractFurnaceScreen`: the flame over the fuel slot and the arrow
+//! `AbstractFurnaceScreen`.
 
 use super::{Loader, MenuDraw, MenuScreen};
 use crate::gui::sprite::GuiSprite;
@@ -55,7 +55,7 @@ fn is_lit(menu: &OpenContainer) -> bool {
     menu.data(LIT_TIME) > 0
 }
 
-/// `getLitProgress`: the fuel left, 0 to 1 (a full flame when the burn
+/// `getLitProgress`.
 fn lit_progress(menu: &OpenContainer) -> f32 {
     let duration = match menu.data(LIT_DURATION) {
         0 => 200,

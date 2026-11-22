@@ -1,4 +1,4 @@
-//! Vanilla `AbstractSliderButton` as `OptionInstance` builds it for an
+//! Vanilla `AbstractSliderButton` as `OptionInstance` builds it.
 
 use crate::gui::screen::CursorKind;
 use crate::gui::sprite::GuiSprite;
@@ -62,7 +62,7 @@ impl Slider {
         Widget::update_hover(self, mx, my);
     }
 
-    /// `onClick`: starts a drag if `(mx, my)` is on the slider. `Some` with
+    /// `onClick`: starts a drag if `(mx, my)` is on the slider.
     pub fn press(&mut self, mx: f32, my: f32) -> Option<bool> {
         if !self.contains(mx, my) {
             return None;
@@ -82,7 +82,7 @@ impl Slider {
         std::mem::take(&mut self.dragging)
     }
 
-    /// `setValueFromMouse`, snapped to the nearest step as
+    /// `setValueFromMouse`, snapped to the nearest step.
     fn set_from_mouse(&mut self, mx: f32) -> bool {
         let fraction = ((mx - (self.x + HANDLE_W / 2.0)) / (self.w - HANDLE_W)).clamp(0.0, 1.0);
         let step = (fraction * self.steps as f32).round() as u32;

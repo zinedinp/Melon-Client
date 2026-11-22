@@ -1,4 +1,4 @@
-//! `SlimeModel` and `MagmaCubeModel`: the cube mobs. A slime is a small
+//! `SlimeModel` and `MagmaCubeModel`: the cube mobs.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};

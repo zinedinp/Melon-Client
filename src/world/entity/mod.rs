@@ -1,4 +1,4 @@
-//! Entities as vanilla's renderers see them: the model structure
+//! Entities as vanilla's renderers see them.
 
 pub mod animation;
 pub mod animations;

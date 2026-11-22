@@ -1,4 +1,4 @@
-//! The local player's hands as drawn: in first person each hand on its own
+//! The local player's hands as drawn.
 
 use glam::{Mat4, Vec3};
 
@@ -11,7 +11,7 @@ use crate::world::player::hands::{Hand, UseAnimation};
 
 /// One thing a first-person hand draws.
 pub(super) enum HandDraw<'a> {
-    /// The bare arm, `matrix` placing it where `renderHand` draws the arm
+    /// The bare arm, `matrix` placing it where `renderHand` draws it.
     Arm {
         arm: Arm,
         matrix: Mat4,
@@ -27,7 +27,7 @@ pub(super) enum HandDraw<'a> {
 }
 
 impl InWorld {
-    /// `AvatarRenderer.getArmPose` for both arms: empty, holding, or
+    /// `AvatarRenderer.getArmPose` for both arms.
     pub(super) fn arm_poses(&self, main_arm: Arm) -> ArmPoses {
         let pose = |hand: Hand| {
             if self.hand_stack(hand).is_empty() {

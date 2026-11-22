@@ -1,4 +1,4 @@
-//! The attributes the server sets on the local player and how movement
+//! The attributes the server sets on the local player and how movement reads them.
 
 use pumpkin_data::attributes::Attributes as A;
 
@@ -28,7 +28,7 @@ impl Instance {
     }
 }
 
-/// What the server set. An attribute it never sent reads as its vanilla
+/// What the server set.
 #[derive(Clone, Debug, Default)]
 pub struct PlayerAttributes {
     instances: Vec<(u8, Instance)>,
@@ -107,7 +107,7 @@ impl PlayerAttributes {
         }
     }
 
-    /// `Attributes.MOVEMENT_SPEED` with the sprint modifier added by the
+    /// `Attributes.MOVEMENT_SPEED` with the sprint modifier added when sprinting.
     pub fn movement_speed(&self, sprinting: bool) -> Option<f32> {
         let id = A::MOVEMENT_SPEED.id;
         let (_, instance) = self.instances.iter().find(|(i, _)| *i == id)?;

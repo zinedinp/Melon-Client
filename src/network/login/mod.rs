@@ -1,4 +1,4 @@
-//! Getting into a server: the handshake, login and configuration phases,
+//! Getting into a server.
 
 mod client_info;
 mod identity;

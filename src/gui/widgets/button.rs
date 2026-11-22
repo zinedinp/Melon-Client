@@ -4,7 +4,7 @@ use crate::gui::sprite::GuiSprite;
 use crate::gui::text::StyledText;
 use crate::gui::widgets::{Label, Rect, Ui, Widget};
 
-/// The three button states' sprites (vanilla's are 200x20 nine-slices,
+/// The three button states' sprites (vanilla's are 200x20 nine-slices).
 #[derive(Clone, Copy)]
 pub struct ButtonTextures {
     pub normal: GuiSprite,
@@ -42,7 +42,7 @@ pub struct Button {
     pub w: f32,
     pub h: f32,
     pub label: Label,
-    /// Centered icon instead of label (`CommonButtons`: language,
+    /// Centered icon instead of label (`CommonButtons`.
     pub icon: Option<IconSprite>,
     pub hovered: bool,
     pub enabled: bool,
@@ -119,7 +119,7 @@ impl Button {
         ui.text(label, tx.round(), ty.round(), color);
     }
 
-    /// [`Self::draw_labeled`] with a styled label, white where it has no
+    /// [`Self::draw_labeled`] with a styled label, white where it has no colour.
     pub fn draw_styled(&self, ui: &mut Ui, label: &StyledText) {
         if self.draw_frame(ui) {
             return;

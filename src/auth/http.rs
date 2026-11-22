@@ -1,4 +1,4 @@
-//! The auth requests' shared HTTP handling: error statuses come back as
+//! The auth requests' shared HTTP handling.
 
 use anyhow::Context;
 use serde::de::DeserializeOwned;
@@ -25,7 +25,7 @@ pub fn get(url: &str) -> RequestBuilder<WithoutBody> {
         .build()
 }
 
-/// A sent request's response, if it arrived with a success status; else
+/// A sent request's response, if it arrived with a success status; else an error naming `what`.
 pub fn check(
     what: &str,
     sent: Result<Response<Body>, ureq::Error>,
@@ -58,7 +58,7 @@ pub fn error(what: &str, response: &mut Response<Body>) -> anyhow::Error {
     anyhow::anyhow!("{what}: http status {status}: {}", short_body(&text))
 }
 
-/// A body fit for a message: a proxy's HTML error page (a 503 from a
+/// A body fit for a message.
 fn short_body(text: &str) -> String {
     let lower = text.to_ascii_lowercase();
     if lower.contains("<html") || lower.contains("<head") || lower.contains("<!doctype") {

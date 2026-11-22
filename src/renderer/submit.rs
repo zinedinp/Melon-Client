@@ -1,4 +1,4 @@
-//! One frame on the GPU: wait for a free frame slot, acquire, record,
+//! One frame on the GPU.
 
 use super::globals::Globals;
 use super::record::scene::ScenePart;
@@ -28,12 +28,12 @@ impl Renderer {
         &self.frames.applied_post_effects
     }
 
-    /// F3's GPU lines: the frame's GPU time and each pass's share, empty
+    /// F3's GPU lines.
     pub fn gpu_profile(&self) -> Vec<String> {
         self.gpu_timer.lines()
     }
 
-    /// The newest frame the GPU finished, unsmoothed: its time and each
+    /// The newest frame the GPU finished, unsmoothed.
     pub fn gpu_last_frame(&self) -> (f32, &[(&'static str, f32)]) {
         self.gpu_timer.last_frame()
     }

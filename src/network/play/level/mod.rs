@@ -1,4 +1,4 @@
-//! The level's packets: chunk columns with their light, light and biome
+//! The level's packets.
 
 pub mod chunk;
 pub(crate) mod chunk_batch;

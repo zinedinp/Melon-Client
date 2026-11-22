@@ -106,7 +106,7 @@ impl Section {
         y * 256 + z * 16 + x
     }
 
-    /// [`Section::index`] for any block coordinates, taking their low four
+    /// [`Section::index`] for any block coordinates, taking their low four bits.
     #[inline]
     pub const fn index_of_block(x: i32, y: i32, z: i32) -> usize {
         Self::index((x & 15) as usize, (y & 15) as usize, (z & 15) as usize)
@@ -124,7 +124,8 @@ impl Section {
         }
     }
 
-    /// Narrows `blocks` (index order, see [`Section::index`]) to the
+    /// Narrows `blocks` (index order, see [`Section::index`]) to the smallest store that holds
+    /// them.
     pub fn from_array(blocks: &[u16; BLOCKS_PER_SECTION]) -> Self {
         let first = blocks[0];
         if blocks.iter().all(|&id| id == first) {
@@ -264,7 +265,7 @@ impl Section {
         self.uniform() == Some(0)
     }
 
-    /// Whether some state `wanted` accepts may be in the section: judged
+    /// Whether some state `wanted` accepts may be in the section.
     pub fn may_hold(&self, wanted: impl Fn(u16) -> bool) -> bool {
         match &self.store {
             Store::Uniform(id) => wanted(*id),

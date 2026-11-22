@@ -1,4 +1,4 @@
-//! The mobs Melon draws: each one's models ([`ModelId`]), how they are
+//! The mobs Melon draws.
 
 pub mod allay;
 pub mod armadillo;
@@ -201,7 +201,7 @@ pub enum ModelId {
     ChestBoat,
     Raft,
     ChestRaft,
-    /// `BoatModel.createWaterPatch`: drawn into the depth only, to keep
+    /// `BoatModel.createWaterPatch`.
     BoatWaterPatch,
     Minecart,
     Bee,
@@ -275,7 +275,7 @@ pub enum ArmorStyle {
     Humanoid,
     /// `ZombieVillagerModel.createArmorLayerSet`: the head of a villager.
     ZombieVillager,
-    /// `PiglinModel.createArmorMeshSet` (outer grown by 1.02), and for babies
+    /// `PiglinModel.createArmorMeshSet` (outer grown by 1.02).
     Piglin,
     /// `ArmorStandArmorModel.createArmorLayerSet`, full and small.
     ArmorStand,
@@ -651,7 +651,7 @@ impl ModelId {
         }
     }
 
-    /// The keyframe animations of this model and the state slot driving
+    /// The keyframe animations of this model and the state slot driving each.
     pub fn animations(self) -> &'static [(&'static AnimationDefinition, usize)] {
         match self {
             Self::Bat => &bat::ANIMATIONS,
@@ -1113,7 +1113,7 @@ impl Rig {
 pub struct MobModel {
     pub model: Model,
     pub rig: Rig,
-    /// The keyframe animations the model plays, each with the slot of the
+    /// The keyframe animations the model plays, each with the slot of the state that runs it.
     pub animations: KeyframeSet,
     /// A walk-driven animation and the clock slot that gates it.
     pub walk: Option<(KeyframeAnimation, usize)>,
@@ -1124,7 +1124,7 @@ pub struct MobModel {
 /// How many animation clocks an entity has: the most any mob runs at once.
 pub const ANIMATION_SLOTS: usize = 6;
 
-/// What a pose reads: the living state, and for humanoids how the arms
+/// What a pose reads.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PoseInput {
     pub living: LivingRenderState,
@@ -1152,7 +1152,7 @@ pub struct PoseInput {
     pub guardian: guardian::GuardianPose,
     /// An adult axolotl's blend factors.
     pub axolotl: axolotl::Factors,
-    /// The keyframe animation clocks, by slot (`AnimationState`s of the
+    /// The keyframe animation clocks, by slot (`AnimationState`s of the entity).
     pub anim: [AnimationState; ANIMATION_SLOTS],
     pub bat_resting: bool,
     pub enderman: enderman::EndermanPose,
@@ -1807,7 +1807,7 @@ mod tests {
         assert_eq!(idle[head].pose, bat.model.initial(head));
     }
 
-    /// The variant tables assume the order the server syncs its registries
+    /// The variant tables assume the order the server syncs its registries in.
     #[test]
     fn the_variant_tables_follow_the_synced_registry_order() {
         use pumpkin_util::version::JavaMinecraftVersion;

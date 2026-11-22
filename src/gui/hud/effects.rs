@@ -1,4 +1,4 @@
-//! The status effects on screen: the icons in the corner of the HUD
+//! The status effects on screen.
 
 use std::collections::HashMap;
 
@@ -67,7 +67,7 @@ impl EffectTextures {
     }
 }
 
-/// `Hud.extractEffects`: the helpful ones in a row along the top right,
+/// `Hud.extractEffects`.
 pub fn draw_hud(
     draw_list: &mut DrawList,
     textures: &EffectTextures,
@@ -99,7 +99,7 @@ pub fn draw_hud(
     }
 }
 
-/// The tiles of the HUD, each effect with its top-left corner: from the
+/// The tiles of the HUD, each effect with its top-left corner.
 fn hud_tiles(effects: &ActiveEffects, width: f32) -> Vec<(ActiveEffect, f32, f32)> {
     let (mut beneficial, mut harmful) = (0.0_f32, 0.0_f32);
     let mut tiles = Vec::new();
@@ -119,7 +119,7 @@ fn hud_tiles(effects: &ActiveEffects, width: f32) -> Vec<(ActiveEffect, f32, f32
     tiles
 }
 
-/// The icon's alpha in its last ten seconds: fading toward half, with a
+/// The icon's alpha in its last ten seconds.
 fn blink(duration: i32) -> f32 {
     let remaining = duration as f32;
     let used_seconds = 10 - duration / 20;
@@ -132,7 +132,7 @@ fn blink(duration: i32) -> f32 {
 /// Where the inventory's list goes, from the panel it hangs beside.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EffectsPanel {
-    /// The panel's left, its top and its width (`leftPos`, `topPos`,
+    /// The panel's left, its top and its width (`leftPos`, `topPos`, `imageWidth`).
     pub left: f32,
     pub top: f32,
     pub width: f32,
@@ -140,13 +140,13 @@ pub struct EffectsPanel {
 }
 
 impl EffectsPanel {
-    /// `EffectsInInventory.canSeeEffects`: 32 pixels to the right of the
+    /// `EffectsInInventory.canSeeEffects`.
     pub fn fits(&self, screen_width: f32) -> bool {
         screen_width - (self.left + self.width + 2.0) >= SQUARE
     }
 }
 
-/// `EffectsInInventory.extractRenderState`. Returns the lines of a tooltip
+/// `EffectsInInventory.extractRenderState`.
 pub fn draw_inventory(
     draw_list: &mut DrawList,
     textures: &EffectTextures,
@@ -226,7 +226,7 @@ pub fn draw_inventory(
     tooltip
 }
 
-/// `EffectsInInventory.getEffectName`: the name, and the level in
+/// `EffectsInInventory.getEffectName`.
 pub fn effect_name(lang: &Lang, effect: &ActiveEffect) -> String {
     let mut name = effect.translation_key().map_or_else(
         || format!("effect.{}", effect.id),

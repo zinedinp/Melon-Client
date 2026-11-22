@@ -1,4 +1,4 @@
-//! Every GUI sprite plus the font, uploaded once at startup and handed to
+//! Every GUI sprite plus the font, uploaded once at startup.
 
 use crate::assets::Assets;
 use crate::gui::sprite::GuiSprite;
@@ -22,7 +22,7 @@ pub struct ServerListSprites {
     pub unknown_server: TextureId,
 }
 
-/// The two nine-slices every tooltip is drawn with, the frame over the
+/// The two nine-slices every tooltip is drawn with.
 #[derive(Clone, Copy)]
 pub struct TooltipSprites {
     pub background: GuiSprite,
@@ -30,7 +30,7 @@ pub struct TooltipSprites {
 }
 
 impl TooltipSprites {
-    /// Both sprites, or `None` if either is missing. Both are loaded either
+    /// Both sprites, or `None` if either is missing.
     pub fn load(renderer: &mut Renderer, assets: &Assets) -> Option<Self> {
         let background = load(
             renderer,
@@ -52,7 +52,7 @@ pub struct GuiAssets {
     pub language_icon: GuiSprite,
     pub accessibility_icon: GuiSprite,
     pub friends_icon: GuiSprite,
-    /// `PauseScreen`'s three other `SpriteIconButton` sprites
+    /// `PauseScreen`'s three other `SpriteIconButton` sprites.
     pub bug_icon: GuiSprite,
     pub feedback_icon: GuiSprite,
     pub player_reporting_icon: GuiSprite,
@@ -82,7 +82,7 @@ pub struct GuiAssets {
     pub world_row: RowIconSprites,
     /// The arrows of a pack list (`transferable_list/*`): select, move.
     pub pack_row: RowIconSprites,
-    /// The selected side's arrows: `transferable_list/unselect` on the left
+    /// The selected side's arrows.
     pub pack_selected_row: RowIconSprites,
     pub font: Font,
     pub font_textures: Vec<TextureId>,
@@ -93,7 +93,7 @@ pub struct GuiAssets {
 }
 
 impl GuiAssets {
-    /// Before a frame is drawn: makes the Unifont glyphs (Chinese,
+    /// Before a frame is drawn.
     pub fn sync_font(&mut self, renderer: &mut Renderer) {
         self.sync_objects(renderer);
         let work = self.font.bake_pending();
@@ -117,7 +117,7 @@ impl GuiAssets {
         }
     }
 
-    /// The atlas sprites `object` components in the last frame's text asked
+    /// The atlas sprites `object` components in the last frame's text asked for.
     fn sync_objects(&mut self, renderer: &mut Renderer) {
         use crate::component::ObjectInfo;
         use crate::gui::text::objects::{ObjectQuads, sprite_image};
@@ -135,7 +135,7 @@ impl GuiAssets {
         }
     }
 
-    /// Every GUI sprite plus the font, uploaded once. Shared by the game's
+    /// Every GUI sprite plus the font, uploaded once.
     pub fn load(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
         let mut font = Font::load(assets, "minecraft:default")?;
         font.white = renderer.white_texture();
@@ -337,7 +337,7 @@ fn load(renderer: &mut Renderer, assets: &Assets, id: &str) -> anyhow::Result<Gu
     GuiSprite::load(renderer, assets, id)
 }
 
-/// A texture of its own rather than a sprite (`gui/title/*`): sampled
+/// A texture of its own rather than a sprite (`gui/title/*`).
 fn standalone(renderer: &mut Renderer, assets: &Assets, id: &str) -> anyhow::Result<TextureId> {
     let image = assets.image(id)?;
     let (namespace, path) = crate::assets::split_id(id);
@@ -419,7 +419,7 @@ fn load_arrow(
     })
 }
 
-/// The arrows of a list row: `primary`, and with `movable` the move up and
+/// The arrows of a list row.
 fn load_row_icons(
     renderer: &mut Renderer,
     assets: &Assets,

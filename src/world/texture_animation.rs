@@ -1,11 +1,11 @@
-//! Animated atlas sprites (vanilla `SpriteContents.AnimatedTexture`): water,
+//! Animated atlas sprites (vanilla `SpriteContents.AnimatedTexture`).
 
 use std::path::Path;
 
 use image::RgbaImage;
 use serde_json::Value;
 
-/// An animated texture's frames, schedule (`(frame, ticks)` in play order,
+/// An animated texture's frames and schedule (`(frame, ticks)` in play order).
 pub struct Frames {
     pub images: Vec<RgbaImage>,
     pub schedule: Vec<(usize, u32)>,
@@ -39,10 +39,10 @@ impl Frames {
 
 /// The most frames an animated icon is baked into.
 const MAX_FRAMES: usize = 64;
-/// The longest stretch of ticks an icon's animations are followed over
+/// The longest stretch of ticks an icon's animations are followed over.
 const MAX_PERIOD: u64 = 1200;
 
-/// The ticks at which any animated texture `textures` loaded changes frame,
+/// The ticks at which any animated texture `textures` loaded changes frame, and the period.
 pub fn frame_changes<'a>(animations: impl Iterator<Item = &'a Frames>) -> Option<(Vec<u64>, u64)> {
     let animations: Vec<_> = animations.filter(|f| f.period() > 0).collect();
     let longest = animations.iter().map(|f| f.period()).max()?;
@@ -101,13 +101,13 @@ pub struct SpriteAnimation {
     sub_tick: u32,
 }
 
-/// The frames of a texture, if it is animated: `textures/<id>.png` cut into
+/// The frames of a texture, if it is animated.
 pub fn load_frames(assets_root: &Path, texture_id: &str) -> Option<Frames> {
     let (png, meta) = crate::assets::texture_with_meta(assets_root, texture_id)?;
     frames_of(&crate::assets::decode_png(&png)?, meta?.get("animation")?)
 }
 
-/// `strip` cut into the frames its `animation` section describes, if there
+/// `strip` cut into the frames its `animation` section describes, if there are any.
 pub fn frames_of(strip: &RgbaImage, animation: &Value) -> Option<Frames> {
     let (width, height) = frame_size(animation, strip.width(), strip.height());
     let per_row = (strip.width() / width).max(1);
@@ -130,7 +130,7 @@ pub fn frames_of(strip: &RgbaImage, animation: &Value) -> Option<Frames> {
     })
 }
 
-/// `AnimationMetadataSection.calculateFrameSize`: one frame of an
+/// `AnimationMetadataSection.calculateFrameSize`.
 pub fn frame_size(animation: &Value, image_width: u32, image_height: u32) -> (u32, u32) {
     let side = |key: &str| animation[key].as_u64().filter(|&n| n > 0).map(|n| n as u32);
     let square = image_width.min(image_height);
@@ -143,7 +143,7 @@ pub fn frame_size(animation: &Value, image_width: u32, image_height: u32) -> (u3
     (width.max(1), height.max(1))
 }
 
-/// `AnimationMetadataSection.frames`: `(frame, ticks)` in play order, each
+/// `AnimationMetadataSection.frames`.
 pub fn schedule(animation: &Value, count: usize) -> Vec<(usize, u32)> {
     let default_time = animation["frametime"].as_u64().unwrap_or(1).max(1) as u32;
     match animation["frames"].as_array() {
@@ -178,7 +178,7 @@ impl SpriteAnimation {
         }
     }
 
-    /// `AnimatedTexture.tick`: one client tick on. The image to upload, if
+    /// `AnimatedTexture.tick`: one client tick on.
     fn tick(&mut self) -> Option<RgbaImage> {
         if self.schedule.is_empty() {
             return None;

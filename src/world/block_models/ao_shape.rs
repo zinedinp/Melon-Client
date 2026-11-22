@@ -1,4 +1,4 @@
-//! What vanilla's smooth lighting reads off a quad's geometry
+//! What vanilla's smooth lighting reads off a quad's geometry.
 
 use glam::Vec3;
 
@@ -8,17 +8,17 @@ use crate::world::geometry::closest_direction;
 /// The facts above for one quad.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AoShape {
-    /// `BakedQuad.direction`: the axis its normal points most along
+    /// `BakedQuad.direction`.
     pub direction: Direction,
     /// `facePartial`: it doesn't cover its side of the block.
     pub partial: bool,
     /// Flat along its own axis (min == max), the first half of `faceCubic`.
     pub flat: bool,
-    /// On the block's side along its axis: the rest of `faceCubic`, unless
+    /// On the block's side along its axis.
     pub boundary: bool,
     /// Per vertex, the corner group (vanilla's `vert0..vert3`) it takes.
     pub groups: [u8; 4],
-    /// Per vertex, its four group weights for partial quads
+    /// Per vertex, its four group weights for partial quads.
     pub weights: [[f32; 4]; 4],
 }
 
@@ -42,7 +42,7 @@ macro_rules! vert {
     };
 }
 
-/// `AdjacencyInfo.vert0Weights..vert3Weights` by direction: four pairs
+/// `AdjacencyInfo.vert0Weights..vert3Weights` by direction.
 const WEIGHTS: [[[usize; 8]; 4]; 6] = [
     [
         vert!(FW S, FW FS, W FS, W S),
@@ -224,7 +224,7 @@ fn corner_groups(d: usize, corners: [Vec3; 4], min: Vec3, max: Vec3) -> [u8; 4] 
 }
 
 impl AoShape {
-    /// The shape of a quad with block-space `corners` (`0..1`, before any
+    /// The shape of a quad with block-space `corners` (`0..1`).
     pub fn of(corners: [Vec3; 4]) -> Self {
         let normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]);
         let direction = closest_direction(normal).unwrap_or(Direction::Up);

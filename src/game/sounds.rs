@@ -1,4 +1,4 @@
-//! The sounds of the world: the player's own (breaking, placing and hitting
+//! The sounds of the world.
 
 use super::InWorld;
 use crate::audio::SoundInstance;
@@ -22,7 +22,7 @@ const SMALL_FALL: &str = "entity.player.small_fall";
 const BIG_FALL: &str = "entity.player.big_fall";
 /// How far from the camera a global level event is heard.
 const GLOBAL_DISTANCE: f64 = 2.0;
-/// A server sound this close to one the client just played itself is the
+/// A server sound this close to one the client just played itself is the same sound.
 const ECHO_RANGE: f64 = 1.5;
 const ECHO_WINDOW: Duration = Duration::from_millis(750);
 
@@ -101,7 +101,7 @@ impl Default for Footsteps {
     }
 }
 
-/// What the client played itself lately: a server that tells every player
+/// What the client played itself lately.
 #[derive(Default)]
 pub(super) struct Echoes {
     recent: Vec<(String, [f64; 3], Instant)>,
@@ -206,7 +206,7 @@ fn special_level_sound(event: LevelEvent, at: [f64; 3]) -> Option<SoundInstance<
     })
 }
 
-/// Blocks that spawn no destroy event when a player breaks them
+/// Blocks that spawn no destroy event when a player breaks them.
 pub(super) fn breaks_silently(state: u16) -> bool {
     matches!(block_name(state), "fire" | "soul_fire")
 }
@@ -261,7 +261,7 @@ impl InWorld {
         }
     }
 
-    /// `Consumable.onUseTick`: the bite or sip of the food or drink being
+    /// `Consumable.onUseTick`.
     pub(super) fn play_consume_sound(&mut self) {
         let Some(hand) = self.hands.consuming.take() else {
             return;
@@ -309,7 +309,7 @@ impl InWorld {
         );
     }
 
-    /// `ClientHandler.handleExplosion`: the blast sound, at volume 4 and a
+    /// `ClientHandler.handleExplosion`.
     pub(super) fn on_explosion(&mut self, explosion: &Explosion) {
         let Some(sound) = &explosion.sound else {
             return;

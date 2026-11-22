@@ -1,4 +1,4 @@
-//! `TntRenderer`: primed TNT swells in its last ten ticks and flashes
+//! `TntRenderer`.
 
 /// `TntRenderer.getSwellAmount`.
 pub fn swell_amount(fuse: f32) -> f32 {

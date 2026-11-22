@@ -15,11 +15,11 @@ pub struct Texture {
     pub descriptor_set: vk::DescriptorSet,
     /// 1 plus the smaller levels below the full-size image.
     pub mip_levels: u32,
-    /// The handles belong to another slot (a freed slot showing the white
+    /// The handles belong to another slot (a freed slot showing the white texture).
     pub shared: bool,
 }
 
-/// Vulkan handles every texture upload needs, bundled so callers do not
+/// Vulkan handles every texture upload needs, bundled so callers pass one value.
 #[derive(Clone, Copy)]
 pub struct Uploader<'a> {
     pub device: &'a ash::Device,
@@ -34,7 +34,7 @@ impl Uploader<'_> {
         self.upload(std::slice::from_ref(rgba), &[], vk::ImageViewType::TYPE_2D)
     }
 
-    /// A 2D texture with its smaller levels, each half the size of the one
+    /// A 2D texture with its smaller levels, each half the size of the one before.
     pub unsafe fn image_2d_mipmapped(
         &self,
         rgba: &RgbaImage,

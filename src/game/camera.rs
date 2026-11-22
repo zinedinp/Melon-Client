@@ -1,4 +1,4 @@
-//! Vanilla `Camera` and `CameraType`: where the view is for this frame, and
+//! Vanilla `Camera` and `CameraType`.
 
 use glam::{DVec3, Mat4, Vec3};
 
@@ -22,7 +22,7 @@ pub enum CameraMode {
     FirstPerson,
     /// Normal over-the-shoulder chase camera, behind the player.
     ThirdPersonBack,
-    /// The "selfie" view: camera in front of the player, facing back at
+    /// The "selfie" view.
     ThirdPersonFront,
 }
 
@@ -49,7 +49,7 @@ pub struct Camera {
     pub fov: f32,
     /// Far plane, blocks.
     pub far: f32,
-    /// `GameRenderer.bobView`, between the projection and the view: what
+    /// `GameRenderer.bobView`, between the projection and the view.
     pub bob: Mat4,
 }
 
@@ -124,7 +124,7 @@ impl Camera {
         self.orientation.look
     }
 
-    /// `Camera.getNearPlane`: where the middle and the corners of the near
+    /// `Camera.getNearPlane`.
     pub fn near_plane(&self, aspect: f32) -> [Vec3; 5] {
         let near = crate::renderer::WORLD_Z_NEAR;
         let half_height = (self.fov.to_radians() / 2.0).tan() * near;
@@ -140,13 +140,13 @@ impl Camera {
         ]
     }
 
-    /// The view volume for a framebuffer of this `aspect`, relative to
-    /// [`Self::position`] (`Frustum.prepare`), the same one the
+    /// The view volume for a framebuffer of this `aspect`, relative to [`Self::position`]
+    /// (`Frustum.prepare`).
     pub fn frustum(&self, aspect: f32) -> Frustum {
         self.frustum_with_fov(aspect, self.fov)
     }
 
-    /// [`Self::frustum`] for another field of view: vanilla culls with at
+    /// [`Self::frustum`] for another field of view.
     pub fn frustum_with_fov(&self, aspect: f32, fov: f32) -> Frustum {
         Frustum::from_view_projection(
             world_projection(fov, aspect, self.far) * self.bob * self.view,
@@ -199,7 +199,7 @@ pub struct FovState {
 }
 
 impl InWorld {
-    /// `Camera.tickFov`: the share of the field of view that sprinting,
+    /// `Camera.tickFov`.
     pub(super) fn tick_fov(&mut self, effect_scale: f32) {
         let target = self.target_fov_modifier(effect_scale);
         self.fov.old = self.fov.modifier;
@@ -241,7 +241,7 @@ impl InWorld {
         self.fov
     }
 
-    /// `GameRenderer.bobHurt`: a dying camera rolls over to one side
+    /// `GameRenderer.bobHurt`.
     pub(super) fn hurt_bob(&self, strength: f32, partial: f32) -> Mat4 {
         let mut bob = Mat4::IDENTITY;
         if self.status.health <= 0.0 {
@@ -261,13 +261,13 @@ impl InWorld {
     }
 }
 
-/// `Camera.modifyFovBasedOnDeathOrFluid`: the view narrows while the camera
+/// `Camera.modifyFovBasedOnDeathOrFluid`.
 pub fn dying_fov(fov: f32, death_time: f32) -> f32 {
     let duration = death_time.min(20.0);
     fov / ((1.0 - 500.0 / (duration + 500.0)) * 2.0 + 1.0)
 }
 
-/// `GameRenderer.getDepthFar`: four times the render distance, so fog-free
+/// `GameRenderer.getDepthFar`.
 pub fn far_plane(render_distance: u8) -> f32 {
     (f32::from(render_distance) * 16.0 * 4.0).max(256.0)
 }

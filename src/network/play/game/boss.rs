@@ -28,7 +28,7 @@ pub enum BossEvent {
     Properties(Uuid, u8),
 }
 
-/// Reads a color or overlay ordinal; one that does not exist is an error,
+/// Reads a color or overlay ordinal; one that does not exist is an error.
 fn ordinal(r: &mut Reader, count: usize) -> Result<u8> {
     let value = r.var_int()?;
     match usize::try_from(value) {

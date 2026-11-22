@@ -1,4 +1,4 @@
-//! Small OS services shared by both binaries: opening links, the
+//! Small OS services shared by both binaries.
 
 #[cfg(target_os = "linux")]
 use std::io::ErrorKind;
@@ -186,7 +186,7 @@ pub fn clipboard_text() -> Option<String> {
     arboard::Clipboard::new().ok()?.get_text().ok()
 }
 
-/// The processor's marketing name (`GLX._getCpuInfo()`): `model name` in
+/// The processor's marketing name (`GLX._getCpuInfo()`).
 pub fn cpu_name() -> Option<String> {
     #[cfg(target_os = "linux")]
     if let Some(name) = std::fs::read_to_string("/proc/cpuinfo")
@@ -260,7 +260,7 @@ mod win_memory {
     }
 }
 
-/// Resident set size of this process: `/proc/self/statm` on Linux, the
+/// Resident set size of this process.
 pub fn resident_set_bytes() -> Option<u64> {
     #[cfg(target_os = "linux")]
     {
@@ -369,7 +369,7 @@ mod stack_tests {
 #[cfg(target_os = "linux")]
 const APP_ID: &str = "melon";
 
-/// Creates a window in the middle of its monitor. Windows places a new
+/// Creates a window in the middle of its monitor.
 pub fn create_centered_window(
     event_loop: &winit::event_loop::ActiveEventLoop,
     attributes: winit::window::WindowAttributes,
@@ -422,7 +422,7 @@ pub fn drop_cargo_stack() {
     }
 }
 
-/// Lets the calling thread give way when the CPU is busy: background work
+/// Lets the calling thread give way when the CPU is busy.
 pub fn lower_thread_priority() {
     #[cfg(target_os = "linux")]
     {
@@ -505,7 +505,7 @@ mod host_tests {
     }
 }
 
-/// The program's icon: the melon cube of the website, its cut face
+/// The program's icon.
 fn window_icon() -> Option<winit::window::Icon> {
     let icon = image::load_from_memory(include_bytes!("icon.png"))
         .ok()?

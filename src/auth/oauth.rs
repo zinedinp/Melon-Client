@@ -93,7 +93,7 @@ pub fn poll_for_token(
     }
 }
 
-/// `grant_type=refresh_token`: a new Microsoft access token (and usually a
+/// `grant_type=refresh_token`.
 pub fn refresh_access_token(
     client_id: &str,
     refresh_token: &str,

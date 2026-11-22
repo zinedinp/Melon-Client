@@ -1,9 +1,9 @@
-//! Vanilla `PlayerFaceExtractor`: a player's face cut from the 64x64 skin,
+//! Vanilla `PlayerFaceExtractor`.
 
 use crate::renderer::TextureId;
 use crate::renderer::quad::DrawList;
 
-/// Draws `skin`'s face `size` pixels square at `(x, y)`, with the hat
+/// Draws `skin`'s face `size` pixels square at `(x, y)`, with the hat on top.
 #[allow(clippy::too_many_arguments)]
 pub fn draw_face(
     draw_list: &mut DrawList,

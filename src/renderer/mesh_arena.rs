@@ -1,4 +1,4 @@
-//! Where terrain and entity meshes live on the GPU: a few large
+//! Where terrain and entity meshes live on the GPU.
 
 use ash::vk;
 
@@ -6,7 +6,7 @@ use super::create_buffer;
 use super::staging::Staging;
 use super::vk_util::{DEVICE_OR_HOST, create_buffer_in};
 
-/// Bytes per arena block. A mesh larger than that gets a block of its own
+/// Bytes per arena block.
 const BLOCK_BYTES: u64 = 64 << 20;
 /// A staging buffer up to this size is kept however little of it is used.
 const STAGING_KEPT: u64 = 4 << 20;
@@ -64,7 +64,7 @@ impl FreeList {
 /// What an arena's elements are.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
-    /// Vertices, read as vertex input; the arena holds the shared quad
+    /// Vertices, read as vertex input.
     Vertices,
     /// Terrain quads, read by the shader as a storage buffer.
     Quads,
@@ -116,7 +116,7 @@ pub struct MeshArena {
     /// By `MeshId`; `None` for a free id.
     slots: Vec<Option<Slot>>,
     free_ids: Vec<usize>,
-    /// Freed slots with the frame they were freed in: a frame still in
+    /// Freed slots with the frame they were freed in.
     retired: Vec<(u64, Slot)>,
     pending: Vec<PendingCopy>,
     pending_bytes: Vec<u8>,
@@ -234,7 +234,7 @@ impl MeshArena {
         )
     }
 
-    /// Queues `bytes` to be copied into `dst` at `dst_offset` at the start
+    /// Queues `bytes` to be copied into `dst` at `dst_offset` at the start of the next frame.
     pub fn queue_copy(&mut self, dst: vk::Buffer, dst_offset: u64, bytes: &[u8]) {
         if bytes.is_empty() {
             return;
@@ -248,7 +248,7 @@ impl MeshArena {
         self.pending_bytes.extend_from_slice(bytes);
     }
 
-    /// Places `elements` in a block and queues their upload; returns the
+    /// Places `elements` in a block and queues their upload; returns the mesh's id.
     pub unsafe fn upload<T: Copy>(
         &mut self,
         device: &ash::Device,
@@ -335,7 +335,7 @@ impl MeshArena {
         Ok(id)
     }
 
-    /// Frees a mesh; its space is reused once no frame in flight can draw
+    /// Frees a mesh; its space is reused once no frame in flight can draw it.
     pub fn free(&mut self, id: usize, frame_number: u64) {
         if let Some(slot) = self.slots.get_mut(id).and_then(Option::take) {
             self.free_ids.push(id);
@@ -377,8 +377,7 @@ impl MeshArena {
         }
     }
 
-    /// Releases retired slots no frame in flight can still draw and
-    /// destroys blocks left empty, then
+    /// Releases retired slots no frame in flight can still draw and destroys blocks left empty.
     pub unsafe fn record(
         &mut self,
         device: &ash::Device,

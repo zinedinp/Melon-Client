@@ -1,4 +1,4 @@
-//! The swapchain and what is sized with it (depth buffer, framebuffers),
+//! The swapchain and what is sized with it (depth buffer, framebuffers).
 
 use super::{Renderer, choose_surface_format, create_depth_image};
 use ash::vk;
@@ -6,7 +6,7 @@ use ash::vk;
 /// `VK_PRESENT_MODE_FIFO_LATEST_READY_KHR` (same value as the `EXT` one);
 pub const FIFO_LATEST_READY: vk::PresentModeKHR = vk::PresentModeKHR::from_raw(1000361000);
 
-/// `VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR`, chained by hand
+/// `VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR`, chained by hand.
 #[repr(C)]
 pub(super) struct FifoLatestReadyFeatures {
     pub s_type: vk::StructureType,
@@ -209,7 +209,7 @@ impl Renderer {
         self.set_present(vsync, self.swapchain.requested)
     }
 
-    /// VSync and, when `requested` is set, the present mode by name (which
+    /// VSync and, when `requested` is set, the present mode by name.
     pub fn set_present(
         &mut self,
         vsync: bool,

@@ -1,4 +1,4 @@
-//! Where a tracked entity is: following the server's moves and teleports
+//! Where a tracked entity is.
 
 use super::*;
 use crate::world::fluid::FluidKind;
@@ -60,7 +60,7 @@ fn lerp_rotation(mut from: f32, to: f32) -> f32 {
 }
 
 impl ClientEntity {
-    /// `moveOrInterpolateTo`: glide there over [`LERP_STEPS`] ticks, or
+    /// `moveOrInterpolateTo`.
     pub(super) fn interpolate_to(&mut self, pos: DVec3, yaw: f32, pitch: f32) {
         if pos.distance_squared(self.pos) > SNAP_DISTANCE * SNAP_DISTANCE {
             self.pos = pos;
@@ -92,7 +92,7 @@ impl ClientEntity {
         })
     }
 
-    /// `handleMoveEntity`: each step counts from the one before it,
+    /// `handleMoveEntity`.
     pub(super) fn relative_move(&mut self, m: &MoveEntity) {
         let (target, mut yaw, mut pitch) = self.target();
         let mut pos = target;
@@ -112,7 +112,7 @@ impl ClientEntity {
         self.interpolate_to(pos, yaw, pitch);
     }
 
-    /// `VecDeltaCodec` only: the client is moving this entity itself, so a
+    /// `VecDeltaCodec` only.
     pub(super) fn track_codec_move(&mut self, m: &MoveEntity) {
         if !m.steps.is_empty() {
             let mut at = self.base;
@@ -124,7 +124,7 @@ impl ClientEntity {
         self.on_ground = m.on_ground;
     }
 
-    /// Absolute or relative sync of the codec (and velocity), without
+    /// Absolute or relative sync of the codec (and velocity).
     pub(super) fn track_codec_position(&mut self, p: &SetPosition) {
         let r = |flag: i32, current: f64, new: f64| {
             if p.relative & flag != 0 {
@@ -191,7 +191,7 @@ impl ClientEntity {
         self.interpolate_to(pos, yaw, pitch);
     }
 
-    /// `FallingBlockEntity.tick` and `PrimedTnt.tick` as the client runs
+    /// `FallingBlockEntity.tick` and `PrimedTnt.tick` as the client runs them.
     pub(super) fn simulate(&mut self, level: &Level) -> bool {
         let at = self.pos.floor();
         if level
@@ -223,7 +223,7 @@ impl ClientEntity {
         false
     }
 
-    /// `ItemEntity.tick` as the client runs it: buoyancy in a fluid, else
+    /// `ItemEntity.tick` as the client runs it.
     fn simulate_item(&mut self, level: &Level) {
         let (w, h) = self.size();
         let region = Aabb::at_feet(self.pos, f64::from(w), f64::from(h)).deflate(0.001);
@@ -268,7 +268,7 @@ impl ClientEntity {
         }
     }
 
-    /// `Entity.move(MoverType.SELF, deltaMovement)` for a box that doesn't
+    /// `Entity.move(MoverType.SELF, deltaMovement)` for a box that doesn't step up.
     pub(super) fn move_by_velocity(&mut self, level: &Level) {
         let delta = self.velocity;
         let (w, h) = self.size();

@@ -1,4 +1,4 @@
-//! Headless Vulkan check: Khronos validation layers, every shader module,
+//! Headless Vulkan check.
 
 use super::{
     globals, indirect, pipeline, quad_table,

@@ -1,4 +1,4 @@
-//! `CreativeModeInventoryScreen.slotClicked`: what a click on a creative
+//! `CreativeModeInventoryScreen.slotClicked`.
 
 use super::{CreativeChanges, CreativeOverlay, IMAGE_HEIGHT, IMAGE_WIDTH, Slot};
 use crate::gui::overlay::container_input::SlotClick;
@@ -85,7 +85,7 @@ impl CreativeOverlay {
     }
 }
 
-/// A click with the Survival Inventory tab open: the real inventory's rules,
+/// A click with the Survival Inventory tab open.
 fn click_inventory_tab(
     inventory: &mut Inventory,
     click: &SlotClick,
@@ -127,7 +127,7 @@ fn click_inventory_tab(
     }
 }
 
-/// A click on an item of the picker: the creative stack is copied, never
+/// A click on an item of the picker.
 fn click_picker(
     inventory: &mut Inventory,
     clicked: &ItemStack,
@@ -202,7 +202,7 @@ fn click_picker(
     }
 }
 
-/// A click on the hotbar row or the destroy slot while a picker tab is open
+/// A click on the hotbar row or the destroy slot while a picker tab is open.
 fn click_picker_menu(
     inventory: &mut Inventory,
     click: &SlotClick,
@@ -243,7 +243,7 @@ fn click_picker_menu(
     }
 }
 
-/// `PICKUP_ALL` on the item picker menu, whose only player slots are the
+/// `PICKUP_ALL` on the item picker menu, whose only player slots are the hotbar.
 pub(super) fn pickup_all_from_hotbar(inventory: &mut Inventory) {
     let (slots, carried) = inventory.slots_and_carried_mut();
     if carried.is_empty() {

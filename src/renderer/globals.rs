@@ -1,4 +1,4 @@
-//! A world scene's constants for the whole frame, in a uniform buffer the
+//! A world scene's constants for the whole frame, in a uniform buffer the world shaders read.
 
 use ash::vk;
 use glam::Mat4;
@@ -87,7 +87,7 @@ impl Globals {
     }
 }
 
-/// The projection's `1 / m00` and `1 / m11`, which `world.vert` uses to
+/// The projection's `1 / m00` and `1 / m11`, which `world.vert` uses for its view rays.
 pub fn inverse_scale(projection: &Mat4) -> [f32; 2] {
     [1.0 / projection.x_axis.x, 1.0 / projection.y_axis.y]
 }

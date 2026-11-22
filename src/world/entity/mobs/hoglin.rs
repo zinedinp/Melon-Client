@@ -1,4 +1,4 @@
-//! `HoglinModel` and `BabyHoglinModel`: also used for a zoglin. The
+//! `HoglinModel` and `BabyHoglinModel`: also used for a zoglin.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};

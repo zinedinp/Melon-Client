@@ -389,7 +389,7 @@ fn detect_player(
     }
 }
 
-/// `BoneMealItem.addGrowthParticles`: what spreads (grass, nylium, moss,
+/// `BoneMealItem.addGrowthParticles`.
 fn growth(world: &World, pos: [i32; 3], count: i32, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     let state = world.level.block_state(pos[0], pos[1], pos[2]).unwrap_or(0);
     let name = super::super::client::block_name(state);
@@ -449,7 +449,7 @@ fn spread(
     }
 }
 
-/// Level event 3006: a sculk charge spreading over the faces `data` packs
+/// Level event 3006.
 fn sculk_charge(
     world: &World,
     base: DVec3,
@@ -538,7 +538,7 @@ pub fn in_block(
     }
 }
 
-/// `ParticleUtils.spawnSmashAttackParticles`: dust pillars of the block
+/// `ParticleUtils.spawnSmashAttackParticles`.
 fn smash_attack(
     world: &World,
     base: DVec3,
@@ -581,7 +581,7 @@ pub fn unpack_difference(pos: [i32; 3], packed: i32, radius: [i32; 3]) -> [i32; 
     ]
 }
 
-/// 128 portal particles strewn from `to` back to `base`; `[width,
+/// 128 portal particles strewn from `to` back to `base`.
 fn teleport_trail(
     base: DVec3,
     to: [i32; 3],

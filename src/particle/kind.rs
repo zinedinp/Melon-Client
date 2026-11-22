@@ -1,4 +1,4 @@
-//! The particle types (`ParticleTypes`), by network id: Pumpkin's
+//! The particle types (`ParticleTypes`), by network id.
 
 pub use pumpkin_data::particle::Particle as Kind;
 
@@ -10,7 +10,7 @@ pub fn all() -> impl Iterator<Item = Kind> {
     (0..COUNT).filter_map(Kind::from_id)
 }
 
-/// `ParticleType.getOverrideLimiter`: shown whatever the distance and the
+/// `ParticleType.getOverrideLimiter`.
 pub fn overrides_limiter(kind: Kind) -> bool {
     use Kind as P;
     matches!(

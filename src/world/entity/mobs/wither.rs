@@ -1,4 +1,4 @@
-//! `WitherBossModel`: three heads on a ribcage and a short tail. The armor
+//! `WitherBossModel`: three heads on a ribcage and a short tail.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
@@ -15,7 +15,7 @@ pub const TEXTURE: &str = "minecraft:entity/wither/wither";
 pub const INVULNERABLE_TEXTURE: &str = "minecraft:entity/wither/wither_invulnerable";
 pub const ARMOR_TEXTURE: &str = "minecraft:entity/wither/wither_armor";
 
-/// `WitherBossRenderer.getTextureLocation`: the invulnerable skin while
+/// `WitherBossRenderer.getTextureLocation`.
 pub fn texture(invulnerable_ticks: f32) -> &'static str {
     let ticks = invulnerable_ticks.floor() as i32;
     if ticks > 0 && (ticks > 80 || ticks / 5 % 2 != 1) {
@@ -111,7 +111,7 @@ impl WitherParts {
     }
 }
 
-/// `WitherBossModel.setupAnim`: the side heads look with the body, the
+/// `WitherBossModel.setupAnim`.
 pub fn setup_anim(
     parts: &WitherParts,
     pose: &mut ModelPose,

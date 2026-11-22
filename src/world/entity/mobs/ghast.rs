@@ -1,4 +1,4 @@
-//! `GhastModel` and `HappyGhastModel`: a cube with nine tentacles under it,
+//! `GhastModel` and `HappyGhastModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle;
@@ -10,7 +10,7 @@ use crate::world::model_part::{Cube, Pose};
 /// `MeshTransformer.scaling(4.5)`.
 pub const SCALE: f32 = 4.5;
 
-/// `MeshTransformer.scaling(factor)` on a root pose: the model grows about
+/// `MeshTransformer.scaling(factor)` on a root pose.
 pub fn scaling(pose: Pose, factor: f32) -> Pose {
     let mut pose = pose.scaled(factor);
     pose.offset.y += 24.016 * (1.0 - factor);
@@ -70,7 +70,7 @@ const HAPPY_SCALE: f32 = 4.0;
 /// `HappyGhastModel.BODY_SQUEEZE`: under a harness the body is slimmer.
 const BODY_SQUEEZE: f32 = 0.9375;
 
-/// The root of a happy ghast's models: four times over, and a baby's
+/// The root of a happy ghast's models.
 fn happy_root(baby: bool) -> Pose {
     let pose = scaling(Pose::ZERO, HAPPY_SCALE);
     if baby {
@@ -93,7 +93,7 @@ const HAPPY_TENTACLES: [(f32, f32, f32); TENTACLES] = [
     (6.25, 5.0, 5.0),
 ];
 
-/// `HappyGhastModel.createBodyLayer`: the tentacles hang from the body,
+/// `HappyGhastModel.createBodyLayer`.
 pub fn happy(baby: bool) -> LayerDefinition {
     let mut root = PartDefinition::root();
     let body = root.add_or_replace_child(
@@ -123,7 +123,7 @@ pub fn happy(baby: bool) -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 64.0)
 }
 
-/// `HappyGhastHarnessModel.createHarnessLayer`: a skin over the body and
+/// `HappyGhastHarnessModel.createHarnessLayer`.
 pub fn harness(baby: bool) -> LayerDefinition {
     let mut root = PartDefinition::root();
     root.add_or_replace_child(
@@ -194,7 +194,7 @@ impl HarnessParts {
     }
 }
 
-/// `HappyGhastHarnessModel.setupAnim`: goggles on the brow, or over the
+/// `HappyGhastHarnessModel.setupAnim`.
 pub fn harness_setup_anim(parts: &HarnessParts, pose: &mut ModelPose, happy: HappyGhastPose) {
     let goggles = &mut pose[parts.goggles].pose;
     if happy.ridden {

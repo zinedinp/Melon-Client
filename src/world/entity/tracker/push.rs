@@ -1,4 +1,4 @@
-//! What pushes the local player: vanilla's `LivingEntity.pushEntities` of
+//! What pushes the local player.
 
 use super::*;
 
@@ -8,7 +8,7 @@ const PUSH_STRENGTH: f64 = 0.05;
 const BOAT_REACH: f64 = 0.2;
 const BOAT_SQUEEZE: f64 = 0.01;
 
-/// `Entity.push(Entity)`, as the impulse the one at `from` gives something
+/// `Entity.push(Entity)`, as the impulse the one at `from` gives something at `at`.
 pub fn push_impulse(from: DVec3, at: DVec3) -> DVec3 {
     let xa = at.x - from.x;
     let za = at.z - from.z;
@@ -50,7 +50,7 @@ impl ClientEntity {
 }
 
 impl Entities {
-    /// The sum of the impulses the entities around give a player whose box
+    /// The sum of the impulses the entities around give a player whose box is `own`.
     pub fn push_on_player(&self, own: &Aabb, team_ok: impl Fn(uuid::Uuid, bool) -> bool) -> DVec3 {
         let own_vehicle = self.own_vehicle();
         let own_feet = DVec3::new(

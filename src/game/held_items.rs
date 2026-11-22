@@ -76,7 +76,7 @@ struct Uploaded {
 pub struct HeldItems {
     assets_root: PathBuf,
     sheets: Sheets,
-    /// `None` for an item with nothing to draw in hand; by item and
+    /// `None` for an item with nothing to draw in hand; by item and use.
     items: HashMap<(ItemKey, HeldUse), Option<Uploaded>>,
     /// Blocks drawn by a mob (a mooshroom's mushrooms), by model id.
     blocks: HashMap<&'static str, Option<Uploaded>>,
@@ -95,7 +95,7 @@ impl HeldItems {
         }
     }
 
-    /// Makes sure `stack` can be drawn in hand, in use or not, building it
+    /// Makes sure `stack` can be drawn in hand, in use or not, building it the first time.
     pub fn prepare(
         &mut self,
         renderer: &mut Renderer,
@@ -129,7 +129,7 @@ impl HeldItems {
         self.items.insert(key, held);
     }
 
-    /// Makes sure a player head with `profile` can be drawn in hand with
+    /// Makes sure a player head with `profile` can be drawn in hand with its skin.
     pub fn prepare_head(
         &mut self,
         renderer: &mut Renderer,
@@ -175,7 +175,7 @@ impl HeldItems {
         self.blocks.insert(model, held);
     }
 
-    /// The meshes and textures of a prepared block model, centred on the
+    /// The meshes and textures of a prepared block model.
     pub fn block(&self, model: &str) -> impl Iterator<Item = (MeshId, TextureId, bool)> + '_ {
         draws(
             self.blocks.get(model).and_then(Option::as_ref),

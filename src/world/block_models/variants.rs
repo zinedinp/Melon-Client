@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::world::java_random::JavaRandom;
 
-/// A state's models: the same quads everywhere, or parts that each pick
+/// A state's models.
 pub enum StateModel<Q> {
     Fixed(Arc<[Q]>),
     Random(Arc<RandomModel<Q>>),
@@ -70,7 +70,7 @@ impl<Q> StateModel<Q> {
         }
     }
 
-    /// Hands `out` the quads the block at world position `pos` shows
+    /// Hands `out` the quads the block at world position `pos` shows.
     #[inline]
     pub fn quads_at(&self, pos: [i32; 3], mut out: impl FnMut(&[Q])) {
         match self {
@@ -115,7 +115,7 @@ impl<Q> Part<Q> {
     }
 }
 
-/// `Mth.getSeed`: a block position's seed. The `x` product wraps as an
+/// `Mth.getSeed`: a block position's seed.
 pub fn seed(x: i32, y: i32, z: i32) -> i64 {
     let mut seed = i64::from(x.wrapping_mul(3_129_871))
         ^ i64::from(z).wrapping_mul(116_129_781)

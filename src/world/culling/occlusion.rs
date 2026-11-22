@@ -1,4 +1,4 @@
-//! Vanilla `SectionOcclusionGraph` (cave culling): a breadth-first walk out
+//! Vanilla `SectionOcclusionGraph` (cave culling).
 
 use glam::DVec3;
 
@@ -6,7 +6,7 @@ use super::visgraph::VisibilitySet;
 use crate::math::{SECTION_SIZE, section_coord};
 use crate::world::block::direction::{Direction, Directions};
 
-/// A section position: chunk X, section index from the world's bottom,
+/// A section position.
 pub type SectionPos = (i32, i32, i32);
 
 /// What the walk needs to know about one section.
@@ -14,7 +14,7 @@ pub type SectionPos = (i32, i32, i32);
 pub enum SectionState {
     /// Its chunk hasn't arrived: the walk doesn't enter it.
     Missing,
-    /// Arrived, with what can be seen through it. Not yet meshed counts as
+    /// Arrived, with what can be seen through it.
     Loaded(VisibilitySet),
 }
 
@@ -36,12 +36,12 @@ pub enum Column<'a> {
     Sets(&'a [VisibilitySet]),
 }
 
-/// Every section's [`SectionState`] in the window a walk around a camera
+/// Every section's [`SectionState`] in the window a walk around a camera covers.
 pub struct SectionGrid {
     center: (i32, i32),
     radius: i32,
     height: i32,
-    /// Layer after layer, bottom to top, in the [`OcclusionMask`]'s slot
+    /// Layer after layer, bottom to top, in the [`OcclusionMask`]'s slot order.
     cells: Vec<u64>,
 }
 
@@ -49,7 +49,7 @@ impl SectionGrid {
     /// Above any set's bits.
     const MISSING: u64 = u64::MAX;
 
-    /// The window [`walk`] covers for `view_distance` around chunk
+    /// The window [`walk`] covers for `view_distance` around chunk `center`.
     pub fn new<'a>(
         center: (i32, i32),
         view_distance: i32,
@@ -87,7 +87,7 @@ impl SectionGrid {
         }
     }
 
-    /// The window for `view_distance` around `center`, asking `section` for
+    /// The window for `view_distance` around `center`, asking `section` for each state.
     pub fn from_fn(
         center: (i32, i32),
         view_distance: i32,
@@ -133,13 +133,13 @@ impl SectionGrid {
     }
 }
 
-/// The sections the walk reached, as one bit each on a grid centred on the
+/// The sections the walk reached, as one bit each on a grid centred on the camera.
 pub struct OcclusionMask {
     center: (i32, i32),
     radius: i32,
     height: i32,
     bits: Vec<u64>,
-    /// The lowest layer of the open sky the walk left out, `height` when
+    /// The lowest layer of the open sky the walk left out, `height` when none.
     sky_from: i32,
     sky: Sky,
     /// What F3's `chunk_section_paths` draws, kept only when asked for.
@@ -157,9 +157,9 @@ struct Trace {
 /// How the open sky above a walk counts (see [`walk_grid`]).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Sky {
-    /// Above a reached section of the walk's top layer: exactly what the
+    /// Above a reached section of the walk's top layer.
     OverReached,
-    /// All of it in view, or none: with the smart cull, a line from higher
+    /// All of it in view, or none.
     All(bool),
 }
 
@@ -200,7 +200,7 @@ impl OcclusionMask {
         self.bits[slot / 64] |= 1 << (slot % 64);
     }
 
-    /// Whether the walk reached the section, i.e. it may be visible. In
+    /// Whether the walk reached the section, i.e. it may be visible.
     #[inline]
     /// TODO(perf): asked once per section by `Culler::reached_of`. With the
     /// bits laid out column by column (y fastest) a column's sections would
@@ -284,10 +284,10 @@ impl OcclusionMask {
 const ADVANCED_CULLING_DISTANCE_SQR: f64 = 60.0 * 60.0;
 /// `MINIMUM_ADVANCED_CULLING_SECTION_DISTANCE`: `blockToSectionCoord(60)`.
 const ADVANCED_CULLING_SECTIONS: i32 = 60 >> 4;
-/// `CEILED_SECTION_DIAGONAL`: `ceil(sqrt(3) * 16)`, the length of a step of
+/// `CEILED_SECTION_DIAGONAL`.
 const SECTION_DIAGONAL: f64 = 28.0;
 
-/// Where the camera is exactly, for vanilla's "smart cull" of distant
+/// Where the camera is exactly, for vanilla's "smart cull" of distant sections.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Eye {
     pub position: DVec3,
@@ -300,7 +300,6 @@ pub struct Eye {
 /// the distance (more in open terrain), so 32 chunks may cost over 1 ms a
 /// walk. Check how often a frame walks, and whether the frustum test per
 /// section (`Frustum::sees_centered_box`) or the queue dominates.
-/// Walks the section grid from `camera` (its Y clamped into the world) out
 pub fn walk(
     camera: SectionPos,
     height: i32,
@@ -322,7 +321,7 @@ struct Queued {
     step: u16,
 }
 
-/// [`walk`] over a grid centred on the camera's chunk. Sections are found
+/// [`walk`] over a grid centred on the camera's chunk.
 fn walk_grid(
     camera: SectionPos,
     view_distance: i32,
@@ -467,14 +466,14 @@ fn exits_of(cell: u64, entered: u8, travelled: u8) -> u8 {
 /// In [`Rays`]: the line from this corner stays in reached sections.
 const SEES: u8 = u8::MAX;
 
-/// `floor(v) as i32`, without a call into libm (plain x86-64 has no
+/// `floor(v) as i32`, without a call into libm.
 #[inline]
 fn floor_i32(v: f64) -> i32 {
     let t = v as i32;
     if f64::from(t) > v { t - 1 } else { t }
 }
 
-/// The smart cull's lines towards the camera during one walk, and what is
+/// The smart cull's lines towards the camera during one walk.
 struct Rays {
     camera: SectionPos,
     radius: i32,
@@ -484,7 +483,7 @@ struct Rays {
     min_y: f64,
     /// `ViewArea.maxY`: `Level.getMaxY`.
     top: f64,
-    /// Per section corner: [`SEES`], or the sample where the line left the
+    /// Per section corner.
     known: Vec<u8>,
 }
 
@@ -503,7 +502,7 @@ impl Rays {
         }
     }
 
-    /// Vanilla's distant step test: from the corner of the section at grid
+    /// Vanilla's distant step test.
     fn sees_camera(
         &mut self,
         mask: &OcclusionMask,
@@ -580,13 +579,13 @@ impl Rays {
     }
 }
 
-/// The faces a section was entered *through*: a step towards east enters
+/// The faces a section was entered *through*.
 #[inline]
 fn opposite_bits(steps: Directions) -> u8 {
     steps.iter().fold(0, |bits, d| bits | d.opposite().bit())
 }
 
-/// One walk to run: the sections' sets copied into a grid, so the walk
+/// One walk to run.
 pub struct WalkJob {
     camera: SectionPos,
     height: i32,
@@ -672,7 +671,7 @@ impl Worker {
     }
 }
 
-/// The last walk, kept until the camera changes section or the level's
+/// The last walk, kept until the camera changes section or the level changes.
 #[derive(Default)]
 pub struct OcclusionCache {
     /// What the mask in `mask` was walked for.
@@ -687,7 +686,7 @@ impl OcclusionCache {
         self.mask.as_ref()
     }
 
-    /// The newest finished mask, after asking for a walk if `camera`,
+    /// The newest finished mask, after asking for a walk if `camera` or the level changed.
     pub fn update(
         &mut self,
         camera: SectionPos,

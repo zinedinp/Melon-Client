@@ -1,4 +1,4 @@
-//! The Escape menu (vanilla `client/gui/screens/PauseScreen`, the
+//! The Escape menu (vanilla `client/gui/screens/PauseScreen`).
 
 use std::sync::Arc;
 
@@ -13,7 +13,7 @@ use crate::gui::widgets::button::{Button, IconSprite};
 use crate::gui::widgets::set::{KeyResult, WidgetSet};
 use crate::i18n::Lang;
 
-/// `PauseScreen.BUTTON_WIDTH_FULL` / `BUTTON_WIDTH_HALF`, and the 20px
+/// `PauseScreen.BUTTON_WIDTH_FULL` / `BUTTON_WIDTH_HALF`, and the 20px button height.
 const BUTTON_W: f32 = 204.0;
 const HALF_BUTTON_W: f32 = 98.0;
 const BUTTON_H: f32 = 20.0;
@@ -21,14 +21,14 @@ const BUTTON_H: f32 = 20.0;
 const PADDING: f32 = 4.0;
 /// `PauseScreen.MENU_PADDING_TOP`: the first row's extra top padding.
 const MENU_PADDING_TOP: f32 = 50.0;
-/// `SpriteIconButton.builder(...).width(20)` with a 15x15 sprite, four of
+/// `SpriteIconButton.builder(...).width(20)` with a 15x15 sprite, four of them in a row.
 const ICON_BUTTON: f32 = 20.0;
 const ICON_SPACING: f32 = 4.0;
 const ICON_ROW_W: f32 = ICON_BUTTON * 4.0 + ICON_SPACING * 3.0;
 
-/// Grid width: one full-width cell is `204 + 4 + 4`, and the two half-width
+/// Grid width.
 const GRID_W: f32 = BUTTON_W + PADDING * 2.0;
-/// Row heights: `20 + 50` for the first row (top padding, no bottom), then
+/// Row heights.
 const GRID_H: f32 = (BUTTON_H + MENU_PADDING_TOP) + (BUTTON_H + PADDING) * 4.0;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -36,7 +36,7 @@ enum Id {
     ReturnToGame,
     Advancements,
     Statistics,
-    /// Report Bugs / Give Feedback / Friends / Player Reporting, in
+    /// Report Bugs / Give Feedback / Friends / Player Reporting, in the icon row.
     Icon(usize),
     /// `addCustomDialogButtons`: the server's links or options.
     Custom,

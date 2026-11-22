@@ -1,4 +1,4 @@
-//! Local Melon client binaries: next to this process, in the home folder,
+//! Local Melon client binaries.
 
 use std::path::{Path, PathBuf};
 

@@ -1,4 +1,4 @@
-//! The other entities in the world: the server's packets about them go to
+//! The other entities in the world.
 
 use glam::{DVec3, IVec3, Mat4, Vec3};
 use pumpkin_data::item::Item;
@@ -86,7 +86,7 @@ impl EntityMeshes {
     }
 }
 
-/// Where one entity's draws go: the block its positions are relative to,
+/// Where one entity's draws go.
 #[derive(Clone, Copy)]
 pub(super) struct Placed {
     pub origin: IVec3,
@@ -95,7 +95,7 @@ pub(super) struct Placed {
 }
 
 impl InWorld {
-    /// One entity packet: the local player's own data goes to its state,
+    /// One entity packet.
     pub(super) fn receive_entity(&mut self, packet: EntityPacket) {
         let own = self.joined.session.info.entity_id;
         if let EntityPacket::Data { id, values } = &packet
@@ -162,7 +162,7 @@ impl InWorld {
         self.audio.push(sound);
     }
 
-    /// The items flying into hands move on, and their pickup sounds play
+    /// The items flying into hands move on, and their pickup sounds play.
     pub(super) fn tick_pickups(&mut self) {
         let own = self.joined.session.info.entity_id;
         let middle = (self.player.feet() + self.player.tick_eye()) / 2.0;
@@ -197,7 +197,7 @@ impl InWorld {
         }
     }
 
-    /// `LivingEntityRenderState.deathTime` of the local player: the body
+    /// `LivingEntityRenderState.deathTime` of the local player.
     pub(super) fn own_death_time(&self, partial: f32) -> f32 {
         if self.body.death > 0 {
             self.body.death as f32 + partial
@@ -376,14 +376,14 @@ impl InWorld {
         }
     }
 
-    /// `EntityRenderer.getPackedLightCoords`: the light at `eye`, with at
+    /// `EntityRenderer.getPackedLightCoords`.
     pub(super) fn light_at_eye(&self, eye: Vec3, glow: u8, params: &LightmapParams) -> [f32; 3] {
         let at = eye.floor().as_ivec3();
         let (block, sky) = self.level.light_at(at.x, at.y, at.z);
         lightmap::sample(block.max(glow), sky, params)
     }
 
-    /// The draws and shadows of the entities in `visible` (from
+    /// The draws and shadows of the entities in `visible`.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn entity_draws(
         &mut self,
@@ -615,7 +615,7 @@ impl InWorld {
         }
     }
 
-    /// A display entity's model (`DisplayRenderer`): where it is, turned
+    /// A display entity's model (`DisplayRenderer`).
     #[allow(clippy::too_many_arguments)]
     fn submit_display(
         &self,
@@ -693,7 +693,7 @@ impl InWorld {
         }
     }
 
-    /// `ItemFrameRenderer`: the frame's model against the block it hangs
+    /// `ItemFrameRenderer`.
     fn submit_item_frame(
         &self,
         assets: &WorldResources,
@@ -777,7 +777,7 @@ impl InWorld {
         );
     }
 
-    /// `Entity.getTeamColor` of a glowing entity: its team's colour, else
+    /// `Entity.getTeamColor` of a glowing entity.
     fn outline_color(
         &self,
         entity: &crate::world::entity::tracker::ClientEntity,
@@ -799,7 +799,7 @@ impl InWorld {
         Some(color)
     }
 
-    /// The items flying into hands (`ItemPickupParticle`), frozen as they
+    /// The items flying into hands (`ItemPickupParticle`).
     pub(super) fn pickup_draws(
         &self,
         assets: &WorldResources,
@@ -882,7 +882,7 @@ impl InWorld {
     }
 }
 
-/// `LivingEntityRenderer`: an invisible body is not drawn, but its armor
+/// `LivingEntityRenderer`.
 fn shows_when_invisible(entity: &crate::world::entity::tracker::ClientEntity) -> bool {
     !entity.appearance.invisible()
         || (mobs::wears_armor(entity.kind) && !entity.equipment.is_empty())
@@ -895,7 +895,7 @@ fn from_block(point: DVec3, origin: IVec3) -> Vec3 {
     (point - origin.as_dvec3()).as_vec3()
 }
 
-/// The tracked entities Melon draws that the camera can see, by id
+/// The tracked entities Melon draws that the camera can see, by id.
 pub(super) fn visible_entities(
     entities: &Entities,
     culler: &Culler,
@@ -1076,13 +1076,13 @@ fn shown_block(entity: &ClientEntity) -> Option<u16> {
     shows.then_some(state)
 }
 
-/// Where its biome tint is read, stable within a tick so the mesh
+/// Where its biome tint is read, stable within a tick so the mesh isn't rebuilt.
 fn block_at(entity: &ClientEntity) -> [i32; 3] {
     let at = entity.tick_pos().floor();
     [at.x as i32, at.y as i32, at.z as i32]
 }
 
-/// `FallingBlockRenderer.submit`: the block's model, centred on the entity
+/// `FallingBlockRenderer.submit`.
 fn submit_block_entity(
     assets: &WorldResources,
     entity: &ClientEntity,
@@ -1230,7 +1230,7 @@ fn submit_swallowed_block(
     });
 }
 
-/// `ItemEntityRenderer.submit`: the stack's ground model, bobbing and
+/// `ItemEntityRenderer.submit`.
 fn submit_item_entity(
     assets: &WorldResources,
     entity: &ClientEntity,
@@ -1537,7 +1537,7 @@ fn submit_mob(
     }
 }
 
-/// `IronGolemFlowerLayer`: a poppy held out in the right arm. The mesh is
+/// `IronGolemFlowerLayer`: a poppy held out in the right arm.
 fn submit_flower(assets: &WorldResources, arm: Mat4, placed: Placed, out: &mut Vec<EntityDraw>) {
     let parts: Vec<_> = assets.held.block(mobs::golem::FLOWER_MODEL).collect();
     let model = arm
@@ -1561,7 +1561,7 @@ fn submit_flower(assets: &WorldResources, arm: Mat4, placed: Placed, out: &mut V
     }
 }
 
-/// `SnowGolemHeadLayer`: a carved pumpkin on the head, five eighths of a
+/// `SnowGolemHeadLayer`.
 fn submit_pumpkin(
     assets: &WorldResources,
     head: Mat4,
@@ -1591,7 +1591,7 @@ fn submit_pumpkin(
     }
 }
 
-/// `MushroomCowMushroomLayer`: two mushrooms on the back and one on the
+/// `MushroomCowMushroomLayer`.
 fn submit_mushrooms(
     assets: &WorldResources,
     model: &str,
@@ -1631,7 +1631,7 @@ fn submit_mushrooms(
     }
 }
 
-/// `HumanoidArmorLayer` and every other worn extra layer: the same path
+/// `HumanoidArmorLayer` and every other worn extra layer.
 fn submit_worn(
     assets: &WorldResources,
     wearer: (&Model, &HumanoidParts, &ModelPose),
@@ -1700,7 +1700,7 @@ fn tinted(light: [f32; 3], tint: [f32; 3]) -> [f32; 3] {
     std::array::from_fn(|i| light[i] * tint[i])
 }
 
-/// An item frame's block models: plain, with a map, glowing, glowing with
+/// An item frame's block models.
 const FRAME_MODELS: [&str; 4] = [
     "block/item_frame",
     "block/item_frame_map",
@@ -1719,7 +1719,7 @@ fn mark_glowing(
     }
 }
 
-/// How the stack in `hand` of another entity is used, as its model sees it
+/// How the stack in `hand` of another entity is used, as its model sees it.
 fn remote_held_use(entity: &ClientEntity, hand: Hand, using: bool, fishing: bool) -> HeldUse {
     if using {
         return HeldUse::Using;

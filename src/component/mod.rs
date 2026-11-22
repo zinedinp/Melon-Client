@@ -1,4 +1,4 @@
-//! `net.minecraft.network.chat.Component`: text a server sends, with what it
+//! `net.minecraft.network.chat.Component`.
 
 mod contents;
 pub mod decode;
@@ -8,7 +8,7 @@ mod style;
 pub use contents::{AtlasSprite, Contents, NbtSource, ObjectInfo, PlayerSprite, Profile};
 pub use style::{ClickEvent, FontDescription, HoverEvent, Style, TextColor};
 
-/// A text component: its own contents, its style, and its siblings, which
+/// A text component.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Component {
     pub contents: Box<Contents>,
@@ -68,7 +68,7 @@ impl Component {
         self
     }
 
-    /// `Component.getString` without a language: a translated part gives
+    /// `Component.getString` without a language.
     pub fn plain_text(&self) -> String {
         let mut out = String::new();
         self.write_plain(&mut out);

@@ -114,7 +114,7 @@ pub(super) fn item(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     Some(p)
 }
 
-/// `TerrainParticle`: a quarter of the block's texture, tinted and
+/// `TerrainParticle`.
 fn terrain(
     kind: Kind,
     pos: DVec3,
@@ -145,7 +145,7 @@ fn terrain(
     Some(p)
 }
 
-/// A random quarter of `rect`, as `TerrainParticle` and
+/// A random quarter of `rect`, as `TerrainParticle` picks its UV.
 fn quarter(rect: [f32; 4], rng: &mut JavaRandom) -> [f32; 4] {
     let uo = rng.next_float() * 3.0;
     let vo = rng.next_float() * 3.0;
@@ -163,7 +163,7 @@ fn is_moving_piston(state: u16) -> bool {
     crate::particle::client::block_name(state) == "moving_piston"
 }
 
-/// `FallingDustParticle`'s colour: a falling block's dust colour, the
+/// `FallingDustParticle`'s colour.
 fn dust_color(ctx: &TickCtx, state: u16, at: [i32; 3]) -> [f32; 3] {
     let name = crate::particle::client::block_name(state);
     let dust = match name {

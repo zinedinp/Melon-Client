@@ -1,4 +1,4 @@
-//! Tooltips: `TooltipRenderUtil`'s box (the `tooltip/*` sprites, a dark
+//! Tooltips: `TooltipRenderUtil`'s box (the `tooltip/*` sprites) around the text.
 
 use crate::gui::assets::TooltipSprites;
 use crate::gui::text::{self, StyledText, TextPaint};
@@ -10,7 +10,7 @@ use crate::renderer::quad::DrawList;
 /// `Tooltip.MAX_WIDTH`: option tooltips wrap at this width.
 pub const MAX_WIDTH: f32 = 170.0;
 
-/// The text block's width and height. The first line stands 2 pixels
+/// The text block's width and height.
 pub fn size(paint: &TextPaint, lines: &[StyledText]) -> (f32, f32) {
     let width = lines
         .iter()
@@ -20,7 +20,7 @@ pub fn size(paint: &TextPaint, lines: &[StyledText]) -> (f32, f32) {
     (width, lines.len() as f32 * 10.0 - 2.0 + gap)
 }
 
-/// `DefaultTooltipPositioner`: right of and above the mouse, kept on the
+/// `DefaultTooltipPositioner`.
 pub fn beside_mouse(mouse: (f32, f32), text: (f32, f32), screen: (f32, f32)) -> (f32, f32) {
     let (width, height) = screen;
     let mut x = mouse.0 + 12.0;
@@ -63,7 +63,7 @@ pub fn by_widget(
     (x, y)
 }
 
-/// `TooltipRenderUtil.extractTooltipBackground` around the text at
+/// `TooltipRenderUtil.extractTooltipBackground` around the text at `text`.
 pub fn draw(
     draw_list: &mut DrawList,
     sprites: Option<&TooltipSprites>,
@@ -92,7 +92,7 @@ pub fn draw(
     }
 }
 
-/// The box the `tooltip/*` sprites draw, by hand, for an `assets/` folder
+/// The box the `tooltip/*` sprites draw, by hand, for an `assets/` folder without them.
 fn draw_plain_box(draw_list: &mut DrawList, white: TextureId, text: [f32; 4]) {
     let background = argb(0xF010_0010);
     let frame_top = argb(0x5050_00FF);

@@ -1,4 +1,4 @@
-//! `AnvilScreen`: the name field over the first input, the cost of the
+//! `AnvilScreen`.
 
 use pumpkin_data::item_stack::ItemStack;
 
@@ -74,7 +74,7 @@ impl AnvilScreen {
         self.rename(lang)
     }
 
-    /// `onNameChanged`: the name to send, if the server doesn't have it. A
+    /// `onNameChanged`: the name to send, if the server doesn't have it.
     fn rename(&mut self, lang: &crate::i18n::Lang) -> Option<String> {
         if self.item.is_empty() {
             return None;

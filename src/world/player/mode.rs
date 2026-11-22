@@ -38,7 +38,7 @@ pub mod glide {
     pub const DRAG: (f64, f64, f64) = (0.99_f32 as f64, 0.98_f32 as f64, 0.99_f32 as f64);
 }
 
-/// Impulse sources that ignore fall damage for a while
+/// Impulse sources that ignore fall damage for a while.
 #[allow(dead_code)]
 pub mod impulse {
     /// Riptide: `1.5 + 0.75 * (level - 1)` blocks of push; 20 spin ticks.

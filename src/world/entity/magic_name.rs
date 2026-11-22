@@ -14,7 +14,7 @@ pub enum Magic {
 }
 
 impl Magic {
-    /// The effect of `name` (`Component.getString`: the text without its
+    /// The effect of `name` (`Component.getString`.
     pub fn of(name: &str) -> Self {
         match name {
             "Dinnerbone" | "Grumm" => Self::UpsideDown,

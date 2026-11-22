@@ -1,4 +1,4 @@
-//! `PostChainConfig`: a post effect chain's JSON, checked the way vanilla's
+//! `PostChainConfig`.
 
 use std::collections::HashSet;
 
@@ -105,7 +105,7 @@ impl Config {
         Ok(config)
     }
 
-    /// `PostChain.load`'s check: every target a pass names is one of the
+    /// `PostChain.load`'s check.
     pub fn validate(&self, allowed: &[&str]) -> Result<(), String> {
         let own: HashSet<&str> = self.targets.iter().map(|t| t.name.as_str()).collect();
         let known = |target: &str| own.contains(target) || allowed.contains(&target);

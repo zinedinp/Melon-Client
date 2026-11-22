@@ -1,4 +1,4 @@
-//! `AdultAxolotlModel` and `BabyAxolotlModel`. An adult blends five poses
+//! `AdultAxolotlModel` and `BabyAxolotlModel`.
 
 use crate::math::angle::{HALF_PI as FRAC_PI_2, PI, QUARTER_PI as FRAC_PI_4};
 
@@ -42,7 +42,7 @@ pub const IDLE_UNDERWATER: usize = 4;
 pub const PLAY_DEAD: usize = 5;
 pub const BABY_SLOTS: usize = 6;
 
-/// The baby's animations and the clock slot of each. The walk-driven one
+/// The baby's animations and the clock slot of each.
 pub static BABY_ANIMATIONS: [(&AnimationDefinition, usize); 6] = [
     (&baby_anim::BABY_AXOLOTL_SWIM, SWIM),
     (&baby_anim::WALK_FLOOR_UNDERWATER, WALK),
@@ -179,7 +179,7 @@ pub fn baby() -> LayerDefinition {
     LayerDefinition::new(r, 32.0, 32.0)
 }
 
-/// `BinaryAnimator(10, IN_OUT_SINE)`: a factor that moves toward 1 or 0
+/// `BinaryAnimator(10, IN_OUT_SINE)`.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Eased {
     ticks: i32,
@@ -266,7 +266,7 @@ impl AxolotlParts {
     }
 }
 
-/// `AdultAxolotlModel.setupAnim`: each pose adds its share, and the right
+/// `AdultAxolotlModel.setupAnim`.
 pub fn setup_anim(p: &AxolotlParts, pose: &mut ModelPose, state: &LivingRenderState, f: Factors) {
     let age = state.age_in_ticks;
     let not_moving = 1.0 - f.moving;

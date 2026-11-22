@@ -1,4 +1,4 @@
-//! What the camera sees of the environment each frame: the atmosphere
+//! What the camera sees of the environment each frame.
 
 use glam::{Mat4, Vec3};
 
@@ -14,7 +14,7 @@ use crate::world::level::Level;
 use crate::world::physics::{eye_in_water, fluid_height};
 use crate::world::sky;
 
-/// `LocalPlayer.waterVisionTime`'s end: ticks in the water until the eyes
+/// `LocalPlayer.waterVisionTime`'s end.
 const WATER_VISION_TICKS: i32 = 600;
 
 /// What the fog keeps between frames.
@@ -72,7 +72,7 @@ impl InWorld {
         }
     }
 
-    /// This frame's atmosphere at the camera, its fog, and what the camera
+    /// This frame's atmosphere at the camera, its fog, and what the camera sees of the sky.
     pub(super) fn environment(
         &self,
         camera: &Camera,
@@ -156,7 +156,7 @@ impl InWorld {
         self.fog.rain_fog += (target - self.fog.rain_fog) * (ticks * 0.2).min(1.0);
     }
 
-    /// `LocalPlayer.getWaterVision`: `0` out of the water, then more as the
+    /// `LocalPlayer.getWaterVision`.
     fn water_vision(&self, in_water: bool) -> f32 {
         if !in_water {
             return 0.0;
@@ -273,10 +273,10 @@ impl InWorld {
     }
 }
 
-/// `ClientLevelData.getHorizonHeight`: where the world's horizon is, for
+/// `ClientLevelData.getHorizonHeight`.
 const HORIZON_HEIGHT: f32 = 63.0;
 
-/// `Camera.getFluidInCamera`, `ATMOSPHERIC` for none: water at the eye,
+/// `Camera.getFluidInCamera`, `ATMOSPHERIC` for none.
 pub fn fog_type(level: &Level, camera: &Camera, aspect: f32) -> FogType {
     if eye_in_water(level, camera.position) {
         return FogType::Water;

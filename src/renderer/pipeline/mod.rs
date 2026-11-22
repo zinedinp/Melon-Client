@@ -46,7 +46,7 @@ pub(super) unsafe fn create_shader_module(
 const DYNAMIC_STATES: [vk::DynamicState; 2] =
     [vk::DynamicState::VIEWPORT, vk::DynamicState::SCISSOR];
 
-/// What sets one pipeline apart; the rest (triangle lists, one viewport,
+/// What sets one pipeline apart from the others.
 pub(in crate::renderer) struct PipelineDesc<'a> {
     pub vert: &'a [u8],
     pub frag: &'a [u8],
@@ -59,7 +59,7 @@ pub(in crate::renderer) struct PipelineDesc<'a> {
     /// A second binding read per instance: its stride and its attributes,
     /// at the locations after [`Self::attributes`]'.
     pub instance: Option<(u32, &'a [(vk::Format, u32)])>,
-    /// The locations the vertex shader reads, when not all of them: the
+    /// The locations the vertex shader reads, when not all of them.
     pub used_locations: Option<&'a [u32]>,
     pub cull: vk::CullModeFlags,
     pub depth: vk::PipelineDepthStencilStateCreateInfo<'a>,
@@ -220,14 +220,14 @@ impl PipelineDesc<'_> {
     }
 }
 
-/// `sky`/`ui` don't test or write depth (background, then screen-space
+/// `sky`/`ui` don't test or write depth.
 pub(in crate::renderer) fn depth_disabled<'a>() -> vk::PipelineDepthStencilStateCreateInfo<'a> {
     vk::PipelineDepthStencilStateCreateInfo::default()
         .depth_test_enable(false)
         .depth_write_enable(false)
 }
 
-/// `data` as push-constant bytes. `size` is the range the pipeline layout
+/// `data` as push-constant bytes.
 pub fn push_constant_bytes(data: &[f32], size: u32) -> &[u8] {
     assert_eq!(std::mem::size_of_val(data), size as usize);
     unsafe { std::slice::from_raw_parts(data.as_ptr().cast(), std::mem::size_of_val(data)) }

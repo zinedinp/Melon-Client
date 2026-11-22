@@ -14,7 +14,7 @@ pub enum NbtSource {
     Storage(String),
 }
 
-/// `ResolvableProfile`, as far as a head needs it: who, and the skin
+/// `ResolvableProfile`, as far as a head needs it.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Profile {
     pub name: Option<String>,
@@ -50,7 +50,7 @@ impl ObjectInfo {
     /// `AtlasSprite.DEFAULT_ATLAS`.
     pub const DEFAULT_ATLAS: &'static str = "minecraft:blocks";
 
-    /// `ObjectInfo.defaultFallback`: what stands in for it where it can't
+    /// `ObjectInfo.defaultFallback`.
     pub fn default_fallback(&self) -> String {
         let short = |id: &str| id.strip_prefix("minecraft:").unwrap_or(id).to_owned();
         match self {
@@ -74,7 +74,7 @@ impl ObjectInfo {
 pub enum Contents {
     /// `PlainTextContents`.
     Text(String),
-    /// `TranslatableContents`: the key, what a missing translation shows
+    /// `TranslatableContents`.
     Translatable {
         key: String,
         fallback: Option<String>,

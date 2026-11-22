@@ -1,4 +1,4 @@
-//! A player's skin from Mojang's session server: the whole texture with
+//! A player's skin from Mojang's session server.
 
 use super::http;
 use anyhow::Context;
@@ -44,13 +44,13 @@ pub struct DownloadedSkin {
     pub slim: bool,
 }
 
-/// The head of the account `uuid` (32 hex digits), as it is on Mojang's
+/// The head of the account `uuid` (32 hex digits), as it is on Mojang's skin.
 pub fn fetch_head(uuid: &str) -> anyhow::Result<RgbaImage> {
     let skin = fetch_skin(uuid)?;
     head_from_skin(&skin.image).context("Skin hat kein Gesicht")
 }
 
-/// The skin of the account `uuid` (with or without dashes), made a 64x64
+/// The skin of the account `uuid` (with or without dashes), made a 64x64 image.
 pub fn fetch_skin(uuid: &str) -> anyhow::Result<DownloadedSkin> {
     let uuid = uuid.replace('-', "");
     let url = format!("https://sessionserver.mojang.com/session/minecraft/profile/{uuid}");
@@ -65,7 +65,7 @@ pub fn fetch_skin(uuid: &str) -> anyhow::Result<DownloadedSkin> {
     skin_from_textures(value)
 }
 
-/// The skin of the account called `name`: its id from Mojang's profile
+/// The skin of the account called `name`.
 pub fn fetch_skin_by_name(name: &str) -> anyhow::Result<DownloadedSkin> {
     #[derive(Deserialize)]
     struct Found {
@@ -82,7 +82,8 @@ pub fn fetch_skin_by_name(name: &str) -> anyhow::Result<DownloadedSkin> {
     fetch_skin(&found.id)
 }
 
-/// The skin a profile's `textures` property (Base64 JSON, as Mojang and
+/// The skin a profile's `textures` property (Base64 JSON, as Mojang and servers send it) points
+/// at.
 pub fn skin_from_textures(value: &str) -> anyhow::Result<DownloadedSkin> {
     let decoded = crate::util::base64::decode(value).context("textures property is not base64")?;
     let textures: Textures = serde_json::from_slice(&decoded).with_context(|| {
@@ -103,7 +104,7 @@ pub fn skin_from_textures(value: &str) -> anyhow::Result<DownloadedSkin> {
     Ok(DownloadedSkin { image, slim })
 }
 
-/// authlib's `TextureUrlChecker`: `https` on `minecraft.net` or
+/// authlib's `TextureUrlChecker`.
 fn allowed_texture_url(url: &str) -> bool {
     let Some(rest) = url.strip_prefix("https://") else {
         return false;
@@ -117,7 +118,7 @@ fn allowed_texture_url(url: &str) -> bool {
         .any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
 }
 
-/// `SkinTextureDownloader.processLegacySkin`: a 64x32 skin from before 1.8
+/// `SkinTextureDownloader.processLegacySkin`.
 pub fn process_legacy_skin(image: RgbaImage) -> Option<RgbaImage> {
     if image.width() != 64 || !(image.height() == 32 || image.height() == 64) {
         return None;
@@ -170,7 +171,7 @@ fn set_no_alpha(image: &mut RgbaImage, x0: u32, y0: u32, x1: u32, y1: u32) {
     }
 }
 
-/// `doNotchTransparencyHack`: an old hat layer without a single clear
+/// `doNotchTransparencyHack`.
 fn notch_transparency_hack(image: &mut RgbaImage, x0: u32, y0: u32, x1: u32, y1: u32) {
     for y in y0..y1 {
         for x in x0..x1 {

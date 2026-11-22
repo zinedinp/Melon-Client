@@ -1,4 +1,4 @@
-//! A frame's phases timed on the CPU, for F3: what the frame loop spends
+//! A frame's phases timed on the CPU, for F3.
 
 use std::time::{Duration, Instant};
 
@@ -13,15 +13,15 @@ pub struct FrameProfiler {
     frame_ms: f32,
     started: Instant,
     last: Instant,
-    /// The current (after [`Self::end`]: the last) frame's own times, for
+    /// The current (after [`Self::end`].
     frame: Vec<(&'static str, f32)>,
     frame_total_ms: f32,
-    /// When the last frame ended: from then until the next begins, the
+    /// When the last frame ended.
     ended: Option<Instant>,
     /// Since then: time in Melon's event handlers, and how many ran.
     gap_events: Duration,
     gap_count: u32,
-    /// Smoothed: Melon's event handlers, the rest of the event loop, how
+    /// Smoothed: Melon's event handlers, the rest of the event loop, and the events per frame.
     events_ms: f32,
     event_loop_ms: f32,
     events_per_frame: f32,
@@ -87,7 +87,7 @@ impl FrameProfiler {
         self.add(name, spent);
     }
 
-    /// Ends the phase `name`, of which `parts` were spent elsewhere, each
+    /// Ends the phase `name`, of which `parts` were spent elsewhere, each counted on its own.
     pub fn mark_split(&mut self, name: &'static str, parts: &[(&'static str, Duration)]) {
         let now = Instant::now();
         let spent = now - self.last;
@@ -131,7 +131,7 @@ impl FrameProfiler {
             .map_or(0.0, |&(_, ms)| ms)
     }
 
-    /// F3's lines: the whole frame, then each phase and the event loop
+    /// F3's lines.
     pub fn lines(&self) -> Vec<String> {
         let mut lines = vec![format!(
             "Frame: {:.2} ms ({:.2} ms CPU in the frame)",
@@ -164,11 +164,11 @@ impl FrameProfiler {
     }
 }
 
-/// What the kernel counts for the main thread (`/proc/thread-self`): its
+/// What the kernel counts for the main thread (`/proc/thread-self`).
 #[derive(Default)]
 struct KernelClock {
     last: Option<(Instant, ThreadCounts)>,
-    /// Over the last period: the share of the thread's CPU time spent in
+    /// Over the last period.
     kernel_share: Option<f32>,
     queued_ms_per_s: f32,
 }
@@ -225,7 +225,7 @@ impl ThreadCounts {
         None
     }
 
-    /// `stat`'s fields 14 and 15 (`utime`, `stime`) and `schedstat`'s
+    /// `stat`'s fields 14 and 15 (`utime`, `stime`) and `schedstat`'s wait time.
     #[cfg(any(target_os = "linux", test))]
     fn parse(stat: &str, sched: &str) -> Option<Self> {
         let rest = stat.get(stat.rfind(')')? + 1..)?;

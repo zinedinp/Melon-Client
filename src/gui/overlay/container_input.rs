@@ -1,4 +1,4 @@
-//! Vanilla `AbstractContainerScreen`'s mouse handling, shared by the
+//! Vanilla `AbstractContainerScreen`'s mouse handling, shared by the container overlays.
 
 use std::time::{Duration, Instant};
 
@@ -30,7 +30,7 @@ impl MouseButtonKind {
     }
 }
 
-/// One `slotClicked` call: the slot (if the mouse was over one), its menu
+/// One `slotClicked` call.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SlotClick {
     pub slot: Option<usize>,
@@ -45,7 +45,7 @@ pub fn hotbar_key(key: &str) -> Option<u8> {
     (1..=9).contains(&digit).then(|| digit - 1)
 }
 
-/// `AbstractContainerScreen.keyPressed` on the hovered `slot`: hotbar, F
+/// `AbstractContainerScreen.keyPressed` on the hovered `slot`.
 pub fn slot_bind(
     bind: &InputBind,
     config: &Config,
@@ -103,7 +103,7 @@ pub trait ContainerView {
     fn can_pickup_all(&self, _slot: usize) -> bool {
         true
     }
-    /// Whether two slots belong to the same container (Shift + double
+    /// Whether two slots belong to the same container (Shift + double click).
     fn same_container(&self, a: usize, b: usize) -> bool;
 }
 
@@ -342,7 +342,7 @@ impl ContainerMouse {
     }
 }
 
-/// `extractSlot`'s preview of a drag: the stack slot `slot` would get, and
+/// `extractSlot`'s preview of a drag.
 pub fn drag_preview(
     drag: &QuickCraft,
     slot: usize,

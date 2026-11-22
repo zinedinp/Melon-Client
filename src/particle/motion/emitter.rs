@@ -1,4 +1,4 @@
-//! Particles that draw nothing (`NoRenderParticle`) and spawn others for a
+//! Particles that draw nothing (`NoRenderParticle`) and spawn others for a while.
 
 use glam::DVec3;
 
@@ -9,13 +9,13 @@ use crate::world::java_random::JavaRandom;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Emitter {
-    /// `HugeExplosionSeedParticle`: six explosions a tick for 8 ticks,
+    /// `HugeExplosionSeedParticle`.
     ExplosionSeed,
-    /// `TrackingEmitter`: 16 of `spec` a tick around an entity's middle
+    /// `TrackingEmitter`.
     Tracking { entity: i32, spec: ParticleSpec },
     /// `GustSeedParticle`: three gusts within `scale`, every `delay + 1`
     GustSeed { scale: f32, delay: i32 },
-    /// `NoxiousGasCloudParticle`: gas over the water around potent sulfur
+    /// `NoxiousGasCloudParticle`.
     NoxiousGasCloud,
     /// `GeyserEruptionParticle`: the plume, its base and its puffs.
     Geyser { aux: [f32; 3], water_blocks: i32 },
@@ -140,7 +140,7 @@ pub fn tick(
     }
 }
 
-/// `PotentSulfurBlockEntity.canBeReachedByNoxiousGas`: the gas shows over
+/// `PotentSulfurBlockEntity.canBeReachedByNoxiousGas`.
 fn gas_reaches(ctx: &TickCtx, source: glam::IVec3, at: DVec3) -> bool {
     let cell = at.floor().as_ivec3();
     let state = crate::world::physics::block_at(ctx.level, cell.x, cell.y, cell.z);

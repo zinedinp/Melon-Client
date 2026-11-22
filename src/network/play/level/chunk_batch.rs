@@ -1,4 +1,4 @@
-//! Vanilla `ChunkBatchSizeCalculator`: how many chunks per tick this client
+//! Vanilla `ChunkBatchSizeCalculator`.
 
 use std::time::Instant;
 
@@ -6,7 +6,7 @@ use std::time::Instant;
 const INITIAL_NANOS_PER_CHUNK: f64 = 2_000_000.0;
 /// How many earlier batches the average weighs, at most.
 const MAX_OLD_SAMPLES_WEIGHT: u32 = 49;
-/// A batch counts as at most this many times faster or slower than the
+/// A batch counts as at most this many times faster or slower than the average.
 const CLAMP_COEFFICIENT: f64 = 3.0;
 /// The time per tick the client offers to spend on chunks.
 const BUDGET_NANOS_PER_TICK: f64 = 7_000_000.0;
@@ -33,7 +33,7 @@ impl ChunkBatchSizeCalculator {
         self.batch_start = Instant::now();
     }
 
-    /// `ClientboundChunkBatchFinishedPacket` arrived, closing a batch of
+    /// `ClientboundChunkBatchFinishedPacket` arrived, closing a batch of `batch_size` chunks.
     pub(crate) fn on_batch_finished(&mut self, batch_size: i32) {
         let nanos = self.batch_start.elapsed().as_nanos() as f64;
         self.add_sample(nanos, batch_size);

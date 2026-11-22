@@ -1,4 +1,4 @@
-//! `RavagerModel`: a horned head on a thick neck, a jaw that opens for a
+//! `RavagerModel`.
 
 use super::{LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI};
@@ -81,7 +81,7 @@ pub fn layer() -> LayerDefinition {
     LayerDefinition::new(root, 128.0, 128.0)
 }
 
-/// What the pose reads besides the walk: stun and attack ticks left, and
+/// What the pose reads besides the walk.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct RavagerPose {
     pub stunned: f32,

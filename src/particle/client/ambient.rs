@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use super::super::Kind;
 
-/// The particles of a biome's `attributes`, as `(type, chance)`. Only
+/// The particles of a biome's `attributes`, as `(type, chance)`.
 pub fn from_attributes(attributes: Option<&Value>) -> Vec<(Kind, f32)> {
     let Some(entry) = attributes.and_then(|a| a.get("minecraft:visual/ambient_particles")) else {
         return Vec::new();

@@ -5,12 +5,12 @@ use rsa::pkcs8::DecodePublicKey;
 use rsa::{Pkcs1v15Encrypt, PublicKey};
 use sha1::{Digest, Sha1};
 
-/// The server's key arrives DER-encoded as a `SubjectPublicKeyInfo` - what
+/// The server's key arrives DER-encoded as a `SubjectPublicKeyInfo`.
 pub fn parse_public_key(der: &[u8]) -> Result<PublicKey> {
     PublicKey::from_public_key_der(der).context("server's RSA public key is malformed")
 }
 
-/// `N` random bytes from the OS CSPRNG - used for both the 16-byte AES key
+/// `N` random bytes from the OS CSPRNG, for the AES key and the verify token.
 pub fn random_bytes<const N: usize>() -> [u8; N] {
     use rand::Rng;
     let mut bytes = [0u8; N];
@@ -18,7 +18,8 @@ pub fn random_bytes<const N: usize>() -> [u8; N] {
     bytes
 }
 
-/// PKCS#1 v1.5 encryption, as `EncryptionResponse` requires for both the
+/// PKCS#1 v1.5 encryption, as `EncryptionResponse` requires for the shared secret and the
+/// verify token.
 pub fn rsa_encrypt(key: &PublicKey, data: &[u8]) -> Result<Vec<u8>> {
     key.encrypt(&mut rand::rng(), Pkcs1v15Encrypt, data)
         .map_err(|e| anyhow::anyhow!("RSA-encrypting for the server's login key failed: {e}"))

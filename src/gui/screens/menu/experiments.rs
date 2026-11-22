@@ -1,4 +1,4 @@
-//! Vanilla `ExperimentsScreen`: the red warning, then a scrolling list of
+//! Vanilla `ExperimentsScreen`.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -15,7 +15,7 @@ use crate::singleplayer::data_packs::EXPERIMENTS;
 
 const LAYOUT: HeaderFooter = HeaderFooter::DEFAULT;
 
-/// `MAIN_CONTENT_WIDTH` and `SwitchGrid.builder(299)`: the warning and the
+/// `MAIN_CONTENT_WIDTH` and `SwitchGrid.builder(299)`.
 const CONTENT_W: f32 = 310.0;
 const GRID_W: f32 = 299.0;
 /// `SCROLL_AREA_MIN_HEIGHT`.
@@ -23,7 +23,7 @@ const SCROLL_MIN_H: f32 = 130.0;
 /// `paddingBottom(15)` under the warning.
 const INFO_GAP: f32 = 15.0;
 const SWITCH_W: f32 = 44.0;
-/// A switch row: the 20 high button, the description's two rows pulled up by
+/// A switch row.
 const ROW_H: f32 = BUTTON_H + 4.0 + 2.0 * LINE_HEIGHT - 4.0 + 4.0;
 /// `withInfoUnderneath(2, true)`.
 const INFO_ROWS: usize = 2;
@@ -42,7 +42,7 @@ pub struct ExperimentsScreen {
     list: ScrollList,
     widgets: WidgetSet<Id>,
     mouse: (f32, f32),
-    /// The warning's lines, wrapped when the screen was laid out, and
+    /// The warning's lines, wrapped when the screen was laid out, and their top.
     info: Vec<String>,
     info_y: f32,
 }
@@ -68,7 +68,7 @@ impl ExperimentsScreen {
         }
     }
 
-    /// `onDone`: the switched-on packs replace the experiments in the list,
+    /// `onDone`.
     fn done(&self) {
         let mut chosen = self.output.borrow_mut();
         chosen.retain(|id| !EXPERIMENTS.contains(&id.as_str()));

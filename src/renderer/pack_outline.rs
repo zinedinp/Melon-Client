@@ -11,7 +11,7 @@ use super::vk_util::{MAPPED_FOR_GPU, create_buffer_in};
 use super::{Renderer, WorldVertex};
 use crate::assets::shaders::{self, Interface, Stage};
 
-/// Glowing entities that write pack-outline markers this frame. A lobby's
+/// Glowing entities that write pack-outline markers this frame.
 const SLOTS: usize = 64;
 const STRIDE: u64 = 256;
 const BLOCKS_N: u64 = BLOCKS.len() as u64;
@@ -31,7 +31,7 @@ pub(super) struct PackOutline {
     buffer: vk::Buffer,
     memory: vk::DeviceMemory,
     ptr: *mut u8,
-    /// One set per slot: DynamicTransforms at that slot, Projection and
+    /// One set per slot.
     sets: Vec<vk::DescriptorSet>,
 }
 
@@ -309,7 +309,7 @@ unsafe fn uniforms(
 }
 
 impl Renderer {
-    /// The pack's outline shaders from now on, or Melon's flat colour when
+    /// The pack's outline shaders from now on, or Melon's flat colour when `None`.
     pub fn set_outline_pack_shader(&mut self, shader: Option<&Shader>) -> Option<anyhow::Error> {
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {

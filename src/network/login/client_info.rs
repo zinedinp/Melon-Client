@@ -12,7 +12,7 @@ pub struct ClientInfo {
     pub language: String,
     /// `Options.renderDistance`, in chunks: how far the server sends them.
     pub view_distance: u8,
-    /// `ChatVisiblity` id: 0 everything, 1 commands only, 2 hidden. The
+    /// `ChatVisiblity` id: 0 everything, 1 commands only, 2 hidden.
     pub chat_visibility: u8,
     /// `Options.chatColors`.
     pub chat_colors: bool,

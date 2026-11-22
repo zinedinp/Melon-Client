@@ -1,4 +1,4 @@
-//! `ClientboundSetEntityDataPacket`: an entity's synced values
+//! `ClientboundSetEntityDataPacket`.
 
 use crate::component::Component;
 use anyhow::{Result, bail};
@@ -7,7 +7,7 @@ use pumpkin_data::meta_data_type::MetaDataType as T;
 
 use crate::network::protocol::packet::Reader;
 
-/// A value Melon keeps. Every serializer encoded as a var-int (poses,
+/// A value Melon keeps.
 #[derive(Clone)]
 pub enum DataValue {
     Byte(u8),
@@ -18,9 +18,9 @@ pub enum DataValue {
     Item(Box<ItemStack>),
     /// `VillagerData`: type, profession and level, as registry ids.
     Villager(i32, i32, i32),
-    /// An optional text component (`DATA_CUSTOM_NAME`): `None` for no
+    /// An optional text component (`DATA_CUSTOM_NAME`).
     Name(Option<Box<Component>>),
-    /// `PARTICLE` and `PARTICLES`: an area effect cloud's particle, a
+    /// `PARTICLE` and `PARTICLES`.
     Particles(Vec<crate::particle::ParticleSpec>),
     /// `Rotations`: an armor stand's limb angles, in degrees (x, y, z).
     Rotations([f32; 3]),

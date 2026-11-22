@@ -46,7 +46,7 @@ fn run_game(command: cli::Command) -> anyhow::Result<()> {
     app::run(options, assets, config)
 }
 
-/// `--connect`: joins a server and logs what it sent, no GUI: the join,
+/// `--connect`: joins a server and logs what it sent, no GUI.
 fn connect(address: &str, assets: &Assets) -> anyhow::Result<()> {
     let identity = network::Identity::saved(assets.launcher_dir());
     let config = Config::load(assets.game_dir());
@@ -227,7 +227,7 @@ fn log_event(event: &network::WorldEvent, lang: &melon::i18n::Lang) {
     }
 }
 
-/// A styled text as its runs: `«text»` with the colour and the switches
+/// A styled text as its runs.
 fn styled(text: &melon::gui::text::StyledText) -> String {
     text.spans
         .iter()
@@ -257,7 +257,7 @@ fn styled(text: &melon::gui::text::StyledText) -> String {
         .collect()
 }
 
-/// Starts the tester when asked to; the report is written when this is
+/// Starts the tester when asked to; the report is written when the guard drops.
 fn start_probe(args: &[String], assets: &Assets) -> Option<ProbeGuard> {
     if !args.iter().any(|a| a == "--probe") && std::env::var_os("MELON_PROBE").is_none() {
         return None;

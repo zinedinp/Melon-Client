@@ -1,4 +1,4 @@
-//! `ClientExplosionTracker`: the debris an explosion packet asks for,
+//! `ClientExplosionTracker`.
 
 use glam::DVec3;
 
@@ -74,7 +74,7 @@ impl ExplosionTracker {
     }
 }
 
-/// `addParticle`: one piece of debris from a random point of the blast,
+/// `addParticle`.
 fn throw(blast: &Blast, level: &Level, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     let mut unit = || f64::from(rng.next_float() * 2.0 - 1.0);
     let dir = DVec3::new(unit(), unit(), unit()).normalize_or_zero();

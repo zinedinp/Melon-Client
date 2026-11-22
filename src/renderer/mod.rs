@@ -54,7 +54,7 @@ const MAX_FRAMES_IN_FLIGHT: usize = 2;
 const MAX_TEXTURES: u32 = 4096;
 const VERTEX_CAPACITY: usize = 1 << 16;
 
-/// A resource pack's replacement for one of vanilla's GUI shaders, compiled
+/// A resource pack's replacement for one of vanilla's GUI shaders, compiled to SPIR-V.
 pub struct GuiShader {
     pub program: quad::Program,
     pub vert: Vec<u32>,
@@ -79,16 +79,16 @@ pub struct MeshId(pub usize);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct QuadMeshId(pub usize);
 
-/// What the F3 overlay's system-specs group needs about the GPU
+/// What the F3 overlay's system-specs group needs about the GPU.
 #[derive(Clone)]
 pub struct DeviceInfo {
     /// `deviceName`, e.g. "AMD Radeon RX 7900 XTX (RADV NAVI31)".
     pub name: String,
-    /// `DeviceInfo.type` as vanilla's suffix already applied: "", " (iGPU)",
+    /// `DeviceInfo.type` as vanilla's suffix already applied.
     pub type_suffix: &'static str,
-    /// `vendorName`. Vulkan reports a PCI vendor ID, not a string, so this is
+    /// `vendorName`.
     pub vendor: String,
-    /// `backendName` plus `driverInfo`: the Vulkan API and driver versions,
+    /// `backendName` plus `driverInfo`.
     pub backend: String,
     pub driver: String,
 }
@@ -117,7 +117,7 @@ pub struct Renderer {
     ui_vertices: UiVertices,
     /// Static cube for the sky pass, uploaded once at startup.
     sky_cube: SkyCube,
-    /// Entity, fluid and other vertex meshes, slices of a few device-local
+    /// Entity, fluid and other vertex meshes, slices of a few device-local buffers.
     meshes: mesh_arena::MeshArena,
     /// Terrain [`TerrainQuad`] lists, the same way.
     quad_meshes: mesh_arena::MeshArena,
@@ -132,7 +132,7 @@ pub struct Renderer {
     tracked_meshes: Option<Vec<MeshId>>,
     /// GPU time per pass, for F3.
     gpu_timer: gpu_timer::GpuTimer,
-    /// The buffers of the terrain's multi-draws; `None` when the device
+    /// The buffers of the terrain's multi-draws; `None` when the device can't draw indirect.
     indirect: Option<indirect::DrawBuffers>,
     /// A set per terrain mesh buffer, binding it for the shader (set 4).
     quad_sets: quad_table::QuadSets,
@@ -148,12 +148,12 @@ pub struct Renderer {
     pictures: picture::Pictures,
 }
 
-/// The swapchain and what is sized with it, rebuilt together (see
+/// The swapchain and what is sized with it, rebuilt together.
 struct Swapchain {
     loader: ash::khr::swapchain::Device,
     handle: vk::SwapchainKHR,
     extent: vk::Extent2D,
-    /// `Options.enableVsync`: `FIFO` when on, otherwise the fastest mode
+    /// `Options.enableVsync`.
     vsync: bool,
     /// A present mode asked for by name, overriding `vsync` when offered.
     requested: Option<vk::PresentModeKHR>,
@@ -167,9 +167,9 @@ struct Swapchain {
     /// Whether the images can be copied from, which the blur needs.
     can_copy: bool,
     depth_format: vk::Format,
-    /// Whether the depth buffer can be read by shaders (a post chain is
+    /// Whether the depth buffer can be read by shaders (a post chain is on).
     depth_sampled: bool,
-    /// One depth buffer shared by every framebuffer: render passes on one
+    /// One depth buffer shared by every framebuffer.
     depth: DepthImage,
     framebuffers: Vec<vk::Framebuffer>,
 }
@@ -177,14 +177,14 @@ struct Swapchain {
 /// The pipelines, all sharing one descriptor set layout.
 struct Pipelines {
     layout: vk::DescriptorSetLayout,
-    /// The UI's, one per blend mode ([`quad::BlendMode`]), and a resource
+    /// The UI's, one per blend mode ([`quad::BlendMode`]), and a resource pack's replacements.
     ui: pipeline::ui::UiPipelines,
     sky: pipeline::Pass,
     /// [`pipeline::world`] without `discard`, for fully opaque terrain.
     solid: pipeline::Pass,
     /// Terrain with holes, and entities.
     world: pipeline::Pass,
-    /// [`pipeline::world`]'s blended variant, for blob shadows and
+    /// [`pipeline::world`]'s blended variant, for blob shadows and other overlays.
     translucent: pipeline::Pass,
     /// The blended variant that writes depth, for translucent terrain.
     translucent_terrain: pipeline::Pass,
@@ -218,13 +218,13 @@ struct Pipelines {
     /// `LINES_DEPTH_BIAS`, `LINES_TRANSLUCENT` and
     /// `LINES_TRANSLUCENT_NO_DEPTH_WRITE`.
     lines: [pipeline::Pass; 4],
-    /// The sets after the texture's that the world pipelines share: the quad
+    /// The sets after the texture's that the world pipelines share.
     layouts: pipeline::world::Layouts,
-    /// Terrain from [`TerrainQuad`]s: solid and cutout, like `solid` and
+    /// Terrain from [`TerrainQuad`]s.
     terrain: [pipeline::Pass; 2],
 }
 
-/// The frames in flight: their command buffers and the fences and
+/// The frames in flight.
 struct Frames {
     command_pool: vk::CommandPool,
     command_buffers: Vec<vk::CommandBuffer>,
@@ -264,11 +264,11 @@ impl Frames {
 /// What one [`Renderer::render`] spent blocked, for the F3 profiler.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FrameWaits {
-    /// On fences: the GPU still busy with an earlier frame, so the GPU is
+    /// On fences.
     pub gpu: std::time::Duration,
-    /// In `acquire_next_image`: no swapchain image free yet (with vsync,
+    /// In `acquire_next_image`.
     pub acquire: std::time::Duration,
-    /// In `queue_present`, which some drivers block in when the queue of
+    /// In `queue_present`, which some drivers block in.
     pub present: std::time::Duration,
 }
 
@@ -314,16 +314,17 @@ struct Textures {
     linear_repeat_sampler: vk::Sampler,
     /// Freed slots, handed out again by the next uploads.
     free: Vec<TextureId>,
-    /// Slots the next uploads replace, in order (a resource reload keeps
+    /// Slots the next uploads replace, in order.
     reuse: std::collections::VecDeque<TextureId>,
     /// The ids of uploads since [`Renderer::track_textures`].
     tracked: Option<Vec<TextureId>>,
-    /// Replaced textures and the frame they were last drawn in, destroyed
+    /// Replaced textures and the frame they were last drawn in, destroyed once no frame in
+    /// flight uses them.
     retired: Vec<(u64, texture::Texture)>,
 }
 
 impl Renderer {
-    /// Drawable aspect ratio. What the scene needs for its projection,
+    /// Drawable aspect ratio.
     pub fn aspect_ratio(&self) -> f32 {
         self.swapchain.extent.width as f32 / self.swapchain.extent.height.max(1) as f32
     }
@@ -337,7 +338,7 @@ impl Renderer {
         &self.device_info
     }
 
-    /// The largest 2D texture side the GPU takes
+    /// The largest 2D texture side the GPU takes.
     pub fn max_texture_side(&self) -> u32 {
         self.max_texture_side
     }

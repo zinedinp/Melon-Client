@@ -1,4 +1,4 @@
-//! [`Entities`]: every tracked entity by id, the packets that change them,
+//! [`Entities`]: every tracked entity by id, and the packets that change them.
 
 use super::*;
 use std::collections::HashSet;
@@ -10,9 +10,9 @@ pub struct Entities {
     pub(super) by_id: HashMap<i32, ClientEntity, crate::math::ChunkHash>,
     /// Some entity was renamed since [`Self::resolve_names`].
     names_pending: bool,
-    /// The dimension turns piglins into zombified ones
+    /// The dimension turns piglins into zombified ones.
     piglins_zombify: bool,
-    /// The vehicle the local player rides, and the local player's id, which
+    /// The vehicle the local player rides, and the local player's id.
     pub(super) own_vehicle: Option<i32>,
     pub(super) own_id: i32,
     /// The vehicle the local player steers, and its simulation.
@@ -91,7 +91,7 @@ impl Entities {
         }
     }
 
-    /// Every named entity's name is looked at again by the next
+    /// Every named entity's name is looked at again by the next [`Self::resolve_names`].
     pub fn rename_all(&mut self) {
         for entity in self.by_id.values_mut() {
             entity.name_pending = entity.custom_name.is_some();
@@ -99,7 +99,7 @@ impl Entities {
         self.names_pending = true;
     }
 
-    /// [`ClientEntity::resolve_name`] for every entity renamed since the
+    /// [`ClientEntity::resolve_name`] for every entity renamed since the last call.
     pub fn resolve_names(&mut self, text_of: &impl Fn(&Component) -> String) {
         if !std::mem::take(&mut self.names_pending) {
             return;
@@ -253,7 +253,7 @@ impl Entities {
         }
     }
 
-    /// The physics of the entities that run their own
+    /// The physics of the entities that run their own.
     pub fn simulate(&mut self, level: &Level) {
         let frozen = &self.frozen;
         self.by_id.retain(|id, entity| {
@@ -261,7 +261,7 @@ impl Entities {
         });
     }
 
-    /// Which swimmers are in water: each kind that swims tests its box
+    /// Which swimmers are in water.
     pub fn update_water(&mut self, level: &crate::world::level::Level) {
         for entity in self.by_id.values_mut() {
             if entity.kind == EntityKind::Boat {
@@ -286,7 +286,7 @@ impl Entities {
         }
     }
 
-    /// Which wolves are angry at `game_time` (`NeutralMob.isAngry`: the
+    /// Which wolves are angry at `game_time` (`NeutralMob.isAngry`.
     pub fn update_anger(&mut self, game_time: i64) {
         for entity in self.by_id.values_mut() {
             if entity.kind == EntityKind::Wolf {
@@ -304,7 +304,7 @@ impl Entities {
         self.pending_passengers.clear();
     }
 
-    /// A newly spawned entity: apply a queued passenger list, and sit it
+    /// A newly spawned entity.
     fn bind_new_entity(&mut self, id: i32) {
         if let Some(passengers) = self.pending_passengers.remove(&id) {
             self.set_passengers(id, passengers);
@@ -400,7 +400,7 @@ impl Entities {
         self.own_id
     }
 
-    /// Whether a living entity other than the player (or what they ride) is
+    /// Whether a living entity other than the player (or what they ride) is in `area`.
     pub fn any_living_in(&self, area: &Aabb) -> bool {
         let own = self.own_vehicle;
         self.by_id.values().any(|e| {
@@ -424,7 +424,7 @@ impl Entities {
         self.own_vehicle
     }
 
-    /// Where `rider` sits on `vehicle`, as a [`ride::Vehicle`] and its seat
+    /// Where `rider` sits on `vehicle`, as a [`ride::Vehicle`] and its seat.
     fn seat_of(
         &self,
         vehicle: &ClientEntity,
@@ -466,7 +466,7 @@ impl Entities {
         Some((vehicle.pos + seat, vehicle))
     }
 
-    /// Where the local player's feet go while it rides: the seat on the
+    /// Where the local player's feet go while it rides.
     pub fn own_seat(&self) -> Option<DVec3> {
         let vehicle = self.by_id.get(&self.own_vehicle?)?;
         Some(self.seat_of(
@@ -477,7 +477,7 @@ impl Entities {
         ))
     }
 
-    /// The local player's vehicle and what it makes of the player's
+    /// The local player's vehicle and what it makes of the player's held items.
     pub fn own_steering(&self, main: &ItemStack, off: &ItemStack) -> Option<ride::Steering> {
         let vehicle = self.by_id.get(&self.own_vehicle?)?;
         if vehicle.passengers.first() != Some(&self.own_id) {
@@ -493,7 +493,7 @@ impl Entities {
         Some(ride::steering(vehicle.kind, vehicle.ty, gear))
     }
 
-    /// The mount's hearts: its health and maximum, if it is living
+    /// The mount's hearts.
     pub fn own_mount_health(&self) -> Option<(f32, f32)> {
         let vehicle = self.by_id.get(&self.own_vehicle?)?;
         vehicle
@@ -501,17 +501,17 @@ impl Entities {
             .then_some((vehicle.appearance.health, vehicle.max_health))
     }
 
-    /// The body turn of the local player's vehicle, last tick's and this
+    /// The body turn of the local player's vehicle, last tick's and this tick's.
     pub fn own_vehicle_body(&self) -> Option<(f32, f32)> {
         self.by_id.get(&self.own_vehicle?)?.body_turn()
     }
 
-    /// Whether the local player's vehicle has a jump charged by holding
+    /// The kind of the local player's vehicle.
     pub fn own_vehicle_kind(&self) -> Option<EntityKind> {
         Some(self.by_id.get(&self.own_vehicle?)?.kind)
     }
 
-    /// `Entity.rideTick`'s second half, for every tracked rider: they stay
+    /// `Entity.rideTick`'s second half, for every tracked rider.
     pub(super) fn position_riders(&mut self) {
         for _ in 0..3 {
             let moves: Vec<RiderMove> = self

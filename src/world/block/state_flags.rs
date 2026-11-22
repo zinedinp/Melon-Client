@@ -1,4 +1,4 @@
-//! Per-block-state flags the mesher and the culling ask for every block, as
+//! Per-block-state flags the mesher and the culling ask for every block.
 
 use pumpkin_data::BlockStateId;
 
@@ -8,7 +8,7 @@ const WORDS: usize = STATES.div_ceil(64);
 /// A set of block states, one bit each.
 struct StateBits([u64; WORDS]);
 
-/// Builds a [`StateBits`] holding every state `rule` accepts. A macro, since
+/// Builds a [`StateBits`] holding every state `rule` accepts.
 macro_rules! state_bits {
     ($rule:path) => {{
         let mut words = [0u64; WORDS];
@@ -35,12 +35,12 @@ impl StateBits {
     }
 }
 
-/// Vanilla `BlockState.isSolidRender`: a full, opaque cube. It hides the
+/// Vanilla `BlockState.isSolidRender`: a full, opaque cube.
 const fn rule_solid(state: BlockStateId) -> bool {
     state.is_solid_render()
 }
 
-/// Whether a state may have anything to draw: everything but air. What it
+/// Whether a state may have anything to draw: everything but air.
 const fn rule_drawn(state: BlockStateId) -> bool {
     !state.is_air()
 }

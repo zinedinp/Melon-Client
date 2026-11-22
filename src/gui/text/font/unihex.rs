@@ -1,4 +1,4 @@
-//! Vanilla `UnihexProvider`: GNU Unifont's `.hex` files (from a zip), a
+//! Vanilla `UnihexProvider`.
 
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
@@ -14,7 +14,7 @@ pub fn advance(width: i32) -> f32 {
     (width / 2 + 1) as f32
 }
 
-/// A `size_overrides` entry: the glyphs from `from` to `to` take the
+/// A `size_overrides` entry.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SizeOverride {
     pub from: char,
@@ -34,7 +34,7 @@ struct Entry {
     right: i8,
 }
 
-/// A `unihex` provider that reads its zip the first time a character no
+/// A `unihex` provider that reads its zip the first time a character needs it.
 pub struct Lazy {
     root: std::path::PathBuf,
     file: String,
@@ -60,7 +60,7 @@ impl Lazy {
         lazy
     }
 
-    /// The glyphs, read on the first call. A zip that is missing or broken
+    /// The glyphs, read on the first call.
     pub fn get(&self) -> Option<&Unihex> {
         self.loaded
             .get_or_init(|| {
@@ -99,7 +99,7 @@ fn hex_digit(byte: u8) -> anyhow::Result<u8> {
 }
 
 impl Unihex {
-    /// Loads a zip's `.hex` files, then applies `overrides` (the widths
+    /// Loads a zip's `.hex` files, then applies `overrides` (the widths a provider sets).
     pub fn from_zip(zip: &[u8], overrides: &[SizeOverride]) -> anyhow::Result<Self> {
         let mut unihex = Self::default();
         let mut parsed = Vec::new();
@@ -123,7 +123,7 @@ impl Unihex {
         Ok(())
     }
 
-    /// `readFromStream`: lines of `CODEPOINT:BITMAP`, the code point 4 to 6
+    /// `readFromStream`.
     fn read_hex(&mut self, text: &mut dyn BufRead, scratch: &mut Vec<u8>) -> anyhow::Result<()> {
         let mut buffer = Vec::new();
         for number in 0.. {
@@ -178,7 +178,7 @@ impl Unihex {
         Ok(())
     }
 
-    /// `Definition.loadData`'s second half: the overridden ranges take their
+    /// `Definition.loadData`'s second half.
     fn set_widths(&mut self, overrides: &[SizeOverride]) {
         let rows = &self.rows;
         for (&c, entry) in &mut self.glyphs {
@@ -219,7 +219,7 @@ impl Unihex {
             .map(|e| i32::from(e.right) - i32::from(e.left) + 1)
     }
 
-    /// `c`'s glyph as pixels, `width` wide and 16 tall, white where the
+    /// `c`'s glyph as pixels, `width` wide and 16 tall, white where the bits are set.
     pub fn raster(&self, c: char) -> Option<RgbaImage> {
         let entry = self.glyphs.get(&c)?;
         let width = (i32::from(entry.right) - i32::from(entry.left) + 1).max(1) as u32;
@@ -237,7 +237,7 @@ impl Unihex {
     }
 }
 
-/// Hands each file of a zip held in memory to `each`, by the central
+/// Hands each file of a zip held in memory to `each`, by the central directory.
 fn zip_entries(
     zip: &[u8],
     mut each: impl FnMut(&str, &mut dyn BufRead) -> anyhow::Result<()>,
@@ -305,7 +305,7 @@ fn row_bits(entry: &Entry, rows: &[u8], y: u32) -> u32 {
     row
 }
 
-/// `LineData.calculateWidth`: from the first to the last column any row
+/// `LineData.calculateWidth`.
 fn bitmap_columns(entry: &Entry, rows: &[u8]) -> (i32, i32) {
     let mask = (0..GLYPH_HEIGHT).fold(0u32, |mask, y| mask | row_bits(entry, rows, y));
     if mask == 0 {

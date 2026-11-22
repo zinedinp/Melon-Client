@@ -1,4 +1,4 @@
-//! Cloud and weather meshes. The weather's vertices are camera-relative; the
+//! Cloud and weather meshes.
 
 use super::InWorld;
 use super::camera::Camera;

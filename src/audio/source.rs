@@ -1,6 +1,6 @@
-//! Vanilla's sound sources (`SoundSource`) and the volume of each
+//! Vanilla's sound sources (`SoundSource`) and the volume of each.
 
-/// What a sound is for: the sliders of "Music & Sound Options" are one per
+/// What a sound is for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SoundSource {
     Master,
@@ -74,7 +74,8 @@ impl SoundSource {
         self as usize
     }
 
-    /// The source a sound event belongs to by its name, for sounds the
+    /// The source a sound event belongs to by its name, for sounds the server names without
+    /// one.
     pub fn for_event(event: &str) -> SoundSource {
         let event = event.strip_prefix("minecraft:").unwrap_or(event);
         let starts = |prefix: &str| event.starts_with(prefix);
@@ -120,7 +121,7 @@ impl Volumes {
         self.0[source.index()] = volume.clamp(0.0, 1.0);
     }
 
-    /// `Options.getFinalSoundSourceVolume`: the source's volume times the
+    /// `Options.getFinalSoundSourceVolume`.
     pub fn final_volume(&self, source: SoundSource) -> f32 {
         let own = self.get(source);
         if source == SoundSource::Master {

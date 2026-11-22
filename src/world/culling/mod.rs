@@ -16,7 +16,7 @@ use occlusion::{OcclusionMask, SectionPos};
 pub struct CullSettings {
     pub frustum: bool,
     pub occlusion: bool,
-    /// `Options.entityDistanceScaling`: how far entities stay drawn, as a
+    /// `Options.entityDistanceScaling`.
     pub entity_distance: f32,
 }
 
@@ -30,12 +30,12 @@ impl Default for CullSettings {
     }
 }
 
-/// `Entity.shouldRenderAtSqrDistance`: entities stay drawn up to this many
+/// `Entity.shouldRenderAtSqrDistance`.
 const ENTITY_RANGE_PER_BLOCK: f32 = 64.0;
-/// `EntityRenderer.shouldRender` grows the box by this much before the
+/// `EntityRenderer.shouldRender` grows the box by this much before the frustum test.
 const ENTITY_BOX_MARGIN: f32 = 0.5;
 
-/// One frame's culling: the camera's frustum and, if on, the sections the
+/// One frame's culling.
 pub struct Culler<'a> {
     /// Relative to the eye (`Frustum.prepare`): boxes are moved by the
     /// eye in doubles first, so culling is as exact far out as near.
@@ -86,7 +86,7 @@ impl<'a> Culler<'a> {
         }
     }
 
-    /// The same culler, now also hiding what the occlusion walk didn't
+    /// The same culler, now also hiding what the occlusion walk didn't reach.
     pub fn with_occlusion(self, mask: &'a OcclusionMask) -> Self {
         Self {
             occlusion: self.settings.occlusion.then_some(mask),
@@ -126,7 +126,7 @@ impl<'a> Culler<'a> {
             .is_none_or(|end| Vec3::ZERO.clamp(min, max).length_squared() < end * end)
     }
 
-    /// Whether the occlusion walk reached the section. Above or below the
+    /// Whether the occlusion walk reached the section.
     #[inline]
     pub fn reaches(&self, pos: SectionPos) -> bool {
         !(0..self.height).contains(&pos.1) || self.occlusion.is_none_or(|mask| mask.contains(pos))
@@ -187,14 +187,14 @@ impl<'a> Culler<'a> {
         reached
     }
 
-    /// Whether all of the box is in the view volume, fog aside: then every
+    /// Whether all of the box is in the view volume, fog aside.
     #[inline]
     pub fn frames_box(&self, min: DVec3, max: DVec3) -> bool {
         let (min, max) = self.relative(min, max);
         !self.settings.frustum || self.frustum.contains_box(min, max)
     }
 
-    /// `EntityRenderer.shouldRender`: close enough for its size and its
+    /// `EntityRenderer.shouldRender`.
     pub fn sees_entity(&self, min: DVec3, max: DVec3) -> bool {
         let (min, max) = self.relative(min, max);
         let size = max - min;
@@ -209,7 +209,7 @@ impl<'a> Culler<'a> {
             )
     }
 
-    /// `LevelExtractor.isEntityVisible`'s second half: the section the
+    /// `LevelExtractor.isEntityVisible`'s second half.
     pub fn in_compiled_section(
         &self,
         min: DVec3,

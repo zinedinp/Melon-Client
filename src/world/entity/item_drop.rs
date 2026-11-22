@@ -7,7 +7,7 @@ use crate::world::java_random::JavaRandom;
 /// A model flatter than this is stacked along Z (`submitMultipleFromCount`).
 pub const FLAT_DEPTH: f32 = 0.0625;
 
-/// `ItemClusterRenderState.getRenderedAmount`: the copies a stack of
+/// `ItemClusterRenderState.getRenderedAmount`.
 pub fn rendered_amount(count: u8) -> usize {
     match count {
         0..=1 => 1,
@@ -18,7 +18,7 @@ pub fn rendered_amount(count: u8) -> usize {
     }
 }
 
-/// The height the item floats above its resting place
+/// The height the item floats above its resting place.
 pub fn bob(age: f32, bob_offs: f32) -> f32 {
     (age / 10.0 + bob_offs).sin() * 0.1 + 0.1
 }
@@ -28,7 +28,7 @@ pub fn spin(age: f32, bob_offs: f32) -> f32 {
     age / 20.0 + bob_offs
 }
 
-/// Where each copy of a stack sits, from the first: `seed` is the item's
+/// Where each copy of a stack sits, from the first.
 pub fn offsets(count: u8, depth: f32, seed: i64) -> Vec<Vec3> {
     let copies = rendered_amount(count);
     let mut random = JavaRandom::with_seed(seed);

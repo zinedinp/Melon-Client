@@ -1,4 +1,4 @@
-//! What vanilla asks `Minecraft.hasShiftDown()` and `MouseHandler` for in
+//! What vanilla asks `Minecraft.hasShiftDown()` and `MouseHandler` for in screens.
 
 use std::cell::Cell;
 

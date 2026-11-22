@@ -1,4 +1,4 @@
-//! Completing command arguments on the client, as vanilla's argument types
+//! Completing command arguments on the client, as vanilla's argument types do.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -13,14 +13,14 @@ use pumpkin_util::version::JavaMinecraftVersion;
 
 const VERSION: JavaMinecraftVersion = JavaMinecraftVersion::V_26_3;
 
-/// `Permissions.COMMANDS_ENTITY_SELECTORS`: game masters (level 2) may use
+/// `Permissions.COMMANDS_ENTITY_SELECTORS`.
 pub const SELECTOR_LEVEL: u8 = 2;
 
 /// The ids of the registries the server sent (`ClientboundRegistryDataPacket`).
 #[derive(Clone, Debug, Default)]
 pub struct Registries {
     synced: HashMap<String, Vec<String>>,
-    /// `ClientPacketListener.serverBrand`, from the configuration phase's
+    /// `ClientPacketListener.serverBrand`, from the configuration phase.
     pub brand: Option<String>,
 }
 
@@ -147,7 +147,7 @@ impl Suggestion {
     }
 }
 
-/// `SharedSuggestionProvider.matchesSubStr`: `pattern` starts `input`, or
+/// `SharedSuggestionProvider.matchesSubStr`.
 pub fn matches_sub_str(pattern: &str, input: &str) -> bool {
     let mut index = 0;
     loop {
@@ -161,7 +161,7 @@ pub fn matches_sub_str(pattern: &str, input: &str) -> bool {
     }
 }
 
-/// `SharedSuggestionProvider.filterResources`: with a `:` typed the whole
+/// `SharedSuggestionProvider.filterResources`.
 fn matches_resource(typed: &str, id: &str) -> bool {
     if typed.contains(':') {
         return matches_sub_str(typed, id);
@@ -180,7 +180,7 @@ const SELECTORS: [(&str, &str); 6] = [
     ("@n", "argument.entity.selector.nearestEntity"),
 ];
 
-/// `EntityArgument`/`GameProfileArgument.listSuggestions`: an empty word
+/// `EntityArgument`/`GameProfileArgument.listSuggestions`.
 fn entity(word: &str, source: &Source) -> Option<Vec<Suggestion>> {
     let lower = word.to_lowercase();
     let names = || {
@@ -219,7 +219,7 @@ fn entity(word: &str, source: &Source) -> Option<Vec<Suggestion>> {
     Some(names().collect())
 }
 
-/// Completes `word` as `argument` on the client. `None` when only the
+/// Completes `word` as `argument` on the client.
 pub fn suggest(argument: &Argument, word: &str, source: &Source) -> Option<Vec<Suggestion>> {
     let lower = word.to_lowercase();
     if let Some(provider) = &argument.suggestions {

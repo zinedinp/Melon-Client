@@ -1,4 +1,4 @@
-//! What the server list knows about each server: the answer to its ping
+//! What the server list knows about each server.
 
 use super::*;
 
@@ -32,25 +32,25 @@ pub(super) enum Ping {
 
 /// The server at the same index in `servers`: its answer and icon.
 pub(super) struct Row {
-    /// Tells a late answer which row it is for, whatever order the rows
+    /// Tells a late answer which row it is for, whatever order the rows are in by then.
     pub(super) id: u64,
     pub(super) ping: Ping,
     pub(super) icon: Option<TextureId>,
     /// A favicon that came in and still has to go to the GPU.
     pub(super) pending_icon: Option<RgbaImage>,
-    /// The MOTD's inline sprites, once loaded (`None` where a texture is
+    /// The MOTD's inline sprites, once loaded (`None` where a texture is missing).
     pub(super) sprites: Option<Vec<Option<TextureId>>>,
 }
 
 pub(super) type PingResult = (u64, u64, Result<ServerStatus, bool>);
 
-/// MOTD sprites already on the GPU, by texture id; `None` when the file
+/// MOTD sprites already on the GPU, by texture id; `None` when the file is missing.
 pub(super) fn uploaded_sprites() -> &'static Mutex<HashMap<String, Option<TextureId>>> {
     static SPRITES: OnceLock<Mutex<HashMap<String, Option<TextureId>>>> = OnceLock::new();
     SPRITES.get_or_init(Default::default)
 }
 
-/// A sprite's texture: `textures/<id>.png`, the first frame of an
+/// A sprite's texture.
 pub(super) fn load_sprite(assets_root: &std::path::Path, id: &str) -> Option<RgbaImage> {
     let image = crate::assets::texture_image(assets_root, id)?;
     let side = image.width();
@@ -79,7 +79,7 @@ pub(super) fn sprite_slots(font: &Font, line: &StyledText) -> Vec<(f32, usize)> 
     slots
 }
 
-/// The server's version as the list shows it; a server that names none is
+/// The server's version as the list shows it; a server that names none is old.
 pub(super) fn version_label<'a>(ui: &Ui<'a>, status: &'a ServerStatus) -> &'a str {
     if status.version_name.is_empty() {
         ui.tr("multiplayer.status.old")

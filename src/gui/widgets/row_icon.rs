@@ -1,4 +1,4 @@
-//! The 32x32 icon at the left of a list row with vanilla's overlay arrows
+//! The 32x32 icon at the left of a list row with vanilla's overlay arrows.
 
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
@@ -41,11 +41,11 @@ pub enum Zone {
 /// Where a list puts its arrows on the icon.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Layout {
-    /// The whole icon is the one action: join a world, select a pack
+    /// The whole icon is the one action.
     Whole,
-    /// Join on the right half, move up and down on the left quarters
+    /// Join on the right half, move up and down on the left quarters.
     Server,
-    /// Unselect on the left half, move up and down on the right quarters
+    /// Unselect on the left half, move up and down on the right quarters.
     Selected,
 }
 
@@ -71,7 +71,7 @@ impl Moves {
     }
 }
 
-/// The zone under the mouse at `(x, y)` for an icon at `icon`'s corner
+/// The zone under the mouse at `(x, y)` for an icon at `icon`'s corner.
 pub fn zone(icon: Rect, (x, y): (f32, f32), layout: Layout, moves: Moves) -> Option<Zone> {
     let (rel_x, rel_y) = ((x - icon.x).floor(), (y - icon.y).floor());
     let half = SIZE / 2.0;
@@ -120,13 +120,14 @@ pub fn draw(ui: &mut Ui, icon: Rect, sprites: &RowIconSprites, zone: Option<Zone
     }
 }
 
-/// Textures already on the GPU, by content: the renderer can't free
+/// Textures already on the GPU, by content.
 fn uploaded() -> &'static Mutex<HashMap<u64, TextureId>> {
     static ICONS: OnceLock<Mutex<HashMap<u64, TextureId>>> = OnceLock::new();
     ICONS.get_or_init(Default::default)
 }
 
-/// `image` as a texture, uploaded through `upload` unless the same pixels
+/// `image` as a texture, uploaded through `upload` unless the same pixels are on the GPU
+/// already.
 pub fn upload_cached(
     image: &RgbaImage,
     upload: &mut dyn FnMut(&RgbaImage) -> Option<TextureId>,
@@ -144,7 +145,7 @@ pub fn upload_cached(
     Some(texture)
 }
 
-/// `FaviconTexture.upload`: server and world icons must be 64x64, anything
+/// `FaviconTexture.upload`.
 pub fn is_favicon(image: &RgbaImage) -> bool {
     image.width() == FAVICON_SIZE && image.height() == FAVICON_SIZE
 }

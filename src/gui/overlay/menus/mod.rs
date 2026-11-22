@@ -27,7 +27,7 @@ use crate::renderer::{Renderer, TextureId};
 use crate::settings::input::InputBind;
 use crate::world::inventory::{ContainerKind, OpenContainer};
 
-/// Where the panel is on screen and where the mouse is, for drawing and
+/// Where the panel is on screen and where the mouse is, for drawing and clicks.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Frame {
     pub left: f32,
@@ -41,7 +41,7 @@ impl Frame {
         (self.cursor.0 - self.left, self.cursor.1 - self.top)
     }
 
-    /// Whether the mouse is in the `w` x `h` rectangle at `(x, y)` of the
+    /// Whether the mouse is in the `w` x `h` rectangle at `(x, y)` of the panel.
     pub fn hovers(&self, x: f32, y: f32, w: f32, h: f32) -> bool {
         let (mx, my) = self.local();
         mx >= x && my >= y && mx < x + w && my < y + h
@@ -88,7 +88,7 @@ impl MenuDraw<'_, '_> {
         );
     }
 
-    /// Styled label, default `color` (`0xAARRGGBB`) for runs without their
+    /// Styled label, default `color` (`0xAARRGGBB`) for runs without their own.
     pub fn styled(&mut self, text: &crate::gui::text::StyledText, x: f32, y: f32, color: u32) {
         let rgb = [
             ((color >> 16) & 0xFF) as f32 / 255.0,
@@ -111,7 +111,7 @@ impl MenuDraw<'_, '_> {
         crate::gui::text::width(self.ui.painter.font, text)
     }
 
-    /// A flat grey label like the container screens' (`text(..., false)`),
+    /// A flat grey label like the container screens' (`text(..., false)`).
     pub fn text(&mut self, text: &str, x: f32, y: f32, color: u32) {
         self.ui.painter.font.push_text_flat(
             self.ui.draw_list,
@@ -170,7 +170,7 @@ impl MenuDraw<'_, '_> {
             .tooltip_lines(self.ui.draw_list, &lines, self.frame.cursor, self.ui.size);
     }
 
-    /// `stack`'s icon alone at `(x, y)` of the panel (`fakeItem`), for
+    /// `stack`'s icon alone at `(x, y)` of the panel (`fakeItem`).
     pub fn icon(&mut self, stack: &ItemStack, x: f32, y: f32) {
         self.ui.painter.stack_with_count(
             self.ui.draw_list,
@@ -181,7 +181,7 @@ impl MenuDraw<'_, '_> {
         );
     }
 
-    /// An item count over the slot at `(x, y)` of the panel, where the
+    /// An item count over the slot at `(x, y)` of the panel.
     pub fn count(&mut self, count: u8, x: f32, y: f32, always: bool) {
         if count == 1 && !always {
             return;
@@ -225,7 +225,7 @@ pub trait MenuScreen {
     /// After the slots and the labels, with the tooltips.
     fn foreground(&mut self, _draw: &mut MenuDraw) {}
 
-    /// A press at `frame.cursor`; `Some` when the screen took it (the slot
+    /// A press at `frame.cursor`; `Some` when the screen took it.
     fn press(
         &mut self,
         _frame: Frame,
@@ -251,7 +251,7 @@ pub trait MenuScreen {
         false
     }
 
-    /// A key before the slots see it (a focused text field takes the
+    /// A key before the slots see it (a focused text field takes the letters).
     fn key(
         &mut self,
         _bind: Option<&InputBind>,
@@ -300,7 +300,7 @@ pub fn screen_for(kind: ContainerKind) -> Option<Box<dyn MenuScreen>> {
     }
 }
 
-/// The Standard Galactic Alphabet: the `alt` font and its pages, for the
+/// The Standard Galactic Alphabet.
 pub struct Galactic {
     pub font: Font,
     pub pages: Vec<TextureId>,

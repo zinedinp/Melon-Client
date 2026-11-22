@@ -1,4 +1,4 @@
-//! Vanilla `ManageServerScreen` ("Edit Server Info"): name and address of a
+//! Vanilla `ManageServerScreen` ("Edit Server Info").
 
 use crate::assets::packs::server::Policy;
 use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};

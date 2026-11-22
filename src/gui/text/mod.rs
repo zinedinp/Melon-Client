@@ -1,4 +1,4 @@
-//! Styled text: vanilla `Component`s (and `§` formatting codes in plain
+//! Styled text.
 
 pub mod font;
 mod layout;
@@ -57,7 +57,7 @@ pub mod colors {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Hover {
     Text(StyledText),
-    /// `ShowItem`: an item's id, count and component patch (JSON), turned
+    /// `ShowItem`.
     Item {
         id: String,
         count: i32,
@@ -76,7 +76,7 @@ pub struct TextStyle {
     pub underlined: bool,
     pub strikethrough: bool,
     pub obfuscated: bool,
-    /// `Style.shadowColor`: the shadow's own colour and opacity, instead
+    /// `Style.shadowColor`.
     pub shadow_color: Option<[f32; 4]>,
     /// `Style.font`: the font the run is drawn in, `None` for the default.
     pub font: Option<Arc<str>>,
@@ -172,7 +172,7 @@ impl From<String> for StyledText {
 }
 
 impl StyledText {
-    /// Unstyled text. `§` codes in it still apply, as they do in every
+    /// Unstyled text.
     pub fn plain(text: &str) -> Self {
         Self::formatted(text)
     }
@@ -235,7 +235,7 @@ impl StyledText {
         self
     }
 
-    /// Appends `text`, reading `§` codes in it the way
+    /// Appends `text`, reading `§` codes in it the way vanilla's legacy formatting does.
     pub fn push_formatted(&mut self, text: &str, base: &TextStyle) {
         let mut style = base.clone();
         let mut chars = text.chars();
@@ -286,12 +286,12 @@ impl StyledText {
         out
     }
 
-    /// Appends `component` with `parent` as the style it inherits
+    /// Appends `component` with `parent` as the style it inherits.
     pub fn push_component(&mut self, component: &Component, parent: &TextStyle, lang: &Lang) {
         self.push_base(component, parent, lang);
     }
 
-    /// `Component.visit`: the component's own content, then its siblings,
+    /// `Component.visit`.
     fn push_base(&mut self, base: &Component, parent: &TextStyle, lang: &Lang) {
         let style = parent.apply(&base.style, lang);
         match &*base.contents {
@@ -328,7 +328,7 @@ impl StyledText {
         }
     }
 
-    /// `TranslatableContents.decompose`: the pattern's literal pieces with
+    /// `TranslatableContents.decompose`.
     fn push_translation(
         &mut self,
         key: &str,

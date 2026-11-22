@@ -1,4 +1,4 @@
-//! `UniformValue`: the values a post pass's JSON gives its uniform blocks,
+//! `UniformValue`.
 
 use serde_json::Value;
 
@@ -16,7 +16,7 @@ pub enum UniformValue {
 }
 
 impl UniformValue {
-    /// `UniformValue.CODEC`: `{"type": ..., "value": ...}` (a `name` is
+    /// `UniformValue.CODEC`: `{"type": ..., "value".
     pub fn parse(json: &Value) -> Result<Self, String> {
         let kind = json["type"].as_str().ok_or("uniform without a type")?;
         let value = &json["value"];
@@ -94,7 +94,7 @@ fn int(value: &Value) -> Option<i32> {
         .or_else(|| value.as_u64().map(|n| n as u32 as i32))
 }
 
-/// A std140 block built member by member (`Std140Builder`), padded to a
+/// A std140 block built member by member (`Std140Builder`).
 #[derive(Default)]
 pub struct Std140 {
     bytes: Vec<u8>,

@@ -1,4 +1,4 @@
-//! `ComponentSerialization.CODEC`: a component from its JSON (or NBT turned
+//! `ComponentSerialization.CODEC`.
 
 use serde_json::{Map, Value};
 use uuid::Uuid;
@@ -109,7 +109,7 @@ fn translatable(map: &Map<String, Value>) -> Option<Contents> {
     })
 }
 
-/// `extra` / `with`: a list, or one sibling when a plugin writes a single
+/// `extra` / `with`.
 fn components_field(map: &Map<String, Value>, key: &str) -> Vec<Component> {
     match map.get(key) {
         Some(Value::Array(list)) => list.iter().map(component).collect(),
@@ -212,7 +212,7 @@ fn player(map: &Map<String, Value>) -> Option<ObjectInfo> {
     }))
 }
 
-/// `ResolvableProfile.CODEC`: a name, or a compound of name, id, properties
+/// `ResolvableProfile.CODEC`.
 fn profile(value: &Value) -> Option<Profile> {
     match value {
         Value::String(name) => Some(Profile {

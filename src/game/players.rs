@@ -1,4 +1,4 @@
-//! The player list as the tab list, the spectator menu and chat
+//! The player list as the tab list, the spectator menu and chat completion see it.
 
 use super::InWorld;
 use super::PlayerEntry;
@@ -14,7 +14,7 @@ use crate::world::entity::magic_name::Magic;
 use crate::world::scoreboard::{DisplaySlot, NumberFormat, compare_ignore_case};
 
 impl InWorld {
-    /// `TeleportToPlayerMenuCategory`: listed players who aren't
+    /// `TeleportToPlayerMenuCategory`.
     pub fn teleport_targets(&self) -> Vec<(uuid::Uuid, String)> {
         let mut out: Vec<_> = self
             .players
@@ -46,7 +46,7 @@ impl InWorld {
         self.players.get(&id)?.textures.as_deref()
     }
 
-    /// Whether players' faces are drawn now: in the tab list or the
+    /// Whether players' faces are drawn now.
     pub(super) fn faces_shown(&self) -> bool {
         self.tab_list.visible() || self.game_mode.current.is_spectator()
     }
@@ -71,7 +71,7 @@ impl InWorld {
         out
     }
 
-    /// `Hud.extractTabList`: while the key is held, unless this is a world
+    /// `Hud.extractTabList`.
     fn update_tab_visibility(&mut self) -> bool {
         let objective = self
             .scoreboard
@@ -120,7 +120,7 @@ impl InWorld {
         self.tab_list = overlay;
     }
 
-    /// `Hud.extractScoreboardSidebar`: the own team colour's sidebar,
+    /// `Hud.extractScoreboardSidebar`.
     pub(super) fn draw_sidebar(
         &self,
         draw_list: &mut DrawList,

@@ -1,4 +1,4 @@
-//! Cloud boxes from `textures/environment/clouds.png` (vanilla
+//! Cloud boxes from `textures/environment/clouds.png` (vanilla `CloudRenderer`).
 
 use std::path::Path;
 
@@ -143,14 +143,14 @@ pub fn build(texture: &CloudTexture, frame: CloudFrame) -> Vec<WorldVertex> {
     build_with(texture, frame, false)
 }
 
-/// What decides the quads [`build_anchored`] makes: while it stays equal,
+/// What decides the quads [`build_anchored`] makes.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CloudKey {
     status: CloudStatus,
     bottom_y: u32,
     range_chunks: u8,
     cell: (i32, i32),
-    /// Whether the layer's bottom is at or under the camera / its top at or
+    /// Whether the layer's bottom is at or under the camera, and its top at or over it.
     inside: (bool, bool),
 }
 
@@ -188,7 +188,7 @@ pub fn key(texture: &CloudTexture, frame: &CloudFrame) -> Option<CloudKey> {
     })
 }
 
-/// The quads of [`build`] for the camera at the cell's corner and the layer
+/// The quads of [`build`] for the camera at the cell's corner.
 pub fn build_anchored(texture: &CloudTexture, frame: CloudFrame) -> Vec<WorldVertex> {
     build_with(texture, frame, true)
 }

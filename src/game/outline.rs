@@ -125,7 +125,7 @@ impl BlockOutline {
 /// An edge of a shape: its two ends.
 type Edge = (DVec3, DVec3);
 
-/// `VoxelShape.forAllEdges`: the edges of the union of `boxes`. A box's edge
+/// `VoxelShape.forAllEdges`: the edges of the union of `boxes`.
 fn edges(boxes: &[Aabb]) -> Vec<Edge> {
     let inside = |p: DVec3| {
         boxes

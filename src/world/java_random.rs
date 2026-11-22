@@ -1,4 +1,4 @@
-//! The one `java.util.Random` / vanilla `LegacyRandomSource` /
+//! The one `java.util.Random` / vanilla `LegacyRandomSource`.
 
 const MULTIPLIER: u64 = 0x5_DEEC_E66D;
 const ADDEND: u64 = 0xB;

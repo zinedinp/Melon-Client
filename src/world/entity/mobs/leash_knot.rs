@@ -1,4 +1,4 @@
-//! `LeashKnotModel`: the knot a lead is tied to a fence with. It doesn't
+//! `LeashKnotModel`: the knot a lead is tied to a fence with.
 
 use super::{LayerSpec, ModelId as M};
 use crate::world::entity::model::{LayerDefinition, PartDefinition};

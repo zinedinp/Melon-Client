@@ -1,4 +1,4 @@
-//! Part matrices kept from the frame before: a mob standing still (the
+//! Part matrices kept from the frame before.
 
 use std::collections::HashMap;
 
@@ -26,7 +26,7 @@ pub struct PoseCache {
 }
 
 impl PoseCache {
-    /// The part matrices of `model` (baked as `id`) in `pose`, placed by
+    /// The part matrices of `model` (baked as `id`) in `pose`, placed by `root`.
     pub fn matrices(
         &mut self,
         entity: i32,

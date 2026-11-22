@@ -1,4 +1,4 @@
-//! `PiglinModel` and `ZombifiedPiglinModel`: a humanoid with a snout and
+//! `PiglinModel` and `ZombifiedPiglinModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
@@ -13,7 +13,7 @@ use crate::world::model_part::{Cube, Pose};
 const ADULT_EAR_DEGREES: f32 = 30.0;
 const BABY_EAR_DEGREES: f32 = 5.0;
 
-/// `AbstractPiglinModel.addHead`: the 10-wide head, snout and tusks, and
+/// `AbstractPiglinModel.addHead`.
 fn add_head(root: &mut PartDefinition) {
     let head = root.add_or_replace_child(
         "head",
@@ -46,7 +46,7 @@ pub fn armor() -> [LayerDefinition; 4] {
     )
 }
 
-/// `AbstractPiglinModel.createBabyArmorMeshSet`: grown by 0.7 everywhere,
+/// `AbstractPiglinModel.createBabyArmorMeshSet`.
 pub fn baby_armor() -> [LayerDefinition; 4] {
     crate::world::entity::humanoid::baby_armor_layers(
         glam::Vec3::splat(0.7),
@@ -171,7 +171,7 @@ pub struct PiglinPose {
     pub main_arm: Arm,
 }
 
-/// `AbstractPiglinModel.setupAnim` and `PiglinModel.setupAnim`, on top of
+/// `AbstractPiglinModel.setupAnim` and `PiglinModel.setupAnim`, on top of the humanoid's.
 pub fn setup_anim(
     parts: &PiglinParts,
     pose: &mut ModelPose,
@@ -244,7 +244,7 @@ pub fn setup_anim(
     }
 }
 
-/// `AnimationUtils.swingWeaponDown`: the weapon arm raised and brought
+/// `AnimationUtils.swingWeaponDown`.
 pub(super) fn swing_weapon_down(
     h: &HumanoidParts,
     pose: &mut ModelPose,

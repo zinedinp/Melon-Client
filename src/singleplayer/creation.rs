@@ -1,8 +1,8 @@
-//! `WorldCreationUiState`: what the Create World tabs edit, and the rules
+//! `WorldCreationUiState`.
 
 use super::{Difficulty, WorldCreationMode, WorldType};
 
-/// `SelectedGameMode` without Debug (the world type decides that): the Game
+/// `SelectedGameMode` without Debug (the world type decides that).
 pub const GAME_MODES: [WorldCreationMode; 3] = [
     WorldCreationMode::Survival,
     WorldCreationMode::Hardcore,
@@ -16,7 +16,7 @@ pub struct CreationState {
     pub world_type: WorldType,
     game_mode: WorldCreationMode,
     difficulty: Difficulty,
-    /// `allowCommands`: `None` follows the game mode (on for Creative) until
+    /// `allowCommands`.
     allow_commands: Option<bool>,
     generate_structures: bool,
     bonus_chest: bool,
@@ -46,7 +46,7 @@ impl CreationState {
         (!self.is_debug()).then_some(self.game_mode)
     }
 
-    /// The mode the world is made with (a Debug world is Spectator, which
+    /// The mode the world is made with (a Debug world is Spectator, which starts as Creative).
     pub fn world_game_mode(&self) -> WorldCreationMode {
         if self.is_debug() {
             WorldCreationMode::Creative

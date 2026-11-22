@@ -72,7 +72,7 @@ impl BlazeParts {
     }
 }
 
-/// `BlazeModel.setupAnim`: three rings turning at their own speeds, the
+/// `BlazeModel.setupAnim`.
 pub fn setup_anim(parts: &BlazeParts, pose: &mut ModelPose, state: &LivingRenderState) {
     let age = state.age_in_ticks;
     let pi = crate::math::angle::PI;

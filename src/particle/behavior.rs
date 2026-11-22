@@ -1,4 +1,4 @@
-//! The `tick` of each particle class, as an enum: what a class keeps
+//! The `tick` of each particle class, as an enum.
 
 use glam::DVec3;
 
@@ -137,7 +137,7 @@ pub enum Behavior {
     CurrentDown {
         angle: f32,
     },
-    /// `SulfurBubbleParticle`: rises three blocks through still water,
+    /// `SulfurBubbleParticle`.
     SulfurBubble {
         y_start: f64,
         y_prev: f64,
@@ -157,7 +157,7 @@ pub enum Behavior {
     },
     /// `DustPlumeParticle`: the default, its pull and drag weakening.
     DustPlume,
-    /// `FlyStraightTowardsParticle`: from `start + velocity` straight to
+    /// `FlyStraightTowardsParticle`.
     FlyStraight {
         start: DVec3,
         from: u32,
@@ -172,7 +172,7 @@ pub enum Behavior {
 }
 
 impl Behavior {
-    /// Whether it is drawn (`NoRenderParticle` isn't, nor a shriek still
+    /// Whether it is drawn (`NoRenderParticle` isn't).
     pub fn drawn(self) -> bool {
         match self {
             Self::Emitter(_) => false,
@@ -502,7 +502,7 @@ fn sulfur_bubble(
     };
 }
 
-/// `GeyserPlumeParticle.tick`: shot up by its propulsion, pulled back the
+/// `GeyserPlumeParticle.tick`.
 fn geyser_plume(p: &mut Particle, ctx: &TickCtx, mut plume: Plume) {
     let y_before = p.pos.y;
     p.base_tick(ctx);
@@ -556,7 +556,7 @@ fn falling_leaf(p: &mut Particle, ctx: &TickCtx, mut leaf: Leaf) {
     p.behavior = Behavior::Leaf(leaf);
 }
 
-/// `WaterDropParticle.tick`: falls, and is gone soon after landing or
+/// `WaterDropParticle.tick`.
 fn water_drop(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom) {
     p.begin_tick();
     if p.count_down() {
@@ -579,7 +579,7 @@ fn water_drop(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom) {
     }
 }
 
-/// The top of the block's collision shape or fluid in `cell` under
+/// The top of the block's collision shape or fluid in `cell` under `pos`.
 pub fn surface_at(ctx: &TickCtx, cell: glam::IVec3, pos: DVec3) -> f64 {
     let shape = physics::block_shapes(ctx.level, (cell.x, cell.y, cell.z))
         .filter(|b| b.min.x <= pos.x && pos.x <= b.max.x && b.min.z <= pos.z && pos.z <= b.max.z)
@@ -592,7 +592,7 @@ pub fn surface_at(ctx: &TickCtx, cell: glam::IVec3, pos: DVec3) -> f64 {
     shape.max(f64::from(fluid))
 }
 
-/// `DripParticle.tick` with its stage's `preMoveUpdate` and
+/// `DripParticle.tick` with its stage's `preMoveUpdate` and `postMoveUpdate`.
 fn tick_drip(p: &mut Particle, drip: Drip, ctx: &TickCtx, out: &mut Vec<Spawn>) {
     p.begin_tick();
     if drip.cooling {

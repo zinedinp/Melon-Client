@@ -1,4 +1,4 @@
-//! Vanilla `DeathScreen`: "You Died!" over a red gradient, with Respawn and
+//! Vanilla `DeathScreen`.
 
 use std::time::{Duration, Instant};
 
@@ -24,7 +24,7 @@ pub struct DeathScreen {
     hardcore: bool,
     widgets: WidgetSet<Id>,
     opened: Instant,
-    /// Respawn was clicked; vanilla greys the button out until the server
+    /// Respawn was clicked; vanilla greys the button out until the server answers.
     respawning: bool,
 }
 

@@ -1,4 +1,4 @@
-//! Fallback menu background when the panorama cubemap is missing
+//! Fallback menu background when the panorama cubemap is missing.
 
 use crate::gui::assets::GuiAssets;
 use crate::math::argb;
@@ -41,7 +41,7 @@ pub fn push_gradient(draw_list: &mut DrawList, white: TextureId, width: f32, hei
     );
 }
 
-/// `Screen.extractTransparentBackground`: the dark gradient container
+/// `Screen.extractTransparentBackground`.
 pub fn push_transparent_background(
     draw_list: &mut DrawList,
     white: TextureId,
@@ -59,12 +59,12 @@ pub fn push_transparent_background(
     );
 }
 
-/// `Screen.extractBackground` on every non-`TitleScreen` menu: panorama (or
+/// `Screen.extractBackground` on every non-`TitleScreen` menu.
 pub fn push_menu_overlay(draw_list: &mut DrawList, white: TextureId, width: f32, height: f32) {
     push_menu_overlay_rect(draw_list, white, 0.0, 0.0, width, height);
 }
 
-/// `Screen.extractMenuBackground(graphics, x, y, width, height)`: the same
+/// `Screen.extractMenuBackground(graphics, x, y, width, height)`.
 pub fn push_menu_overlay_rect(
     draw_list: &mut DrawList,
     white: TextureId,

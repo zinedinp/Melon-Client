@@ -1,4 +1,4 @@
-//! The client's `Scoreboard`: objectives, the scores of every holder (a
+//! The client's `Scoreboard`.
 
 use crate::component::{Component, Contents, Style, TextColor};
 use std::collections::HashMap;
@@ -79,7 +79,7 @@ pub struct Score {
 }
 
 impl Score {
-    /// `ReadOnlyScoreInfo.formatValue`: the score's own format, else
+    /// `ReadOnlyScoreInfo.formatValue`.
     pub fn format(&self, default: &NumberFormat) -> Component {
         self.number_format
             .as_ref()
@@ -88,7 +88,7 @@ impl Score {
     }
 }
 
-/// `DisplaySlot`: `list`, `sidebar`, `below_name`, then the sidebar per
+/// `DisplaySlot`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DisplaySlot(u8);
 
@@ -166,7 +166,7 @@ pub enum CollisionRule {
     PushOwnTeam,
 }
 
-/// `EntitySelector.pushableBy`'s team part: whether an entity in team
+/// `EntitySelector.pushableBy`'s team part.
 pub fn team_allows_push(
     own: Option<(&str, CollisionRule)>,
     their: Option<(&str, CollisionRule)>,
@@ -206,7 +206,7 @@ pub struct TeamLook {
     pub name_tags: Visibility,
     pub collision: CollisionRule,
     pub color: Option<TeamColor>,
-    /// `PlayerTeam.packOptions`: friendly fire (1), seeing invisible team
+    /// `PlayerTeam.packOptions`.
     pub options: u8,
 }
 
@@ -233,7 +233,7 @@ impl TeamLook {
         self.options & 2 != 0
     }
 
-    /// `PlayerTeam.getFormattedName`: prefix, name and suffix, in the
+    /// `PlayerTeam.getFormattedName`.
     pub fn format_name(&self, name: Component) -> Component {
         let mut out = Component::text("");
         if let Some(color) = self.color {
@@ -458,7 +458,7 @@ impl Scoreboard {
         }
     }
 
-    /// `Entity.belowNameDisplay`: the `below_name` slot's score, then the
+    /// `Entity.belowNameDisplay`.
     pub fn below_name_display(&self, holder: &str) -> Option<Component> {
         let (name, objective) = self.display_objective(DisplaySlot::BELOW_NAME)?;
         let score = self.score(holder, name)?;
@@ -476,7 +476,7 @@ impl Scoreboard {
         )
     }
 
-    /// `Hud.extractScoreboardSidebar`'s choice: the sidebar of the own
+    /// `Hud.extractScoreboardSidebar`'s choice.
     pub fn sidebar_objective(&self, own_name: &str) -> Option<(&str, &Objective)> {
         self.team_of(own_name)
             .and_then(|(_, team)| team.look.color)
@@ -484,7 +484,7 @@ impl Scoreboard {
             .or_else(|| self.display_objective(DisplaySlot::SIDEBAR))
     }
 
-    /// `Hud.displayScoreboardSidebar`'s rows: `objective`'s scores but
+    /// `Hud.displayScoreboardSidebar`'s rows.
     pub fn sidebar_entries(&self, objective: &str) -> Vec<(&str, &Score)> {
         let mut out: Vec<(&str, &Score)> = self
             .scores

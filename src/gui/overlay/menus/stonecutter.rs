@@ -1,4 +1,4 @@
-//! `StonecutterScreen`: the grid of what the input cuts into (12 at a time,
+//! `StonecutterScreen`.
 
 use pumpkin_data::item_stack::ItemStack;
 
@@ -15,7 +15,7 @@ const PER_PAGE: usize = COLUMNS * ROWS;
 /// Where the recipe grid starts in the panel, and one button's size.
 const GRID: (f32, f32) = (52.0, 14.0);
 const BUTTON: (f32, f32) = (16.0, 18.0);
-/// The scroll bar: the column it is in, where its track starts for the
+/// The scroll bar.
 const BAR_X: f32 = 119.0;
 const BAR_PRESS_Y: f32 = 9.0;
 const BAR_TOP: f32 = 15.0;
@@ -52,7 +52,7 @@ pub struct StonecutterScreen {
 }
 
 impl StonecutterScreen {
-    /// `containerChanged`: lists what the input cuts into when it changed,
+    /// `containerChanged`.
     fn refresh(&mut self, menu: &OpenContainer, sets: &crate::world::recipes::RecipeSets) {
         let input = &menu.slots[0];
         if self.input.as_ref().is_some_and(|known| {
@@ -80,7 +80,7 @@ impl StonecutterScreen {
         self.scroll.start_index(self.offscreen_rows(), COLUMNS)
     }
 
-    /// The shown options with the panel position of each button (the
+    /// The shown options with the panel position of each button.
     fn visible(&self) -> impl Iterator<Item = (usize, f32, f32)> + '_ {
         let start = self.start();
         (start..(start + PER_PAGE).min(self.options.len())).map(move |index| {

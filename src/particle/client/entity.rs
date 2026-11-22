@@ -1,4 +1,4 @@
-//! An entity's own particles, made on the client: the dust kicked up
+//! An entity's own particles, made on the client.
 
 use glam::DVec3;
 
@@ -35,7 +35,7 @@ pub fn sprint_dust(
     ));
 }
 
-/// `doWaterSplashEffect`'s particles: bubbles and splashes across the
+/// `doWaterSplashEffect`'s particles.
 pub fn water_splash(
     feet: DVec3,
     width: f32,
@@ -67,7 +67,7 @@ pub fn water_splash(
     }
 }
 
-/// `spawnItemParticles`: `count` crumbs of `item` from in front of the
+/// `spawnItemParticles`.
 pub fn item_crumbs(
     item: u16,
     eye: DVec3,

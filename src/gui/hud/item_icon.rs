@@ -1,4 +1,4 @@
-//! Item icons for the hotbar and inventory, baked on the CPU from the
+//! Item icons for the hotbar and inventory, baked on the CPU from the item models.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -20,7 +20,7 @@ use crate::world::head_profile::HeadProfile;
 use crate::world::item_model::{self, Count, ItemKey, ItemModel, ItemQuad};
 use crate::world::texture_animation;
 
-/// Edge length of a baked block icon. Drawn at 16 GUI pixels, so this is
+/// Edge length of a baked block icon.
 const BLOCK_ICON_SIZE: u32 = 64;
 /// `ItemTransform`'s default for block models (`block/block.json`'s `gui`).
 const DEFAULT_BLOCK_GUI: Display = Display {
@@ -314,7 +314,7 @@ fn atlas_layers(item: &ItemModel, sheet: &ItemSheet) -> Option<Vec<([f32; 4], [f
         .collect()
 }
 
-/// Bakes the icon for the item with registry key `key` (e.g. `stone`), its
+/// Bakes the icon for the item with registry key `key` (e.g.
 pub fn bake(assets_root: &Path, key: &str) -> Option<RgbaImage> {
     let item = resolve(assets_root, key, None)?;
     bake_item(assets_root, &item, None).map(|mut icon| icon.frames.swap_remove(0))
@@ -322,7 +322,7 @@ pub fn bake(assets_root: &Path, key: &str) -> Option<RgbaImage> {
 
 /// The tallest strip of frames an animated icon is uploaded as.
 const MAX_STRIP_HEIGHT: u32 = 8192;
-/// A baked icon: one image, or the frames of an item whose textures are
+/// A baked icon.
 struct BakedIcon {
     frames: Vec<RgbaImage>,
     /// `(frame, ticks)` in play order.
@@ -433,7 +433,7 @@ fn bake_frame(
     Some(rasterize(quads, display, item.model.front_light, textures))
 }
 
-/// Draws the faces orthographically through the GUI display transform,
+/// Draws the faces orthographically through the GUI display transform.
 fn rasterize(
     quads: &[ItemQuad],
     display: Display,
@@ -488,7 +488,7 @@ fn rasterize(
     out
 }
 
-/// `Lighting.setupFor3DItems`: two directional lights plus ambient, in view
+/// `Lighting.setupFor3DItems`.
 fn gui_light(normal: Vec3, front: bool) -> f32 {
     let mut l0 = Vec3::new(0.2, 1.0, -0.7).normalize();
     let mut l1 = Vec3::new(-0.2, 1.0, 0.7).normalize();

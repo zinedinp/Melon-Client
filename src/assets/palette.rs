@@ -1,4 +1,4 @@
-//! Vanilla `PalettedPermutations` / `PaletteMapping`: a grayscale (or
+//! Vanilla `PalettedPermutations` / `PaletteMapping`.
 
 use image::{Rgba, RgbaImage};
 use std::path::Path;
@@ -6,7 +6,7 @@ use std::path::Path;
 /// One entry of a palette mapping: a base colour (RGB) and what it becomes.
 pub type ColorMapping = ((u8, u8, u8), [u8; 4]);
 
-/// `PaletteMapping.create`: each opaque colour in `base` maps to the
+/// `PaletteMapping.create`.
 pub fn mapping(base: &RgbaImage, target: &RgbaImage) -> Vec<ColorMapping> {
     let n = (base.width() * base.height()).min(target.width() * target.height()) as usize;
     let mut out = Vec::with_capacity(n);
@@ -24,7 +24,7 @@ pub fn mapping(base: &RgbaImage, target: &RgbaImage) -> Vec<ColorMapping> {
     out
 }
 
-/// `PaletteMapping.apply` over every pixel: keep fully transparent ones,
+/// `PaletteMapping.apply` over every pixel.
 pub fn apply(image: &RgbaImage, map: &[ColorMapping]) -> RgbaImage {
     let mut out = image.clone();
     for pixel in out.pixels_mut() {

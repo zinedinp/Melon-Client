@@ -1,6 +1,6 @@
-//! Vanilla `LanguageInfo` table, baked from Mojang lang files
+//! Vanilla `LanguageInfo` table, baked from Mojang lang files.
 
-/// One entry per language: its variant, filename stem
+/// One entry per language.
 macro_rules! languages {
     ($($variant:ident => $code:literal, $name:literal, $region:literal;)*) => {
         #[derive(Clone, Copy, PartialEq, Eq, Debug)]

@@ -1,4 +1,4 @@
-//! `LoomScreen`: the patterns the banner can take (16 at a time, four to a
+//! `LoomScreen`.
 
 use pumpkin_data::banner_pattern::BannerPattern;
 use pumpkin_data::dye_color::DyeColor;
@@ -19,13 +19,13 @@ const PER_PAGE: usize = COLUMNS * ROWS;
 /// Where the first pattern button is, and its size.
 const GRID: (f32, f32) = (60.0, 13.0);
 const BUTTON: f32 = 14.0;
-/// The scroll bar: its column, the top of its track for the thumb and
+/// The scroll bar.
 const BAR_X: f32 = 119.0;
 const BAR_Y: f32 = 13.0;
 const BAR_PRESS_Y: f32 = 9.0;
 const TRACK: f32 = 56.0;
 const THUMB: (f32, f32) = (12.0, 15.0);
-/// The banner's picture: where the preview goes and how big, and the
+/// The banner's picture.
 const PREVIEW: (f32, f32, f32, f32) = (141.0, 8.0, 20.0, 40.0);
 const SHEET: f32 = 64.0;
 
@@ -284,7 +284,7 @@ impl MenuScreen for LoomScreen {
 }
 
 impl LoomScreen {
-    /// The pattern on its button: white on a grey flag, 5x10 pixels
+    /// The pattern on its button.
     fn draw_button_icon(&self, draw: &mut MenuDraw, pattern: BannerPattern, x: f32, y: f32) {
         let (left, top) = (draw.frame.left + x + 4.0, draw.frame.top + y + 2.0);
         let white = draw.ui.painter.white;
@@ -304,7 +304,7 @@ impl LoomScreen {
         }
     }
 
-    /// The banner in the result slot, flat: its base colour, then each
+    /// The banner in the result slot, flat.
     fn draw_banner(&self, draw: &mut MenuDraw, banner: &ItemStack) {
         let Some(base) = loom::banner_color(banner) else {
             return;

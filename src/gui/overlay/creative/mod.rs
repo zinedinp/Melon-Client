@@ -1,4 +1,4 @@
-//! Vanilla `CreativeModeInventoryScreen`: the 195x136 panel with seven tabs
+//! Vanilla `CreativeModeInventoryScreen`.
 
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
@@ -127,7 +127,7 @@ pub struct CreativeOverlay {
 }
 
 impl CreativeOverlay {
-    /// Opens on `remembered_tab` (an index into [`tabs`], see
+    /// Opens on `remembered_tab` (an index into [`tabs`]).
     pub fn new(
         width: f32,
         height: f32,
@@ -245,7 +245,7 @@ impl CreativeOverlay {
         self.scroll = 0.0;
     }
 
-    /// `refreshSearchResults`: every item whose name or id contains the
+    /// `refreshSearchResults`.
     fn refresh_search(&mut self, lang: &Lang) {
         self.items.clear();
         let tab = self.tab();
@@ -298,7 +298,7 @@ impl CreativeOverlay {
         }
     }
 
-    /// `mouseClicked`'s own part: tabs and the scrollbar. `true` when it
+    /// `mouseClicked`'s own part: tabs and the scrollbar.
     fn press_tabs(&mut self, left_button: bool) -> bool {
         if !left_button {
             return false;
@@ -341,7 +341,7 @@ impl CreativeOverlay {
         changed
     }
 
-    /// `keyPressed`: the chat key opens the search tab, number keys still
+    /// `keyPressed`.
     fn key_takes_text(&mut self, key_char: Option<&str>, hotbars: &Hotbars, lang: &Lang) -> bool {
         self.ignore_text_input = false;
         if self.tab_type() != TabType::Search {
@@ -370,7 +370,7 @@ impl CreativeOverlay {
         !(number && swap_ok)
     }
 
-    /// The slot under the mouse, as a menu click target for the keys
+    /// The slot under the mouse, as a menu click target for the keys.
     fn hovered(&self) -> Option<usize> {
         self.hovered_slot(self.cursor)
     }
@@ -500,7 +500,7 @@ impl Overlay for CreativeOverlay {
         vec![self.apply(vec![click], ctx.inventory)]
     }
 
-    /// The tab is remembered for the next opening, and the creative cursor,
+    /// The tab is remembered for the next opening, and the creative cursor is emptied.
     fn closed(&mut self, _exit: ChatExit, ctx: &mut OverlayContext) {
         *ctx.creative_tab = self.tab_index();
         ctx.inventory.set_carried(empty());
@@ -519,7 +519,7 @@ impl Overlay for CreativeOverlay {
         );
     }
 
-    /// `CreativeModeInventoryScreen.extractBackground`: the player, on the
+    /// `CreativeModeInventoryScreen.extractBackground`.
     fn entity_preview(&self) -> Option<crate::gui::entity_preview::EntityPreview> {
         (self.tab_type() == crate::world::creative_tabs::TabType::Inventory).then_some(
             crate::gui::entity_preview::EntityPreview {

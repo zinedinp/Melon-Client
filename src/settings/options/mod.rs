@@ -28,12 +28,12 @@ pub const FOV_DEFAULT: u8 = 70;
 /// `Options.renderDistance` (the 64-bit Java range) and default, in chunks.
 pub const RENDER_DISTANCE_RANGE: (u8, u8) = (2, 32);
 pub const RENDER_DISTANCE_DEFAULT: u8 = 12;
-/// `Options.simulationDistance` (the 64-bit Java range) and default, in
+/// `Options.simulationDistance` (the 64-bit Java range) and default.
 pub const SIMULATION_DISTANCE_RANGE: (u8, u8) = (5, 32);
 pub const SIMULATION_DISTANCE_DEFAULT: u8 = 12;
 /// `Options.entityDistanceScaling`: `0.5..=5.0` in quarter steps.
 pub const ENTITY_DISTANCE_RANGE: (f32, f32) = (0.5, 5.0);
-/// `Options.framerateLimit`: `10..=260` in steps of 10, the top meaning
+/// `Options.framerateLimit`.
 pub const MAX_FPS_RANGE: (u32, u32) = (10, 260);
 pub const MAX_FPS_STEP: u32 = 10;
 pub const MAX_FPS_DEFAULT: u32 = 120;
@@ -58,17 +58,17 @@ pub struct Config {
     pub fov: u8,
     /// Chunks: how far terrain is asked for and drawn.
     pub render_distance: u8,
-    /// Chunks: how far the integrated server ticks the world around the
+    /// Chunks: how far the integrated server ticks the world around the player.
     pub simulation_distance: u8,
     /// Which culling runs, and how far entities are drawn.
     pub cull: CullSettings,
     /// `Options.graphicsPreset`: what last set the quality options.
     pub graphics_preset: GraphicsPreset,
-    /// `Options.ambientOcclusion`, "Smooth Lighting": light blended over
+    /// `Options.ambientOcclusion`, "Smooth Lighting".
     pub smooth_lighting: bool,
     /// `Options.prioritizeChunkUpdates`.
     pub chunk_builder: ChunkBuilder,
-    /// `Options.biomeBlendRadius`: biome colours of the terrain are
+    /// `Options.biomeBlendRadius`.
     pub biome_blend: u8,
     /// `Options.renderClouds`.
     pub clouds: CloudStatus,
@@ -78,11 +78,11 @@ pub struct Config {
     pub weather_radius: u8,
     /// `Options.vignette`: the darkened screen edges.
     pub vignette: bool,
-    /// `Options.screenEffectScale` ("Distortion Effects"): how strongly
+    /// `Options.screenEffectScale` ("Distortion Effects").
     pub screen_effect_scale: f64,
-    /// `Options.fovEffectScale` ("FOV Effects"): how far gameplay changes
+    /// `Options.fovEffectScale` ("FOV Effects").
     pub fov_effect_scale: f64,
-    /// `Options.damageTiltStrength` ("Damage Tilt"): how far the camera
+    /// `Options.damageTiltStrength` ("Damage Tilt").
     pub damage_tilt_strength: f64,
     /// `Options.guiScale`: `0` is Auto, the largest scale that fits.
     pub gui_scale: u8,
@@ -106,7 +106,7 @@ pub struct Config {
     pub chat: ChatSettings,
     /// `Options.soundSourceVolumes`, the sliders of Music & Sound Options.
     pub sound_volumes: Volumes,
-    /// `Options.soundDevice`: the output device's name, empty for the
+    /// `Options.soundDevice`.
     pub sound_device: String,
     /// `Options.showSubtitles` ("Closed Captions").
     pub show_subtitles: bool,
@@ -118,7 +118,7 @@ pub struct Config {
     pub music_toast: MusicToast,
     /// Mouse, toggles, sprint window and key binds.
     pub input: InputSettings,
-    /// `Options.modelParts` (Skin Customization): the outer layer and cape
+    /// `Options.modelParts` (Skin Customization).
     pub model_parts: ShownParts,
     /// `Options.mainHand`.
     pub main_hand: Arm,
@@ -131,9 +131,9 @@ pub struct Config {
     pub attack_indicator: AttackIndicator,
     /// `Options.particles`: how many particles show.
     pub particles: ParticleStatus,
-    /// `Options.resourcePacks`: the selected packs' ids, lowest first,
+    /// `Options.resourcePacks`.
     pub resource_packs: Vec<String>,
-    /// `Options.incompatibleResourcePacks`: the selected ones the player
+    /// `Options.incompatibleResourcePacks`.
     pub incompatible_resource_packs: Vec<String>,
 }
 
@@ -200,7 +200,7 @@ impl Config {
         game_dir.join("options.txt")
     }
 
-    /// Missing file or keys: defaults. Out-of-range values are clamped, as
+    /// Missing file or keys: defaults.
     pub fn load(game_dir: &Path) -> Self {
         std::fs::read_to_string(Self::path(game_dir))
             .map(|text| Self::parse(&text))

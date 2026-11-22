@@ -1,4 +1,4 @@
-//! What every part of the world asks about blocks: the six directions, and
+//! What every part of the world asks about blocks.
 
 pub mod ao_flags;
 pub mod direction;

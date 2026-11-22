@@ -27,9 +27,10 @@ const WATER_MASK_FRAG_SPV: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/world_water_mask.frag.spv"));
 const GLINT_FRAG_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/world_glint.frag.spv"));
 
-/// `mat4 view_proj`, `vec4 ambient`, `vec4 params` (sky light RGB, gamma),
+/// `mat4 view_proj`, `vec4 ambient`, `vec4 params` (sky light RGB, gamma), and the rest of the
+/// push block.
 pub const PUSH_CONSTANT_SIZE: u32 = VIEW_AT + 16;
-/// Where the per-draw mesh offset starts: everything before it is the same
+/// Where the per-draw mesh offset starts.
 pub const OFFSET_AT: u32 = 96;
 /// Where how the fog finds a model's distance is.
 pub const VIEW_AT: u32 = 112;
@@ -41,9 +42,9 @@ pub const OFFSET_SIZE: u32 = 16;
 pub enum FogInput {
     /// Not at all: the vertex is not fogged (sky bodies).
     None,
-    /// Its position plus the push constants' offset is relative to the
+    /// Its position plus the push constants' offset is relative to the camera's block.
     Chunk,
-    /// From where `view_proj` puts it: a model. `1 / m00` and `1 / m11` of
+    /// From where `view_proj` puts it: a model.
     Model([f32; 2]),
 }
 
@@ -57,7 +58,7 @@ impl FogInput {
         }
     }
 }
-/// The lightmap's inputs are read where it runs, per fragment, and the rest
+/// The lightmap's inputs are read where it runs, per fragment.
 pub const PUSH_STAGES: vk::ShaderStageFlags = vk::ShaderStageFlags::from_raw(
     vk::ShaderStageFlags::VERTEX.as_raw() | vk::ShaderStageFlags::FRAGMENT.as_raw(),
 );
@@ -65,13 +66,13 @@ pub const PUSH_STAGES: vk::ShaderStageFlags = vk::ShaderStageFlags::from_raw(
 /// How one world/celestial draw is lit and fogged.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DrawLight {
-    /// Multiplied onto sentinel-lit vertices (entities, celestials,
+    /// Multiplied onto sentinel-lit vertices (entities, celestials, ...).
     pub ambient: [f32; 4],
-    /// The lightmap's sky light and gamma, for vertices that carry their
+    /// The lightmap's sky light and gamma, for vertices that carry their own light.
     pub lightmap: LightmapParams,
     /// How the fog finds the draw's distance from the camera.
     pub fog: FogInput,
-    /// Vanilla's entity overlay (`OverlayTexture`) on sentinel-lit
+    /// Vanilla's entity overlay (`OverlayTexture`) on sentinel-lit vertices.
     pub overlay: f32,
     /// `TextureTransform` scale for the glint overlay pass; 0 skips it.
     pub glint_scale: f32,
@@ -124,7 +125,7 @@ impl DrawLight {
 #[derive(Clone, Copy, PartialEq)]
 pub struct PushBlock<const N: usize = 24>(pub [f32; N]);
 
-/// Bytes for one world/celestial draw: `view_proj`, `ambient`, then
+/// Bytes for one world/celestial draw.
 pub fn push_bytes(view_proj: &glam::Mat4, light: &DrawLight) -> [f32; 24] {
     let mut data = [0.0; 24];
     data[..16].copy_from_slice(&view_proj.to_cols_array());
@@ -141,34 +142,34 @@ pub fn push_bytes(view_proj: &glam::Mat4, light: &DrawLight) -> [f32; 24] {
 /// Which world-shaped pipeline to build.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
-    /// Fully opaque terrain (vanilla's `SOLID` chunk layer): no `discard`,
+    /// Fully opaque terrain (vanilla's `SOLID` chunk layer).
     Solid,
     /// Terrain with holes (leaves, plants; vanilla `CUTOUT`) and entities.
     Opaque,
-    /// Blob shadows and see-through items: blended, depth-tested, no depth
+    /// Blob shadows and see-through items.
     Translucent,
     /// Text displays (`RenderPipelines.TEXT_POLYGON_OFFSET`): blended,
     /// depth-tested and depth written, clear texels dropped.
     Text,
-    /// Water, glass and ice (vanilla `TRANSLUCENT_TERRAIN`): blended, drawn
+    /// Water, glass and ice (vanilla `TRANSLUCENT_TERRAIN`).
     TranslucentTerrain,
-    /// Fancy clouds (`RenderPipelines.CLOUDS`): translucent, depth written
+    /// Fancy clouds (`RenderPipelines.CLOUDS`).
     Clouds,
-    /// Rain and snow (`RenderPipelines.WEATHER`): blended over the world,
+    /// Rain and snow (`RenderPipelines.WEATHER`).
     Weather,
     /// Sun, moon and stars: no depth, vanilla `BlendFunction.OVERLAY`.
     Celestial,
-    /// The sky's flat colour (`RenderPipelines.SKY`): no depth, faded into
+    /// The sky's flat colour (`RenderPipelines.SKY`).
     SkyDisc,
-    /// What lies over the sky and under the sun: the glow of dusk, the
+    /// What lies over the sky and under the sun.
     SkyGlow,
     /// The cracks on a block being broken (`RenderPipelines.CRUMBLING`):
     Crumbling,
-    /// The boat's water patch (`RenderPipelines.WATER_MASK`): depth only,
+    /// The boat's water patch (`RenderPipelines.WATER_MASK`).
     WaterMask,
-    /// A glowing entity's flat outline colour, into the entity outline
+    /// A glowing entity's flat outline colour, into the entity outline target.
     Outline,
-    /// Enchantment glint overlay (`RenderPipelines.GLINT`): the scrolling
+    /// Enchantment glint overlay (`RenderPipelines.GLINT`).
     Glint,
     /// Lines and points of a fixed width in pixels (`RenderPipelines.LINES`):
     /// depth written, not blended.
@@ -203,11 +204,11 @@ impl Mode {
 pub enum Geometry {
     /// [`Vertex`] quads through the shared index buffer.
     Vertices,
-    /// [`TerrainQuad`]s, read from the mesh buffer (set 4) by
+    /// [`TerrainQuad`]s, read from the mesh buffer (set 4) by the terrain shader.
     Quads { indirect: bool },
 }
 
-/// The descriptor sets after the texture's that every world pipeline
+/// The descriptor sets after the texture's that every world pipeline binds.
 #[derive(Clone, Copy)]
 pub struct Layouts {
     /// Set 1: the quad table.
@@ -237,7 +238,7 @@ fn translucent_blend() -> vk::PipelineColorBlendAttachmentState {
         .alpha_blend_op(vk::BlendOp::ADD)
 }
 
-/// The world pipeline. [`Mode::TranslucentTerrain`] is water and glass
+/// The world pipeline.
 pub unsafe fn create(
     device: &ash::Device,
     render_pass: vk::RenderPass,

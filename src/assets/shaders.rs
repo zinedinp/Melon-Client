@@ -22,7 +22,7 @@ impl Stage {
     }
 }
 
-/// `shaders/core/<name>.<vsh|fsh>` from the resource packs, and whether
+/// `shaders/core/<name>.<vsh|fsh>` from the resource packs, and whether a pack replaced it.
 pub fn core_source(assets_root: &Path, name: &str, stage: Stage) -> Option<(String, bool)> {
     let path = format!("shaders/core/{name}.{}", stage.extension());
     let (bytes, layer) = packs::active().find(assets_root, "minecraft", &path)?;
@@ -41,7 +41,7 @@ pub fn source(assets_root: &Path, id: &str, stage: Stage) -> Option<(String, boo
 
 /// What a pipeline offers a shader, by the names vanilla gives them.
 pub struct Interface<'a> {
-    /// Vertex attributes: name and location (`DefaultVertexFormat`'s
+    /// Vertex attributes.
     pub inputs: &'a [(&'a str, u32)],
     /// Uniform blocks and samplers: name, descriptor set and binding.
     pub resources: &'a [(&'a str, u32, u32)],
@@ -83,7 +83,7 @@ pub fn compile(
     Ok(words)
 }
 
-/// `ShaderManager`'s includes: `<namespace:path.glsl>` (namespace
+/// `ShaderManager`'s includes.
 fn include(assets_root: &Path, requested: &str) -> shaderc::IncludeCallbackResult {
     let (namespace, path) = match requested.split_once(':') {
         Some((namespace, path)) => (namespace, path),
@@ -113,7 +113,8 @@ const STORAGE_UNIFORM: u32 = 2;
 const STORAGE_PUSH_CONSTANT: u32 = 9;
 const STORAGE_BUFFER: u32 = 12;
 
-/// Gives every uniform, sampler and (for a vertex shader) input the set,
+/// Gives every uniform, sampler and (for a vertex shader) input the set, binding or location
+/// Melon's pipelines use.
 pub fn rebind(words: &mut [u32], stage: Stage, interface: &Interface) -> anyhow::Result<()> {
     anyhow::ensure!(words.len() > 5 && words[0] == 0x0723_0203, "not SPIR-V");
     let mut names: HashMap<u32, String> = HashMap::new();
@@ -248,7 +249,7 @@ mod tests {
         ],
     };
 
-    /// The location or binding decoration of the variable or block named
+    /// The location or binding decoration of the variable or block named `name`.
     fn decoration(words: &[u32], name: &str, decoration: u32) -> Option<u32> {
         let mut ids = Vec::new();
         let mut at = 5;

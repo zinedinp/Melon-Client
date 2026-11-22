@@ -1,11 +1,11 @@
-//! Vanilla `Frustum`: the six planes of the camera's view volume. Like
+//! Vanilla `Frustum`: the six planes of the camera's view volume.
 
 use glam::{Mat4, Vec3, Vec4};
 
 #[derive(Clone, Copy)]
 struct Plane {
     normal: Vec3,
-    /// `|normal|` per component: how much of a box's half-size counts
+    /// `|normal|` per component.
     reach: Vec3,
     distance: f32,
 }
@@ -33,7 +33,7 @@ pub struct Frustum {
 }
 
 impl Frustum {
-    /// From `projection * view` with Vulkan's `0..1` depth range, so the
+    /// From `projection * view` with Vulkan's `0..1` depth range.
     pub fn from_view_projection(m: Mat4) -> Self {
         let (r0, r1, r2, r3) = (m.row(0), m.row(1), m.row(2), m.row(3));
         Self {
@@ -49,7 +49,7 @@ impl Frustum {
             .all(|plane| plane.signed_distance(center) + plane.reach.dot(half) >= 0.0)
     }
 
-    /// Whether all of the box is inside every plane: then so is all of
+    /// Whether all of the box is inside every plane.
     #[inline]
     pub fn contains_box(&self, min: Vec3, max: Vec3) -> bool {
         let (center, half) = ((min + max) * 0.5, (max - min) * 0.5);
@@ -70,7 +70,7 @@ impl Frustum {
         self.planes.map(|p| (p.normal, p.reach, p.distance))
     }
 
-    /// Whether any of a sphere can be inside: the cheapest test, for
+    /// Whether any of a sphere can be inside.
     #[inline]
     pub fn sees_sphere(&self, center: Vec3, radius: f32) -> bool {
         self.planes

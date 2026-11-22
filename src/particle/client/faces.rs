@@ -6,7 +6,7 @@ use super::super::{Kind, ParticleSpec, Spawn};
 use crate::world::block::direction::Direction;
 use crate::world::java_random::JavaRandom;
 
-/// `spawnParticlesOnBlockFaces`: `min..=max` on each of the six faces,
+/// `spawnParticlesOnBlockFaces`.
 pub fn on_faces(
     base: DVec3,
     kind: Kind,
@@ -74,7 +74,7 @@ pub fn on_face_of(
     out.push(Spawn::new(spec, at, aux));
 }
 
-/// `spawnParticlesAlongAxis`: `count` along `axis` (0 x, 1 y, 2 z), half a
+/// `spawnParticlesAlongAxis`.
 pub fn along_axis(
     base: DVec3,
     axis: usize,

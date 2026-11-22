@@ -1,4 +1,4 @@
-//! Vanilla `EditBox`: `widget/text_field`/`text_field_highlighted` border by
+//! Vanilla `EditBox`.
 
 use crate::gui::screen::{CursorKind, TextEvent};
 use crate::gui::widgets::text_input::{Edit, TextInput};
@@ -11,9 +11,9 @@ const TEXT_COLOR: [f32; 4] = [
     0xE0 as f32 / 255.0,
     1.0,
 ];
-/// `ChatFormatting.GRAY` + `ITALIC`, `EditBox.SEARCH_HINT_STYLE`: search boxes
+/// `ChatFormatting.GRAY` + `ITALIC`, `EditBox.SEARCH_HINT_STYLE`.
 const SEARCH_HINT_COLOR: [f32; 4] = [170.0 / 255.0, 170.0 / 255.0, 170.0 / 255.0, 1.0];
-/// `ChatFormatting.DARK_GRAY`, `EditBox.DEFAULT_HINT_STYLE`: ordinary fields
+/// `ChatFormatting.DARK_GRAY`, `EditBox.DEFAULT_HINT_STYLE`.
 const DEFAULT_HINT_COLOR: [f32; 4] = [85.0 / 255.0, 85.0 / 255.0, 85.0 / 255.0, 1.0];
 
 pub struct EditBox {
@@ -37,7 +37,7 @@ impl EditBox {
         Self::build(hint, w, h, false)
     }
 
-    /// A search box (`EditBox.SEARCH_HINT_STYLE`): italic gray hint instead of
+    /// A search box (`EditBox.SEARCH_HINT_STYLE`).
     pub fn new_search(hint: impl Into<Label>, w: f32, h: f32) -> Self {
         Self::build(hint, w, h, true)
     }
@@ -57,7 +57,7 @@ impl EditBox {
         }
     }
 
-    /// `AbstractContainerEventHandler.setFocused`: reassigning the screen's
+    /// `AbstractContainerEventHandler.setFocused`.
     pub fn focused(&self) -> bool {
         self.focused
     }
@@ -87,7 +87,7 @@ impl EditBox {
         Widget::contains(self, mx, my)
     }
 
-    /// `EditBox.onClick`: a click on the box focuses it and puts the
+    /// `EditBox.onClick`.
     pub fn click(&mut self, x: f32, y: f32) -> bool {
         let hit = self.contains(x, y);
         self.set_focused(hit);

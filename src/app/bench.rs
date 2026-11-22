@@ -1,4 +1,4 @@
-//! `--bench` in the app: the fixed world it joins, the options it holds
+//! `--bench` in the app.
 
 use std::path::{Path, PathBuf};
 
@@ -136,7 +136,8 @@ impl BenchRun {
         false
     }
 
-    /// Writes the files and prints the summary, and the comparison when
+    /// Writes the files and prints the summary, and the comparison when there is an earlier
+    /// report.
     pub fn finish(&self) {
         let Some(recorder) = &self.recorder else {
             crate::warn!("Bench: the world was never entered, nothing measured");
@@ -164,7 +165,7 @@ impl BenchRun {
     }
 }
 
-/// What the benchmark holds still for the run, in memory only: no VSync,
+/// What the benchmark holds still for the run, in memory only.
 pub(super) fn override_config(config: &mut Config) {
     // The heaviest preset, whatever the player chose: render distance 32,
     // fancy clouds out to 128, every particle.
@@ -201,7 +202,7 @@ pub(super) fn largest_monitor(
     })
 }
 
-/// The benchmark's world, made the first time: creative, fixed seed, no
+/// The benchmark's world, made the first time.
 pub(super) fn prepare_world(game_dir: &Path, scene: Scene) -> anyhow::Result<Target> {
     let folder = scene.world_folder();
     let active = scene == Scene::Active;

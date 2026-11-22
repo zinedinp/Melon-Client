@@ -1,4 +1,4 @@
-//! What the player sees laid over the world, and what warps the view: the
+//! What the player sees laid over the world, and what warps the view.
 
 use glam::{Mat4, Vec3};
 use pumpkin_data::{Block, BlockStateId};
@@ -30,7 +30,7 @@ pub struct EffectState {
     /// `MobEffectInstance` blend factor, previous tick and now.
     old_nausea: f32,
     nausea: f32,
-    /// How bright the sky counts, as of the last frame (the vignette is
+    /// How bright the sky counts, as of the last frame.
     sky_light_level: f32,
 }
 
@@ -58,14 +58,14 @@ const NAUSEA_BLEND_IN: f32 = 1.0 / 150.0;
 const NAUSEA_BLEND_OUT: f32 = 1.0 / 20.0;
 const NAUSEA_BLEND_OUT_ADVANCE: i32 = 60;
 
-/// `Lightmap.getBrightness`: the light level `0..=15` as brightness, the
+/// `Lightmap.getBrightness`.
 pub fn level_brightness(level: u8, ambient_light: f32) -> f32 {
     let v = f32::from(level.min(15)) / 15.0;
     let curved = v / (4.0 - 3.0 * v);
     curved + (1.0 - curved) * ambient_light
 }
 
-/// `getMaxLocalRawBrightness`: the brighter of block light and what is left
+/// `getMaxLocalRawBrightness`.
 pub fn raw_brightness(block: u8, sky: u8, sky_light_level: f32) -> u8 {
     let darken = (15.0 - sky_light_level).round().clamp(0.0, 15.0) as i32;
     block.max((i32::from(sky) - darken).clamp(0, 15) as u8)
@@ -122,7 +122,7 @@ impl InWorld {
         state.vignette += (target - state.vignette) * 0.01;
     }
 
-    /// The warp of the view this frame: max of portal and nausea, a
+    /// The warp of the view this frame.
     pub(super) fn distortion(&self, partial: f32, effect_scale: f64) -> Mat4 {
         let state = &self.effects;
         let portal = state.old_portal + (state.portal - state.old_portal) * partial;
@@ -200,7 +200,7 @@ impl InWorld {
         effects
     }
 
-    /// `LevelExtractor.getViewBlockingState`: the first of eight points
+    /// `LevelExtractor.getViewBlockingState`.
     fn view_blocking_sprite(&self, assets: &WorldResources) -> Option<AtlasSprite> {
         let feet = self.player.feet();
         let eye_y = self.player.tick_eye().y;

@@ -1,4 +1,4 @@
-//! The world border (`WorldBorder`, as the client keeps it): where it is, how
+//! The world border (`WorldBorder`, as the client keeps it).
 
 use glam::DVec3;
 
@@ -7,12 +7,12 @@ use crate::world::physics::Aabb;
 
 /// `WorldBorder.MAX_SIZE`: a border this wide is no border.
 const DEFAULT_SIZE: f64 = 5.999_996_8E7;
-/// `WorldBorder.MAX_CENTER_COORDINATE`'s neighbour: the border never reaches
+/// `WorldBorder.MAX_CENTER_COORDINATE`'s neighbour.
 const DEFAULT_ABSOLUTE_MAX: i32 = 29_999_984;
 /// How far the collision slabs reach out past the border.
 const SLAB: f64 = 1.0e8;
 
-/// What the server tells about the border, one packet each
+/// What the server tells about the border, one packet each.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BorderUpdate {
     Initialize {
@@ -186,7 +186,7 @@ impl WorldBorder {
         }
     }
 
-    /// What stops a body inside the border from leaving it
+    /// What stops a body inside the border from leaving it.
     pub fn collision_boxes(&self, mover: &Aabb) -> Vec<Aabb> {
         let (min_x, min_z, max_x, max_z) = self.bounds();
         let inside = mover.min.x >= min_x - 1.0e-7
@@ -217,7 +217,7 @@ impl WorldBorder {
         ]
     }
 
-    /// `WorldBorderRenderer`'s wall: for each side within `range` of
+    /// `WorldBorderRenderer`'s wall.
     pub fn wall(
         &self,
         camera: DVec3,

@@ -22,7 +22,7 @@ pub enum LoginEvent {
         uuid: String,
     },
     Error(String),
-    /// A saved session could not be refreshed; the button returns to logged out
+    /// A saved session could not be refreshed; the button returns to logged out.
     SessionExpired,
 }
 
@@ -36,7 +36,7 @@ pub fn start_login(client_id: String, game_dir: PathBuf) -> LoginHandle {
     LoginHandle { events: rx }
 }
 
-/// Refreshes the selected Microsoft account's session, or checks that its
+/// Refreshes the selected Microsoft account's session, or checks that its token still works.
 pub fn start_restore(client_id: Option<String>, game_dir: PathBuf) -> LoginHandle {
     let (tx, rx) = channel();
     std::thread::spawn(
@@ -110,7 +110,7 @@ fn restore_session(client_id: Option<&str>, game_dir: &Path) -> anyhow::Result<(
     Ok((profile.name, profile.id))
 }
 
-/// Melon's Azure Application (client) ID. Public by design: this is a
+/// Melon's Azure Application (client) ID.
 pub const PUBLIC_CLIENT_ID: &str = "061962da-2e9c-4d36-af8d-0b00b8828580";
 
 /// Azure public-client ID for Melon's own app registration.
@@ -151,7 +151,7 @@ pub struct StoredAccount {
     pub username: String,
     pub uuid: String,
     pub access_token: String,
-    /// Microsoft refresh token (`offline_access`). Used to mint a new
+    /// Microsoft refresh token (`offline_access`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
     /// The tokens are in the system keyring, not in `accounts.json`.
@@ -159,7 +159,7 @@ pub struct StoredAccount {
     pub in_keyring: bool,
 }
 
-/// The account Play starts as, refreshing a Microsoft one when a refresh
+/// The account Play starts as, refreshing a Microsoft one when its session ran out.
 pub fn load_or_refresh(game_dir: &Path) -> Option<Account> {
     let selected = Accounts::load(game_dir).selected()?.clone();
     let Account::Microsoft(account) = &selected else {
@@ -180,7 +180,7 @@ pub fn load_or_refresh(game_dir: &Path) -> Option<Account> {
     }
 }
 
-/// The single account earlier versions kept in `account.json` (before that
+/// The single account earlier versions kept in `account.json`.
 fn legacy_account(game_dir: &Path) -> Option<StoredAccount> {
     let path = game_dir.join("account.json");
     let old = game_dir.join("assets").join("account.json");

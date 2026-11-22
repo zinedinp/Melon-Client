@@ -1,4 +1,4 @@
-//! Vanilla `SelectWorldScreen`: title, search, world list, footer
+//! Vanilla `SelectWorldScreen`.
 
 use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::gui::screens::menu::confirm_delete::confirm_delete_world;
@@ -24,7 +24,7 @@ const ROW_W: f32 = 270.0;
 const ROW_H: f32 = 36.0;
 /// `SelectWorldScreen`'s `HeaderAndFooterLayout(this, 8 + 9 + 8 + 20 + 4, 60)`.
 const LAYOUT: HeaderFooter = HeaderFooter::new(49.0, 60.0);
-/// Footer grid: 4 columns of 71 with `GridLayout.columnSpacing(8)`. Row-0
+/// Footer grid: 4 columns of 71 with `GridLayout.columnSpacing(8)`.
 const COL_W: f32 = 71.0;
 const GRID_W: f32 = COL_W * 4.0 + SPACING * 3.0;
 /// `-8355712`: the grey of a world's folder line and its info line.
@@ -32,7 +32,7 @@ const DETAIL_RGB: [f32; 3] = [128.0 / 255.0; 3];
 /// `Component.withColor(-65536)`: Hardcore in pure red.
 const HARDCORE_RGB: [f32; 3] = [1.0, 0.0, 0.0];
 const DETAIL_COLOR: [f32; 4] = [128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0, 1.0];
-/// `WorldListEntry`: the text starts 3 px right of the icon, and the
+/// `WorldListEntry`.
 const TEXT_GAP: f32 = 3.0;
 const TEXT_MARGIN: f32 = 2.0;
 
@@ -59,7 +59,7 @@ pub struct SingleplayerScreen {
     mouse: (f32, f32),
     /// `saves/<folder>/icon.png`s read but not yet on the GPU, by folder.
     pending_icons: Vec<(String, RgbaImage)>,
-    /// The worlds' icon textures by folder; a world without one shows
+    /// The worlds' icon textures by folder; a world without one shows the default icon.
     icons: HashMap<String, TextureId>,
 }
 
@@ -113,7 +113,7 @@ impl SingleplayerScreen {
             .map(|row| &self.entries[self.filtered[row]])
     }
 
-    /// `SelectWorldScreen.joinWorld`: opens the selected world on the
+    /// `SelectWorldScreen.joinWorld`.
     fn play_selected(&self, ctx: &ScreenContext) -> ScreenAction {
         let Some(entry) = self.selected() else {
             return ScreenAction::None;
@@ -188,7 +188,7 @@ impl SingleplayerScreen {
     }
 }
 
-/// `StringWidget.setMaxWidth`'s clip: as much of `text` as fits in `width`,
+/// `StringWidget.setMaxWidth`'s clip.
 fn clip(ui: &Ui, text: &str, width: f32) -> String {
     let font = ui.font();
     if font.text_width(text) <= width {
@@ -220,7 +220,7 @@ fn id_and_date(entry: &WorldEntry) -> String {
     }
 }
 
-/// `LevelSummary.createInfo`: the mode (Hardcore in red), `, Cheats`, and
+/// `LevelSummary.createInfo`.
 fn info_text(ui: &Ui, entry: &WorldEntry) -> StyledText {
     let grey = TextStyle::colored(DETAIL_RGB);
     let mut text = StyledText::default();

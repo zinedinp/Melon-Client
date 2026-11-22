@@ -1,4 +1,4 @@
-//! Vanilla 26.3 `WorldClock` / `ClientClockManager` and the overworld day
+//! Vanilla 26.3 `WorldClock` / `ClientClockManager` and the overworld day.
 
 use std::collections::HashMap;
 
@@ -19,7 +19,7 @@ pub struct ClockUpdate {
     pub rate: f32,
 }
 
-/// `ClientClockManager`: every clock the server has mentioned, keyed by
+/// `ClientClockManager`.
 #[derive(Clone, Debug)]
 pub struct ClientClocks {
     clocks: HashMap<i32, ClockInstance>,
@@ -91,12 +91,12 @@ impl ClientClocks {
         }
     }
 
-    /// Overworld day clock (`WorldClocks.OVERWORLD`, registry id 0). Missing
+    /// Overworld day clock (`WorldClocks.OVERWORLD`, registry id 0).
     fn overworld(&self) -> ClockInstance {
         self.clocks.get(&0).copied().unwrap_or_default()
     }
 
-    /// Fractional overworld ticks for this frame: whole ticks plus the
+    /// Fractional overworld ticks for this frame.
     pub fn overworld_time(&self, partial: f32) -> f64 {
         let clock = self.overworld();
         clock.total_ticks as f64
@@ -114,7 +114,7 @@ impl ClientClocks {
     }
 }
 
-/// What the sky and the world's lighting read off the overworld day
+/// What the sky and the world's lighting read off the overworld day.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Environment {
     /// `EnvironmentAttributes.SUN_ANGLE`, radians.
@@ -131,13 +131,13 @@ pub struct Environment {
     pub fog_multiplier: [f32; 3],
     /// The `CLOUD_COLOR` track.
     pub cloud_multiplier: [f32; 4],
-    /// `EnvironmentAttributes.SUNRISE_SUNSET_COLOR`: the glow at the
+    /// `EnvironmentAttributes.SUNRISE_SUNSET_COLOR`.
     pub sunrise_sunset: [f32; 4],
     /// The `SKY_LIGHT_FACTOR` track (1 by day, 0.24 at night).
     pub sky_light_factor: f32,
-    /// The `SKY_LIGHT_LEVEL` track: a fifteenth of the level, 1 by day and
+    /// The `SKY_LIGHT_LEVEL` track.
     pub sky_level_multiplier: f32,
-    /// The `SKY_LIGHT_COLOR` track: white by day, blue at night
+    /// The `SKY_LIGHT_COLOR` track.
     pub sky_light_color: [f32; 3],
     /// `MoonPhase.index`.
     pub moon_phase: u8,
@@ -171,7 +171,7 @@ impl Environment {
         }
     }
 
-    /// The timeline with no effect: the sun at noon, full light. What a
+    /// The timeline with no effect: the sun at noon, full light.
     pub fn still() -> Self {
         Self {
             sky_multiplier: [1.0; 3],
@@ -268,7 +268,7 @@ fn solve_t(x: f32, x_curve: CubicCurve) -> f32 {
     t
 }
 
-/// `Timelines`' night multipliers: `NIGHT_FOG_COLOR_MULTIPLIER` and
+/// `Timelines`' night multipliers.
 const NIGHT_FOG: [f32; 3] = [0.06, 0.06, 0.09];
 const NIGHT_CLOUD: [f32; 4] = [0.1, 0.1, 0.15, 1.0];
 
@@ -413,7 +413,7 @@ fn sample_star_brightness(day_time: f64) -> f32 {
     .max(0.0)
 }
 
-/// Period-24000 piecewise-linear sample. Keyframes are in tick order; the
+/// Period-24000 piecewise-linear sample.
 fn sample_wrapped_scalar(day_time: f64, keys: &[(f64, f32)]) -> f32 {
     let (t0, a, t1, b) = wrap_segment(day_time, keys);
     let alpha = ((day_time - t0) / (t1 - t0)).clamp(0.0, 1.0) as f32;

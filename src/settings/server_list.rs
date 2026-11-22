@@ -9,7 +9,7 @@ pub struct ServerEntry {
     pub name: String,
     /// `host[:port]`, as typed.
     pub ip: String,
-    /// `ServerData.acceptTextures`: the server's resource packs are taken
+    /// `ServerData.acceptTextures`.
     #[serde(
         rename = "acceptTextures",
         default,
@@ -23,7 +23,7 @@ pub fn find(game_dir: &Path, address: &str) -> Option<ServerEntry> {
     load(game_dir).into_iter().find(|s| s.ip == address)
 }
 
-/// `ServerList.saveSingleServer` for the pack prompt's answer: every saved
+/// `ServerList.saveSingleServer` for the pack prompt's answer.
 pub fn set_accept_textures(game_dir: &Path, address: &str, accept: Option<bool>) {
     let mut servers = load(game_dir);
     let mut changed = false;
@@ -68,7 +68,7 @@ pub fn remove(game_dir: &Path, index: usize) {
     }
 }
 
-/// `ServerList.swap`: exchanges two servers, which is how the arrows on a
+/// `ServerList.swap`.
 pub fn swap(game_dir: &Path, a: usize, b: usize) {
     let mut servers = load(game_dir);
     if a < servers.len() && b < servers.len() {

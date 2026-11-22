@@ -1,4 +1,4 @@
-//! The game's window and frame loop: `world/` emits the scene, `gui/` the
+//! The game's window and frame loop.
 
 mod bench;
 pub mod cli;
@@ -71,7 +71,7 @@ struct App {
     startup: Option<Startup>,
 }
 
-/// What every screen and frame reads: the files, the GUI's sprites, the
+/// What every screen and frame reads.
 struct Env {
     assets: Assets,
     gui_assets: GuiAssets,
@@ -118,7 +118,7 @@ struct RunningState {
     screens: ScreenStack,
     /// 3D scene behind the menus. `None` if cubemap textures are missing:
     background: Option<Panorama>,
-    /// Uploaded on the first join and kept, since the renderer can't free
+    /// Uploaded on the first join and kept, since the renderer can't free all of it.
     world_resources: Option<WorldResources>,
     world: Option<InWorld>,
     /// `Camera.fovModifier`: outlives the worlds, as vanilla's camera does.
@@ -346,7 +346,7 @@ impl RunningState {
         }
     }
 
-    /// Pops one screen. In a world, an empty stack is playing again; in the
+    /// Pops one screen.
     fn close_top_screen(&mut self) {
         let scale = self.scale();
         let ctx = self.env.ctx(scale);
@@ -419,7 +419,7 @@ impl RunningState {
         self.screens.push(Box::new(screen), &ctx);
     }
 
-    /// Leaves the world for the menus it was joined from, dropping the
+    /// Leaves the world for the menus it was joined from, dropping the connection.
     fn leave_world(&mut self, reason: Option<String>) {
         let Some(mut world) = self.world.take() else {
             return;

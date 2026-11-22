@@ -1,4 +1,4 @@
-//! The worlds in `saves/`: listing, creating, reading back and deleting
+//! The worlds in `saves/`.
 
 use serde::{Deserialize, Serialize};
 use std::io;
@@ -114,7 +114,7 @@ impl crate::cycle::Cycle for Difficulty {
     const ALL: &'static [Self] = &Difficulty::ALL;
 }
 
-/// Vanilla `WorldOptions.parseSeed`: a decimal long when the text parses as
+/// Vanilla `WorldOptions.parseSeed`.
 pub fn parse_seed(seed: &str) -> Option<i64> {
     let seed = seed.trim();
     if seed.is_empty() {
@@ -242,7 +242,7 @@ pub struct WorldSettings {
 pub struct WorldEntry {
     /// `LevelSummary.getLastPlayed`: milliseconds since the epoch, `-1`
     pub last_played: i64,
-    /// `LevelSummary.getWorldVersionName`, from `level.dat`; `None` before
+    /// `LevelSummary.getWorldVersionName`, from `level.dat`.
     pub version: Option<String>,
     pub folder: String,
     pub name: String,
@@ -273,7 +273,7 @@ fn saves_dir(game_dir: &Path) -> PathBuf {
     game_dir.join("saves")
 }
 
-/// `saves/<folder>/`: where the world's `melon_world.json` and the integrated
+/// `saves/<folder>/`.
 pub fn world_dir(game_dir: &Path, folder: &str) -> PathBuf {
     saves_dir(game_dir).join(folder)
 }
@@ -350,7 +350,7 @@ pub fn list_worlds(game_dir: &Path) -> Vec<WorldEntry> {
     worlds
 }
 
-/// `SharedConstants.ILLEGAL_FILE_CHARACTERS`, plus the `[./"]` that
+/// `SharedConstants.ILLEGAL_FILE_CHARACTERS`, plus the `[./"]` that `FileUtil` replaces too.
 const ILLEGAL_FILE_CHARACTERS: &[char] = &[
     '/', '\n', '\r', '\t', '\0', '\u{c}', '`', '?', '*', '\\', '<', '>', '|', '"', ':', '.',
 ];
@@ -369,7 +369,7 @@ fn is_portable(name: &str) -> bool {
     !(reserved || name.ends_with('.'))
 }
 
-/// `FileUtil.findAvailableName(savesDir, name, "")`: the name made safe,
+/// `FileUtil.findAvailableName(savesDir, name, "")`.
 pub fn folder_name_for(game_dir: &Path, world_name: &str) -> String {
     let name = world_name.trim();
     let name = if name.is_empty() { "World" } else { name };
@@ -415,7 +415,7 @@ fn split_copy_counter(name: &str) -> Option<(&str, u32)> {
     Some((stem, digits.parse().unwrap_or(0)))
 }
 
-/// Writes `saves/<folder>/melon_world.json`. `folder` is immutable after create
+/// Writes `saves/<folder>/melon_world.json`.
 pub fn save_world(game_dir: &Path, folder: &str, settings: &WorldSettings) -> io::Result<()> {
     let dir = saves_dir(game_dir).join(folder);
     std::fs::create_dir_all(&dir)?;
@@ -431,7 +431,7 @@ pub fn save_world(game_dir: &Path, folder: &str, settings: &WorldSettings) -> io
     crate::json_file::save(&dir.join("melon_world.json"), &file)
 }
 
-/// The seed the integrated server generated the world with, from its
+/// The seed the integrated server generated the world with, from its `level.dat`.
 pub fn read_seed(game_dir: &Path, folder: &str) -> Option<i64> {
     use pumpkin_world::world_info::WorldInfoReader;
     pumpkin_world::world_info::anvil::AnvilLevelInfo
@@ -440,7 +440,7 @@ pub fn read_seed(game_dir: &Path, folder: &str) -> Option<i64> {
         .map(|level| level.world_gen_settings.seed)
 }
 
-/// `LevelStorageAccess.renameLevel`: the name the list and the create screen
+/// `LevelStorageAccess.renameLevel`.
 pub fn rename_world(game_dir: &Path, folder: &str, name: &str) -> io::Result<()> {
     let path = world_dir(game_dir, folder).join("melon_world.json");
     let mut file: WorldFile = crate::json_file::load(&path)
@@ -454,7 +454,7 @@ pub fn icon_path(game_dir: &Path, folder: &str) -> PathBuf {
     world_dir(game_dir, folder).join("icon.png")
 }
 
-/// `LevelStorageAccess.makeWorldBackup`: zips the world into
+/// `LevelStorageAccess.makeWorldBackup`.
 pub fn backup_world(game_dir: &Path, folder: &str) -> io::Result<(PathBuf, u64)> {
     use std::io::Write;
     let backups = backups_dir(game_dir);

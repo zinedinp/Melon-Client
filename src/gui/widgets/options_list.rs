@@ -1,4 +1,4 @@
-//! Vanilla `OptionsList` inside an `OptionsSubScreen`: the title, a
+//! Vanilla `OptionsList` inside an `OptionsSubScreen`.
 
 use crate::gui::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext};
 use crate::gui::widgets::button::Button;
@@ -10,9 +10,9 @@ use crate::settings::options::Config;
 
 /// `OptionsList`'s `itemHeight`.
 const ROW_H: f32 = 25.0;
-/// `AbstractSelectionList`: the first entry starts 2 below the list's top,
+/// `AbstractSelectionList`.
 const ENTRY_PAD: f32 = 2.0;
-/// `OptionsList.addHeader`: a header entry is two lines high, plus two
+/// `OptionsList.addHeader`.
 const HEADER_H: f32 = 18.0;
 const HEADER_GAP: f32 = 18.0;
 /// `FocusableTextWidget.DEFAULT_PADDING` around a header's text.
@@ -65,7 +65,8 @@ pub trait OptionEntry: Copy + 'static {
     }
 }
 
-/// Each option's row and column (0 or 1; wide ones take column 0) in a
+/// Each option's row and column (0 or 1; wide ones take column 0) in a section, and the row
+/// count.
 fn section_layout<O: OptionEntry>(options: &[O]) -> (Vec<(usize, usize)>, usize) {
     let mut cells = Vec::with_capacity(options.len());
     let (mut row, mut column) = (0, 0);
@@ -88,7 +89,7 @@ fn section_layout<O: OptionEntry>(options: &[O]) -> (Vec<(usize, usize)>, usize)
     (cells, row + usize::from(column != 0))
 }
 
-/// `OptionsList.addHeader`'s space above a header: none for the list's
+/// `OptionsList.addHeader`'s space above a header.
 fn header_gap(height: f32) -> f32 {
     if height > 0.0 { HEADER_GAP } else { 0.0 }
 }
@@ -258,7 +259,7 @@ impl<O: OptionEntry> OptionsList<O> {
         self.layout();
     }
 
-    /// A click on an option. An [`ScreenAction::Open`] from [`OptionEntry::open`],
+    /// A click on an option.
     pub fn on_click(&mut self, x: f32, y: f32, ctx: &ScreenContext) -> ScreenAction {
         if !self.in_list(y) {
             return ScreenAction::None;

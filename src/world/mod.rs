@@ -1,4 +1,4 @@
-//! World layer: a joined world's blocks, player, inventory and block
+//! World layer.
 
 pub mod atmosphere;
 pub mod biome;

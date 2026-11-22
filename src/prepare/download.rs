@@ -19,7 +19,7 @@ const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
 const JAR_LIMIT: u64 = 512 * 1024 * 1024;
 /// Parallel object downloads.
 const WORKERS: usize = 6;
-/// What the client streams or plays rarely and long: the music and the
+/// What the client streams or plays rarely and long.
 const SKIPPED: [&str; 2] = ["minecraft/sounds/music/", "minecraft/sounds/records/"];
 
 #[derive(Deserialize)]
@@ -95,7 +95,7 @@ fn sha1_bytes(bytes: &[u8]) -> String {
     hex(Sha1::digest(bytes).as_ref())
 }
 
-/// Writes through a temporary name, so an interrupted download never
+/// Writes through a temporary name, so an interrupted download never leaves a broken file.
 fn store(path: &Path, bytes: &[u8]) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;

@@ -1,4 +1,4 @@
-//! `GrindstoneScreen`: the red cross between the inputs and the result
+//! `GrindstoneScreen`.
 
 use super::{Loader, MenuDraw, MenuScreen};
 use crate::gui::sprite::GuiSprite;

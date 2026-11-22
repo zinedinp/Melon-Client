@@ -1,4 +1,4 @@
-//! The subsystems besides drawing, measured together: the connection, the
+//! The subsystems besides drawing, measured together.
 
 use std::time::Instant;
 

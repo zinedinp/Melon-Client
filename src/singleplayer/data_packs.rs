@@ -1,4 +1,4 @@
-//! A world's data packs and experiments, as Pumpkin keeps them: the ids in
+//! A world's data packs and experiments, as Pumpkin keeps them.
 
 use std::path::{Path, PathBuf};
 
@@ -11,7 +11,7 @@ use pumpkin_world::world_info::{LevelData, WorldInfoWriter};
 /// The id Pumpkin always has enabled.
 pub const VANILLA: &str = "vanilla";
 
-/// The feature packs Pumpkin loads (`load_bundled_datapacks`): the
+/// The feature packs Pumpkin loads (`load_bundled_datapacks`).
 pub const EXPERIMENTS: [&str; 3] = [
     "trade_rebalance",
     "minecart_improvements",
@@ -33,7 +33,7 @@ pub fn folder(world_dir: &Path) -> PathBuf {
     world_dir.join("datapacks")
 }
 
-/// The packs in a `datapacks` folder, by id. Only folders with a
+/// The packs in a `datapacks` folder, by id.
 pub fn discover(packs_dir: &Path) -> Vec<FoundPack> {
     let Ok(entries) = std::fs::read_dir(packs_dir) else {
         return Vec::new();
@@ -75,7 +75,7 @@ pub fn enabled_ids(chosen: &[String]) -> Vec<String> {
     ids
 }
 
-/// Writes the new world's `level.dat` with these packs, as Pumpkin would
+/// Writes the new world's `level.dat` with these packs, as Pumpkin would make it.
 pub fn prepare_level(world_dir: &Path, seed: i64, chosen: &[String]) -> std::io::Result<()> {
     if chosen.is_empty() || world_dir.join(LEVEL_DAT_FILE_NAME).exists() {
         return Ok(());
@@ -89,7 +89,7 @@ pub fn prepare_level(world_dir: &Path, seed: i64, chosen: &[String]) -> std::io:
         .map_err(|e| std::io::Error::other(e.to_string()))
 }
 
-/// Copies a folder's contents into `to` (`Util.copyBetweenDirs`), creating
+/// Copies a folder's contents into `to` (`Util.copyBetweenDirs`), creating it first.
 pub fn copy_into(from: &Path, to: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(to)?;
     for entry in std::fs::read_dir(from)? {

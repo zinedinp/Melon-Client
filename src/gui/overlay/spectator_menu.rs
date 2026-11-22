@@ -1,4 +1,4 @@
-//! Vanilla `SpectatorGui` and `SpectatorMenu`: a spectator's hotbar. A
+//! Vanilla `SpectatorGui` and `SpectatorMenu`: a spectator's hotbar.
 
 use std::time::{Duration, Instant};
 
@@ -159,7 +159,7 @@ impl SpectatorMenu {
         (left / FADE_TIME).clamp(0.0, 1.0)
     }
 
-    /// `onHotbarSelected`: a number key. `players` are the listed players
+    /// `onHotbarSelected`: a number key.
     pub fn select_slot(
         &mut self,
         slot: usize,
@@ -201,7 +201,7 @@ impl SpectatorMenu {
         SpectatorAction::None
     }
 
-    /// `onHotbarActionKeyPressed`: a click picks the selected slot, or
+    /// `onHotbarActionKeyPressed`.
     pub fn action_key(&mut self, players: Vec<(uuid::Uuid, String)>) -> SpectatorAction {
         match self.menu.as_ref().and_then(|m| m.selected) {
             Some(slot) => self.select_slot(slot, players),
@@ -230,7 +230,7 @@ impl SpectatorMenu {
         }
     }
 
-    /// `extractHotbar` and `extractAction`. `skin_of` is the skin a
+    /// `extractHotbar` and `extractAction`.
     #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &mut self,

@@ -1,4 +1,4 @@
-//! Vanilla `DirectJoinServerScreen`: one address field, Join Server and
+//! Vanilla `DirectJoinServerScreen`.
 
 use std::path::{Path, PathBuf};
 
@@ -11,7 +11,8 @@ use crate::gui::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_
 use crate::gui::widgets::set::{KeyResult, WidgetSet};
 use crate::join::Target;
 
-/// Vanilla keeps the last address in `options.txt` (`lastMpIp`); Melon's
+/// Vanilla keeps the last address in `options.txt` (`lastMpIp`); Melon keeps it in its own
+/// file.
 const LAST_SERVER_FILE: &str = "melon_last_server.txt";
 /// `0xA0A0A0`, the label above the field.
 const LABEL_COLOR: [f32; 4] = [0.63, 0.63, 0.63, 1.0];

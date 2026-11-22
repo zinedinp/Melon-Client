@@ -1,4 +1,4 @@
-//! Debug lines in the world (vanilla's `Gizmos`): entity hitboxes
+//! Debug lines in the world (vanilla's `Gizmos`).
 
 use glam::{DVec3, IVec3, Mat4, Vec3};
 

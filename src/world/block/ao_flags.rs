@@ -1,4 +1,4 @@
-//! What vanilla's smooth lighting (`BlockModelLighter`) asks of each block
+//! What vanilla's smooth lighting (`BlockModelLighter`) asks of each block.
 
 use std::sync::LazyLock;
 
@@ -112,7 +112,7 @@ fn collision_full(state: &pumpkin_data::BlockState) -> bool {
     volume >= 1.0 - 1e-6
 }
 
-/// `BlockBehaviour.getShadeBrightness` is 0.2 for a full collision shape,
+/// `BlockBehaviour.getShadeBrightness` is 0.2 for a full collision shape.
 fn shade_dark<'a>(name: &str, collision_full: bool, layers: impl Fn() -> Option<&'a str>) -> bool {
     match name {
         "glass" | "tinted_glass" | "barrier" | "light" | "structure_void" => false,
@@ -126,7 +126,7 @@ fn shade_dark<'a>(name: &str, collision_full: bool, layers: impl Fn() -> Option<
 static TABLE: LazyLock<Box<[AoFlags]>> =
     LazyLock::new(|| (0..BlockStateId::COUNT).map(AoFlags::of).collect());
 
-/// Every state's flags, indexed by state ID. Fetch once per section and
+/// Every state's flags, indexed by state ID.
 pub fn table() -> &'static [AoFlags] {
     &TABLE
 }

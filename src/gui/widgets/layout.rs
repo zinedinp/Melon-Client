@@ -1,4 +1,4 @@
-//! Shared layout measurements: vanilla's `Button` defaults and
+//! Shared layout measurements.
 
 use crate::gui::text::font::LINE_HEIGHT;
 use crate::gui::widgets::Widget;
@@ -10,7 +10,7 @@ pub const SPACING: f32 = 8.0;
 /// The 200 wide buttons of the older centred menus (`width / 2 - 100`).
 pub const WIDE_BUTTON_W: f32 = 200.0;
 
-/// `HeaderAndFooterLayout`: a header and a footer of fixed height, the
+/// `HeaderAndFooterLayout`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct HeaderFooter {
     pub header: f32,
@@ -51,12 +51,12 @@ impl HeaderFooter {
     }
 }
 
-/// The left edge of the older centred menus' 200 wide column (vanilla's
+/// The left edge of the older centred menus' 200 wide column.
 pub fn wide_column_left(width: f32) -> f32 {
     (width / 2.0).floor() - WIDE_BUTTON_W / 2.0
 }
 
-/// The older menus' anchor a quarter down the screen (vanilla's
+/// The older menus' anchor a quarter down the screen.
 pub fn quarter(height: f32) -> f32 {
     (height / 4.0).floor()
 }

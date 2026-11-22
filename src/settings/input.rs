@@ -1,4 +1,4 @@
-//! Vanilla `KeyMapping` / `InputConstants`: the names `options.txt` stores
+//! Vanilla `KeyMapping` / `InputConstants`.
 
 use std::borrow::Cow;
 
@@ -48,7 +48,7 @@ impl InputBind {
         self.name == UNKNOWN
     }
 
-    /// `InputConstants.getKey(name)`. Unknown names stay as written so a
+    /// `InputConstants.getKey(name)`.
     pub fn parse(name: &str) -> Self {
         Self::new(name.trim())
     }

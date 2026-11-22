@@ -276,7 +276,7 @@ impl PlayerState {
         if self.eye_height() < 0.4 { 0.0 } else { 0.4 }
     }
 
-    /// `Entity.move`: collides this tick's velocity, moves, and zeroes the
+    /// `Entity.move`.
     pub fn move_colliding(&mut self, level: &Level, sneaking: bool) {
         if self.spectator {
             self.feet += self.velocity;
@@ -378,7 +378,7 @@ impl PlayerState {
         );
     }
 
-    /// `Player.isAboveGround`: on the ground, or fallen less than a step
+    /// `Player.isAboveGround`.
     fn is_above_ground(&self, level: &Level, aabb: Aabb) -> bool {
         let step = f64::from(self.attributes.step_height() as f32);
         self.on_ground
@@ -400,7 +400,7 @@ impl PlayerState {
         )
     }
 
-    /// `Entity.getBlockPosBelowThatAffectsMyMovement`: the block 0.5 below
+    /// `Entity.getBlockPosBelowThatAffectsMyMovement`.
     pub(super) fn block_below(&self, level: &Level) -> &'static pumpkin_data::Block {
         crate::world::block_motion::block_below_supported(level, self.feet, self.support.block)
     }
@@ -420,7 +420,7 @@ impl PlayerState {
     }
 }
 
-/// `Entity.getInputVector`: vanilla's `(strafe, forward)` input, capped at
+/// `Entity.getInputVector`.
 pub(super) fn rotate_input(forward: f32, strafe: f32, speed: f32, sin: f32, cos: f32) -> DVec3 {
     let (mut x, mut z) = (f64::from(strafe), f64::from(forward));
     let len_sq = x * x + z * z;
@@ -438,7 +438,7 @@ pub(super) fn rotate_input(forward: f32, strafe: f32, speed: f32, sin: f32, cos:
     DVec3::new(x * cos - z * sin, 0.0, z * cos + x * sin)
 }
 
-/// `LocalPlayer.isHorizontalCollisionMinor`: the wall turned the intended
+/// `LocalPlayer.isHorizontalCollisionMinor`.
 pub(super) fn is_minor_deflection(intent: DVec3, moved: DVec3) -> bool {
     let intent_sq = intent.x * intent.x + intent.z * intent.z;
     let moved_sq = moved.x * moved.x + moved.z * moved.z;

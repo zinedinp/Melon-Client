@@ -1,10 +1,10 @@
-//! Mipmaps for the block atlas (vanilla `MipmapGenerator`, default
+//! Mipmaps for the block atlas (vanilla `MipmapGenerator`).
 
 use image::RgbaImage;
 
 /// Levels below the full-size image (vanilla's default `mipmapLevels`).
 pub const LEVELS: u32 = 4;
-/// Sprites start on multiples of this, so level [`LEVELS`] still has whole
+/// Sprites start on multiples of this, so level [`LEVELS`] still has whole texels.
 pub const ALIGN: u32 = 1 << LEVELS;
 /// The cutout shader's alpha cutoff (0.1), as a byte.
 const CUTOFF: u8 = 26;
@@ -26,7 +26,7 @@ pub fn chain(sprite: &RgbaImage, holes: bool) -> Vec<RgbaImage> {
     levels
 }
 
-/// Each 2x2 block averaged: colour in linear light, weighted by alpha so
+/// Each 2x2 block averaged.
 pub(super) fn halve(image: &RgbaImage) -> RgbaImage {
     let (w, h) = image.dimensions();
     let (nw, nh) = ((w / 2).max(1), (h / 2).max(1));

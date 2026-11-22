@@ -10,7 +10,7 @@ use crate::i18n::languages::Language;
 use crate::renderer::TextureId;
 use crate::settings::options::Config;
 
-/// A change to the options, applied and saved at once, as vanilla's
+/// A change to the options, applied and saved at once, as vanilla's options screens do.
 pub type ConfigChange = Box<dyn FnOnce(&mut Config)>;
 
 /// Click result for the app's screen stack.
@@ -19,7 +19,7 @@ pub enum ScreenAction {
     Quit,
     Back,
     Open(Box<dyn Screen>),
-    /// Closes this screen and opens another in its place (a failed join's
+    /// Closes this screen and opens another in its place.
     Replace(Box<dyn Screen>),
     SetLanguage(Language),
     /// Joined a world: leave the menus and start playing it.
@@ -36,7 +36,7 @@ pub enum ScreenAction {
     Copy(String),
     /// Puts text on the clipboard and leaves the screens as they are.
     Clipboard(String),
-    /// The pack screen's Done: these packs (lowest first) and the
+    /// The pack screen's Done.
     SetResourcePacks {
         selected: Vec<String>,
         incompatible: Vec<String>,
@@ -75,7 +75,7 @@ pub enum CursorKind {
     Default,
     Pointer,
     Text,
-    /// `AbstractScrollArea.extractScrollbar`: `CursorTypes.RESIZE_NS` while a
+    /// `AbstractScrollArea.extractScrollbar`.
     ResizeNs,
     /// `AbstractSliderButton.handleCursor`: `RESIZE_EW` while dragging.
     ResizeEw,
@@ -84,7 +84,7 @@ pub enum CursorKind {
 /// Keyboard input for the focused screen. Subset of `EditBox.keyPressed` / `charTyped`.
 pub enum TextEvent {
     Char(char),
-    /// Text an input method is composing (`Ime::Preedit`): shown at the
+    /// Text an input method is composing (`Ime::Preedit`).
     Preedit(String),
     /// Backspace and Delete; with Control a whole word.
     Backspace {
@@ -93,7 +93,7 @@ pub enum TextEvent {
     Delete {
         word: bool,
     },
-    /// The arrow keys: with Shift the selection grows, with Control the
+    /// The arrow keys.
     Left {
         shift: bool,
         word: bool,
@@ -117,7 +117,7 @@ pub enum TextEvent {
     Down,
     PageUp,
     PageDown,
-    /// The Insert key: typing replaces the character after the cursor
+    /// The Insert key.
     Insert,
     /// Tab, `shift` for backwards.
     Tab {
@@ -127,7 +127,7 @@ pub enum TextEvent {
     Paste(String),
 }
 
-/// Everything a screen may need besides its own state: what vanilla's
+/// Everything a screen may need besides its own state.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Modifiers {
     pub shift: bool,
@@ -172,10 +172,10 @@ impl ScreenContext<'_> {
 }
 
 pub trait Screen {
-    /// Lays the screen out for the GUI's size (vanilla `Screen.init` /
+    /// Lays the screen out for the GUI's size (vanilla `Screen.init`).
     fn resize(&mut self, ctx: &ScreenContext);
     fn tick(&mut self) {}
-    /// Called before each draw of the top menu screen: uploads images that
+    /// Called before each draw of the top menu screen.
     fn upload_images(&mut self, _upload: &mut dyn FnMut(&image::RgbaImage) -> Option<TextureId>) {}
     fn on_mouse_move(&mut self, x: f32, y: f32);
     fn on_click(&mut self, x: f32, y: f32, ctx: &ScreenContext) -> ScreenAction;
@@ -188,7 +188,7 @@ pub trait Screen {
         ScreenAction::None
     }
     fn draw(&self, ui: &mut Ui, ctx: &ScreenContext);
-    /// Rebuild text made from translations after a language change. Labels
+    /// Rebuild text made from translations after a language change.
     fn refresh_lang(&mut self, _lang: &Lang) {}
     /// Options changed (here or in a sub-screen): show the new values.
     fn refresh_config(&mut self, _config: &Config) {}
@@ -196,23 +196,23 @@ pub trait Screen {
     fn cursor(&self) -> CursorKind {
         CursorKind::Default
     }
-    /// Checked once a frame for the top screen, for actions that aren't a
+    /// Checked once a frame for the top screen, for actions that aren't a click.
     fn poll(&mut self) -> ScreenAction {
         ScreenAction::None
     }
-    /// Whether this is the screen shown while a new level loads, which the
+    /// Whether this is the screen shown while a new level loads.
     fn is_level_loading(&self) -> bool {
         false
     }
-    /// Whether leaving a world returns to this screen (`Minecraft.disconnect`'s
+    /// Whether leaving a world returns to this screen (`Minecraft.disconnect`'s next screen).
     fn is_world_exit(&self, _integrated: bool) -> bool {
         false
     }
-    /// `Screen.extractBackground`: whether what is behind this screen (the
+    /// `Screen.extractBackground`.
     fn blurs_background(&self) -> bool {
         true
     }
-    /// Escape on a screen that closes on it: what to do instead of just
+    /// Escape on a screen that closes on it.
     fn on_escape(&mut self, _ctx: &ScreenContext) -> Option<ScreenAction> {
         None
     }
@@ -252,10 +252,10 @@ pub trait Screen {
     }
 }
 
-/// The window's size in physical pixels and `Options.guiScale`: everything
+/// The window's size in physical pixels and `Options.guiScale`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GuiScale {
-    /// `0` for Auto (the largest scale that fits), otherwise the scale asked
+    /// `0` for Auto (the largest scale that fits), otherwise the scale asked for.
     pub setting: u8,
     pub window_width: u32,
     pub window_height: u32,
@@ -279,7 +279,7 @@ impl GuiScale {
         )
     }
 
-    /// `ClampingLazyMaxIntRange`'s top: the Auto scale for this window, the
+    /// `ClampingLazyMaxIntRange`'s top.
     pub fn max_scale(&self) -> u8 {
         calculate_scale(0, self.window_width, self.window_height).min(255) as u8
     }
@@ -302,7 +302,7 @@ impl GuiScale {
         )
     }
 
-    /// `MouseHandler.getScaledXPos`/`getScaledYPos`: a physical cursor position
+    /// `MouseHandler.getScaledXPos`/`getScaledYPos`: a physical cursor position in GUI pixels.
     pub fn to_virtual(&self, position: (f64, f64)) -> (f32, f32) {
         let (virtual_w, virtual_h) = self.virtual_size();
         (
@@ -312,7 +312,7 @@ impl GuiScale {
     }
 }
 
-/// `Window.calculateScale(maxScale, false)`: the largest scale up to
+/// `Window.calculateScale(maxScale, false)`.
 pub fn calculate_scale(max_scale: u32, window_width: u32, window_height: u32) -> u32 {
     let mut scale = 1;
     while scale != max_scale

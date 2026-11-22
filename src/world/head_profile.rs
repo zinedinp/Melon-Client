@@ -1,4 +1,4 @@
-//! Vanilla `ResolvableProfile` as far as a player head needs it: whose skin
+//! Vanilla `ResolvableProfile` as far as a player head needs it.
 
 use pumpkin_data::data_component_impl::ProfileImpl;
 use pumpkin_data::item_stack::ItemStack;
@@ -8,7 +8,7 @@ use uuid::Uuid;
 /// Keys for the skins known only by their `textures` value or a name.
 const KEY_NAMESPACE: Uuid = Uuid::from_u128(0x6d65_6c6f_6e2d_6865_6164_2d73_6b69_6e00);
 
-/// Whether `state` is a player head, standing or on a wall: the blocks
+/// Whether `state` is a player head, standing or on a wall.
 pub fn is_player_head(state: u16) -> bool {
     use crate::world::block_entity::{Kind, kind_of, models::SkullType};
     matches!(
@@ -48,7 +48,7 @@ impl HeadProfile {
         (out.id.is_some() || out.name.is_some() || out.textures.is_some()).then_some(out)
     }
 
-    /// A skull block entity's `profile`: a name alone, or the compound
+    /// A skull block entity's `profile`.
     pub fn from_nbt(tag: &NbtTag) -> Option<Self> {
         Self::from_component(&ProfileImpl::read_data(tag)?)
     }
@@ -61,7 +61,7 @@ impl HeadProfile {
         Self::from_component(stack.get_data_component::<ProfileImpl>()?)
     }
 
-    /// What the skin is kept under: the profile's id when that is all
+    /// What the skin is kept under.
     pub fn skin_key(&self) -> Uuid {
         match (&self.textures, self.id, &self.name) {
             (Some(textures), ..) => Uuid::new_v5(&KEY_NAMESPACE, textures.as_bytes()),

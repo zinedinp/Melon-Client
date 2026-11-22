@@ -1,10 +1,10 @@
-//! `LocalPlayer.moveTowardsClosestSpace`: a player whose box reaches into
+//! `LocalPlayer.moveTowardsClosestSpace`.
 
 use super::PlayerState;
 use crate::world::level::Level;
 use crate::world::physics::{self, Aabb};
 
-/// The sides tried, in vanilla's order: west, east, north, south
+/// The sides tried, in vanilla's order.
 const SIDES: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
 impl PlayerState {

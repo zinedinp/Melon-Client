@@ -1,4 +1,4 @@
-//! Joining a world: a server by address, or a singleplayer world on the
+//! Joining a world.
 
 use std::path::PathBuf;
 
@@ -8,7 +8,7 @@ use crate::network::{self, ClientInfo, Identity, Session};
 use crate::singleplayer::WorldSettings;
 use crate::singleplayer::server::{self, IntegratedServer};
 
-/// A world joined and ready to play. For a singleplayer world, dropping it
+/// A world joined and ready to play.
 pub struct Joined {
     pub session: Session,
     pub server: Option<IntegratedServer>,
@@ -43,7 +43,7 @@ impl Target {
     }
 }
 
-/// Connects and logs in, telling the server about the options in
+/// Connects and logs in, telling the server about the options in `client`.
 pub fn join(
     target: Target,
     identity: &Identity,

@@ -1,4 +1,4 @@
-//! The name tags over entities (`NameTagFeatureRenderer`): a player's
+//! The name tags over entities (`NameTagFeatureRenderer`).
 
 use glam::{DVec3, Mat4, Vec3};
 
@@ -58,7 +58,7 @@ impl NameView {
         }
     }
 
-    /// Where `point` falls on a GUI screen of `size`, and how far in front
+    /// Where `point` falls on a GUI screen of `size`, and how far in front of the camera it is.
     pub fn project(&self, point: DVec3, size: (f32, f32)) -> Option<([f32; 2], f32)> {
         let v = self
             .view
@@ -82,7 +82,7 @@ impl NameView {
 }
 
 impl InWorld {
-    /// The shown custom names of the entities in range, as they hang above
+    /// The shown custom names of the entities in range, as they hang above them.
     pub(super) fn draw_name_tags(
         &self,
         draw_list: &mut DrawList,
@@ -188,7 +188,7 @@ impl InWorld {
         }
     }
 
-    /// The text displays in range (`TextDisplayRenderer`): lines split at
+    /// The text displays in range (`TextDisplayRenderer`).
     pub(super) fn draw_text_displays(
         &self,
         draw_list: &mut DrawList,

@@ -1,4 +1,4 @@
-//! Boats, rafts and minecarts: `BoatModel`, `RaftModel`, `MinecartModel` and
+//! Boats, rafts and minecarts.
 
 use crate::math::angle::{EIGHTH_PI, HALF_PI as FRAC_PI_2, PI, QUARTER_PI as FRAC_PI_4, THIRD_PI};
 
@@ -39,7 +39,7 @@ fn add_paddles(root: &mut PartDefinition, left_uv: (f32, f32), right_uv: (f32, f
     );
 }
 
-/// The chest a chest boat carries: `chest_bottom`, `chest_lid`, `chest_lock`,
+/// The chest a chest boat carries.
 fn add_chest(root: &mut PartDefinition, lift: f32) {
     let turn = -FRAC_PI_2;
     root.add_or_replace_child(
@@ -110,7 +110,7 @@ pub fn boat(chest: bool) -> LayerDefinition {
     LayerDefinition::new(root, 128.0, if chest { 128.0 } else { 64.0 })
 }
 
-/// `BoatModel.createWaterPatch`: the boat's bottom, but lifted into the
+/// `BoatModel.createWaterPatch`.
 pub fn water_patch() -> LayerDefinition {
     let mut root = PartDefinition::root();
     root.add_or_replace_child(
@@ -163,7 +163,8 @@ pub fn minecart() -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 32.0)
 }
 
-/// The texture of a boat type, `entity/boat/<wood>` or `entity/chest_boat/<wood>`,
+/// The texture of a boat type, `entity/boat/<wood>` or `entity/chest_boat/<wood>`, and whether
+/// it has a chest and is a raft.
 pub fn boat_look(resource_name: &str) -> Option<(&'static str, bool, bool)> {
     let chest = resource_name.contains("chest");
     let raft = resource_name.ends_with("raft");
@@ -205,14 +206,14 @@ impl BoatParts {
     }
 }
 
-/// `AbstractBoat.getRowingTime`: where a paddle's clock is, 0 while it is
+/// `AbstractBoat.getRowingTime`.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Rowing {
     pub left: f32,
     pub right: f32,
 }
 
-/// The paddle clocks, `AbstractBoat.tick`'s: each runs `PADDLE_STEP` a tick
+/// The paddle clocks, `AbstractBoat.tick`'s.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Paddles {
     clock: [f32; 2],
@@ -258,7 +259,7 @@ pub fn setup_anim(parts: &BoatParts, pose: &mut ModelPose, rowing: Rowing) {
     }
 }
 
-/// How a hit vehicle shakes: `hurt` ticks left (with the partial tick
+/// How a hit vehicle shakes.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Shake {
     pub hurt: f32,
@@ -276,7 +277,7 @@ impl Shake {
     }
 }
 
-/// `AbstractBoatRenderer.submit`: up 0.375, turned by the yaw (vanilla's
+/// `AbstractBoatRenderer.submit`.
 pub fn boat_root(position: Vec3, yaw: f32, shake: Shake) -> Mat4 {
     Mat4::from_translation(position + Vec3::new(0.0, 0.375, 0.0))
         * Mat4::rot_y_deg(180.0 - yaw)
@@ -345,7 +346,7 @@ pub fn minecart_block_matrix(root: Mat4, offset: i32, tnt_swell: Option<f32>) ->
 /// `MinecartTNT.handleEntityEvent`: the fuse is lit.
 pub const EVENT_PRIME_TNT: u8 = 10;
 
-/// `AbstractMinecartRenderer.oldRender` and its shake: up 0.375, turned by
+/// `AbstractMinecartRenderer.oldRender` and its shake.
 pub fn minecart_root(position: Vec3, yaw: f32, pitch: f32, shake: Shake) -> Mat4 {
     Mat4::from_translation(position + Vec3::new(0.0, 0.375, 0.0))
         * Mat4::rot_y_deg(180.0 - yaw)

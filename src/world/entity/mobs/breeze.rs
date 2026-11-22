@@ -1,4 +1,4 @@
-//! `BreezeModel`: idle, shoot, jump, inhale and slide are keyframe
+//! `BreezeModel`.
 
 use super::{LayerSpec, ModelId as M};
 use crate::math::angle::{EIGHTH_PI, PI, THIRD_PI};
@@ -137,7 +137,7 @@ impl BreezeParts {
 /// `BreezeModel.setupAnim` has no procedural pose; keyframes do the work.
 pub fn setup_anim(_parts: &BreezeParts, _pose: &mut ModelPose, _living: &LivingRenderState) {}
 
-/// Idle always runs; shoot, inhale, jump and slide follow `Pose`. Leaving
+/// Idle always runs; shoot, inhale, jump and slide follow `Pose`.
 pub fn tick_anim(anim: &mut [AnimationState], tick: i32, pose: i32) {
     match pose {
         POSE_SHOOTING => {

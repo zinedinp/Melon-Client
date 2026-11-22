@@ -1,4 +1,4 @@
-//! Other entities' particles, made on the client each tick: the trails of
+//! Other entities' particles, made on the client each tick.
 
 use glam::DVec3;
 

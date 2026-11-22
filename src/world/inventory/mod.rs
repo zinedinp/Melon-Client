@@ -1,4 +1,4 @@
-//! The player's inventory as the server's `InventoryMenu` numbers it
+//! The player's inventory as the server's `InventoryMenu` numbers it.
 
 mod click;
 mod container;
@@ -28,13 +28,13 @@ pub enum ClickType {
     /// Middle click in creative: a full stack of the slot's item.
     Clone = 3,
     Throw = 4,
-    /// Dragging the cursor stack over slots; `button` is
+    /// Dragging the cursor stack over slots.
     QuickCraft = 5,
     /// Double click: gathers matching items onto the cursor.
     PickupAll = 6,
 }
 
-/// `AbstractContainerMenu.getQuickcraftMask`: the drag's stage (0 start,
+/// `AbstractContainerMenu.getQuickcraftMask`.
 pub fn quick_craft_mask(stage: i8, kind: i8) -> i8 {
     (stage & 3) | ((kind & 3) << 2)
 }
@@ -56,15 +56,15 @@ pub struct Inventory {
     slots: Vec<ItemStack>,
     /// The stack on the mouse cursor.
     carried: ItemStack,
-    /// `AbstractContainerMenu.stateId`: echoed in every click so the server
+    /// `AbstractContainerMenu.stateId`.
     state_id: i32,
     /// Hotbar slot 0-8 in the main hand (`Inventory.selected`).
     selected: u8,
-    /// A drag in progress (`quickcraftStatus`/`quickcraftType`/
+    /// A drag in progress (`quickcraftStatus`/`quickcraftType`).
     drag: Option<Drag>,
 }
 
-/// `AbstractContainerMenu`'s quick craft state: a drag of the cursor stack
+/// `AbstractContainerMenu`'s quick craft state.
 #[derive(Clone, Debug)]
 struct Drag {
     /// 0 split evenly, 1 one each, 2 full stacks (creative).
@@ -84,7 +84,7 @@ impl Default for Inventory {
     }
 }
 
-/// A click to send: the predicted slots and cursor, see
+/// A click to send.
 pub struct Click {
     pub slot: i16,
     pub button: i8,
@@ -156,7 +156,7 @@ impl Inventory {
         &self.slots[self.selected_slot()]
     }
 
-    /// `Q` (whole stack with Control): `LocalPlayer.drop`'s prediction, the
+    /// `Q` (whole stack with Control).
     pub fn drop_selected(&mut self, whole_stack: bool) -> bool {
         let slot = self.selected_slot();
         let stack = &mut self.slots[slot];
@@ -206,7 +206,7 @@ impl Inventory {
         self.drag.as_ref().map(|d| (d.kind, d.slots.as_slice()))
     }
 
-    /// Whether a drag of `kind` may add `slot` (`mouseDragged`'s
+    /// Whether a drag of `kind` may add `slot` (`mouseDragged`'s test).
     pub fn can_drag_to(&self, slot: usize, kind: i8, already: usize) -> bool {
         let carried = &self.carried;
         !carried.is_empty()

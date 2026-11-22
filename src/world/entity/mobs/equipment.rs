@@ -1,9 +1,9 @@
-//! What a mob wears and holds: armor, saddles and other equipment layers
+//! What a mob wears and holds.
 
 use super::*;
 use crate::world::entity::equipment_asset;
 
-/// Whether the item in hand is drawn: each illager shows it only in its
+/// Whether the item in hand is drawn.
 pub fn shows_held_item(entity: &ClientEntity) -> bool {
     let a = &entity.appearance;
     match entity.kind {

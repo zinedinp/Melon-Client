@@ -1,4 +1,4 @@
-//! Vanilla `EditWorldScreen`: rename a world, reset its icon, open its
+//! Vanilla `EditWorldScreen`.
 
 use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::gui::widgets::Ui;
@@ -84,7 +84,7 @@ impl EditWorldScreen {
         ScreenAction::Back
     }
 
-    /// `makeWorldBackup`: zips the world, then says how it went (vanilla's
+    /// `makeWorldBackup`.
     fn backup(&self, ctx: &ScreenContext) -> ScreenAction {
         let dialog = DialogScreen::new();
         let dialog = match singleplayer::backup_world(ctx.game_dir, &self.folder) {

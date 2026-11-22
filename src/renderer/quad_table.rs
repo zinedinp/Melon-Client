@@ -1,10 +1,10 @@
-//! Every baked block quad's four corners, in one storage buffer the
+//! Every baked block quad's four corners, in one storage buffer the terrain shader reads.
 
 use ash::vk;
 
 use super::{QuadCorner, Renderer, WorldVertex, create_buffer, mesh_arena};
 
-/// The table's buffer and the descriptor set binding it (set 1 of the
+/// The table's buffer and the descriptor set binding it (set 1 of the terrain pipelines).
 pub(super) struct QuadTable {
     buffer: vk::Buffer,
     memory: vk::DeviceMemory,
@@ -20,7 +20,7 @@ impl QuadTable {
     }
 }
 
-/// The descriptor set layout of the table: one storage buffer at binding 0,
+/// The descriptor set layout of the table.
 pub(super) unsafe fn create_layout(
     device: &ash::Device,
 ) -> anyhow::Result<vk::DescriptorSetLayout> {
@@ -36,7 +36,7 @@ pub(super) unsafe fn create_layout(
 }
 
 impl Renderer {
-    /// Uploads the baked quads' corners, four per quad in index order, that
+    /// Uploads the baked quads' corners, four per quad in index order.
     pub fn set_quad_table(&mut self, corners: &[WorldVertex]) -> anyhow::Result<()> {
         unsafe {
             if let Some(old) = self.quad_table.take() {
@@ -112,10 +112,10 @@ impl Renderer {
     }
 }
 
-/// Most terrain mesh buffers there can be sets for: at 64 MiB a block, far
+/// Most terrain mesh buffers there can be sets for.
 const MAX_QUAD_BUFFERS: u32 = 256;
 
-/// A descriptor set per terrain mesh buffer, binding it as storage (set 4
+/// A descriptor set per terrain mesh buffer, binding it as storage (set 4).
 pub(super) struct QuadSets {
     pool: vk::DescriptorPool,
     sets: Vec<(vk::Buffer, vk::DescriptorSet)>,
@@ -140,7 +140,7 @@ impl QuadSets {
         })
     }
 
-    /// Makes a set for each of `buffers` that has none yet. Buffers are
+    /// Makes a set for each of `buffers` that has none yet.
     pub unsafe fn sync(
         &mut self,
         device: &ash::Device,

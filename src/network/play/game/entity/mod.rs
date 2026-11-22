@@ -1,4 +1,4 @@
-//! The packets about entities, decoded into [`EntityPacket`]s: spawning
+//! The packets about entities, decoded into [`EntityPacket`]s.
 
 mod data;
 mod equipment;
@@ -24,7 +24,7 @@ pub const NAUSEA_ID: i32 = 8;
 
 /// `Entity.DATA_SHARED_FLAGS_ID`' index.
 pub const SHARED_FLAGS_INDEX: u8 = 0;
-/// `LivingEntity.DATA_LIVING_ENTITY_FLAGS`' index, and its bits: using an
+/// `LivingEntity.DATA_LIVING_ENTITY_FLAGS`' index, and its bits.
 pub const LIVING_FLAGS_INDEX: u8 = 8;
 pub const LIVING_USING_ITEM: u8 = 1;
 pub const LIVING_OFF_HAND: u8 = 2;
@@ -37,7 +37,7 @@ pub const EVENT_DEATH: u8 = 3;
 pub enum EntityPacket {
     Add(AddEntity),
     Remove(Vec<i32>),
-    /// `ClientboundTakeItemEntityPacket`: `taker` picks up `amount` of
+    /// `ClientboundTakeItemEntityPacket`.
     Take {
         item: i32,
         taker: i32,
@@ -45,7 +45,7 @@ pub enum EntityPacket {
     },
     Move(MoveEntity),
     SetPosition(SetPosition),
-    /// `ClientboundSetEntityMotionPacket` for an entity: its velocity per
+    /// `ClientboundSetEntityMotionPacket` for an entity.
     Motion {
         id: i32,
         velocity: [f64; 3],
@@ -68,10 +68,10 @@ pub enum EntityPacket {
     /// `ClientboundHurtAnimationPacket`.
     Hurt {
         id: i32,
-        /// Where the blow came from, relative to the entity's look
+        /// Where the blow came from, relative to the entity's look.
         yaw: f32,
     },
-    /// `ClientboundDamageEventPacket`: `damage` is the damage type's
+    /// `ClientboundDamageEventPacket`.
     Damage {
         id: i32,
         damage: i32,
@@ -87,21 +87,21 @@ pub enum EntityPacket {
         id: i32,
         event: u8,
     },
-    /// `ClientboundSetEntityLinkPacket`: `id` is on a lead held by
+    /// `ClientboundSetEntityLinkPacket`.
     Leash {
         id: i32,
         holder: Option<i32>,
     },
-    /// `ClientboundSetPassengersPacket`: everyone now riding `id`, in seat
+    /// `ClientboundSetPassengersPacket`.
     Passengers {
         id: i32,
         passengers: Vec<i32>,
     },
-    /// `ClientboundUpdateAttributesPacket`: the attributes the server sets,
+    /// `ClientboundUpdateAttributesPacket`.
     Attributes {
         id: i32,
         values: Vec<(i32, f64)>,
-        /// The same attributes with their base and modifiers, as the
+        /// The same attributes with their base and modifiers.
         snapshots: Vec<AttributeSnapshot>,
     },
 }
@@ -111,7 +111,8 @@ pub enum EntityPacket {
 pub struct AttributeSnapshot {
     pub attribute: i32,
     pub base: f64,
-    /// `(id, amount, operation)`; operation 0 adds, 1 multiplies the base,
+    /// `(id, amount, operation)`; operation 0 adds, 1 multiplies the base, 2 multiplies the
+    /// total.
     pub modifiers: Vec<(String, f64, i8)>,
 }
 
@@ -129,7 +130,7 @@ pub const ATTRIBUTE_BELOW_NAME_DISTANCE: i32 =
     pumpkin_data::attributes::Attributes::BELOW_NAME_DISTANCE.id as i32;
 pub const ATTRIBUTE_SCALE: i32 = pumpkin_data::attributes::Attributes::SCALE.id as i32;
 
-/// `AttributeInstance.calculateValue`: the base plus the added amounts,
+/// `AttributeInstance.calculateValue`.
 pub fn attribute_value(base: f64, modifiers: &[(i8, f64)]) -> f64 {
     let sum = |op: i8| -> f64 { modifiers.iter().filter(|m| m.0 == op).map(|m| m.1).sum() };
     let base = base + sum(0);

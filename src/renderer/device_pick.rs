@@ -1,4 +1,4 @@
-//! Which GPU renders. Every device that can draw to the window, has the
+//! Which GPU renders.
 
 use ash::vk;
 use std::ffi::CStr;
@@ -49,7 +49,7 @@ pub(super) fn best(candidates: &[Candidate]) -> Option<usize> {
         .map(|(i, _)| i)
 }
 
-/// `MELON_GPU`: an index into `candidates` or a case-insensitive part of a
+/// `MELON_GPU`.
 fn forced(candidates: &[Candidate], setting: &str) -> Option<usize> {
     let setting = setting.trim();
     if let Ok(index) = setting.parse::<usize>() {

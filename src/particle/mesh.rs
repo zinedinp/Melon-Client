@@ -1,4 +1,4 @@
-//! Drawing the particles: each frame one camera-facing quad per particle
+//! Drawing the particles.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -180,7 +180,7 @@ fn quad(
     ]);
 }
 
-/// The particles' GPU side: this frame's meshes and the item textures
+/// The particles' GPU side.
 #[derive(Default)]
 pub struct ParticleMeshes {
     meshes: Vec<MeshId>,

@@ -1,4 +1,4 @@
-//! `WorldCreationUiState.WorldTypeEntry`: the World Type button's choices,
+//! `WorldCreationUiState.WorldTypeEntry`.
 
 use crate::cycle::Cycle;
 

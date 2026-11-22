@@ -1,4 +1,4 @@
-//! The entity textures block entities draw with, stitched into the block
+//! The entity textures block entities draw with, stitched into the block atlas.
 
 use super::DYES;
 use super::models::{ChestHalf, SkullType};
@@ -31,7 +31,7 @@ pub(super) const POT_SIDE: &str = "minecraft:entity/decorated_pot/decorated_pot_
 pub(super) const CONDUIT_SHELL: &str = "minecraft:entity/conduit/base";
 pub(super) const END_PORTAL: &str = "minecraft:entity/end_portal/end_portal";
 
-/// A banner's flag in dye `color`: `banner_base` with the base pattern
+/// A banner's flag in dye `color`.
 pub(super) fn banner_flag(assets_root: &Path, color: usize) -> Option<RgbaImage> {
     let load = |id: &str| -> Option<RgbaImage> { crate::assets::texture_image(assets_root, id) };
     let mut flag = load(BANNER_BASE)?;
@@ -42,7 +42,7 @@ pub(super) fn banner_flag(assets_root: &Path, color: usize) -> Option<RgbaImage>
     Some(flag)
 }
 
-/// Every texture the renderers here sample, for the block atlas, with the
+/// Every texture the renderers here sample, for the block atlas.
 pub fn atlas_textures(assets_root: &Path) -> Vec<ExtraTexture> {
     let file = |id: &str| ExtraTexture {
         id: id.to_owned(),

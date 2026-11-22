@@ -1,4 +1,4 @@
-//! Which renderer an entity type gets. Every entity is tracked; those of
+//! Which renderer an entity type gets.
 
 use pumpkin_data::entity::EntityType;
 
@@ -170,7 +170,7 @@ pub enum EntityKind {
     ArmorStand,
     /// `LeashFenceKnotEntity`: the knot a lead is tied to a fence with.
     LeashKnot,
-    /// Every boat and raft, with or without a chest: `BoatModel` or
+    /// Every boat and raft, with or without a chest.
     Boat,
     /// Every minecart: `MinecartModel` (the contents are not drawn yet).
     Minecart,
@@ -180,7 +180,7 @@ pub enum EntityKind {
     PrimedTnt,
     /// `ItemEntity`: a dropped stack, spinning and bobbing.
     Item,
-    /// `Display.ItemDisplay`, `BlockDisplay` and `TextDisplay`: a model or
+    /// `Display.ItemDisplay`, `BlockDisplay` and `TextDisplay`.
     ItemDisplay,
     BlockDisplay,
     TextDisplay,
@@ -239,12 +239,13 @@ pub enum EntityKind {
     Other,
 }
 
-/// What a renderer fixes about its model, whatever the entity: the
+/// What a renderer fixes about its model, whatever the entity.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Look {
     /// `shadowRadius`, before a baby halves it.
     pub shadow: f32,
-    /// Scales the model; a baby's own model is already small, so most of
+    /// Scales the model; a baby's own model is already small, so most of them keep the adult
+    /// scale.
     pub scale: f32,
     pub adult_scale: bool,
     /// How far a dying entity tips: 180 for those that end on their back.
@@ -288,7 +289,7 @@ impl EntityKind {
         matches!(self, Self::FallingBlock | Self::PrimedTnt)
     }
 
-    /// `MoveSimulationType.SERVER_AND_CLIENT`: the client runs the physics
+    /// `MoveSimulationType.SERVER_AND_CLIENT`.
     pub fn simulates_movement(self) -> bool {
         self.is_block() || self == Self::Item
     }
@@ -625,7 +626,7 @@ impl EntityKind {
         )
     }
 
-    /// A `VehicleEntity` (a boat or a minecart): drawn on its own turn,
+    /// A `VehicleEntity` (a boat or a minecart).
     pub fn is_vehicle(self) -> bool {
         matches!(self, Self::Boat | Self::Minecart)
     }

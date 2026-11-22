@@ -1,4 +1,4 @@
-//! `PandaModel` and `BabyPandaModel`: a quadruped that sits, lies, rolls,
+//! `PandaModel` and `BabyPandaModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI, QUARTER_PI};
@@ -145,7 +145,7 @@ pub struct PandaPose {
     pub roll_amount: f32,
 }
 
-/// Sit/lie/roll as 0 or 1 from the flags; sneeze time is a mid-sneeze if
+/// Sit, lie and roll as 0 or 1 from the flags.
 pub fn pose_from_flags(flags: u8) -> PandaPose {
     PandaPose {
         unhappy: flags & FLAG_UNHAPPY != 0,

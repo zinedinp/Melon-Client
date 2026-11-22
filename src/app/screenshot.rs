@@ -1,7 +1,7 @@
 //! `Screenshot.grab` (F2, `key.screenshot`): the next frame as drawn, GUI
 //! and all, saved as `screenshots/<yyyy-MM-dd_HH.mm.ss>.png` in the game
 //! folder (the instance's), written off the render thread as vanilla does
-//! on its IO pool. Then "Saved screenshot as <name>" in the chat, the name
+//! on its IO pool. Then `Saved screenshot as <name>` in the chat, the name
 //! a link that opens the file.
 
 use std::path::{Path, PathBuf};

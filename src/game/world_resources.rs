@@ -1,4 +1,4 @@
-//! What a joined world draws with, independent of which world: the block
+//! What a joined world draws with, independent of which world.
 
 use crate::world::item_model::HeldUse;
 use pumpkin_data::item_stack::ItemStack;
@@ -36,11 +36,11 @@ pub struct WorldResources {
     pub item_atlas: TextureId,
     pub item_animator: TextureAnimator,
     pub fluids: FluidSprites,
-    /// The assets these were loaded from, for what loads on first sight
+    /// The assets these were loaded from, for what loads on first sight.
     pub root: std::path::PathBuf,
     /// Every particle type's sprites on the block atlas.
     pub particle_sprites: std::sync::Arc<crate::particle::animation::SpriteSets>,
-    /// The player models (Steve's wide arms, Alex's slim ones) and the
+    /// The player models (Steve's wide arms, Alex's slim ones) and the skins.
     pub players: PlayerModels,
     /// The mob models and the mob and armor textures seen so far.
     pub mobs: MobModels,
@@ -190,7 +190,7 @@ impl WorldResources {
         }
     }
 
-    /// Loads everything again from the current resource packs, into the
+    /// Loads everything again from the current resource packs.
     pub fn reload(
         mut self,
         renderer: &mut Renderer,
@@ -332,7 +332,7 @@ impl WorldResources {
         })
     }
 
-    /// The nether portal's sprite in the block atlas, as it is when the
+    /// The nether portal's sprite in the block atlas.
     pub fn nether_portal_sprite(&self) -> Option<crate::gui::effects::AtlasSprite> {
         self.models
             .sprite("minecraft:block/nether_portal")
@@ -342,7 +342,7 @@ impl WorldResources {
             })
     }
 
-    /// Runs `ticks` client ticks of the atlas animations and uploads the
+    /// Runs `ticks` client ticks of the atlas animations and uploads the changed frames.
     pub fn animate(&mut self, renderer: &mut Renderer, ticks: u32) {
         let mut latest = std::collections::HashMap::new();
         for _ in 0..ticks {
@@ -368,7 +368,7 @@ impl WorldResources {
         }
     }
 
-    /// Makes sure `stack` can be drawn in hand; a player head with a
+    /// Makes sure `stack` can be drawn in hand.
     pub fn prepare_held(
         &mut self,
         renderer: &mut Renderer,
@@ -391,7 +391,7 @@ impl WorldResources {
         }
     }
 
-    /// Bakes the icons of the stacks about to be drawn: a parallel batch of
+    /// Bakes the icons of the stacks about to be drawn.
     pub fn prepare_icons(
         &mut self,
         renderer: &mut Renderer,

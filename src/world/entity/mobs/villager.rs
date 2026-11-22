@@ -1,4 +1,4 @@
-//! `VillagerModel` and what is built on it (`WitchModel`, the wandering
+//! `VillagerModel` and what is built on it (`WitchModel`, the wandering trader).
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI, Rotation, THIRD_PI};
@@ -8,7 +8,7 @@ use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinit
 use crate::world::model_part::{Cube, Pose};
 use glam::{Mat4, Vec3};
 
-/// `VillagerMetadataSection.Hat`: how much of the hat part of the head a
+/// `VillagerMetadataSection.Hat`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Hat {
     #[default]
@@ -27,7 +27,7 @@ impl Hat {
         }
     }
 
-    /// `VillagerProfessionLayer`: whether the biome's hat shows under a
+    /// `VillagerProfessionLayer`.
     pub fn type_hat_visible(self, type_hat: Self) -> bool {
         self == Self::None || self == Self::Partial && type_hat != Self::Full
     }
@@ -179,7 +179,7 @@ pub fn baby_no_hat() -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 64.0)
 }
 
-/// `WitchModel.createBodyLayer`: the villager with a hat of four tilted
+/// `WitchModel.createBodyLayer`.
 pub fn witch() -> LayerDefinition {
     let mut root = adult_root();
     let head = root.add_or_replace_child(
@@ -353,7 +353,7 @@ pub fn baby_zombie_villager_no_hat() -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 64.0)
 }
 
-/// `ZombieVillagerModel.createArmorLayerSet`: the humanoid's armor with the
+/// `ZombieVillagerModel.createArmorLayerSet`.
 pub fn zombie_villager_armor() -> [LayerDefinition; 4] {
     humanoid::armor_layers(
         |g| {

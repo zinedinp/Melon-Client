@@ -1,4 +1,4 @@
-//! 8×8 ASCII + Latin-1 atlas for the launcher. Public-domain IBM VGA
+//! 8×8 ASCII + Latin-1 atlas for the launcher.
 
 use crate::gui::text::font::{Font, Glyph, GlyphKind};
 use image::{Rgba, RgbaImage};

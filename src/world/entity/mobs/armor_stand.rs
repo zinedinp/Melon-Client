@@ -1,4 +1,4 @@
-//! `ArmorStandModel` and `ArmorStandArmorModel`: a frame of sticks that
+//! `ArmorStandModel` and `ArmorStandArmorModel`.
 
 use glam::Vec3;
 
@@ -72,7 +72,7 @@ pub fn body() -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 64.0)
 }
 
-/// `ArmorStandArmorModel.createBaseMesh`: the humanoid's, with the head a
+/// `ArmorStandArmorModel.createBaseMesh`.
 fn base_armor_mesh(grow: f32) -> PartDefinition {
     let mut root = humanoid::create_mesh(grow, 0.0);
     root.add_or_replace_child(
@@ -91,12 +91,12 @@ fn base_armor_mesh(grow: f32) -> PartDefinition {
     root
 }
 
-/// The armor of a full-size stand, by [`ArmorSlot::ALL`].
+/// The armor of a full-size stand, by [`ArmorSlot::ALL`](crate::world::entity::humanoid::ArmorSlot::ALL).
 pub fn armor() -> [LayerDefinition; 4] {
     humanoid::armor_layers(base_armor_mesh, 0.5, 1.0)
 }
 
-/// `HumanoidModel.BABY_TRANSFORMER` for a small stand: the head moved down
+/// `HumanoidModel.BABY_TRANSFORMER` for a small stand.
 fn small(mut layer: LayerDefinition) -> LayerDefinition {
     for part in &mut layer.root.children {
         let (down, factor) = if part.name == "head" {
@@ -115,7 +115,7 @@ pub fn small_body() -> LayerDefinition {
     small(body())
 }
 
-/// `ARMOR_STAND_SMALL_ARMOR`, by [`ArmorSlot::ALL`].
+/// `ARMOR_STAND_SMALL_ARMOR`, by [`ArmorSlot::ALL`](crate::world::entity::humanoid::ArmorSlot::ALL).
 pub fn small_armor() -> [LayerDefinition; 4] {
     armor().map(small)
 }
@@ -142,7 +142,7 @@ impl ArmorStandParts {
     }
 }
 
-/// What a stand's pose reads: the synced angles (degrees), whether it
+/// What a stand's pose reads.
 #[derive(Clone, Copy, Debug)]
 pub struct StandPoseInput {
     pub angles: [[f32; 3]; 6],
@@ -178,7 +178,7 @@ fn radians(angles: [f32; 3]) -> Vec3 {
     Vec3::from(angles) * (std::f32::consts::PI / 180.0)
 }
 
-/// `ArmorStandModel.setupAnim`: the limbs turned by the synced angles
+/// `ArmorStandModel.setupAnim`.
 pub fn setup_anim(parts: &ArmorStandParts, pose: &mut ModelPose, input: &StandPoseInput) {
     let h = &parts.humanoid;
     let angle = |limb: StandPose| radians(input.angles[limb as usize]);

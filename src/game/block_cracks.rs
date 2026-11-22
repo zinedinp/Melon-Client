@@ -32,7 +32,7 @@ pub struct BlockCracks {
 }
 
 impl BlockCracks {
-    /// `destroyBlockProgress`: `breaker` has broken `pos` to `stage`; any
+    /// `destroyBlockProgress`.
     pub fn set(&mut self, breaker: i32, pos: [i32; 3], stage: i32, tick: u64) {
         match u8::try_from(stage).ok().filter(|stage| *stage < 10) {
             Some(stage) => {
@@ -65,7 +65,7 @@ impl BlockCracks {
         }
     }
 
-    /// The overlays to draw: per block the furthest stage, rebuilt when a
+    /// The overlays to draw.
     pub fn draws(
         &mut self,
         renderer: &mut Renderer,
@@ -125,12 +125,12 @@ impl BlockCracks {
     }
 }
 
-/// The faces of a block of `state` at `pos`, each textured with the whole
+/// The faces of a block of `state` at `pos`, each textured with the whole crack texture.
 fn crack_vertices(models: &BlockModels, state: u16, pos: [i32; 3]) -> Vec<WorldVertex> {
     let mut out = Vec::new();
     models.quads_at(state, pos, |quads| {
         for quad in quads {
-            for vertex in quad.vertices {
+            for vertex in *models.corners_of(quad) {
                 let local = glam::Vec3::from_array(vertex.pos);
                 let [x, y, z] = local.to_array();
                 let uv = match vertex.face {

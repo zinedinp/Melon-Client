@@ -1,4 +1,4 @@
-//! Vanilla `WalkAnimationState`: the limbs' swing phase and strength,
+//! Vanilla `WalkAnimationState`.
 
 /// `WalkAnimationState`.
 #[derive(Clone, Copy, Debug)]
@@ -21,7 +21,7 @@ impl Default for WalkAnimation {
 }
 
 impl WalkAnimation {
-    /// `LivingEntity.updateWalkAnimation`: once a tick, from the distance
+    /// `LivingEntity.updateWalkAnimation`.
     pub fn tick(&mut self, distance: f32, baby: bool) {
         let target = (distance * 4.0).min(1.0);
         self.update(target, 0.4, if baby { 3.0 } else { 1.0 });

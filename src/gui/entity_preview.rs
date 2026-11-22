@@ -18,12 +18,12 @@ pub struct EntityPreview {
     /// `offsetY`, in blocks.
     pub offset_y: f32,
     pub mouse: (f32, f32),
-    /// The tracked entity to show instead of the own player (a mount's
+    /// The tracked entity to show instead of the own player (a mount's preview).
     pub entity: Option<i32>,
 }
 
 impl EntityPreview {
-    /// `xAngle`/`yAngle`: how far the mouse is beside and above the box's
+    /// `xAngle`/`yAngle`: how far the mouse is beside and above the box's centre.
     pub fn angles(&self) -> (f32, f32) {
         let center_x = (self.x0 + self.x1) / 2.0;
         let center_y = (self.y0 + self.y1) / 2.0;
@@ -41,7 +41,7 @@ impl EntityPreview {
         )
     }
 
-    /// From the entity's world space (feet at the origin) to the texture's
+    /// From the entity's world space (feet at the origin) to the texture's clip space.
     pub fn view(&self, gui_scale: f32, height: f32) -> Mat4 {
         let (width_px, height_px) = self.pixels(gui_scale);
         let (_, y_angle) = self.angles();
@@ -64,7 +64,7 @@ fn inventory_light(normal: Vec3) -> f32 {
     (0.4 + 0.6 * (normal.dot(l0).max(0.0) + normal.dot(l1).max(0.0))).min(1.0)
 }
 
-/// One model of a picture: posed by `pose`, placed by `root` (model pixels
+/// One model of a picture.
 pub struct PreviewLayer<'a> {
     pub model: &'a Model,
     pub pose: &'a ModelPose,
@@ -75,7 +75,7 @@ pub struct PreviewLayer<'a> {
     pub skip: &'a [PartId],
     /// When set, only these parts (the outer skin).
     pub only: Option<&'a [PartId]>,
-    /// Keep the previous layer's depth so a translucent overlay tests
+    /// Keep the previous layer's depth so a translucent overlay tests against it.
     pub share_depth: bool,
     /// Armor glint (`enchanted_glint_armor`), sampled with [`crate::world::glint::ARMOR_SCALE`].
     pub glint: Option<&'a RgbaImage>,
@@ -133,7 +133,7 @@ pub fn signature(layers: &[PreviewLayer], width: u32, height: u32) -> Option<u64
     Some(hasher.finish())
 }
 
-/// The layers over one another, first at the back. A layer with
+/// The layers over one another, first at the back.
 pub fn rasterize_layers(layers: &[PreviewLayer], width: u32, height: u32) -> RgbaImage {
     let mut out = RgbaImage::new(width, height);
     let mut depth = vec![f32::NEG_INFINITY; (width * height) as usize];

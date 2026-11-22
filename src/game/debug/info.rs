@@ -1,4 +1,4 @@
-//! The F3 lines that need the running game: the server line, what is looked
+//! The F3 lines that need the running game.
 
 use pumpkin_data::tag::{self, RegistryKey, Taggable};
 use pumpkin_data::{Block, BlockStateId};
@@ -8,7 +8,7 @@ use crate::gui::hud::debug::DebugExtras;
 use crate::gui::hud::debug_entries::Entry;
 use crate::world::clouds::CloudStatus;
 
-/// A block state as `BlockState.toString` says it: the block's id and its
+/// A block state as `BlockState.toString` says it.
 pub fn describe_state(state: u16) -> (String, Vec<String>) {
     let Some(id) = BlockStateId::new(state) else {
         return ("minecraft:air".to_owned(), Vec::new());

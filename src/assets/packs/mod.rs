@@ -1,4 +1,4 @@
-//! Resource packs over the vanilla `assets/` tree, like vanilla's
+//! Resource packs over the vanilla `assets/` tree, like vanilla's `PackRepository`.
 
 mod archive;
 pub mod meta;
@@ -34,7 +34,7 @@ impl Source {
         }
     }
 
-    /// Every file below the folder `prefix` (ending in `/`), as names
+    /// Every file below the folder `prefix` (ending in `/`), as names relative to the pack.
     fn list(&self, prefix: &str, out: &mut BTreeSet<String>) {
         match self {
             Self::Folder(root) => {
@@ -77,7 +77,7 @@ fn join(base: &Path, name: &str) -> PathBuf {
 
 /// One pack ready to read from.
 pub struct Pack {
-    /// `file/<name>` for a pack from the `resourcepacks` folder,
+    /// `file/<name>` for a pack from the `resourcepacks` folder.
     pub id: String,
     /// The file or folder name, shown as the pack's title.
     pub title: String,
@@ -88,7 +88,7 @@ pub struct Pack {
 }
 
 impl Pack {
-    /// Opens a folder or zip pack. Fails without a readable `pack.mcmeta`,
+    /// Opens a folder or zip pack.
     pub fn open(id: String, title: String, path: &Path) -> anyhow::Result<Self> {
         let source = if path.is_dir() {
             Source::Folder(path.to_path_buf())
@@ -125,7 +125,7 @@ impl Pack {
         self.source.read("pack.png")
     }
 
-    /// `assets/<namespace>/<path>`, from the newest overlay that has it,
+    /// `assets/<namespace>/<path>`, from the newest overlay that has it, else the pack's root.
     fn read(&self, namespace: &str, path: &str) -> Option<Vec<u8>> {
         let name = format!("assets/{namespace}/{path}");
         for overlay in self.overlays.iter().rev() {
@@ -255,7 +255,7 @@ impl ResourceStack {
         join(&root.join(namespace), path).is_file()
     }
 
-    /// `path.mcmeta` for a file from `layer`: from the top pack down to
+    /// `path.mcmeta` for a file from `layer`.
     pub fn find_metadata(
         &self,
         root: &Path,
@@ -284,7 +284,7 @@ impl ResourceStack {
         std::fs::read(join(&root.join(namespace), &meta)).ok()
     }
 
-    /// Every copy of `namespace:path`, vanilla's first, for files the packs
+    /// Every copy of `namespace:path`, vanilla's first, for files the packs merge.
     pub fn find_all(&self, root: &Path, namespace: &str, path: &str) -> Vec<Vec<u8>> {
         if !valid_namespace(namespace) || !valid_path(path) {
             return Vec::new();
@@ -356,7 +356,7 @@ pub fn active() -> Arc<ResourceStack> {
         .unwrap_or_default()
 }
 
-/// Reads through `stack` from now on. Whatever was built from the old one
+/// Reads through `stack` from now on.
 pub fn activate(stack: ResourceStack) {
     *ACTIVE.write().unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(stack));
 }
@@ -369,7 +369,7 @@ pub fn valid_namespace(namespace: &str) -> bool {
             .all(|b| matches!(b, b'a'..=b'z' | b'0'..=b'9' | b'_' | b'-' | b'.'))
 }
 
-/// `Identifier.isValidPath`, plus no `.`/`..` parts so nothing leaves
+/// `Identifier.isValidPath`, plus no `.`/`..` parts so nothing leaves the pack.
 pub fn valid_path(path: &str) -> bool {
     !path.is_empty()
         && path
@@ -394,7 +394,8 @@ mod tests {
         Arc::new(Pack::open(format!("file/{id}"), id.to_owned(), &root).unwrap())
     }
 
-    /// A zip in `resourcepacks/` overrides a texture with an HD one, adds
+    /// A zip in `resourcepacks/` overrides a texture with an HD one, adds a file, and every
+    /// reader sees both.
     #[test]
     fn zip_pack_reaches_every_reader() {
         use std::io::Write;

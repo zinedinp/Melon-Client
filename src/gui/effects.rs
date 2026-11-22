@@ -1,4 +1,4 @@
-//! Screen effects: what is laid over the world before the HUD, as vanilla
+//! Screen effects.
 
 use crate::assets::Assets;
 use crate::math::angle::{self, PI};
@@ -6,7 +6,7 @@ use crate::math::argb;
 use crate::renderer::quad::{BlendMode, DrawList};
 use crate::renderer::{Renderer, TextureId};
 
-/// The field of view the hand and these overlays are drawn with
+/// The field of view the hand and these overlays are drawn with.
 const HUD_FOV_DEGREES: f32 = 70.0;
 /// How far in front of the camera their quads lie.
 const OVERLAY_DEPTH: f32 = 0.5;
@@ -146,7 +146,7 @@ impl ScreenEffects {
     }
 }
 
-/// `Hud.extractVignette`'s colour: a grey of the brightness, red-drained
+/// `Hud.extractVignette`'s colour.
 pub fn vignette_color(v: Vignette) -> [f32; 4] {
     let brightness = v.brightness.clamp(0.0, 1.0);
     if v.border_warning > 0.0 {
@@ -184,7 +184,7 @@ fn project(x: f32, y: f32, depth: f32, size: (f32, f32)) -> [f32; 2] {
     ]
 }
 
-/// `ScreenEffectRenderer.submitWater`: `underwater.png` four times over a
+/// `ScreenEffectRenderer.submitWater`.
 fn underwater(list: &mut DrawList, texture: TextureId, size: (f32, f32), water: Underwater) {
     let tan = (HUD_FOV_DEGREES.to_radians() / 2.0).tan();
     let half_height = OVERLAY_DEPTH * tan;
@@ -207,7 +207,7 @@ fn underwater(list: &mut DrawList, texture: TextureId, size: (f32, f32), water: 
     );
 }
 
-/// `ScreenEffectRenderer.submitFire`: two quads of the fire sprite at the
+/// `ScreenEffectRenderer.submitFire`.
 fn fire_overlay(list: &mut DrawList, fire: AtlasSprite, size: (f32, f32)) {
     let [u0, v0, u1, v1] = fire.uv;
     let color = argb(0xE5FF_FFFF);
@@ -234,7 +234,7 @@ fn fire_overlay(list: &mut DrawList, fire: AtlasSprite, size: (f32, f32)) {
     }
 }
 
-/// `Hud.extractConfusionOverlay`: `nausea.png` additive, scaled from the
+/// `Hud.extractConfusionOverlay`.
 fn nausea_overlay(list: &mut DrawList, texture: TextureId, size: (f32, f32), strength: f32) {
     let strength = strength.clamp(0.0, 1.0);
     let [x0, y0, x1, y1] = nausea_rect(size, strength);
@@ -265,7 +265,7 @@ pub fn nausea_rect(size: (f32, f32), strength: f32) -> [f32; 4] {
     ]
 }
 
-/// `extractDeathBackground`: the red gradient over the sharp world that the
+/// `extractDeathBackground`.
 pub fn death_veil(list: &mut DrawList, white: TextureId, size: (f32, f32)) {
     veil(list, white, size, argb(0x6050_0000), argb(0xA080_3030));
 }

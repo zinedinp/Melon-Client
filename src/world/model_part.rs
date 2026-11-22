@@ -1,4 +1,4 @@
-//! Vanilla `ModelPart` for block entity models: boxes with the classic box
+//! Vanilla `ModelPart` for block entity models.
 
 use glam::{Mat3, Mat4, Vec2, Vec3};
 
@@ -17,7 +17,7 @@ pub struct Cube {
     pub size: Vec3,
     /// `texOffs`.
     pub uv: Vec2,
-    /// `CubeDeformation`: grown (or shrunk) on every side, per axis, UVs
+    /// `CubeDeformation`.
     pub grow: Vec3,
     pub mirror: bool,
     pub faces: Directions,
@@ -68,7 +68,7 @@ impl Cube {
         self
     }
 
-    /// `ModelPart.Cube`'s six polygons: corners (counter-clockwise from
+    /// `ModelPart.Cube`'s six polygons.
     fn polygons(&self) -> Vec<([Vec3; 4], [Vec2; 4], Direction)> {
         let mut lo = self.min - self.grow;
         let mut hi = self.min + self.size + self.grow;
@@ -157,7 +157,7 @@ impl Pose {
         }
     }
 
-    /// `ModelPart.translateAndRotate`: offset, then the Euler angles
+    /// `ModelPart.translateAndRotate`.
     #[inline]
     pub fn matrix(&self) -> Mat4 {
         let r = Mat3::euler_zyx(self.rotation);
@@ -218,7 +218,7 @@ impl Part {
     }
 }
 
-/// Where a part's texture sits: its atlas rectangle and its size in texels
+/// Where a part's texture sits.
 #[derive(Clone, Copy, Debug)]
 pub struct Sprite {
     pub rect: [f32; 4],
@@ -232,7 +232,7 @@ impl Sprite {
     }
 }
 
-/// One face of a part, through its transform: corners counter-clockwise
+/// One face of a part, through its transform.
 pub struct Face {
     pub corners: [Vec3; 4],
     pub texels: [Vec2; 4],
@@ -245,7 +245,6 @@ pub struct Face {
 /// cube for 8 corners. Transform the 8 once (then as eight lanes, AVX
 /// f32x8, mul and add in `transform_point3`'s order, no FMA: same bits),
 /// and take the normal from the matrix's column once a part, not a face.
-/// Every face of `part` and its children through `transform` (model pixels
 pub fn faces(part: &Part, transform: Mat4, visit: &mut impl FnMut(Face)) {
     let transform = transform * part.pose.matrix();
     let normal_matrix = Mat3::from_mat4(transform);
@@ -267,7 +266,7 @@ pub fn faces(part: &Part, transform: Mat4, visit: &mut impl FnMut(Face)) {
     }
 }
 
-/// Writes `part` and its children through `transform` (model pixels to
+/// Writes `part` and its children through `transform` (model pixels to the target space).
 pub fn emit(part: &Part, transform: Mat4, sprite: &Sprite, tint: [f32; 3], out: &mut Vec<Vertex>) {
     faces(part, transform, &mut |face| {
         let color = tint.map(|c| c * geometry::shade(face.normal));

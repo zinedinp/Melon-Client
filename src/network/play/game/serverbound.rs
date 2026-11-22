@@ -1,4 +1,4 @@
-//! What the client sends about the player's state: inventory clicks,
+//! What the client sends about the player's state.
 
 use anyhow::Result;
 use pumpkin_data::item_stack::ItemStack;
@@ -8,7 +8,7 @@ use std::io::Write;
 use crate::network::protocol::packet;
 use crate::network::protocol::varint::write_var_int;
 
-/// `ServerboundSetCreativeModeSlotPacket`: puts `stack` into menu slot
+/// `ServerboundSetCreativeModeSlotPacket`.
 pub fn write_creative_slot(buf: &mut Vec<u8>, slot: i16, stack: &ItemStack) -> Result<()> {
     buf.write_all(&slot.to_be_bytes())?;
     ItemStackSerializer::from(stack.clone())
@@ -19,7 +19,7 @@ pub fn write_creative_slot(buf: &mut Vec<u8>, slot: i16, stack: &ItemStack) -> R
         .map_err(|e| anyhow::anyhow!("item stack: {e}"))
 }
 
-/// `ServerboundContainerClickPacket`. `changed` holds each slot the click
+/// `ServerboundContainerClickPacket`.
 #[allow(clippy::too_many_arguments)]
 pub fn write_container_click(
     buf: &mut Vec<u8>,
@@ -44,7 +44,7 @@ pub fn write_container_click(
     write_hashed_stack(buf, carried)
 }
 
-/// `HashedStack`: item, count, and a CRC32C per changed data component
+/// `HashedStack`.
 fn write_hashed_stack(buf: &mut Vec<u8>, stack: &ItemStack) -> Result<()> {
     if stack.is_empty() {
         return packet::write_bool(buf, false);
@@ -96,7 +96,7 @@ pub enum PlayerCommand {
     StopSprinting = 2,
     /// A jump on a ridden horse, its strength 0-100 in the packet's data.
     StartRidingJump = 3,
-    /// The key that opens the inventory of a horse, donkey or llama the
+    /// The key that opens the inventory of a horse, donkey or llama the player rides.
     OpenInventory = 5,
     /// Jumping in the air with a glider on.
     StartFallFlying = 8,

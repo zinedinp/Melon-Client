@@ -1,4 +1,4 @@
-//! Vanilla `HumanoidModel`: head with hat, body, two arms and two legs
+//! Vanilla `HumanoidModel`.
 
 use glam::{Mat4, Vec3};
 
@@ -112,7 +112,7 @@ impl ArmPose {
         self == Self::BowAndArrow
     }
 
-    /// `AvatarRenderer.getArmPose`'s last step: the off hand of a two-handed
+    /// `AvatarRenderer.getArmPose`'s last step.
     pub fn offhand_of(self, main_hand: Self) -> Self {
         match (main_hand.is_two_handed(), self) {
             (true, Self::Empty) | (false, _) => self,
@@ -121,7 +121,7 @@ impl ArmPose {
     }
 }
 
-/// How the arms answer a swing: `HumanoidModel.setupAttackAnimation` or a
+/// How the arms answer a swing.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum AttackStyle {
     /// The player's and most mobs' one-armed swing.
@@ -134,7 +134,7 @@ pub enum AttackStyle {
     },
 }
 
-/// The swing under way: the arm, `swingAnimation` (0 to 1) and whether it
+/// The swing under way.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SwingPose {
     pub arm: Arm,
@@ -163,7 +163,7 @@ pub struct HumanoidRenderState {
     pub swim_amount: f32,
     /// `isUsingItem`: a swimmer keeps the arms of the item in use.
     pub using_item: bool,
-    /// Which stroke: a drowned's (`DrownedModel.setupSwimAnimation`) or
+    /// Which stroke.
     pub drowned_swim: bool,
     pub right_arm_pose: ArmPose,
     pub left_arm_pose: ArmPose,
@@ -223,7 +223,7 @@ impl HumanoidParts {
     }
 }
 
-/// `HumanoidModel.copyPropertiesTo`: an armor layer follows the body it is
+/// `HumanoidModel.copyPropertiesTo`.
 pub fn copy_pose(
     from: (&Model, &HumanoidParts, &ModelPose),
     to: (&Model, &HumanoidParts, &mut ModelPose),
@@ -348,7 +348,7 @@ pub fn sit(parts: &HumanoidParts, pose: &mut ModelPose) {
     pose[parts.left_leg].pose.rotation = Vec3::new(-1.413_716_7, -PI / 10.0, -0.078_539_82);
 }
 
-/// `HumanoidModel.setupSwimAnimation`: the front crawl. The arms circle
+/// `HumanoidModel.setupSwimAnimation`: the front crawl.
 fn setup_swim_animation(parts: &HumanoidParts, pose: &mut ModelPose, state: &HumanoidRenderState) {
     let swim = state.swim_amount;
     let head = &mut pose[parts.head].pose.rotation;
@@ -390,7 +390,7 @@ fn setup_swim_animation(parts: &HumanoidParts, pose: &mut ModelPose, state: &Hum
     *right_leg += (kick(0.0) - *right_leg) * swim;
 }
 
-/// `DrownedModel.setupSwimAnimation`: arms thrown forward and paddling,
+/// `DrownedModel.setupSwimAnimation`.
 fn setup_drowned_swim(parts: &HumanoidParts, pose: &mut ModelPose, state: &HumanoidRenderState) {
     let swim = state.swim_amount;
     let paddle = angle::sin(0.1 * state.age_in_ticks);
@@ -406,7 +406,7 @@ fn setup_drowned_swim(parts: &HumanoidParts, pose: &mut ModelPose, state: &Human
     pose[parts.head].pose.rotation.x = 0.0;
 }
 
-/// `HumanoidModel.setupAttackAnimation`: the body twists toward the
+/// `HumanoidModel.setupAttackAnimation`.
 fn setup_attack_animation(parts: &HumanoidParts, pose: &mut ModelPose, swing: SwingPose) {
     let animation = swing.animation;
     if animation <= 0.0 {
@@ -451,7 +451,7 @@ impl HumanoidParts {
     }
 }
 
-/// `HumanoidModel.translateToHand`: where the item in `arm`'s hand hangs,
+/// `HumanoidModel.translateToHand`.
 pub fn hand_transform(
     model: &Model,
     parts: &HumanoidParts,
@@ -482,12 +482,12 @@ impl ArmorSlot {
     pub const ALL: [Self; 4] = [Self::Head, Self::Chest, Self::Legs, Self::Feet];
 }
 
-/// `HumanoidModel.createArmorMeshSet(inner 0.5, outer 1.0)` as 64x32
+/// `HumanoidModel.createArmorMeshSet(inner 0.5, outer 1.0)` as 64x32 layers.
 pub fn create_armor_layers() -> [LayerDefinition; 4] {
     armor_layers(base_armor_mesh, 0.5, 1.0)
 }
 
-/// `HumanoidModel.createBaseArmorMesh`: the legs a tenth of a pixel
+/// `HumanoidModel.createBaseArmorMesh`.
 pub fn base_armor_mesh(grow: f32) -> PartDefinition {
     let mut root = create_mesh(grow, 0.0);
     for (name, x, mirror) in [("right_leg", -1.9, false), ("left_leg", 1.9, true)] {
@@ -501,7 +501,7 @@ pub fn base_armor_mesh(grow: f32) -> PartDefinition {
     root
 }
 
-/// `HumanoidModel.createArmorMeshSet` over `base`: each slot keeps its
+/// `HumanoidModel.createArmorMeshSet` over `base`.
 pub fn armor_layers(
     base: impl Fn(f32) -> PartDefinition,
     inner: f32,
@@ -524,7 +524,7 @@ pub fn armor_layers(
     })
 }
 
-/// `createBabyArmorMeshSet` with `HumanoidMobRenderer`'s baby deformations
+/// `createBabyArmorMeshSet` with `HumanoidMobRenderer`'s baby deformations.
 pub fn create_baby_armor_layers() -> [LayerDefinition; 4] {
     baby_armor_layers(
         Vec3::new(-0.1, 0.3, 0.3),
@@ -533,7 +533,7 @@ pub fn create_baby_armor_layers() -> [LayerDefinition; 4] {
     )
 }
 
-/// `createBabyArmorMeshSet` with these deformations and `arm_offset` (the
+/// `createBabyArmorMeshSet` with these deformations and `arm_offset`.
 pub fn baby_armor_layers(inner: Vec3, outer: Vec3, arm_offset: Vec3) -> [LayerDefinition; 4] {
     let mesh = |g: Vec3| {
         let less = g - Vec3::splat(0.1);

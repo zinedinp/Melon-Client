@@ -1,4 +1,4 @@
-//! Drawing one server row (`ServerSelectionList.OnlineServerEntry`) and the
+//! Drawing one server row (`ServerSelectionList.OnlineServerEntry`).
 
 use super::*;
 
@@ -106,7 +106,7 @@ impl MultiplayerScreen {
         }
     }
 
-    /// The tooltip of what the mouse is on: the status bars say what they
+    /// The tooltip of what the mouse is on.
     pub(super) fn draw_tooltip(&self, ui: &mut Ui) {
         let (mouse_x, mouse_y) = self.mouse;
         let Some(index) = self.list.row_at(mouse_x, mouse_y) else {

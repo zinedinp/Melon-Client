@@ -1,4 +1,4 @@
-//! Vanilla `ClipContext` against block outline shapes, and the entity boxes
+//! Vanilla `ClipContext` against block outline shapes, and the entity boxes.
 
 use glam::DVec3;
 use pumpkin_data::BlockStateId;
@@ -47,7 +47,7 @@ pub enum Hit {
     Entity(EntityHit),
 }
 
-/// `LocalPlayer.pick`: the block or the entity the ray from `eye` along
+/// `LocalPlayer.pick`.
 pub fn pick(
     level: &Level,
     eye: DVec3,
@@ -71,7 +71,7 @@ pub fn pick(
     }
 }
 
-/// `ProjectileUtil.getEntityHitResult`: the nearest box the segment from
+/// `ProjectileUtil.getEntityHitResult`.
 pub fn clip_entities(
     start: DVec3,
     end: DVec3,
@@ -187,7 +187,7 @@ pub fn clip_colliders(level: &Level, start: DVec3, end: DVec3) -> Option<DVec3> 
         .map(|t| start + dir * t)
 }
 
-/// Sight for name tags. Vanilla writes framebuffer depth from drawn
+/// Sight for name tags.
 pub fn clip_blocks_for_nametag(level: &Level, start: DVec3, end: DVec3) -> Option<BlockHit> {
     clip_blocks_where(level, start, end, occludes_name_tag, false)
 }
@@ -283,7 +283,7 @@ fn axis_delta(dir: f64) -> f64 {
     }
 }
 
-/// The boxes of the block at `(x, y, z)` that the crosshair hits and the
+/// The boxes of the block at `(x, y, z)` that the crosshair hits and the outline draws.
 pub fn outline_shapes(level: &Level, (x, y, z): (i32, i32, i32)) -> impl Iterator<Item = Aabb> {
     let origin = DVec3::new(f64::from(x), f64::from(y), f64::from(z));
     let id = level.block_state(x, y, z).unwrap_or(0);
@@ -301,7 +301,7 @@ pub fn outline_shapes(level: &Level, (x, y, z): (i32, i32, i32)) -> impl Iterato
         })
 }
 
-/// Ray from `start` along unit `dir`, up to `max_t`. The enter time and
+/// Ray from `start` along unit `dir`, up to `max_t`.
 fn clip_aabb(aabb: &Aabb, start: DVec3, dir: DVec3, max_t: f64) -> Option<(f64, u8, bool)> {
     let mut t_enter = f64::NEG_INFINITY;
     let mut t_exit = f64::INFINITY;
@@ -519,7 +519,7 @@ mod tests {
         assert_eq!(high.map(|h| h.pos), Some([3, 64, 0]));
     }
 
-    /// `cargo test --lib -- --ignored pick_cost --nocapture`: what a pick
+    /// `cargo test --lib -- --ignored pick_cost --nocapture`.
     #[test]
     #[ignore]
     fn pick_cost() {

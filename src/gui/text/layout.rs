@@ -34,7 +34,7 @@ pub fn width(font: &Font, text: &StyledText) -> f32 {
         .sum()
 }
 
-/// Draws `text` with its top-left at `(x, y)`; returns its width. Its quads
+/// Draws `text` with its top-left at `(x, y)`; returns its width.
 pub fn draw(draw_list: &mut DrawList, paint: &TextPaint, text: &StyledText, x: f32, y: f32) -> f32 {
     let program = draw_list.set_program(crate::renderer::quad::Program::Text);
     let width = draw_glyphs(draw_list, paint, text, x, y);
@@ -171,7 +171,7 @@ fn draw_glyphs(
     pen - x
 }
 
-/// `StringSplitter.splitLines`: breaks `text` into lines at most
+/// `StringSplitter.splitLines`.
 pub fn wrap(font: &Font, text: &StyledText, max_width: f32) -> Vec<StyledText> {
     let chars: Vec<(char, usize)> = text
         .spans

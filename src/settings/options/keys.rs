@@ -1,4 +1,4 @@
-//! `Options.processOptions`: every `options.txt` key, how its value is
+//! `Options.processOptions`.
 
 use super::*;
 
@@ -32,7 +32,7 @@ pub(super) fn flag(value: &str) -> bool {
     value == "true"
 }
 
-/// One `options.txt` key: how it reads into the config, and how it is
+/// One `options.txt` key.
 pub(super) struct OptionKey {
     pub(super) name: &'static str,
     pub(super) read: fn(&mut Config, &str),

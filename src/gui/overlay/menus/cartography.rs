@@ -1,4 +1,4 @@
-//! `CartographyTableScreen`: the frame of the map being made. What the map
+//! `CartographyTableScreen`: the frame of the map being made.
 
 use pumpkin_data::item::Item;
 

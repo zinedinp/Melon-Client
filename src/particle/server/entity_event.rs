@@ -1,4 +1,4 @@
-//! The particles of `ClientboundEntityEventPacket` (each entity class's
+//! The particles of `ClientboundEntityEventPacket` (each entity class's `handleEntityEvent`).
 
 use glam::DVec3;
 
@@ -229,7 +229,7 @@ pub fn tracking(engine: &mut ParticleEngine, entity: i32, spec: ParticleSpec, li
     engine.add(p);
 }
 
-/// `count` of `kind` in the box, raised by `lift` (`spawnTamingParticles`,
+/// `count` of `kind` in the box, raised by `lift` (`spawnTamingParticles` and its kin).
 fn around(
     body: &EntityBox,
     kind: Kind,

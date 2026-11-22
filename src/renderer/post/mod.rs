@@ -1,4 +1,4 @@
-//! Post effect chains (`assets/minecraft/post_effect/<id>.json`), run the
+//! Post effect chains (`assets/minecraft/post_effect/<id>.json`).
 
 pub mod config;
 pub(in crate::renderer) mod gpu;

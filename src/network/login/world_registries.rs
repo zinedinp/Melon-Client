@@ -1,4 +1,4 @@
-//! The registries that decide what a level looks like, from the
+//! The registries that decide what a level looks like.
 
 use anyhow::Result;
 use pumpkin_protocol::ser::{NetworkReadSliceExt, nbt_tag_to_json_ext};

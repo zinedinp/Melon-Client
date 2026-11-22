@@ -1,4 +1,4 @@
-//! Recipes that don't come from the server. A zip-mod ships
+//! Recipes that don't come from the server.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -48,7 +48,7 @@ impl Layer {
         &self.entries
     }
 
-    /// Whether the layer hides a recipe: it makes something, and only
+    /// Whether the layer hides a recipe.
     pub fn removes(&self, display: &RecipeDisplay) -> bool {
         if self.removed.is_empty() {
             return false;

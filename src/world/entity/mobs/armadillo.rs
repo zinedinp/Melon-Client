@@ -1,4 +1,4 @@
-//! `AdultArmadilloModel` and `BabyArmadilloModel`: walk is a keyframe
+//! `AdultArmadilloModel` and `BabyArmadilloModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{EIGHTH_PI, THIRD_PI};
@@ -184,7 +184,7 @@ impl ArmadilloParts {
     }
 }
 
-/// `Armadillo.shouldHideInShell` from the state and how long it has been
+/// `Armadillo.shouldHideInShell` from the state and how long it has been in it.
 pub fn hide_in_shell(state: i32, ticks: u32) -> bool {
     match state {
         STATE_ROLLING => ticks > 5,

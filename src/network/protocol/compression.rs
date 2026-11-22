@@ -1,4 +1,4 @@
-//! Vanilla `CompressionDecoder` / `CompressionEncoder`: zlib wrapping the
+//! Vanilla `CompressionDecoder` / `CompressionEncoder`.
 
 use anyhow::{Context, Result, bail};
 use flate2::Compression;

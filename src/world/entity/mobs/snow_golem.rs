@@ -1,4 +1,4 @@
-//! `SnowGolemModel`: three balls of snow, the head turning with the look
+//! `SnowGolemModel`.
 
 use super::{LayerSpec, ModelId as M};
 use crate::math::angle;
@@ -65,7 +65,7 @@ impl SnowGolemParts {
     }
 }
 
-/// `SnowGolemModel.setupAnim`: the upper body turns a quarter as far as
+/// `SnowGolemModel.setupAnim`.
 pub fn setup_anim(parts: &SnowGolemParts, pose: &mut ModelPose, state: &LivingRenderState) {
     look(&mut pose[parts.head].pose, state);
     let turn = state.y_rot.to_radians() * 0.25;

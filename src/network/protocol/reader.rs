@@ -15,7 +15,7 @@ pub fn write_bool(w: &mut impl Write, b: bool) -> Result<()> {
     Ok(())
 }
 
-/// `LpVec3.write`: three axes over a shared scale, 15 bits each, or a
+/// `LpVec3.write`.
 pub fn write_lp_vec3(w: &mut impl Write, value: [f64; 3]) -> Result<()> {
     const LIMIT: f64 = 1.717_986_918_3e10;
     let [x, y, z] = value.map(|v| {
@@ -109,7 +109,7 @@ impl<'a> Reader<'a> {
         anyhow::bail!("VarLong is too long")
     }
 
-    /// `BlockPos.STREAM_CODEC`: x in the top 26 bits, z in the next 26, y in
+    /// `BlockPos.STREAM_CODEC`.
     pub fn block_pos(&mut self) -> Result<[i32; 3]> {
         Ok(unpack_block_pos(self.i64_be()?))
     }
@@ -126,7 +126,7 @@ impl<'a> Reader<'a> {
         Ok(f64::from_be_bytes(b))
     }
 
-    /// `LpVec3.read`: a velocity packed into 6 bytes (15 bits per axis over
+    /// `LpVec3.read`.
     pub fn lp_vec3(&mut self) -> Result<[f64; 3]> {
         let lowest = u64::from(self.u8()?);
         if lowest == 0 {
@@ -158,7 +158,7 @@ impl<'a> Reader<'a> {
         self.string_max(32767)
     }
 
-    /// A string of at most `max_chars` characters, checked the way vanilla's
+    /// A string of at most `max_chars` characters, checked the way vanilla's `readUtf` does.
     pub fn string_max(&mut self, max_chars: usize) -> Result<String> {
         let len = self.var_int()?;
         let max_bytes = max_chars.saturating_mul(3);
@@ -191,7 +191,7 @@ impl<'a> Reader<'a> {
         Ok(uuid::Uuid::from_u64_pair(high, low))
     }
 
-    /// Reads `n` raw bytes - the DER public key / verify token / shared
+    /// Reads `n` raw bytes (the DER public key, verify token or shared secret).
     pub fn bytes(&mut self, n: usize) -> Result<Vec<u8>> {
         if n > self.buf.len() {
             bail!("tried to read {n} bytes but only {} remain", self.buf.len());
@@ -201,12 +201,12 @@ impl<'a> Reader<'a> {
         Ok(out)
     }
 
-    /// The unread bytes, for a decoder that reads straight from a slice
+    /// The unread bytes, for a decoder that reads straight from a slice.
     pub fn remaining(&mut self) -> &mut &'a [u8] {
         &mut self.buf
     }
 
-    /// Splits off and returns the next `n` bytes as their own sub-slice,
+    /// Splits off and returns the next `n` bytes as their own sub-slice.
     pub fn slice(&mut self, n: usize) -> Result<&'a [u8]> {
         if n > self.buf.len() {
             bail!("tried to read {n} bytes but only {} remain", self.buf.len());

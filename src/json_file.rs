@@ -1,4 +1,4 @@
-//! Small JSON files next to the game: the server list, account, and each
+//! Small JSON files next to the game.
 
 use std::path::Path;
 
@@ -16,7 +16,7 @@ pub fn save<T: Serialize + ?Sized>(path: &Path, value: &T) -> std::io::Result<()
     std::fs::write(path, serde_json::to_string_pretty(value)?)
 }
 
-/// Like [`save`], for a file only its owner may read: on Unix it is created
+/// Like [`save`], for a file only its owner may read.
 pub fn save_private<T: Serialize + ?Sized>(path: &Path, value: &T) -> std::io::Result<()> {
     #[cfg(unix)]
     {

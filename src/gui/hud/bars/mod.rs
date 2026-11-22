@@ -1,4 +1,4 @@
-//! The status bars above the hotbar (vanilla `Hud.extractPlayerHealth` and
+//! The status bars above the hotbar (vanilla `Hud.extractPlayerHealth`).
 
 pub mod air;
 pub mod food;
@@ -9,7 +9,7 @@ use super::{ICON, JavaRandom, PlayerStatus};
 use crate::gui::sprite::GuiSprite;
 use crate::renderer::quad::DrawList;
 
-/// Where the bars sit and how tall their rows are, from the server's
+/// Where the bars sit and how tall their rows are.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Layout {
     /// The hotbar's centre, and the screen's height.
@@ -84,7 +84,7 @@ impl BarState {
     }
 }
 
-/// `Hud.extractPlayerHealth` and `extractVehicleHealth`: armor, hearts,
+/// `Hud.extractPlayerHealth` and `extractVehicleHealth`.
 pub fn draw(
     draw_list: &mut DrawList,
     sprites: &BarSprites,
@@ -150,7 +150,7 @@ fn armor(draw_list: &mut DrawList, sprites: &BarSprites, status: &PlayerStatus, 
     }
 }
 
-/// Which of an icon's three states shows for icon `index` of a bar of
+/// Which of an icon's three states shows for icon `index` of a bar of `value` halves.
 pub fn fill(index: i32, value: i32) -> usize {
     let halves = index * 2 + 1;
     match halves.cmp(&value) {

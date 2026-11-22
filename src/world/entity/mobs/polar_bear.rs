@@ -1,4 +1,4 @@
-//! `PolarBearModel` and `BabyPolarBearModel`: a quadruped that rears when
+//! `PolarBearModel` and `BabyPolarBearModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::PI;

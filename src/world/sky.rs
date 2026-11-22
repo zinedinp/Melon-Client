@@ -1,4 +1,4 @@
-//! Sky geometry: the sky disc, the glow at dusk, the sun, moon and stars,
+//! Sky geometry.
 
 use glam::{Mat3, Mat4, Vec3};
 
@@ -41,7 +41,7 @@ pub fn star_model(env: &Environment) -> Mat4 {
     body_model(env.star_angle, 0.0, 1.0)
 }
 
-/// Camera view with the translation stripped, so the sky sits at infinity
+/// Camera view with the translation stripped, so the sky sits at infinity.
 pub fn rotation_view(view: Mat4) -> Mat4 {
     let mut rotation = view;
     rotation.w_axis.x = 0.0;
@@ -70,7 +70,7 @@ pub fn sky_disc(y: f32) -> Vec<WorldVertex> {
     out
 }
 
-/// `SkyRenderer.buildSunriseFan`: the glow at the horizon, opaque in the
+/// `SkyRenderer.buildSunriseFan`.
 pub fn sunrise_fan() -> Vec<WorldVertex> {
     const STEPS: usize = 16;
     let at = |at: [f32; 3], alpha: u8| {
@@ -97,7 +97,7 @@ pub fn sunrise_fan() -> Vec<WorldVertex> {
     out
 }
 
-/// The sunrise fan's place for a sun at `sun_angle` radians: turned to the
+/// The sunrise fan's place for a sun at `sun_angle` radians.
 pub fn sunrise_model(sun_angle: f32, strength: f32) -> Mat4 {
     let flip = if angle::sin(sun_angle) < 0.0 {
         180.0f32
@@ -109,7 +109,7 @@ pub fn sunrise_model(sun_angle: f32, strength: f32) -> Mat4 {
         * Mat4::from_scale(Vec3::new(1.0, 1.0, strength))
 }
 
-/// `SkyRenderer.buildEndSky`: a box of 200 blocks round the camera whose
+/// `SkyRenderer.buildEndSky`.
 pub fn end_sky_box() -> Vec<WorldVertex> {
     const TILES: usize = 16;
     const SHADE: f32 = 40.0 / 255.0;
@@ -173,7 +173,7 @@ fn celestial_quad(flip_uv: bool, color: [f32; 3]) -> Vec<WorldVertex> {
     out
 }
 
-/// `SkyRenderer.buildStars`, same count and size range. Positions are not
+/// `SkyRenderer.buildStars`, same count and size range.
 pub fn star_quads() -> Vec<WorldVertex> {
     let mut rng = JavaRandom::new(10842);
     let mut out = Vec::with_capacity(STAR_COUNT * 4);
@@ -215,7 +215,7 @@ pub fn star_quads() -> Vec<WorldVertex> {
     out
 }
 
-/// JOML `Matrix3f.rotateTowards(dir, up)`: columns are the local axes with
+/// JOML `Matrix3f.rotateTowards(dir, up)`.
 fn rotate_towards(dir: Vec3, up: Vec3) -> Mat3 {
     let z = dir.normalize_or_zero();
     let x = up.cross(z).normalize_or_zero();

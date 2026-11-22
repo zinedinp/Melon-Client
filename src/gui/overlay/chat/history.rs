@@ -1,4 +1,4 @@
-//! `ChatComponent.recentChat` and vanilla's `CommandHistory`: what was sent,
+//! `ChatComponent.recentChat` and vanilla's `CommandHistory`.
 
 use std::collections::VecDeque;
 use std::path::PathBuf;
@@ -46,7 +46,7 @@ impl CommandHistory {
         self.recent.get(index).map(String::as_str)
     }
 
-    /// `addRecentChat`: remembered unless it repeats the last; a command is
+    /// `addRecentChat`.
     pub fn add(&mut self, message: &str) {
         if self.recent.back().map(String::as_str) != Some(message) {
             if self.recent.len() >= MAX_RECENT {

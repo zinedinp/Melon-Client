@@ -1,4 +1,4 @@
-//! What changes over a particle's life without moving it: its size
+//! What changes over a particle's life without moving it.
 
 use crate::math::angle::PI;
 
@@ -8,7 +8,7 @@ pub enum SizeCurve {
     /// `SingleQuadParticle`: the size as set.
     #[default]
     Fixed,
-    /// Grows to full size in the first 32nd of its life (smoke, dust,
+    /// Grows to full size in the first 32nd of its life (smoke, dust, ...).
     GrowIn,
     /// `FlameParticle`: shrinks to half by the end.
     Flame,
@@ -20,7 +20,7 @@ pub enum SizeCurve {
     ReversePortal,
     /// `BlockMarker`: half a block.
     Marker,
-    /// `FireworkParticles.OverlayParticle`: a flash swelling to 7.1 and
+    /// `FireworkParticles.OverlayParticle`.
     Flash,
     /// `ShriekParticle`: grows to full size by three quarters of its life.
     Shriek,
@@ -88,7 +88,7 @@ impl Glow {
     }
 }
 
-/// `FireflyParticle.getFadeAmount`: up over the first `rise` of its life,
+/// `FireflyParticle.getFadeAmount`.
 pub fn firefly_fade(progress: f32, fall: f32, rise: f32) -> f32 {
     if progress >= 1.0 - fall {
         (1.0 - progress) / fall
@@ -99,7 +99,7 @@ pub fn firefly_fade(progress: f32, fall: f32, rise: f32) -> f32 {
     }
 }
 
-/// `Particle.LifetimeAlpha`: alpha from `start` to `end` between two
+/// `Particle.LifetimeAlpha`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LifetimeAlpha {
     pub start: f32,

@@ -1,4 +1,4 @@
-//! Fog, as vanilla's `FogRenderer`: how thick it is and what colour, from
+//! Fog, as vanilla's `FogRenderer`.
 
 use glam::Vec3;
 
@@ -41,7 +41,7 @@ impl FogData {
         cloud_end: f32::MAX,
     };
 
-    /// `fog.glsl`'s `total_fog_value`, `0..=1`: how much of the fog colour
+    /// `fog.glsl`'s `total_fog_value`, `0..=1`.
     pub fn amount(&self, spherical: f32, cylindrical: f32) -> f32 {
         linear(spherical, self.environmental_start, self.environmental_end).max(linear(
             cylindrical,
@@ -62,7 +62,7 @@ fn linear(distance: f32, start: f32, end: f32) -> f32 {
     }
 }
 
-/// `fog_spherical_distance` and `fog_cylindrical_distance` of a position
+/// `fog_spherical_distance` and `fog_cylindrical_distance` of a position.
 pub fn distances(position: Vec3) -> (f32, f32) {
     (
         position.length(),
@@ -85,7 +85,7 @@ pub struct FogContext {
     pub min_y: i32,
     /// `ClientLevel.voidDarknessOnsetRange`: 32, 1 in a flat world.
     pub void_darkness_range: f32,
-    /// `LocalPlayer.getWaterVision`, `0..=1`: how well the player has got
+    /// `LocalPlayer.getWaterVision`, `0..=1`.
     pub water_vision: f32,
     /// Fire resistance sees further in lava.
     pub fire_resistance: bool,
@@ -95,17 +95,17 @@ pub struct FogContext {
     pub effects: FogEffects,
     /// `Options.cloudRange`, in chunks.
     pub cloud_range_chunks: u8,
-    /// The rain and thunder levels: they darken the sky colour the fog takes
+    /// The rain and thunder levels.
     pub rain_level: f32,
     pub thunder_level: f32,
-    /// `AtmosphericFogEnvironment.rainFogMultiplier`: how much of the rain
+    /// `AtmosphericFogEnvironment.rainFogMultiplier`.
     pub rain_fog: f32,
 }
 
 /// `BlindnessFogEnvironment`, `DarknessFogEnvironment` and night vision.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FogEffects {
-    /// Blindness' remaining ticks (`None`: not blind) and whether it never
+    /// Blindness' remaining ticks (`None`.
     pub blindness: Option<(i32, bool)>,
     /// `MobEffectInstance.getBlendFactor` of darkness.
     pub darkness: Option<f32>,
@@ -114,7 +114,7 @@ pub struct FogEffects {
 }
 
 impl FogContext {
-    /// The atmosphere of an overworld camera at the origin: tests and the
+    /// The atmosphere of an overworld camera at the origin.
     pub fn plain(fog_type: FogType, render_distance_chunks: u8) -> Self {
         Self {
             fog_type,
@@ -271,7 +271,7 @@ fn color(atmosphere: &Atmosphere, context: &FogContext) -> Rgb {
     [r, g, b]
 }
 
-/// `AtmosphericFogEnvironment.getBaseColor`: the fog colour, with the glow
+/// `AtmosphericFogEnvironment.getBaseColor`.
 fn air_color(atmosphere: &Atmosphere, context: &FogContext) -> Rgb {
     let mut fog = atmosphere.fog_color;
     if context.render_distance_chunks >= 4 {
@@ -297,7 +297,7 @@ fn air_color(atmosphere: &Atmosphere, context: &FogContext) -> Rgb {
     )
 }
 
-/// `AtmosphericFogEnvironment.applyWeatherDarken`: the sky colour the fog
+/// `AtmosphericFogEnvironment.applyWeatherDarken`.
 fn weather_darkened(color: Rgb, context: &FogContext) -> Rgb {
     let [mut r, mut g, mut b] = color;
     if context.rain_level > 0.0 {

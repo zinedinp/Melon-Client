@@ -35,13 +35,11 @@ fn with_hints(quad: &BakedQuad, hints: RenderHints) -> BakedQuad {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::renderer::WorldVertex;
     use crate::world::block::direction::Direction;
     use crate::world::block_tint::TintKind;
 
     fn quad(layer: ChunkLayer) -> BakedQuad {
         BakedQuad {
-            vertices: [WorldVertex::new([0.0; 3], [0.0; 2], [1.0; 3]); 4],
             cullface: Some(Direction::Up),
             facing: Some(Direction::Up),
             layer,

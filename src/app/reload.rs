@@ -1,4 +1,5 @@
 //! Reloading every resource when the resource packs change (vanilla
+//! `Minecraft.reloadResourcePacks`).
 
 use std::time::Instant;
 
@@ -30,7 +31,8 @@ pub(super) fn activate_packs(assets: &Assets, config: &Config) {
     crate::probe::describe_packs(assets.root());
 }
 
-/// The active packs' replacements for vanilla's GUI shaders, compiled and
+/// The active packs' replacements for vanilla's GUI shaders, compiled and handed to the
+/// renderer.
 pub(super) fn apply_gui_shaders(renderer: &mut Renderer, assets: &Assets) {
     let shaders = crate::gui::pack_shaders::compile(assets.root());
     for shader in &shaders {
@@ -56,7 +58,7 @@ pub(super) fn apply_gui_shaders(renderer: &mut Renderer, assets: &Assets) {
     }
 }
 
-/// The post effect chains the packs have (vanilla's entity outline, and a
+/// The post effect chains the packs have (vanilla's entity outline, and any others).
 pub(super) fn apply_post_chains(renderer: &mut Renderer, assets: &Assets) {
     let (chains, blit) = crate::renderer::post::load::load(assets.root());
     for chain in &chains {
@@ -68,7 +70,7 @@ pub(super) fn apply_post_chains(renderer: &mut Renderer, assets: &Assets) {
 }
 
 impl RunningState {
-    /// Builds the pack stack anew and reloads what is read from it: the
+    /// Builds the pack stack anew and reloads what is read from it.
     pub(super) fn reload_resources(&mut self) {
         let started = Instant::now();
         activate_packs(&self.env.assets, &self.env.config);
@@ -139,7 +141,7 @@ impl RunningState {
         crate::info!("Resources reloaded in {:.2?}", started.elapsed());
     }
 
-    /// Carries out what the server's resource packs need: the prompt, a
+    /// Carries out what the server's resource packs need.
     pub(super) fn poll_server_packs(&mut self) {
         let Some(action) = server::poll() else {
             return;
@@ -164,7 +166,7 @@ impl RunningState {
         }
     }
 
-    /// The player answered the server's pack prompt; a saved server
+    /// The player answered the server's pack prompt; a saved server remembers the answer.
     pub(super) fn answer_server_packs(&mut self, accept: bool) {
         if let Some((address, policy)) = server::answer_prompt(accept) {
             crate::settings::server_list::set_accept_textures(

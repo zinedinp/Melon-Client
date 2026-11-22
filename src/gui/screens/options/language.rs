@@ -13,7 +13,8 @@ use crate::gui::widgets::set::{KeyResult, WidgetSet};
 use crate::i18n::available_languages;
 use crate::i18n::languages::Language;
 
-/// `AbstractSelectionList`'s default row width (`220`), `+50` as overridden
+/// `AbstractSelectionList`'s default row width (`220`), `+50` as `LanguageSelectionList`
+/// overrides it.
 const ROW_W: f32 = 270.0;
 /// `itemHeight` passed to the `ObjectSelectionList` constructor.
 const ROW_H: f32 = 18.0;
@@ -32,7 +33,7 @@ pub struct LanguageScreen {
     /// Visible `entries` indices after the search filter; the list's rows.
     filtered: Vec<usize>,
     list: ScrollList,
-    /// The search box, and the footer's buttons: `addFooter` builds both
+    /// The search box, and the footer's buttons.
     widgets: WidgetSet<Id>,
     height: f32,
 }

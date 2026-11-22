@@ -1,4 +1,4 @@
-//! Dimension types (vanilla `DimensionType`): how tall a level is, whether
+//! Dimension types (vanilla `DimensionType`).
 
 use crate::math::argb;
 use anyhow::Result;
@@ -7,7 +7,7 @@ use serde_json::Value;
 /// Blocks along Y in a chunk section.
 pub const SECTION_HEIGHT: i32 = 16;
 
-/// Where a level's blocks are: `min_y` to `min_y + height`, whole sections
+/// Where a level's blocks are.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Height {
     pub min_y: i32,
@@ -36,12 +36,12 @@ impl Height {
         self.min_y + self.height
     }
 
-    /// World Y of light section 0: one section below the lowest block
+    /// World Y of light section 0.
     pub const fn light_min_y(self) -> i32 {
         self.min_y - SECTION_HEIGHT
     }
 
-    /// Light sections in a column: one below the world, the block sections,
+    /// Light sections in a column.
     pub const fn light_sections(self) -> usize {
         self.sections() + 2
     }
@@ -63,7 +63,7 @@ pub enum Skybox {
     None,
 }
 
-/// `DimensionType.cardinalLightType`: how block faces are shaded by the
+/// `DimensionType.cardinalLightType`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CardinalLight {
     Default,
@@ -71,7 +71,7 @@ pub enum CardinalLight {
 }
 
 impl CardinalLight {
-    /// `CardinalLighting.byFace` as vanilla stores it: down, up, north,
+    /// `CardinalLighting.byFace` as vanilla stores it.
     pub const fn shades(self) -> [f32; 6] {
         match self {
             Self::Default => [0.5, 1.0, 0.8, 0.8, 0.6, 0.6],
@@ -79,7 +79,7 @@ impl CardinalLight {
         }
     }
 
-    /// The factor on a face baked with the default shade that gives this
+    /// The factor on a face baked with the default shade that gives this dimension's shade.
     pub fn relative(self) -> [f32; 6] {
         let default = Self::Default.shades();
         let mine = self.shades();
@@ -87,10 +87,10 @@ impl CardinalLight {
     }
 }
 
-/// A colour attribute, linear `0..1` RGB (vanilla keeps them in sRGB-ish
+/// A colour attribute, linear `0..1` RGB.
 pub type Rgb = [f32; 3];
 
-/// The environment attributes a dimension type sets
+/// The environment attributes a dimension type sets.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Attributes {
     pub ambient_sounds: Option<crate::world::biome::AmbientSounds>,
@@ -217,7 +217,7 @@ impl DimensionType {
         }
     }
 
-    /// Reads one registry entry as the datapack JSON has it. A field the
+    /// Reads one registry entry as the datapack JSON has it.
     pub fn from_json(json: &Value, base: &Self) -> Result<Self> {
         let int = |key: &str| json.get(key).and_then(Value::as_i64);
         let flag = |key: &str, default: bool| json.get(key).and_then(as_bool).unwrap_or(default);

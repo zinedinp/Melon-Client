@@ -1,4 +1,4 @@
-//! The player's own state the server keeps authoritative (vanilla
+//! The player's own state the server keeps authoritative.
 
 pub mod boss;
 mod decode;

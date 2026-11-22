@@ -1,4 +1,4 @@
-//! The particles in the world: [`crate::particle`]'s engine fed from the
+//! The particles in the world.
 
 use glam::{DVec3, IVec3, Vec3};
 
@@ -17,7 +17,7 @@ use crate::world::entity::tracker::Entities;
 use crate::world::inventory::Inventory;
 use crate::world::player::PlayerState;
 
-/// A level event 2001 for a block this client broke itself within this
+/// A level event 2001 for a block this client broke itself within this many ticks is its own.
 const OWN_BREAK_TICKS: u64 = 20;
 
 /// What the world keeps of its particles.
@@ -216,7 +216,7 @@ impl InWorld {
         self.particles.engine.request_all(out);
     }
 
-    /// One tick of the particles: the client's own spawners, then the
+    /// One tick of the particles.
     pub(super) fn tick_particles(&mut self, ui: &WorldContext) {
         let config = ui.config;
         let eye = self.player.tick_eye();
@@ -297,7 +297,7 @@ impl InWorld {
         engine.tick(&world);
     }
 
-    /// The player's own: sprint dust (`baseTick`) and the splash into
+    /// The player's own.
     fn tick_own_particles(&mut self) {
         let feet = self.player.feet();
         let vel = self.player.velocity();

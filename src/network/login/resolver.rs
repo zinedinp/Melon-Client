@@ -1,4 +1,4 @@
-//! Vanilla `ServerNameResolver`: a server address to socket addresses. A
+//! Vanilla `ServerNameResolver`: a server address to socket addresses.
 
 use std::net::{IpAddr, SocketAddr, ToSocketAddrs, UdpSocket};
 use std::time::Duration;
@@ -16,7 +16,7 @@ pub struct Resolved {
     pub port: u16,
 }
 
-/// `resolveAddress`: the host itself must resolve; then, on the default
+/// `resolveAddress`.
 pub fn resolve(host: &str, port: u16) -> Result<Resolved, CannotResolve> {
     let own: Vec<SocketAddr> = (host, port)
         .to_socket_addrs()
@@ -75,7 +75,7 @@ fn lookup_srv(host: &str) -> Option<(String, u16)> {
     None
 }
 
-/// `/etc/resolv.conf`'s `nameserver` lines. Without any, no SRV lookup
+/// `/etc/resolv.conf`'s `nameserver` lines.
 fn nameservers() -> Vec<SocketAddr> {
     let Ok(conf) = std::fs::read_to_string("/etc/resolv.conf") else {
         return Vec::new();
@@ -149,7 +149,7 @@ fn skip_name(message: &[u8], mut at: usize) -> Option<usize> {
     }
 }
 
-/// A name, following compression pointers (at most a few, so a loop in a
+/// A name, following compression pointers (at most a few, so a loop in a reply ends).
 fn read_name(message: &[u8], mut at: usize) -> Option<String> {
     let mut name = String::new();
     for _ in 0..64 {
@@ -175,7 +175,7 @@ fn read_name(message: &[u8], mut at: usize) -> Option<String> {
 mod tests {
     use super::*;
 
-    /// A response to `_minecraft._tcp.a.b`: two records, the second with
+    /// A response to `_minecraft._tcp.a.b`.
     fn response() -> Vec<u8> {
         let mut m = vec![0x4D, 0x4C, 0x81, 0x80, 0, 1, 0, 2, 0, 0, 0, 0];
         for label in ["_minecraft", "_tcp", "a", "b"] {

@@ -1,4 +1,4 @@
-//! Vanilla's keyframe animations (`AnimationDefinition`, `AnimationChannel`,
+//! Vanilla's keyframe animations (`AnimationDefinition`, `AnimationChannel`, `Keyframe`).
 
 use glam::Vec3;
 
@@ -7,7 +7,7 @@ use super::model::{Model, ModelPose, PartId};
 /// What a channel moves (`AnimationChannel.Targets`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Target {
-    /// `ModelPart.offsetPos`, in model pixels with Y down (build values
+    /// `ModelPart.offsetPos`, in model pixels with Y down.
     Position,
     /// `ModelPart.offsetRotation`, radians ([`degree_vec`]).
     Rotation,
@@ -15,19 +15,19 @@ pub enum Target {
     Scale,
 }
 
-/// How the value between two keyframes is found
+/// How the value between two keyframes is found.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Interpolation {
-    /// `Interpolations.LINEAR`: from the previous keyframe's leaving value
+    /// `Interpolations.LINEAR`.
     Linear,
     /// `Interpolations.CATMULLROM`: a smooth curve through the keyframes'
     CatmullRom,
 }
 
-/// Any other curve: vanilla's `Interpolation` is an interface and takes
+/// Any other curve.
 pub type Curve = fn(&Sample) -> Vec3;
 
-/// What a [`Curve`] gets: where between the keyframes
+/// What a [`Curve`] gets.
 pub struct Sample<'a> {
     pub alpha: f32,
     pub keyframes: &'a [Keyframe],
@@ -36,7 +36,7 @@ pub struct Sample<'a> {
     pub target_scale: f32,
 }
 
-/// `Keyframe`: at `time` seconds the value arrives as `pre` and leaves as
+/// `Keyframe`.
 #[derive(Clone, Copy, Debug)]
 pub struct Keyframe {
     pub time: f32,
@@ -65,7 +65,7 @@ impl Keyframe {
         }
     }
 
-    /// The value jumps at `time`: it arrives as `pre`, and leaves as
+    /// The value jumps at `time`.
     pub const fn jump(time: f32, pre: Vec3, post: Vec3, interpolation: Interpolation) -> Self {
         Self {
             time,
@@ -76,7 +76,7 @@ impl Keyframe {
     }
 }
 
-/// `AnimationChannel`: one target of one part over time. The keyframes are
+/// `AnimationChannel`: one target of one part over time.
 #[derive(Clone, Copy, Debug)]
 pub struct Channel {
     pub target: Target,
@@ -226,7 +226,7 @@ impl AnimationState {
 /// One channel bound to the part it moves.
 #[derive(Clone, Debug)]
 enum Entry {
-    /// A channel of one keyframe never changes: its value, found when baked
+    /// A channel of one keyframe never changes.
     Constant {
         part: PartId,
         target: Target,
@@ -352,12 +352,12 @@ impl KeyframeAnimation {
         self.definition
     }
 
-    /// `applyStatic`: the first instant (poses held, such as a resting
+    /// `applyStatic`.
     pub fn apply_static(&self, pose: &mut ModelPose) {
         self.apply(pose, 0, 1.0);
     }
 
-    /// `applyWalk`: driven by the walk animation. The cycle advances with
+    /// `applyWalk`: driven by the walk animation.
     pub fn apply_walk(
         &self,
         pose: &mut ModelPose,
@@ -370,7 +370,7 @@ impl KeyframeAnimation {
         self.apply(pose, millis, (walk_speed * scale_factor).min(1.0));
     }
 
-    /// `apply(state, time, speed)`: if the state runs, the animation as it
+    /// `apply(state, time, speed)`.
     pub fn apply_state(
         &self,
         pose: &mut ModelPose,
@@ -383,7 +383,7 @@ impl KeyframeAnimation {
         }
     }
 
-    /// `apply(millis, targetScale)`: every channel at that time, added to
+    /// `apply(millis, targetScale)`.
     pub fn apply(&self, pose: &mut ModelPose, millis_since_start: i64, target_scale: f32) {
         let seconds = elapsed_seconds(self.definition, millis_since_start);
         for entry in &self.entries {
@@ -402,7 +402,7 @@ fn elapsed_seconds(definition: &AnimationDefinition, millis: i64) -> f32 {
     }
 }
 
-/// One animation of a [`KeyframeSet`]: its channels are `start..end` of
+/// One animation of a [`KeyframeSet`].
 #[derive(Clone, Debug)]
 struct Run {
     slot: usize,
@@ -411,7 +411,7 @@ struct Run {
     end: usize,
 }
 
-/// All the animations of one model, baked into one list of channels, for
+/// All the animations of one model, baked into one list of channels.
 #[derive(Clone, Debug, Default)]
 pub struct KeyframeSet {
     entries: Vec<Entry>,
@@ -443,7 +443,7 @@ impl KeyframeSet {
         self.runs.is_empty()
     }
 
-    /// Every running animation at its time, added to the pose in the order
+    /// Every running animation at its time, added to the pose in the order they were baked.
     pub fn apply(&self, pose: &mut ModelPose, states: &[AnimationState], age_in_ticks: f32) {
         for run in &self.runs {
             let Some(millis) = states[run.slot].time_in_millis(age_in_ticks) else {

@@ -1,4 +1,4 @@
-//! Text displays (`DisplayRenderer.TextDisplayRenderer`) as meshes in the
+//! Text displays (`DisplayRenderer.TextDisplayRenderer`) as meshes.
 
 use std::collections::HashMap;
 
@@ -71,7 +71,7 @@ impl TextDisplayMeshes {
     }
 }
 
-/// The meshes of one text display, one per texture it draws from, in draw
+/// The meshes of one text display, one per texture it draws from, in draw order.
 fn build(
     state: &display::DisplayState,
     painter: ItemPainter,
@@ -212,7 +212,7 @@ struct Built {
 }
 
 impl InWorld {
-    /// Builds again the meshes of the text displays whose text changed, and
+    /// Builds again the meshes of the text displays whose text changed.
     pub fn prepare_text_displays(
         &mut self,
         renderer: &mut Renderer,
@@ -313,7 +313,7 @@ impl InWorld {
         }
     }
 
-    /// The text displays in `visible`, placed as `submit_display` places
+    /// The text displays in `visible`, placed as `submit_display` places them.
     pub(super) fn text_display_draws(
         &self,
         visible: &[i32],

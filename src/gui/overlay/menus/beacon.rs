@@ -1,4 +1,4 @@
-//! `BeaconScreen`: the powers to pick from by tier (each opened by a
+//! `BeaconScreen`.
 
 use pumpkin_data::effect::StatusEffect;
 use pumpkin_data::item::Item;
@@ -77,7 +77,7 @@ enum Action {
         effect: &'static StatusEffect,
         primary: bool,
     },
-    /// The tier-three button after the powers: the primary power again,
+    /// The tier-three button after the powers.
     Upgrade {
         effect: &'static StatusEffect,
     },
@@ -125,7 +125,7 @@ impl BeaconScreen {
         }
     }
 
-    /// The buttons as `init` lays them out; the upgrade button only with a
+    /// The buttons as `init` lays them out; the upgrade button only with a fourth tier.
     fn buttons(&self) -> Vec<Button> {
         let mut buttons = Vec::new();
         for (tier, effects) in TIERS.iter().enumerate().take(3) {

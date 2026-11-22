@@ -1,4 +1,4 @@
-//! `ClientboundTakeItemEntityPacket`: what the client does when something
+//! `ClientboundTakeItemEntityPacket`.
 
 use super::*;
 
@@ -23,7 +23,7 @@ impl Pickup {
         self.taker
     }
 
-    /// Where it is drawn: the square of the way there, between ticks
+    /// Where it is drawn.
     pub fn position(&self, partial: f32) -> DVec3 {
         let t = f64::from((f32::from(self.life) + partial) / f32::from(PICKUP_TICKS));
         let target = self.prev_target.lerp(self.target, f64::from(partial));
@@ -70,7 +70,7 @@ impl Entities {
         }
     }
 
-    /// Moves the flying items on: `taker_at` is where each taker's hands
+    /// Moves the flying items on.
     pub fn tick_pickups(&mut self, taker_at: impl Fn(i32) -> Option<DVec3>) {
         for pickup in &mut self.pickups {
             if let Some(at) = taker_at(pickup.taker) {
@@ -96,7 +96,7 @@ impl Entities {
         std::mem::take(&mut self.pickup_sounds)
     }
 
-    /// The middle of an entity's body, where an item flies to
+    /// The middle of an entity's body, where an item flies to.
     pub fn body_middle(&self, id: i32) -> Option<DVec3> {
         let e = self.by_id.get(&id)?;
         Some(e.pos + DVec3::new(0.0, f64::from(e.ty.eye_height * e.scale()) / 2.0, 0.0))

@@ -1,4 +1,4 @@
-//! Items in the GUI (`GuiGraphicsExtractor.item` + `itemDecorations`): the
+//! Items in the GUI (`GuiGraphicsExtractor.item` + `itemDecorations`).
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -19,7 +19,7 @@ use crate::math::argb;
 use crate::renderer::TextureId;
 use crate::renderer::quad::{DrawList, Program};
 
-/// Everything drawing an item needs, bundled so the HUD and the screens pass
+/// Everything drawing an item needs, bundled so the HUD and the screens pass one value.
 #[derive(Clone, Copy)]
 pub struct ItemPainter<'a> {
     pub icons: &'a ItemIcons,
@@ -141,7 +141,7 @@ fn hsv_to_rgb(hue: f32) -> [f32; 3] {
     }
 }
 
-/// `ItemStack.getItemName` (`Item.getName`): a potion's name by its
+/// `ItemStack.getItemName` (`Item.getName`).
 pub fn display_name(lang: &Lang, stack: &ItemStack) -> String {
     let key = stack.item.registry_key;
     if let Some(name) = potion_name(lang, stack) {
@@ -186,7 +186,7 @@ pub fn hover_name(lang: &Lang, stack: &ItemStack) -> String {
     }
 }
 
-/// `ItemStack.getStyledHoverName`: the hover name in the rarity's colour,
+/// `ItemStack.getStyledHoverName`.
 pub fn styled_hover_name(lang: &Lang, stack: &ItemStack) -> StyledText {
     let mut style = TextStyle::colored(rarity_color(stack.get_rarity()));
     let mut out = StyledText::default();
@@ -238,7 +238,7 @@ fn level_name(lang: &Lang, level: i32) -> String {
     }
 }
 
-/// `Enchantment.getFullname`: the name with its level, which an enchantment
+/// `Enchantment.getFullname`.
 pub fn enchantment_name(
     lang: &Lang,
     enchantment: &pumpkin_data::Enchantment,
@@ -252,7 +252,7 @@ pub fn enchantment_name(
     }
 }
 
-/// `Options.advancedItemTooltips` (F3+H): tooltips also give an item's
+/// `Options.advancedItemTooltips` (F3+H).
 static ADVANCED_TOOLTIPS: AtomicBool = AtomicBool::new(false);
 
 pub fn set_advanced_tooltips(on: bool) {
@@ -263,7 +263,7 @@ pub fn advanced_tooltips() -> bool {
     ADVANCED_TOOLTIPS.load(Ordering::Relaxed)
 }
 
-/// `ItemStack.getTooltipLines`; advanced (F3+H) adds the durability and the
+/// `ItemStack.getTooltipLines`; advanced (F3+H) adds the durability and the item id.
 pub fn tooltip_lines(lang: &Lang, stack: &ItemStack) -> Vec<StyledText> {
     let mut lines = vec![styled_hover_name(lang, stack)];
     let mut enchantments: Vec<(&'static pumpkin_data::Enchantment, i32)> = Vec::new();
@@ -369,7 +369,7 @@ pub fn tooltip_lines(lang: &Lang, stack: &ItemStack) -> Vec<StyledText> {
     lines
 }
 
-/// `HoverEvent.ShowItem`'s stack: the item, its count and the component
+/// `HoverEvent.ShowItem`'s stack.
 pub fn hover_stack(
     id: &str,
     count: i32,
@@ -417,7 +417,7 @@ fn hover_component(value: &serde_json::Value) -> crate::component::Component {
     crate::component::decode::component(value)
 }
 
-/// A component's JSON as NBT: whole numbers as ints (longs past that),
+/// A component's JSON as NBT.
 fn component_nbt(value: &serde_json::Value) -> pumpkin_nbt::tag::NbtTag {
     use pumpkin_nbt::tag::NbtTag;
     match value {
@@ -437,7 +437,7 @@ fn component_nbt(value: &serde_json::Value) -> pumpkin_nbt::tag::NbtTag {
     }
 }
 
-/// `ItemStack.addAttributeTooltips` with `Display.Default`: per slot group
+/// `ItemStack.addAttributeTooltips` with `Display.Default`.
 fn attribute_lines(lang: &Lang, stack: &ItemStack, lines: &mut Vec<StyledText>) {
     use pumpkin_data::AttributeModifierSlot as Slot;
     use pumpkin_data::attributes::Attributes;
@@ -519,7 +519,7 @@ fn attribute_lines(lang: &Lang, stack: &ItemStack, lines: &mut Vec<StyledText>) 
     }
 }
 
-/// `Attribute.getStyle`: blue for a good change and red for a bad one,
+/// `Attribute.getStyle`.
 fn sentiment_color(attribute: &str, positive: bool) -> [f32; 3] {
     match attribute.trim_start_matches("minecraft:") {
         "gravity" | "scale" | "waypoint_transmit_range" | "waypoint_receive_range" => colors::GRAY,

@@ -1,4 +1,4 @@
-//! Vanilla's chat on the client: `ChatListener` (what arrives, delayed by
+//! Vanilla's chat on the client.
 
 mod draw;
 pub mod history;
@@ -95,7 +95,7 @@ pub struct Chat {
     pub draft: Option<String>,
     delayed: VecDeque<Delayed>,
     previous_message_ms: u128,
-    /// `LastSeenMessagesTracker.offset`: signed messages not yet
+    /// `LastSeenMessagesTracker.offset`.
     pending_acks: i32,
     /// `Hud.getGuiTicks`.
     ticks: u32,
@@ -190,7 +190,7 @@ impl Chat {
         }
     }
 
-    /// Takes the pending acknowledgement count once it is due
+    /// Takes the pending acknowledgement count once it is due.
     pub fn take_ack(&mut self) -> Option<i32> {
         (self.pending_acks > ACK_THRESHOLD).then(|| std::mem::take(&mut self.pending_acks))
     }
@@ -200,7 +200,7 @@ impl Chat {
         std::mem::take(&mut self.pending_acks)
     }
 
-    /// A chat packet from the server. An action bar message comes back,
+    /// A chat packet from the server.
     pub fn receive(&mut self, event: ChatEvent, lang: &Lang, font: &Font) -> Option<StyledText> {
         match event {
             ChatEvent::System { content, overlay } => {
@@ -260,7 +260,7 @@ impl Chat {
         None
     }
 
-    /// `ChatType.Bound.decorate`: the type's translation with the sender,
+    /// `ChatType.Bound.decorate`.
     fn decorate(&self, bound: &BoundChatType, content: &Component, lang: &Lang) -> StyledText {
         let decoration = self.types.get(bound.chat_type);
         let args: Vec<Component> = decoration
@@ -284,7 +284,7 @@ impl Chat {
         StyledText::from_component(&component, lang)
     }
 
-    /// `ChatComponent.addClientSystemMessage`: a message from Melon itself,
+    /// `ChatComponent.addClientSystemMessage`.
     pub fn add_client_message(&mut self, content: StyledText, font: &Font) {
         self.show(
             content,
@@ -371,7 +371,7 @@ impl Chat {
         self.lines.truncate(MAX_MESSAGES);
     }
 
-    /// `ChatComponent.clearMessages(false)` (F3+D): everything shown goes,
+    /// `ChatComponent.clearMessages(false)` (F3+D).
     pub fn clear_messages(&mut self) {
         self.messages.clear();
         self.lines.clear();
@@ -389,7 +389,7 @@ impl Chat {
         self.messages = messages;
     }
 
-    /// `ChatComponent.deleteMessage`: replaced by "This chat message has
+    /// `ChatComponent.deleteMessage`.
     fn delete(&mut self, signature: &[u8; 256], lang: &Lang, font: &Font) {
         self.delayed
             .retain(|m| m.signature.as_deref() != Some(signature));
@@ -415,7 +415,7 @@ impl Chat {
         }
     }
 
-    /// `addRecentChat`: remembered for the up and down keys; commands also
+    /// `addRecentChat`.
     pub fn add_recent(&mut self, message: &str) {
         self.history.add(message);
     }

@@ -10,7 +10,7 @@ use crate::world::inventory::empty;
 
 pub const HOTBARS: usize = 9;
 const SLOTS: usize = 9;
-/// `SharedConstants.getCurrentVersion().dataVersion()` for 26.3's world
+/// `SharedConstants.getCurrentVersion().dataVersion()` for 26.3's world data.
 pub const DATA_VERSION: i32 = 4671;
 
 pub struct Hotbars {
@@ -19,7 +19,7 @@ pub struct Hotbars {
 }
 
 impl Hotbars {
-    /// `hotbar.nbt` in the game folder, like `options.txt`; empty when it is
+    /// `hotbar.nbt` in the game folder, like `options.txt`; empty when it is missing.
     pub fn load(game_dir: &Path) -> Self {
         let path = game_dir.join("hotbar.nbt");
         let mut hotbars = Self {

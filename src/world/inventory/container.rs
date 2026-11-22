@@ -1,4 +1,4 @@
-//! A server-opened menu (`AbstractContainerMenu` that isn't the player's
+//! A server-opened menu (an `AbstractContainerMenu` that isn't the player's own).
 
 use super::Inventory;
 use super::{
@@ -11,7 +11,7 @@ use pumpkin_data::item_stack::ItemStack;
 /// Player inventory portion of every vanilla container: 27 main + 9 hotbar.
 pub const PLAYER_SLOTS: usize = 36;
 
-/// What a mount's screen shows besides its slots
+/// What a mount's screen shows besides its slots.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MountLook {
     /// The tracked entity drawn on the left.
@@ -45,7 +45,7 @@ pub enum ContainerKind {
     Beacon,
     Enchantment,
     Merchant,
-    /// A horse's, donkey's, llama's or nautilus' inventory
+    /// A horse's, donkey's, llama's or nautilus' inventory.
     Mount {
         columns: u8,
         look: MountLook,
@@ -113,7 +113,7 @@ impl ContainerKind {
         }
     }
 
-    /// The menu's output slot, which nothing may be placed in and which
+    /// The menu's output slot, which nothing may be placed in.
     pub fn result_slot(self) -> Option<usize> {
         match self {
             Self::Crafting => Some(0),
@@ -134,7 +134,7 @@ impl ContainerKind {
         self.result_slot() == Some(slot)
     }
 
-    /// Whether `quickMoveStack` is predicted here. The other menus' rules
+    /// Whether `quickMoveStack` is predicted here.
     pub fn predicts_quick_move(self) -> bool {
         matches!(
             self,
@@ -148,7 +148,7 @@ impl ContainerKind {
     }
 }
 
-/// The open menu's slots and `stateId`. The cursor stack lives on
+/// The open menu's slots and `stateId`.
 pub struct OpenContainer {
     pub id: i32,
     pub kind: ContainerKind,
@@ -358,7 +358,7 @@ impl OpenContainer {
         self.slots.swap(index, target);
     }
 
-    /// `quickMoveStack` of `ChestMenu`, `HopperMenu`, `DispenserMenu` and
+    /// `quickMoveStack` of `ChestMenu`, `HopperMenu`, `DispenserMenu` and their kin.
     fn quick_move(&mut self, index: usize) {
         if !self.kind.predicts_quick_move()
             || self.slots[index].is_empty()
@@ -390,7 +390,7 @@ impl OpenContainer {
         self.slots[index] = moving;
     }
 
-    /// `AbstractContainerMenu.moveItemStackTo`: first tops up matching
+    /// `AbstractContainerMenu.moveItemStackTo`.
     fn move_into(
         &mut self,
         moving: &mut ItemStack,

@@ -1,4 +1,4 @@
-//! `LlamaModel` and `BabyLlamaModel`: a long-necked quadruped that can
+//! `LlamaModel` and `BabyLlamaModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, push_equipment_textures};
 use crate::math::angle::HALF_PI;

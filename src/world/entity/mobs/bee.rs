@@ -1,4 +1,4 @@
-//! `AdultBeeModel` and `BabyBeeModel`: a bone with a body, wings, three
+//! `AdultBeeModel` and `BabyBeeModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, DEG_TO_RAD, EIGHTH_PI, PI, QUARTER_PI};

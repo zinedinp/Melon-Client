@@ -1,4 +1,4 @@
-//! Vanilla `InventoryScreen` (E): the 176x166 `inventory.png` panel with the
+//! Vanilla `InventoryScreen` (E).
 
 use pumpkin_data::item_stack::ItemStack;
 
@@ -29,7 +29,7 @@ const IMAGE_HEIGHT: f32 = 166.0;
 
 pub struct InventoryTextures {
     pub background: TextureId,
-    /// `slot_highlight_back`/`_front`: 24x24 around the hovered slot. A
+    /// `slot_highlight_back`/`_front`: 24x24 around the hovered slot.
     pub highlight_back: GuiSprite,
     pub highlight_front: GuiSprite,
     /// Empty armor slots' outlines, head to feet, then the offhand's shield.
@@ -65,7 +65,7 @@ impl InventoryTextures {
     }
 }
 
-/// `InventoryMenu`'s slots in menu order: the result, the 2x2 grid, the
+/// `InventoryMenu`'s slots in menu order.
 pub fn survival_layout() -> MenuLayout {
     MenuLayout::new(IMAGE_WIDTH, IMAGE_HEIGHT)
         .title_at(97.0, 6.0)
@@ -103,7 +103,7 @@ pub struct SurvivalView<'a> {
     inventory: &'a Inventory,
 }
 
-/// `Slot.container` for the player's menu: result, crafting grid, or the
+/// `Slot.container` for the player's menu.
 fn container_of(slot: usize) -> u8 {
     match slot {
         inventory::RESULT_SLOT => 0,
@@ -401,7 +401,7 @@ impl Overlay for InventoryOverlay {
         actions
     }
 
-    /// `InventoryScreen.extractBackground`: the player in the box left of
+    /// `InventoryScreen.extractBackground`.
     fn entity_preview(&self) -> Option<EntityPreview> {
         let (left, top) = (self.layout.menu.left(), self.layout.menu.top());
         Some(EntityPreview {
@@ -460,7 +460,7 @@ pub struct SlotDrag<'a> {
     pub max_in: &'a dyn Fn(usize) -> u8,
 }
 
-/// `AbstractContainerScreen.extractSlots`: each slot's stack (or a drag's
+/// `AbstractContainerScreen.extractSlots`.
 pub fn draw_slots<'a>(
     draw_list: &mut DrawList,
     textures: &InventoryTextures,
@@ -506,7 +506,7 @@ pub fn draw_slots<'a>(
     }
 }
 
-/// `extractCarriedItem`: the cursor stack centred on the mouse, showing
+/// `extractCarriedItem`.
 pub fn draw_carried(
     draw_list: &mut DrawList,
     painter: ItemPainter,

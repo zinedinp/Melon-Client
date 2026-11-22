@@ -1,4 +1,4 @@
-//! Drawing the creative inventory: background, tabs, slots, search box,
+//! Drawing the creative inventory.
 
 use super::{
     COLUMNS, CreativeOverlay, CreativeTextures, IMAGE_HEIGHT, IMAGE_WIDTH, Slot, TAB_HEIGHT,
@@ -168,7 +168,7 @@ impl CreativeOverlay {
         }
     }
 
-    /// `getTooltipFromContainerItem`: outside a single category tab, the
+    /// `getTooltipFromContainerItem`.
     pub(super) fn tooltip_lines(
         &self,
         stack: &ItemStack,
@@ -222,7 +222,7 @@ impl CreativeOverlay {
         painter.stack(draw_list, &tab.icon, x + 13.0 - 8.0, icon_y);
     }
 
-    /// The borderless search box at (82, 6), white text and a blinking
+    /// The borderless search box at (82, 6), white text and a blinking cursor.
     pub(super) fn draw_search(
         &self,
         draw_list: &mut DrawList,

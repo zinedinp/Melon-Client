@@ -31,7 +31,7 @@ impl Around<'_> {
             .unwrap_or(0)
     }
 
-    /// `LightCoordsUtil.getLightCoords` there: block and sky light, the
+    /// `LightCoordsUtil.getLightCoords` there.
     fn light_coords(&self, dx: i32, dy: i32, dz: i32) -> [u8; 2] {
         let flags = ao_flags::of(self.state(dx, dy, dz));
         if flags.emissive_rendering() {
@@ -55,7 +55,7 @@ impl Around<'_> {
         fluid_of(self.state(dx, dy, dz))
     }
 
-    /// `FluidRenderer.getHeight`: 1 with the same fluid above, the fluid's
+    /// `FluidRenderer.getHeight`.
     fn height(&self, kind: FluidKind, dx: i32, dz: i32) -> f32 {
         match self.fluid(dx, 0, dz) {
             Some(fluid) if fluid.kind == kind => {
@@ -76,7 +76,7 @@ impl Around<'_> {
         }
     }
 
-    /// `FluidRenderer.calculateAverageHeight` for the corner between the
+    /// `FluidRenderer.calculateAverageHeight` for the corner between the neighbours.
     fn corner_height(&self, kind: FluidKind, own: f32, ax: i32, bz: i32) -> f32 {
         let (h1, h2) = (self.height(kind, ax, 0), self.height(kind, 0, bz));
         if h1 >= 1.0 || h2 >= 1.0 {
@@ -105,7 +105,7 @@ impl Around<'_> {
         weighted[0] / weighted[1]
     }
 
-    /// `FlowingFluid.getFlow` (without the falling push down): the slope
+    /// `FlowingFluid.getFlow` (without the falling push down).
     fn flow(&self, fluid: FluidState) -> (f32, f32) {
         let own = fluid.own_height();
         let (mut fx, mut fz) = (0.0f32, 0.0f32);
@@ -139,7 +139,7 @@ impl Around<'_> {
     }
 }
 
-/// `FluidRenderer.isFaceOccludedByState`. Empty occlusion (ice, glass,
+/// `FluidRenderer.isFaceOccludedByState`.
 fn is_face_occluded_by_state(direction: Direction, height: f32, state: u16) -> bool {
     let Some(id) = BlockStateId::new(state) else {
         return false;
@@ -173,7 +173,7 @@ fn should_render_face(
     !same && !is_face_occluded_by_self(block, direction)
 }
 
-/// `FluidState.shouldRenderBackwardUpFace`: seen from below unless all nine
+/// `FluidState.shouldRenderBackwardUpFace`.
 fn should_render_backward_up_face(around: &Around, kind: FluidKind) -> bool {
     (-1..=1).any(|dx| {
         (-1..=1).any(|dz| {
@@ -218,7 +218,7 @@ fn scaled(color: [f32; 3], shade: f32) -> [f32; 3] {
     color.map(|c| c * shade)
 }
 
-/// `FluidRenderer.tesselate` for the fluid in section `section`'s block
+/// `FluidRenderer.tesselate` for the fluid in section `section`'s block.
 #[allow(clippy::too_many_arguments)]
 pub fn mesh(
     neighborhood: &Neighborhood,

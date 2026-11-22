@@ -1,4 +1,4 @@
-//! Packet framing: `VarInt` length, then either a raw packet or (once
+//! Packet framing.
 
 use super::compression::{self, MAXIMUM_UNCOMPRESSED_LENGTH};
 use super::varint::{read_var_int, write_var_int};
@@ -12,7 +12,7 @@ pub use super::reader::{
 /// `Varint21FrameDecoder` max: a 3-byte VarInt, 2^21 − 1.
 const MAX_PACKET_LEN: i32 = 2_097_152;
 
-/// Room for the longest `VarInt` length prefix, written right-aligned once
+/// Room for the longest `VarInt` length prefix, written right-aligned once the length is known.
 const PREFIX_ROOM: usize = 5;
 
 /// Reads one length-prefixed packet and splits off its `VarInt` packet ID.
@@ -90,7 +90,7 @@ pub fn write_packet(
     }
 }
 
-/// `MELON_PACKET_DEBUG=sent`: every packet Melon sends, id and size (with
+/// `MELON_PACKET_DEBUG=sent`.
 fn trace_sent(id: i32, body: &[u8]) {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     let on = *ON.get_or_init(|| {

@@ -1,4 +1,4 @@
-//! Changed options, applied and saved at once (`OptionInstance.set`), and
+//! Changed options, applied and saved at once (`OptionInstance.set`).
 
 use std::time::Duration;
 
@@ -35,7 +35,7 @@ impl RunningState {
         }
     }
 
-    /// Lays every screen and overlay out again for the window's GUI size
+    /// Lays every screen and overlay out again for the window's GUI size.
     pub(super) fn resize_gui(&mut self) {
         let size = self.gui_size();
         self.screens.resize(&self.env.ctx(self.scale()));
@@ -44,7 +44,7 @@ impl RunningState {
         }
     }
 
-    /// Applies, saves and shows changed options. The server hears of a new
+    /// Applies, saves and shows changed options.
     pub(super) fn set_config(&mut self, config: Config) {
         let old = &self.env.config;
         if config == *old {
@@ -127,7 +127,7 @@ impl RunningState {
         });
     }
 
-    /// `FramerateLimitTracker.getFramerateLimit`: the limit for the next
+    /// `FramerateLimitTracker.getFramerateLimit`.
     pub(super) fn framerate_limit(&self) -> Option<u32> {
         if let Some(run) = &self.bench {
             return run.options.fps_cap;

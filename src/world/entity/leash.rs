@@ -1,4 +1,4 @@
-//! Leads between an entity and what holds it: where they end
+//! Leads between an entity and what holds it.
 
 use glam::Vec3;
 
@@ -10,19 +10,19 @@ const STEPS: usize = 24;
 /// `LeashFeatureRenderer.LEASH_WIDTH`.
 const WIDTH: f32 = 0.05;
 
-/// One lead to draw, in the world (`EntityRenderState.LeashState` with
+/// One lead to draw, in the world (`EntityRenderState.LeashState`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Lead {
     /// Where it is tied on the leashed entity.
     pub start: Vec3,
     /// Where the holder holds it.
     pub end: Vec3,
-    /// Block and sky light (`0..=15`) at the leashed entity's eyes and at
+    /// Block and sky light (`0..=15`) at the leashed entity's eyes and at the holder.
     pub start_light: (u8, u8),
     pub end_light: (u8, u8),
 }
 
-/// `Vec3.yRot(-yaw)`: `offset` turned with a body facing `yaw` (vanilla
+/// `Vec3.yRot(-yaw)`.
 fn turned(offset: Vec3, yaw: f32) -> Vec3 {
     let (sin, cos) = angle::unit(-yaw * angle::DEG_TO_RAD);
     Vec3::new(
@@ -32,7 +32,7 @@ fn turned(offset: Vec3, yaw: f32) -> Vec3 {
     )
 }
 
-/// `Leashable.getLeashOffset` turned with the body: at the eyes, 0.4 of
+/// `Leashable.getLeashOffset` turned with the body.
 pub fn tied_at(feet: Vec3, body_yaw: f32, eye_height: f32, width: f32) -> Vec3 {
     feet + turned(Vec3::new(0.0, eye_height, width * 0.4), body_yaw)
 }
@@ -61,7 +61,7 @@ pub fn entity_hold(feet: Vec3, eye_height: f32) -> Vec3 {
 }
 
 impl Lead {
-    /// `LeashFeatureRenderer.prepare` as quads, relative to `origin`: two
+    /// `LeashFeatureRenderer.prepare` as quads, relative to `origin`.
     pub fn quads(&self, origin: Vec3) -> Vec<WorldVertex> {
         let d = self.end - self.start;
         let horizontal = (d.x * d.x + d.z * d.z).sqrt();

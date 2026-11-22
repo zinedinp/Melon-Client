@@ -10,7 +10,7 @@ pub enum FluidKind {
     Lava,
 }
 
-/// `FluidState` without its block: kind, amount (`1..=8`, 8 a source or
+/// `FluidState` without its block.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct FluidState {
     pub kind: FluidKind,
@@ -25,7 +25,7 @@ impl FluidState {
     }
 }
 
-/// Packed per block state: 0 none, else kind in bit 4/5, falling in bit 7,
+/// Packed per block state.
 static FLUIDS: LazyLock<Vec<u8>> = LazyLock::new(|| {
     let mut table = vec![0u8; usize::from(BlockStateId::COUNT)];
     let mut fill = |block: &Block, kind: u8| {

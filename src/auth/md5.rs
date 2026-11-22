@@ -1,4 +1,4 @@
-//! MD5, only for vanilla's offline UUIDs (`UUID.nameUUIDFromBytes`): the
+//! MD5, only for vanilla's offline UUIDs (`UUID.nameUUIDFromBytes`).
 
 const SHIFTS: [u32; 64] = [
     7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9,

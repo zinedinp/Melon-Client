@@ -1,4 +1,4 @@
-//! Vanilla `Direction`, in its ordinal order (down, up, north, south, west,
+//! Vanilla `Direction`, in its ordinal order (down, up, north, south, west, east).
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
@@ -52,7 +52,7 @@ impl Direction {
         STEPS[self.index()]
     }
 
-    /// `Direction.getOpposite`: ordinals pair up, so flipping the low bit is
+    /// `Direction.getOpposite`.
     #[inline]
     pub const fn opposite(self) -> Direction {
         Direction::ALL[self.index() ^ 1]
@@ -75,7 +75,7 @@ impl Direction {
         1 << self as u8
     }
 
-    /// `Direction.byName`, for block-state `facing` values and model face
+    /// `Direction.byName`, for block-state `facing` values and model face names.
     pub fn from_name(name: &str) -> Option<Direction> {
         Some(match name {
             "down" | "bottom" => Direction::Down,
@@ -88,7 +88,7 @@ impl Direction {
         })
     }
 
-    /// `Direction.toYRot`: south 0, west 90, north 180, east 270; 0 for up
+    /// `Direction.toYRot`.
     pub fn y_rot(self) -> f32 {
         match self {
             Direction::South => 0.0,

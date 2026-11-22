@@ -1,4 +1,4 @@
-//! `Display` entities (item, block and text displays): the data the server
+//! `Display` entities (item, block and text displays).
 
 use std::cell::Cell;
 
@@ -60,7 +60,7 @@ impl Transform {
             * Mat4::from_quat(self.right)
     }
 
-    /// `Transformation.slerp`: translation and scale lerped, rotations
+    /// `Transformation.slerp`.
     pub fn slerp(self, to: Transform, progress: f32) -> Transform {
         Transform {
             translation: self.translation.lerp(to.translation, progress),
@@ -71,7 +71,7 @@ impl Transform {
     }
 }
 
-/// What a display's entity data says, and where its transformation is in
+/// What a display's entity data says, and where its transformation is in its interpolation.
 #[derive(Clone)]
 pub struct DisplayState {
     from: Transform,
@@ -310,7 +310,7 @@ impl DisplayState {
         }
     }
 
-    /// `Display.tick`, on the client: takes in what changed. `tick` is the
+    /// `Display.tick`, on the client: takes in what changed.
     pub fn tick(&mut self, tick: i32) {
         if std::mem::take(&mut self.dirty_start) {
             self.start_tick = tick.wrapping_add(self.start_delta);
@@ -409,7 +409,7 @@ impl DisplayState {
         self.value(self.progress(tick, partial))
     }
 
-    /// The sky and block light of a brightness override, `None` for the
+    /// The sky and block light of a brightness override, `None` for the world's light.
     pub fn light_override(&self) -> Option<(u8, u8)> {
         (self.brightness != -1).then(|| {
             let packed = self.brightness as u32;
@@ -427,14 +427,14 @@ fn quat(x: f32, y: f32, z: f32, w: f32) -> Quat {
     }
 }
 
-/// The camera's yaw and pitch in degrees, from where it looks
+/// The camera's yaw and pitch in degrees, from where it looks.
 pub fn camera_angles(forward: Vec3) -> (f32, f32) {
     let yaw = (-forward.x).atan2(forward.z).to_degrees();
     let pitch = (-forward.y).clamp(-1.0, 1.0).asin().to_degrees();
     (yaw, pitch)
 }
 
-/// `DisplayRenderer.calculateOrientation`: how a display faces for its
+/// `DisplayRenderer.calculateOrientation`.
 pub fn orientation(billboard: u8, entity: (f32, f32), camera: (f32, f32)) -> Quat {
     let (yaw, pitch) = match billboard {
         2 => (-entity.0, -camera.1),

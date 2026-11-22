@@ -140,7 +140,7 @@ impl InWorld {
         }
     }
 
-    /// `KeyboardHandler.handleDebugKeys` for what Melon has: the action,
+    /// `KeyboardHandler.handleDebugKeys` for what Melon has.
     pub(super) fn debug_key(&mut self, key: &Key, ui: &WorldContext) -> Option<ScreenAction> {
         let feedback =
             |this: &mut Self, key: &'static str| this.debug_feedback(ui.lang, ui.font, key);
@@ -279,7 +279,7 @@ impl InWorld {
         self.debug_view.save(self.debug.visible());
     }
 
-    /// A number key while playing: the hotbar slot, or in creative with C
+    /// A number key while playing.
     pub(super) fn hotbar_key(&mut self, index: u8, ui: &WorldContext) {
         let mode = self.game_mode.current;
         if mode.is_spectator() {

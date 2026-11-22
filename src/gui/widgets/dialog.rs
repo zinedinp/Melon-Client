@@ -1,4 +1,4 @@
-//! Vanilla `ConfirmScreen`/`DisconnectedScreen`: paragraphs of text over a
+//! Vanilla `ConfirmScreen`/`DisconnectedScreen`.
 
 use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::gui::text::font::LINE_HEIGHT;
@@ -17,7 +17,7 @@ pub type Choice = Box<dyn FnMut(&ScreenContext) -> ScreenAction>;
 
 pub struct DialogScreen {
     paragraphs: Vec<(Label, [f32; 4])>,
-    /// The paragraphs wrapped for the current width and language: each
+    /// The paragraphs wrapped for the current width and language.
     lines: Vec<(String, [f32; 4], f32)>,
     /// The buttons, by their index in `choices`.
     widgets: WidgetSet<usize>,

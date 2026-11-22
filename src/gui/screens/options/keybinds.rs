@@ -1,4 +1,4 @@
-//! Vanilla `KeyBindsScreen` / `KeyBindsList`: bold, underlined category
+//! Vanilla `KeyBindsScreen` / `KeyBindsList`.
 
 use crate::gui::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext};
 use crate::gui::text::{StyledText, TextStyle, colors};
@@ -86,7 +86,7 @@ impl KeyBindsScreen {
         self.selected = None;
     }
 
-    /// `KeyEntry.updateChangeButtonMessage`: the key, white; in yellow
+    /// `KeyEntry.updateChangeButtonMessage`.
     fn change_label(
         action: Action,
         config: &Config,

@@ -1,4 +1,4 @@
-//! `SheepModel`, `BabySheepModel` and `SheepFurModel`: the body, and the
+//! `SheepModel`, `BabySheepModel` and `SheepFurModel`.
 
 use pumpkin_data::dye_color::DyeColor;
 
@@ -76,7 +76,7 @@ pub fn fur() -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 32.0)
 }
 
-/// `ColorLerper.Type.SHEEP.getColor`: the dye's texture colour at 75 %
+/// `ColorLerper.Type.SHEEP.getColor`.
 pub fn wool_tint(color: DyeColor) -> [f32; 3] {
     let rgb = if color == DyeColor::White {
         0xE6E6E6
@@ -88,7 +88,7 @@ pub fn wool_tint(color: DyeColor) -> [f32; 3] {
     [16, 8, 0].map(|shift| ((rgb >> shift) & 0xFF) as f32 / 255.0)
 }
 
-/// `ColorLerper.getLerpedColor(SHEEP, ageInTicks)` for a sheep named
+/// `ColorLerper.getLerpedColor(SHEEP, ageInTicks)` for a sheep named jeb_.
 pub fn jeb_tint(age_in_ticks: f32) -> [f32; 3] {
     const DURATION: i32 = 25;
     const DYES: i32 = 16;

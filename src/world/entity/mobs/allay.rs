@@ -1,4 +1,4 @@
-//! `AllayModel`: a small winged body that bobs while idle, leans into a
+//! `AllayModel`.
 
 use super::{LayerSpec, ModelId as M};
 use crate::math::angle::{self, DEG_TO_RAD, PI, QUARTER_PI, THIRD_PI};

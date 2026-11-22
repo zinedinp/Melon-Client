@@ -1,4 +1,4 @@
-//! Vanilla `ConfirmLinkScreen` for an untrusted link from the chat: "Are
+//! Vanilla `ConfirmLinkScreen` for an untrusted link from the chat.
 
 use crate::gui::screen::ScreenAction;
 use crate::gui::widgets::dialog::DialogScreen;

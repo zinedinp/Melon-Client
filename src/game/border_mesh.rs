@@ -1,4 +1,4 @@
-//! The world border's wall (`WorldBorderRenderer`): a few quads near the
+//! The world border's wall (`WorldBorderRenderer`).
 
 use glam::{DVec3, Mat4};
 

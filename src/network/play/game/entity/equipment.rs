@@ -34,7 +34,7 @@ impl EquipmentSlot {
     }
 }
 
-/// The slots in the packet: a slot byte whose top bit says another
+/// The slots in the packet.
 pub fn read_set_equipment(r: &mut Reader<'_>) -> Result<(i32, Vec<(EquipmentSlot, ItemStack)>)> {
     let id = r.var_int()?;
     let mut slots = Vec::new();

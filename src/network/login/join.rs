@@ -1,4 +1,4 @@
-//! Joining a server: TCP, handshake, login (with encryption), the
+//! Joining a server.
 
 use super::client_info::write_client_information;
 use super::world_registries::WorldRegistries;
@@ -19,7 +19,7 @@ use std::net::{Shutdown, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-/// The send side of a joined connection, shared with whatever answers the
+/// The send side of a joined connection, shared with whatever answers the server.
 pub(crate) type SharedWriter = Arc<Mutex<WriteHalf>>;
 
 fn lock(writer: &Mutex<WriteHalf>) -> std::sync::MutexGuard<'_, WriteHalf> {
@@ -28,7 +28,7 @@ fn lock(writer: &Mutex<WriteHalf>) -> std::sync::MutexGuard<'_, WriteHalf> {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-/// What the server's Play-phase `Login` packet says about the world and
+/// What the server's Play-phase `Login` packet says about the world and the player.
 pub struct JoinInfo {
     pub entity_id: i32,
     /// This player's profile id, as logged in.
@@ -36,14 +36,14 @@ pub struct JoinInfo {
     /// Hardcore hearts, and no respawning.
     pub hardcore: bool,
     pub dimension_id: i32,
-    /// `Level.dimension().identifier()`, e.g. `minecraft:overworld` - the F3
+    /// `Level.dimension().identifier()`, e.g.
     pub dimension_name: String,
     pub hashed_seed: i64,
     pub game_mode: GameMode,
-    /// The mode before the current one, if any: what the game mode
+    /// The mode before the current one, if any.
     pub previous_game_mode: Option<GameMode>,
     pub is_flat: bool,
-    /// The server checks accounts with Mojang (`onlineMode`): the player
+    /// The server checks accounts with Mojang (`onlineMode`).
     pub online_mode: bool,
     /// `minecraft:chat_type`, from the configuration phase.
     pub chat_types: chat::ChatTypes,
@@ -107,7 +107,7 @@ pub fn join_server(addr: &str, identity: &Identity, client: &ClientInfo) -> Resu
     )
 }
 
-/// `host:port`, with a vanilla-default port when it's left out, resolved
+/// `host:port`, with a vanilla-default port when it's left out, resolved and connected.
 pub(crate) fn connect_tcp(addr: &str) -> Result<(TcpStream, String, u16)> {
     let (host, port) = match addr.rsplit_once(':') {
         Some((host, port)) => (host, port.parse().context("invalid port")?),
@@ -124,7 +124,7 @@ pub(crate) fn connect_tcp(addr: &str) -> Result<(TcpStream, String, u16)> {
     Ok((stream, resolved.host, resolved.port))
 }
 
-/// Joins over an already open `stream`, such as the pipe to the integrated
+/// Joins over an already open `stream`, such as the pipe to the integrated server.
 pub fn join_stream(
     stream: impl Stream + 'static,
     identity: &Identity,
@@ -172,7 +172,7 @@ pub(crate) fn join_over(
     Ok((reader, writer, listener, info, events))
 }
 
-/// Sends a resource pack's status (`ServerboundResourcePackPacket`) with
+/// Sends a resource pack's status (`ServerboundResourcePackPacket`) to the server.
 fn pack_responder(writer: &SharedWriter) -> crate::assets::packs::server::Responder {
     let writer = Arc::clone(writer);
     Arc::new(move |pack, status| {
@@ -274,7 +274,7 @@ pub(crate) fn login(conn: &mut Connection, identity: &Identity) -> Result<()> {
     conn.write_packet(id::SB_LOGIN_ACKNOWLEDGED, |_| Ok(()))
 }
 
-/// `ClientHandshakePacketListenerImpl.handleHello`: RSA-encrypt a fresh AES
+/// `ClientHandshakePacketListenerImpl.handleHello`.
 pub(crate) fn handle_encryption_request(
     conn: &mut Connection,
     r: &mut Reader<'_>,
@@ -317,7 +317,7 @@ pub(crate) fn handle_encryption_request(
     Ok(())
 }
 
-/// The configuration phase; returns the chat types the server registered,
+/// The configuration phase; returns the chat types the server registered.
 pub(crate) fn configure(
     reader: &mut ReadHalf,
     writer: &SharedWriter,
@@ -337,7 +337,7 @@ pub(crate) fn configure(
     configure_loop(reader, writer)
 }
 
-/// The configuration phase's packets up to `FinishConfiguration`: on
+/// The configuration phase's packets up to `FinishConfiguration`.
 pub(crate) fn configure_loop(
     reader: &mut ReadHalf,
     writer: &SharedWriter,
@@ -410,7 +410,7 @@ pub(crate) fn configure_loop(
     }
 }
 
-/// Reads Play packets until the `Login` packet, the first position sync and
+/// Reads Play packets until the `Login` packet and the first position sync.
 pub(crate) fn play(
     reader: &mut ReadHalf,
     writer: &SharedWriter,
@@ -461,7 +461,7 @@ pub(crate) fn play(
     Ok((join, events))
 }
 
-/// Field order/presence is the 26.3 branch of `CLogin::write_packet_data` and
+/// Field order and presence are the 26.3 branch of `CLogin::write_packet_data`.
 pub(crate) fn read_login(r: &mut Reader) -> Result<JoinInfo> {
     let entity_id = r.i32_be()?;
     let hardcore = r.bool()?;

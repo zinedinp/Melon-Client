@@ -1,4 +1,4 @@
-//! `ChickenModel`: two legs and two flapping wings; the adult
+//! `ChickenModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M, variant_body};
 use crate::math::angle::{self, PI};

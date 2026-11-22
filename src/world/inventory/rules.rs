@@ -1,10 +1,10 @@
-//! Item rules the clicks follow: which slot takes what and how many, when
+//! Item rules the clicks follow.
 
 use super::{ARMOR_SLOTS, HOTBAR_SLOTS, OFFHAND_SLOT, RESULT_SLOT};
 use pumpkin_data::data_component_impl::{EquipmentSlot, EquippableImpl};
 use pumpkin_data::item_stack::ItemStack;
 
-/// The menu slot showing `Inventory` index `index` (0-8 hotbar, 9-35 the
+/// The menu slot showing `Inventory` index `index` (0-8 hotbar, 9-35 the rest).
 pub fn menu_slot_of_inventory_index(index: i32) -> Option<usize> {
     Some(match index {
         0..=8 => HOTBAR_SLOTS.start + index as usize,
@@ -28,7 +28,7 @@ pub(super) fn shrink(stack: &mut ItemStack, count: u8) {
     }
 }
 
-/// `ItemStack.split`, then [`empty`] when nothing is left. Vanilla's
+/// `ItemStack.split`, then [`empty`] when nothing is left.
 pub(super) fn split_slot(stack: &mut ItemStack, amount: u8) -> ItemStack {
     let taken = stack.split(amount);
     if stack.is_empty() {
@@ -37,7 +37,7 @@ pub(super) fn split_slot(stack: &mut ItemStack, amount: u8) -> ItemStack {
     taken
 }
 
-/// `LivingEntity.getEquipmentSlotForItem`, as a menu slot: the armor slot
+/// `LivingEntity.getEquipmentSlotForItem`, as a menu slot.
 pub fn equipment_slot(stack: &ItemStack) -> Option<usize> {
     let equippable = stack.get_data_component::<EquippableImpl>()?;
     Some(match equippable.slot {
@@ -50,7 +50,7 @@ pub fn equipment_slot(stack: &ItemStack) -> Option<usize> {
     })
 }
 
-/// `Slot.mayPlace`: nothing goes into the crafting result, and an armor
+/// `Slot.mayPlace`.
 pub fn may_place(index: usize, stack: &ItemStack) -> bool {
     if index == RESULT_SLOT {
         return false;
@@ -61,7 +61,7 @@ pub fn may_place(index: usize, stack: &ItemStack) -> bool {
     true
 }
 
-/// `Slot.getMaxStackSize(stack)`: the item's stack size, one in the armor
+/// `Slot.getMaxStackSize(stack)`.
 pub fn slot_max(index: usize, stack: &ItemStack) -> u8 {
     let max = stack.get_max_stack_size();
     if ARMOR_SLOTS.contains(&index) {
@@ -71,7 +71,7 @@ pub fn slot_max(index: usize, stack: &ItemStack) -> u8 {
     }
 }
 
-/// `AbstractContainerMenu.canItemQuickReplace`: an empty slot, or the same
+/// `AbstractContainerMenu.canItemQuickReplace`.
 pub fn can_item_quick_replace(slot: &ItemStack, stack: &ItemStack, ignore_size: bool) -> bool {
     if slot.is_empty() {
         return true;
@@ -86,7 +86,7 @@ pub fn can_item_quick_replace(slot: &ItemStack, stack: &ItemStack, ignore_size: 
             <= u16::from(stack.get_max_stack_size())
 }
 
-/// `AbstractContainerMenu.getQuickCraftPlaceCount`: what each slot of a
+/// `AbstractContainerMenu.getQuickCraftPlaceCount`.
 pub fn quick_craft_place_count(slots: usize, kind: i8, stack: &ItemStack) -> i32 {
     match kind {
         0 => i32::from(stack.item_count) / slots.max(1) as i32,

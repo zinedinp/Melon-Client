@@ -1,4 +1,4 @@
-//! CPU time per subsystem, from the kernel's own count of each thread's
+//! CPU time per subsystem, from the kernel's own count of each thread's time.
 
 use std::collections::BTreeMap;
 
@@ -41,7 +41,7 @@ impl ThreadTimes {
         Self(groups)
     }
 
-    /// Cores busy per group between `earlier` and `self`, `seconds` apart
+    /// Cores busy per group between `earlier` and `self`, `seconds` apart.
     pub fn load_since(&self, earlier: &ThreadTimes, seconds: f64) -> Vec<(String, f64)> {
         let mut load: Vec<(String, f64)> = self
             .0

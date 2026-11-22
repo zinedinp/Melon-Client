@@ -1,8 +1,8 @@
-//! `CommandSuggestions`: the command's colours and usage, and the completion
+//! `CommandSuggestions`.
 
 use super::*;
 
-/// What completing a command draws on: the server's command tree, and
+/// What completing a command draws on.
 pub(super) struct Completer<'a> {
     pub(super) tree: &'a CommandTree,
     pub(super) source: Source<'a>,
@@ -38,7 +38,7 @@ pub(super) struct SuggestionList {
 }
 
 impl ChatInput {
-    /// `updateCommandInfo` without the completions: the command's colours
+    /// `updateCommandInfo` without the completions.
     pub(super) fn update_command_info(&mut self, completer: &Completer) {
         self.usage.clear();
         let value = self.value();
@@ -113,7 +113,7 @@ impl ChatInput {
         self.request(settings, false, completer)
     }
 
-    /// `updateCommandInfo`: with auto suggestions off the list only opens
+    /// `updateCommandInfo`.
     pub(super) fn request(
         &mut self,
         settings: &ChatSettings,
@@ -193,7 +193,7 @@ impl ChatInput {
         });
     }
 
-    /// Player names for the word before the cursor
+    /// Player names for the word before the cursor.
     pub(super) fn suggest_names(&mut self, players: &[String]) {
         let before = self.input.before_cursor();
         let start = before.rfind(' ').map_or(0, |i| i + 1);
@@ -218,7 +218,7 @@ impl ChatInput {
         });
     }
 
-    /// `SuggestionsList.useSuggestion`: the selected completion replaces
+    /// `SuggestionsList.useSuggestion`.
     pub(super) fn use_suggestion(&mut self) {
         let Some(list) = &mut self.suggestions else {
             return;

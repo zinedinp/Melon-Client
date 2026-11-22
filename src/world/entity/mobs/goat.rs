@@ -1,4 +1,4 @@
-//! `GoatModel` and `BabyGoatModel`: a quadruped whose horns can be missing
+//! `GoatModel` and `BabyGoatModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::EIGHTH_PI;

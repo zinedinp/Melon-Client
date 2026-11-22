@@ -1,4 +1,4 @@
-//! What the local player's hands are doing, tick by tick: the swing
+//! What the local player's hands are doing, tick by tick.
 
 use pumpkin_data::AttributeModifierSlot;
 use pumpkin_data::attributes::Attributes;
@@ -42,7 +42,7 @@ impl Hand {
 /// `SwingAnimation`: how an item swings and for how many ticks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Swing {
-    /// `WHACK` moves the arm; `NONE` (and the spear's `STAB`, which Melon
+    /// `WHACK` moves the arm; `NONE` doesn't.
     pub whack: bool,
     pub duration: i32,
 }
@@ -65,7 +65,7 @@ impl Swing {
     }
 }
 
-/// `LivingEntity.SwingState`: the swing under way, as a fraction of its
+/// `LivingEntity.SwingState`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SwingState {
     current: Option<(Hand, Swing)>,
@@ -109,7 +109,7 @@ impl SwingState {
         }
     }
 
-    /// `getAnimation`: 0 at rest, rising to 1 over the swing; across a
+    /// `getAnimation`.
     pub fn animation(&self, partial: f32) -> f32 {
         let end = if self.animation >= self.old_animation {
             self.animation
@@ -148,7 +148,7 @@ impl UseAnimation {
     }
 }
 
-/// What holding use with an item does: `Item.getUseAnimation` and
+/// What holding use with an item does.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ItemUse {
     pub animation: UseAnimation,
@@ -158,7 +158,7 @@ pub struct ItemUse {
 }
 
 impl ItemUse {
-    /// `Consumable.shouldEmitParticlesAndSounds`: every fourth tick, once
+    /// `Consumable.shouldEmitParticlesAndSounds`.
     pub fn consume_effect_due(&self, remaining: i32) -> bool {
         if !matches!(self.animation, UseAnimation::Eat | UseAnimation::Drink) {
             return false;
@@ -168,7 +168,7 @@ impl ItemUse {
         used > wait && remaining % 4 == 0
     }
 
-    /// How `stack` is used when held down, if it is: food and drink,
+    /// How `stack` is used when held down, if it is.
     pub fn of(stack: &ItemStack) -> Option<Self> {
         let (animation, duration) =
             if let Some(consumable) = stack.get_data_component::<ConsumableImpl>() {
@@ -205,7 +205,7 @@ impl ItemUse {
         })
     }
 
-    /// `Consumable.canConsume`: food only while hungry, unless it may
+    /// `Consumable.canConsume`.
     pub fn can_start(stack: &ItemStack, food: i32) -> bool {
         match stack.get_data_component::<FoodImpl>() {
             Some(edible) => edible.can_always_eat || food < 20,
@@ -214,20 +214,20 @@ impl ItemUse {
     }
 }
 
-/// The item being used: which hand, how, and the ticks left
+/// The item being used.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UsingItem {
     pub hand: Hand,
     pub item_use: ItemUse,
     pub remaining: i32,
-    /// Ticks since `remaining` ran out with the server still saying the
+    /// Ticks since `remaining` ran out with the server still saying the item is in use.
     pub overrun: u8,
 }
 
-/// Ticks the server gets, past the time being up, to say the item is done
+/// Ticks the server gets, past the time being up, to say the item is done.
 pub const OVERRUN_TICKS: u8 = 3;
 
-/// `Consumable.emitParticlesAndSounds`' sound: the item's own (`entity.generic.eat`,
+/// `Consumable.emitParticlesAndSounds`' sound.
 pub fn consume_sound(stack: &ItemStack, mut r: impl FnMut() -> f32) -> Option<(String, f32, f32)> {
     use pumpkin_data::data_component_impl::IdOr;
     let consumable = stack.get_data_component::<ConsumableImpl>()?;
@@ -244,7 +244,7 @@ pub fn consume_sound(stack: &ItemStack, mut r: impl FnMut() -> f32) -> Option<(S
     Some((name, volume, pitch))
 }
 
-/// `Player.getCurrentItemAttackStrengthDelay`: ticks for the attack to
+/// `Player.getCurrentItemAttackStrengthDelay`.
 pub fn attack_delay(stack: &ItemStack) -> f32 {
     let mut speed = Attributes::ATTACK_SPEED.default_value;
     if let Some(modifiers) = stack.get_data_component::<AttributeModifiersImpl>() {
@@ -274,7 +274,7 @@ pub fn attack_delay(stack: &ItemStack) -> f32 {
     (1.0 / speed.max(1.0e-3) * 20.0) as f32
 }
 
-/// The same item, so a change to it (fewer, damaged) doesn't lower the
+/// The same item, so a change to it (fewer, damaged) doesn't restart the use.
 fn same_item(a: &ItemStack, b: &ItemStack) -> bool {
     a.is_empty() && b.is_empty() || a.item.registry_key == b.item.registry_key
 }
@@ -294,9 +294,9 @@ pub struct Hands {
     pub using: Option<UsingItem>,
     /// Set by a tick that is due the bites' sounds (`Consumable.onUseTick`):
     pub consuming: Option<Hand>,
-    /// The items each first-person hand shows: they change only once the
+    /// The items each first-person hand shows.
     shown: [ItemStack; 2],
-    /// `mainHandHeight`/`offHandHeight` now and a tick ago: 1 raised, 0
+    /// `mainHandHeight`/`offHandHeight` now and a tick ago.
     height: [f32; 2],
     old_height: [f32; 2],
 }
@@ -317,7 +317,7 @@ impl Default for Hands {
 }
 
 impl Hands {
-    /// One tick with `main` and `off` held: `Player.tick`'s swap ticker,
+    /// One tick with `main` and `off` held.
     pub fn tick(&mut self, main: &ItemStack, off: &ItemStack) {
         self.swap_ticker += 1;
         if !matches(&self.last_main, main) {
@@ -367,22 +367,22 @@ impl Hands {
         }
     }
 
-    /// `Player.getAttackStrengthScale(0)` with `main` held: how far the
+    /// `Player.getAttackStrengthScale(0)` with `main` held.
     pub fn attack_strength(&self, main: &ItemStack) -> f32 {
         (self.swap_ticker as f32 / attack_delay(main)).clamp(0.0, 1.0)
     }
 
-    /// `resetAttackStrengthTicker`: a punch at nothing starts the cooldown
+    /// `resetAttackStrengthTicker`.
     pub fn reset_attack_strength(&mut self) {
         self.swap_ticker = 0;
     }
 
-    /// `itemUsed`: the hand drops out of view and comes back up, as after
+    /// `itemUsed`.
     pub fn item_used(&mut self, hand: Hand) {
         self.height[hand_index(hand)] = 0.0;
     }
 
-    /// `swing`: starts a swing of `hand` with `stack`'s animation unless
+    /// `swing`.
     pub fn swing(&mut self, hand: Hand, stack: &ItemStack) -> bool {
         self.swing.start_if_able(hand, Swing::of(stack))
     }
@@ -392,7 +392,7 @@ impl Hands {
         &self.shown[hand_index(hand)]
     }
 
-    /// `1 - height`, between the last tick and this one: how far below
+    /// `1 - height`, between the last tick and this one.
     pub fn lowered(&self, hand: Hand, partial: f32) -> f32 {
         let i = hand_index(hand);
         1.0 - (self.old_height[i] + (self.height[i] - self.old_height[i]) * partial)

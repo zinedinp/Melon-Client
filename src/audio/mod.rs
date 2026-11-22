@@ -1,4 +1,4 @@
-//! Sound, through `rodio` (cpal output + symphonia vorbis). cpal's ALSA
+//! Sound, through `rodio` (cpal output and symphonia vorbis).
 
 pub mod block_sounds;
 mod device;
@@ -34,7 +34,7 @@ const VOLUME_POLL: Duration = Duration::from_millis(10);
 /// `SoundEngine.calculatePitch`.
 const PITCH_RANGE: (f32, f32) = (0.5, 2.0);
 
-/// A sound to play: `SimpleSoundInstance`'s event, source, volume, pitch
+/// A sound to play.
 pub struct SoundInstance<'a> {
     /// The sound event, `block.stone.break`.
     pub event: Cow<'a, str>,
@@ -42,7 +42,7 @@ pub struct SoundInstance<'a> {
     /// Above 1 the sound carries further (`Sound.getAttenuationDistance`).
     pub volume: f32,
     pub pitch: f32,
-    /// Where it is heard from, in the world. A sound without a place is
+    /// Where it is heard from, in the world.
     pub position: Option<[f64; 3]>,
 }
 
@@ -81,7 +81,7 @@ impl<'a> SoundInstance<'a> {
     }
 }
 
-/// What each source is worth right now (volume times master), shared with
+/// What each source is worth right now (volume times master), shared with the playing sounds.
 #[derive(Default)]
 struct Gains([AtomicU32; 11]);
 
@@ -98,7 +98,7 @@ impl Gains {
     }
 }
 
-/// `MELON_SOUND_SOURCE=<name>` plays every sound on that source, to try
+/// `MELON_SOUND_SOURCE=<name>` plays every sound on that source, to try its slider.
 const FORCED_SOURCE_VAR: &str = "MELON_SOUND_SOURCE";
 
 /// A sound that started with a subtitle, for `SubtitleOverlay.onPlaySound`.
@@ -229,7 +229,7 @@ impl Job {
 }
 
 impl AudioEngine {
-    /// Missing device or sound file: playing is a no-op. `device` is the
+    /// Missing device or sound file: playing is a no-op.
     pub fn init(assets: &Assets, device: &str, channels: Option<u16>, directional: bool) -> Self {
         let hrtf = directional.then(hrtf::HrtfStore::default_set).flatten();
         let stream = open_output(device, if hrtf.is_some() { Some(2) } else { channels });
@@ -347,7 +347,7 @@ impl AudioEngine {
         device::output_device_names()
     }
 
-    /// Moves the output to the device with this name (the system default
+    /// Moves the output to the device with this name (the system default when empty).
     pub fn set_device(&mut self, device: &str) {
         self.device = device.to_owned();
         self.reopen();
@@ -443,7 +443,7 @@ impl AudioEngine {
         self.generation.fetch_add(1, Ordering::Relaxed);
     }
 
-    /// Starts a sound. The mixer gets a pre-decoded `SamplesBuffer`; a live
+    /// Starts a sound.
     pub fn play(&self, instance: &SoundInstance) {
         let started = std::time::Instant::now();
         if self.start(instance, None) {
@@ -521,7 +521,7 @@ impl AudioEngine {
     }
 }
 
-/// A sound about to start: where it goes and how loud, everything it needs
+/// A sound about to start.
 struct Voice {
     mixer: Mixer,
     layout: Layout,
@@ -635,7 +635,7 @@ fn decode(assets_root: &Path, name: &str) -> Option<PcmBuffer> {
     Some(PcmBuffer::from_samples(channels, sample_rate, decoder))
 }
 
-/// Music: decoded while it plays, from the file read whole (it may sit in
+/// Music: decoded while it plays, from the file read whole.
 fn open_stream(assets_root: &Path, sound: &Sound) -> Option<Decoder<std::io::Cursor<Vec<u8>>>> {
     let bytes = crate::assets::sound(assets_root, &sound.name)?;
     match Decoder::new(std::io::Cursor::new(bytes)) {

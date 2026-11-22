@@ -1,4 +1,4 @@
-//! The level's terrain on the GPU (vanilla `LevelRenderer`'s section
+//! The level's terrain on the GPU (vanilla `LevelRenderer`'s section meshes).
 
 use std::collections::{HashSet, VecDeque};
 use std::ops::Range;
@@ -18,14 +18,14 @@ use crate::world::dimension::Height;
 use crate::world::level::{FinishedMesh, Level};
 use crate::world::terrain::{self, LayerMesh, SectionMesh, TranslucentMesh};
 
-/// How many mesh bytes go to the GPU per frame at most: a join or a fast
+/// How many mesh bytes go to the GPU per frame at most.
 const UPLOAD_BUDGET: usize = 16 << 20;
-/// `Octree.isClose`'s 32 blocks: sections this many sections from the
+/// `Octree.isClose`'s 32 blocks.
 const NEARBY_SECTIONS: i32 = 2;
-/// Bytes of sorted-again faces uploaded per frame at most, nearest
+/// Bytes of sorted-again faces uploaded per frame at most, nearest sections first.
 const RESORT_BUDGET: usize = 4 << 20;
 
-/// Where section meshes go: the renderer, or ids only for the headless
+/// Where section meshes go.
 trait MeshSink {
     fn quads(&mut self, quads: &[TerrainQuad]) -> anyhow::Result<QuadMeshId>;
     fn vertices(&mut self, vertices: &[WorldVertex]) -> anyhow::Result<MeshId>;
@@ -70,13 +70,13 @@ struct QuadLayer {
     groups: [Range<u32>; terrain::FACINGS],
 }
 
-/// A section's translucent faces on the GPU, and the list they came from
+/// A section's translucent faces on the GPU, and the list they came from.
 struct Translucent {
     mesh: MeshId,
     faces: TranslucentMesh,
-    /// `TranslucencyPointOfView`: where the camera's section was, relative
+    /// `TranslucencyPointOfView`.
     view: IVec3,
-    /// The camera's block when they were sorted: built on a worker, that
+    /// The camera's block when they were sorted.
     block: IVec3,
 }
 
@@ -297,11 +297,11 @@ struct Column {
     draws: Vec<SectionDraws>,
     /// Bit `y` set for each section with anything to draw.
     filled: u32,
-    /// Bit `y` set for each section a mesh came for, empty or not
+    /// Bit `y` set for each section a mesh came for, empty or not.
     compiled: u32,
 }
 
-/// The chunk-local origin of section `pos`'s vertices: its chunk's corner,
+/// The chunk-local origin of section `pos`'s vertices.
 fn corner_of((x, _, z): SectionPos) -> DVec3 {
     DVec3::new(
         f64::from(x * SECTION_SIZE),
@@ -325,12 +325,12 @@ fn section_of_eye(eye: DVec3, min_y: i32) -> IVec3 {
     )
 }
 
-/// `TranslucencyPointOfView`: the camera's section relative to `pos`, each
+/// `TranslucencyPointOfView`.
 fn point_of_view(camera: IVec3, (x, y, z): SectionPos) -> IVec3 {
     (camera - IVec3::new(x, y, z)).clamp(IVec3::NEG_ONE, IVec3::ONE)
 }
 
-/// This frame's section draws, per layer. Solid and cutout ones are sorted
+/// This frame's section draws, per layer.
 #[derive(Default)]
 pub struct VisibleChunks {
     pub solid: Vec<ChunkDraw>,
@@ -343,17 +343,17 @@ pub struct LevelMeshes {
     /// The world's bottom, where section 0 starts.
     min_y: i32,
     columns: Columns,
-    /// Built meshes over the upload budget, uploaded in order on the next
+    /// Built meshes over the upload budget, uploaded in order on the next frames.
     waiting: VecDeque<FinishedMesh>,
-    /// Draws with their distance, sorted before they go out: solid ones
+    /// Draws with their distance, sorted before they go out.
     solid: SortedDraws,
     cutout: SortedDraws,
     translucent: SortedDraws,
-    /// Last frame's draw lists, handed back by [`Self::recycle`] to be
+    /// Last frame's draw lists, handed back by [`Self::recycle`] to be reused.
     spare_solid: Vec<ChunkDraw>,
     spare_cutout: Vec<ChunkDraw>,
     spare_translucent: Vec<ChunkDraw>,
-    /// The sections with translucent faces the last frame drew, for
+    /// The sections with translucent faces the last frame drew.
     seen_translucent: Vec<SectionPos>,
 }
 
@@ -375,12 +375,12 @@ impl Default for LevelMeshes {
 }
 
 impl LevelMeshes {
-    /// The level's bottom: where its first section starts. Set when the
+    /// The level's bottom: where its first section starts.
     pub fn set_min_y(&mut self, min_y: i32) {
         self.min_y = min_y;
     }
 
-    /// Uploads finished meshes in place of the sections' old ones: the
+    /// Uploads finished meshes in place of the sections' old ones.
     pub fn upload(&mut self, renderer: &mut Renderer, finished: Vec<FinishedMesh>) {
         self.upload_to(renderer, finished);
     }
@@ -407,7 +407,7 @@ impl LevelMeshes {
         }
     }
 
-    /// Whether a mesh was ever built for the section, drawn or not
+    /// Whether a mesh was ever built for the section, drawn or not.
     pub fn section_compiled(&self, (x, y, z): SectionPos) -> bool {
         usize::try_from(y)
             .ok()
@@ -473,7 +473,7 @@ impl LevelMeshes {
         std::mem::replace(&mut column.sections[y], meshes).free(sink);
     }
 
-    /// Takes a section's meshes without a GPU, `ids` handing out an id for
+    /// Takes a section's meshes without a GPU, `ids` handing out an id for each.
     pub fn insert_headless(&mut self, mesh: FinishedMesh, ids: impl FnMut() -> usize) {
         self.install(&mut Headless(ids), mesh);
     }
@@ -500,7 +500,7 @@ impl LevelMeshes {
         }
     }
 
-    /// Sorts the translucent faces of sections the camera now sees from
+    /// Sorts the translucent faces of sections the camera now sees from elsewhere.
     pub fn resort(&mut self, renderer: &mut Renderer, eye: DVec3) {
         self.resort_with(renderer, eye);
     }
@@ -543,7 +543,7 @@ impl LevelMeshes {
         self.seen_translucent = seen;
     }
 
-    /// Vanilla's block / point-of-view tests when `from_seen`, plus a face
+    /// Vanilla's block and point-of-view tests when `from_seen`, plus a face check.
     fn due_to_resort(
         &self,
         pos: SectionPos,
@@ -586,7 +586,7 @@ impl LevelMeshes {
             .and_then(|section| section.translucent.as_mut())
     }
 
-    /// Sorts one section's translucent faces from `eye` and uploads them
+    /// Sorts one section's translucent faces from `eye` and uploads them.
     fn resort_section(
         &mut self,
         sink: &mut impl MeshSink,
@@ -770,7 +770,7 @@ impl LevelMeshes {
         visible
     }
 
-    /// Takes back the draw lists [`Self::visible_sections`] handed out,
+    /// Takes back the draw lists [`Self::visible_sections`] handed out, to reuse them.
     pub fn recycle(
         &mut self,
         solid: Vec<ChunkDraw>,
@@ -882,7 +882,8 @@ pub struct SectionCount {
     pub draws: usize,
 }
 
-/// Whether some face of facing group `group` in section `y` of the chunk at
+/// Whether some face of facing group `group` in section `y` of the chunk at `origin` can face
+/// `eye`.
 fn faces_camera(group: usize, origin: DVec3, y: usize, eye: DVec3, min_y: i32) -> bool {
     let size = f64::from(SECTION_SIZE);
     let min = DVec3::new(
@@ -913,7 +914,7 @@ struct ChangingMesh {
 }
 
 impl ChangingMesh {
-    /// Builds the vertices with `build` and uploads them if they differ
+    /// Builds the vertices with `build` and uploads them if they differ from the last.
     fn update(
         &mut self,
         renderer: &mut Renderer,
@@ -947,21 +948,23 @@ impl ChangingMesh {
     }
 }
 
-/// How far the camera moves before the still block entities are gathered
+/// How far the camera moves before the still block entities are gathered again.
 const STILL_STEP: f32 = 8.0;
 
 /// The block entities' geometry (chests, bells, books...), in two meshes:
 #[derive(Default)]
 pub struct BlockEntityMeshes {
     still: ChangingMesh,
-    /// The level's and the animations' revision and the camera position
+    /// The level's and the animations' revision and the camera position the still mesh was
+    /// built for.
     still_for: Option<(u64, u64, DVec3)>,
     /// The block `still`'s vertices are relative to.
     still_origin: IVec3,
     moving: ChangingMesh,
 }
 
-/// Makes `vertices` relative to the block `origin`, so they are drawn
+/// Makes `vertices` relative to the block `origin`, so they are drawn without float error far
+/// out.
 fn shift(vertices: &mut [WorldVertex], origin: IVec3) {
     let origin = origin.as_vec3();
     for vertex in vertices {
@@ -970,7 +973,8 @@ fn shift(vertices: &mut [WorldVertex], origin: IVec3) {
 }
 
 impl BlockEntityMeshes {
-    /// This frame's meshes, rebuilt as needed, each with the block its
+    /// This frame's meshes, rebuilt as needed, each with the block its vertices are relative
+    /// to.
     pub fn update(
         &mut self,
         renderer: &mut Renderer,
@@ -1097,7 +1101,7 @@ mod tests {
         assert!(near.draws.is_empty() && near.keys.is_empty());
     }
 
-    /// A section at `pos` with two flat translucent quads, at heights
+    /// A section at `pos` with two flat translucent quads, at heights `low` and `high`.
     fn two_quads(pos: SectionPos, low: f32, high: f32, eye: DVec3) -> FinishedMesh {
         let quad = |y: f32| {
             [[0.0, y, 0.0], [0.0, y, 1.0], [1.0, y, 1.0], [1.0, y, 0.0]]

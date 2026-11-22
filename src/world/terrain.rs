@@ -1,4 +1,4 @@
-//! Section terrain meshes (vanilla `SectionCompiler`), built from the
+//! Section terrain meshes (vanilla `SectionCompiler`).
 
 use std::ops::Range;
 
@@ -19,9 +19,9 @@ use crate::world::smooth_light::{LightCache, flat_corners, smooth_corners};
 
 /// A chunk and the eight around it.
 pub struct Neighborhood<'a> {
-    /// Row-major from north-west: index `(dx + 1) + (dz + 1) * 3`, the
+    /// Row-major from north-west.
     pub chunks: [Option<&'a Chunk>; 9],
-    /// The section being meshed, unpacked: `(index, blocks)`. Most block
+    /// The section being meshed, unpacked: `(index, blocks)`.
     flat: Option<(usize, &'a [u16; BLOCKS_PER_SECTION])>,
 }
 
@@ -33,7 +33,7 @@ impl<'a> Neighborhood<'a> {
         Self { chunks, flat: None }
     }
 
-    /// The nine chunks, centre at index 4, and an optional unpacked centre
+    /// The nine chunks, centre at index 4, and an optional unpacked centre section.
     pub fn with_chunks(
         chunks: [Option<&'a Chunk>; 9],
         decoded: Option<(usize, &'a [u16; BLOCKS_PER_SECTION])>,
@@ -53,7 +53,7 @@ impl<'a> Neighborhood<'a> {
         self.flat
     }
 
-    /// The block at chunk-local `(x, z)` (`-16..32`) and `y` relative to
+    /// The block at chunk-local `(x, z)` (`-16..32`) and `y` relative to section `s`.
     #[inline]
     pub fn block(&self, s: usize, x: i32, y: i32, z: i32) -> Option<u16> {
         if let Some((flat_s, flat)) = self.flat
@@ -78,7 +78,7 @@ impl<'a> Neighborhood<'a> {
         Some(section.get(Section::index(lx as usize, ly as usize, lz as usize)))
     }
 
-    /// Whether the block there hides the faces against it. A missing chunk
+    /// Whether the block there hides the faces against it.
     fn solid_at(&self, s: usize, x: i32, y: i32, z: i32) -> bool {
         self.block(s, x, y, z).is_some_and(state_flags::is_solid)
     }
@@ -108,14 +108,14 @@ impl<'a> Neighborhood<'a> {
     }
 }
 
-/// Facing groups a layer's quads are sorted into: the six [`Direction`]s
+/// Facing groups a layer's quads are sorted into.
 pub const FACINGS: usize = 7;
-/// The group of quads not along an axis (plants' crosses, fluid surfaces),
+/// The group of quads not along an axis (plants' crosses, fluid surfaces).
 pub const SLANTED: usize = 6;
 
-/// One layer of a section: its quads (or lava vertices), group after
+/// One layer of a section.
 pub struct LayerMesh<T = TerrainQuad> {
-    /// Quads are placed above [`SectionMesh::base_y`]; lava vertices are
+    /// Quads are placed above [`SectionMesh::base_y`].
     pub items: Vec<T>,
     /// Per facing group, its slice of `items`.
     pub groups: [Range<u32>; FACINGS],
@@ -130,7 +130,7 @@ impl<T> Default for LayerMesh<T> {
     }
 }
 
-/// A section's translucent faces, block faces and water together, as plain
+/// A section's translucent faces, block faces and water together, as plain vertices.
 #[derive(Clone, Default)]
 pub struct TranslucentMesh {
     pub vertices: Vec<Vertex>,
@@ -192,7 +192,7 @@ impl TranslucentMesh {
     }
 }
 
-/// `MeshData.decodeQuadCentroids`: midpoint of opposite corners 0 and 2
+/// `MeshData.decodeQuadCentroids`.
 fn quad_centroid(quad: &[Vertex; 4]) -> Vec3 {
     (Vec3::from_array(quad[0].pos) + Vec3::from_array(quad[2].pos)) * 0.5
 }
@@ -234,7 +234,7 @@ impl SectionMesh {
             && self.translucent.vertices.is_empty()
     }
 
-    /// Vertices per layer (solid, cutout, translucent), four per quad and
+    /// Vertices per layer (solid, cutout, translucent), four per quad.
     pub fn vertex_counts(&self) -> [usize; 3] {
         [
             self.solid.items.len() * 4 + self.lava.items.len(),
@@ -260,13 +260,13 @@ pub struct MeshContext<'a> {
     pub min_y: i32,
     /// `Options.ambientOcclusion` ("Smooth Lighting").
     pub smooth_lighting: bool,
-    /// The dimension's face shading relative to the default
+    /// The dimension's face shading relative to the default.
     pub cardinal: [f32; 6],
     /// Biome colours and the blend radius.
     pub tints: &'a TintSettings,
 }
 
-/// A layer being built: a list per facing group. Kept per thread between
+/// A layer being built: a list per facing group.
 struct LayerBuilder<T> {
     groups: [Vec<T>; FACINGS],
 }
@@ -297,7 +297,7 @@ impl<T: Copy> LayerBuilder<T> {
     }
 }
 
-/// Block faces (solid, cutout), lava, the translucent faces and the light
+/// Block faces (solid, cutout), lava, the translucent faces and the light cache.
 #[derive(Default)]
 struct Builders {
     quads: [LayerBuilder<TerrainQuad>; 2],
@@ -327,14 +327,14 @@ static PLAINS_TINTS: std::sync::OnceLock<TintSettings> = std::sync::OnceLock::ne
 /// TODO(perf): the biggest CPU load left in the world. `perf_world`
 /// (2026-11-15, 290 chunks, Ryzen 9800X3D): `mesh_chunk` 0.89 ms a chunk,
 /// about 7200 quads; 0.70 ms with flat light. Filling the `LightCache`
-/// (both modes) is ~12 µs a section, ~145 µs a chunk.
-/// Decoding and the flag rows are 0.2 µs a section now, the visibility
-/// graph ~1%. Still to split up, with a profiler: in `fill_section`'s quad
-/// loop the cullface test (`neighborhood.block` + `skip_rendering::hides`
-/// when the solid cache says no), `tints.color` per quad, `quads_at`'s
-/// closure. Here, `LayerBuilder::finish` copies every quad once more and
-/// the translucent vertices are cloned out of the builder.
-/// Meshes section `s` of `neighborhood`'s centre chunk. The translucent
+/// (both modes) is ~12 µs a section, ~145 µs a chunk. Decoding and the
+/// flag rows are 0.2 µs a section now, the visibility graph ~1%. Still to
+/// split up, with a profiler: in `fill_section`'s quad loop the cullface
+/// test (`neighborhood.block` + `skip_rendering::hides` when the solid
+/// cache says no), `tints.color` per quad, `quads_at`'s closure. Here,
+/// `LayerBuilder::finish` copies every quad once more and the translucent
+/// vertices are cloned out of the builder. Meshes section `s` of
+/// `neighborhood`'s centre chunk.
 pub fn mesh_section(neighborhood: &Neighborhood, s: usize, context: &MeshContext) -> SectionMesh {
     let empty = || SectionMesh {
         base_y: context.min_y,
@@ -387,7 +387,7 @@ pub fn mesh_chunk(neighborhood: &Neighborhood, context: &MeshContext) -> Vec<Sec
         .collect()
 }
 
-/// What can be seen through each of a chunk's sections, bottom to top. Only
+/// What can be seen through each of a chunk's sections, bottom to top.
 pub fn section_visibility(chunk: &Chunk) -> Vec<VisibilitySet> {
     chunk
         .sections
@@ -402,12 +402,12 @@ pub fn section_visibility(chunk: &Chunk) -> Vec<VisibilitySet> {
         .collect()
 }
 
-/// All air (state 0): nothing to draw, nothing to stop sight. A plain
+/// All air (state 0): nothing to draw, nothing to stop sight.
 pub fn is_empty(section: &Section) -> bool {
     section.is_empty()
 }
 
-/// A section's blocks as rows of x (index `y * 16 + z`, bit `x`), from one
+/// A section's blocks as rows of x (index `y * 16 + z`, bit `x`).
 struct SectionRows {
     /// Hides the faces against it, stops sight.
     solid: [u16; 256],
@@ -548,7 +548,7 @@ fn fill_section(
     }
 }
 
-/// Which blocks of a section and the one-block shell around it hide the
+/// Which blocks of a section and the one-block shell around it hide the faces against them.
 struct SolidCache {
     /// Indexed `(y + 1) * 18 + (z + 1)` for `y, z` in `-1..=16`; bit `x + 1`
     rows: [u32; PADDED * PADDED],
@@ -557,7 +557,7 @@ struct SolidCache {
 const PADDED: usize = 18;
 
 impl SolidCache {
-    /// `inside`: the section's own solid blocks ([`solid_rows`]); the
+    /// `inside`.
     fn new(neighborhood: &Neighborhood, s: usize, inside: &[u16; 256]) -> Self {
         let mut rows = [0u32; PADDED * PADDED];
         for y in -1..=16i32 {
@@ -589,7 +589,7 @@ impl SolidCache {
         self.rows[Self::row(y, z)] >> (x + 1) & 1 != 0
     }
 
-    /// Bit `x` set for each block of row `(y, z)` (`0..16`) with solid
+    /// Bit `x` set for each block of row `(y, z)` (`0..16`) with solid blocks on all six sides.
     #[inline]
     fn enclosed(&self, y: i32, z: i32) -> u32 {
         let here = self.rows[Self::row(y, z)];
@@ -605,7 +605,7 @@ impl SolidCache {
     }
 }
 
-/// The baked models and fluid sprites from `assets/`, once for every
+/// The baked models and fluid sprites from `assets/`, once for every test.
 #[cfg(test)]
 pub(crate) fn test_models() -> Option<(&'static std::sync::Arc<BlockModels>, FluidSprites)> {
     use std::sync::{Arc, OnceLock};
@@ -917,7 +917,7 @@ mod tests {
             let mut expected = Vec::new();
             models.quads_at(id, [x, y, z], |quads| {
                 for quad in quads {
-                    expected.push(quad.vertices.map(|v| {
+                    expected.push(models.corners_of(quad).map(|v| {
                         [
                             v.pos[0] + x as f32 + ox,
                             v.pos[1] + y as f32 + oy,

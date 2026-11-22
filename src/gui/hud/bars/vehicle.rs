@@ -1,4 +1,4 @@
-//! `Hud.extractVehicleHealth`: the hearts of the mount the player rides,
+//! `Hud.extractVehicleHealth`.
 
 use super::{Layout, fill};
 use crate::gui::hud::{ICON, PlayerStatus};

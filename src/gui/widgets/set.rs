@@ -1,4 +1,4 @@
-//! A screen's buttons and text fields by id, handled in one place: hover,
+//! A screen's buttons and text fields by id, handled in one place.
 
 use crate::gui::screen::{CursorKind, TextEvent};
 use crate::gui::widgets::button::Button;
@@ -27,7 +27,7 @@ impl Control {
         }
     }
 
-    /// Whether Tab may move the focus here: fields, and buttons that can
+    /// Whether Tab may move the focus here.
     fn focusable(&self) -> bool {
         match self {
             Control::Button(button) => button.enabled,
@@ -39,7 +39,7 @@ impl Control {
 /// What a key did to a [`WidgetSet`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KeyResult<Id> {
-    /// The set took the key: a cursor key, Tab, or a key the focused field
+    /// The set took the key.
     Taken,
     /// Enter on the focused button: press it.
     Pressed(Id),
@@ -55,7 +55,7 @@ pub struct WidgetSet<Id> {
     hidden: Vec<bool>,
     /// Index into `items` of the focused widget.
     focus: Option<usize>,
-    /// The field the left button went down on, while it is held: mouse
+    /// The field the left button went down on, while it is held.
     pressed: Option<usize>,
 }
 
@@ -194,7 +194,8 @@ impl<Id: Copy + PartialEq + std::fmt::Debug> WidgetSet<Id> {
         }
     }
 
-    /// The mouse is at `(x, y)`; with the button still held since a click
+    /// The mouse is at `(x, y)`; with the button still held since a click, the pressed widget
+    /// stays pressed.
     pub fn hover(&mut self, x: f32, y: f32) {
         if !crate::gui::input_state::left_held() {
             self.pressed = None;
@@ -211,7 +212,7 @@ impl<Id: Copy + PartialEq + std::fmt::Debug> WidgetSet<Id> {
         }
     }
 
-    /// The visible widget under `(x, y)` - enabled or not, which is what a
+    /// The visible widget under `(x, y)`, enabled or not.
     pub fn at(&self, x: f32, y: f32) -> Option<(Id, Rect)> {
         self.shown().find_map(|(_, (id, control))| {
             let rect = control.widget().rect();
@@ -273,7 +274,7 @@ impl<Id: Copy + PartialEq + std::fmt::Debug> WidgetSet<Id> {
         }
     }
 
-    /// Tab: the focus moves to the next widget that takes it (Shift: the
+    /// Tab: the focus moves to the next widget that takes it (Shift.
     pub fn tab(&mut self, backwards: bool) {
         let count = self.items.len();
         if count == 0 {
@@ -299,7 +300,7 @@ impl<Id: Copy + PartialEq + std::fmt::Debug> WidgetSet<Id> {
         }
     }
 
-    /// A key or typed text: Tab moves the focus, Enter presses the focused
+    /// A key or typed text.
     pub fn key(&mut self, event: &TextEvent) -> KeyResult<Id> {
         if let TextEvent::Tab { shift } = event {
             self.tab(*shift);
@@ -330,7 +331,7 @@ impl<Id: Copy + PartialEq + std::fmt::Debug> WidgetSet<Id> {
         self.draw_with(ui, |_| None);
     }
 
-    /// Draws every widget, a button with the label `label` gives it, if any,
+    /// Draws every widget, a button with the label `label` gives it, if any.
     pub fn draw_with(&self, ui: &mut Ui, label: impl Fn(Id) -> Option<String>) {
         for (_, (id, control)) in self.shown() {
             match (control, label(*id)) {

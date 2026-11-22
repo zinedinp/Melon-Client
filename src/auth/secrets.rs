@@ -1,4 +1,4 @@
-//! The system keyring, through `secret-tool` (libsecret) on Linux: where an
+//! The system keyring, through `secret-tool` (libsecret) on Linux.
 
 #[cfg(target_os = "linux")]
 mod imp {

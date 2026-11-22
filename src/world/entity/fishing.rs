@@ -1,4 +1,4 @@
-//! A fishing rod's cast (`FishingHookRenderer`): where the line leaves the
+//! A fishing rod's cast (`FishingHookRenderer`).
 
 use glam::Vec3;
 
@@ -10,12 +10,12 @@ pub const STEPS: usize = 16;
 /// How far the line is lifted off the bobber's centre.
 pub const LINE_LIFT: f32 = 0.25;
 
-/// `FishingHookRenderer.getHoldingArm`: whether the rod is in the right
+/// `FishingHookRenderer.getHoldingArm`.
 pub fn holds_right(main_arm_right: bool, main_hand_has_rod: bool) -> bool {
     main_arm_right == main_hand_has_rod
 }
 
-/// `FishingRodCast`: of the rods a player holds, only the one in the
+/// `FishingRodCast`.
 pub fn rod_looks_cast(fishing: bool, is_main_hand: bool, main_hand_has_rod: bool) -> bool {
     fishing
         && if is_main_hand {
@@ -25,7 +25,7 @@ pub fn rod_looks_cast(fishing: bool, is_main_hand: bool, main_hand_has_rod: bool
         }
 }
 
-/// `getPlayerHandPos` for any view but the owner's own first person: in
+/// `getPlayerHandPos` for any view but the owner's own first person.
 pub fn hand_third_person(
     eye: Vec3,
     body_yaw: f32,
@@ -45,7 +45,7 @@ pub fn hand_third_person(
     )
 }
 
-/// The camera's near plane, enough to find a point on it
+/// The camera's near plane, enough to find a point on it.
 #[derive(Clone, Copy)]
 pub struct NearPlane {
     pub forward: Vec3,
@@ -56,7 +56,7 @@ pub struct NearPlane {
     pub aspect: f32,
 }
 
-/// `getPlayerHandPos` for the owner's own first person: a point of the
+/// `getPlayerHandPos` for the owner's own first person.
 pub fn hand_first_person(eye: Vec3, plane: &NearPlane, right: bool, swing: f32) -> Vec3 {
     let invert = if right { 1.0 } else { -1.0 };
     let height = (plane.fov.to_radians() / 2.0).tan() * plane.near;
@@ -84,7 +84,7 @@ pub fn swing_of(attack: f32) -> f32 {
     (attack.max(0.0).sqrt() * std::f32::consts::PI).sin()
 }
 
-/// Where along the line, `i` of [`STEPS`] steps from the bobber to the
+/// Where along the line, `i` of [`STEPS`] steps from the bobber to the rod.
 pub fn line_point(offset: Vec3, i: usize) -> Vec3 {
     let a = i as f32 / STEPS as f32;
     Vec3::new(

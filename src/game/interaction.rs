@@ -1,4 +1,4 @@
-//! Vanilla `Minecraft.handleKeybinds` for attack/use/pick, and
+//! Vanilla `Minecraft.handleKeybinds` for attack, use and pick.
 
 use pumpkin_data::item_stack::ItemStack;
 use pumpkin_data::{Block, BlockStateId};
@@ -25,7 +25,7 @@ const TRIDENT_MIN_HOLD: i32 = 10;
 /// `InventoryMenu`'s helmet slot, for Aqua Affinity.
 const HEAD_SLOT: usize = 5;
 
-/// `MultiPlayerGameMode.destroyDelay` after a creative break or a finished
+/// `MultiPlayerGameMode.destroyDelay` after a creative break or a finished one.
 const DESTROY_DELAY: i32 = 5;
 /// `Minecraft.rightClickDelay` after each use.
 const RIGHT_CLICK_DELAY: i32 = 4;
@@ -49,7 +49,7 @@ pub(super) struct Interaction {
     pub(super) right_click_delay: i32,
 }
 
-/// What a hand's try at a right click came to (`InteractionResult`), as
+/// What a hand's try at a right click came to (`InteractionResult`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum UseOutcome {
     /// Nothing happened: the next try goes on.
@@ -72,7 +72,7 @@ impl InWorld {
         self.predictions.start_predicting()
     }
 
-    /// Opens or closes the overlay for [`Self::open_container`] once a tick
+    /// Opens or closes the overlay for [`Self::open_container`] once a tick.
     pub(super) fn apply_pending_container_overlay(&mut self, ui: &WorldContext) {
         if self.menus.pending_container_close {
             self.menus.pending_container_close = false;
@@ -107,7 +107,7 @@ impl InWorld {
         self.open_overlay_with(Box::new(overlay), !was_open, ui);
     }
 
-    /// `Minecraft.handleKeybinds` for attack, use and pick. While an item
+    /// `Minecraft.handleKeybinds` for attack, use and pick.
     pub(super) fn handle_keybinds(&mut self, _ui: &WorldContext) {
         self.hit_result = self.pick_hit(self.player.tick_eye());
         let mut instant = false;
@@ -157,7 +157,7 @@ impl InWorld {
         }
     }
 
-    /// `MultiPlayerGameMode.releaseUsingItem`: lets go of a shield, or of
+    /// `MultiPlayerGameMode.releaseUsingItem`.
     pub(super) fn release_using_item(&mut self) {
         if let Some(using) = self.hands.using.take() {
             self.predict_riptide(&using);
@@ -167,7 +167,7 @@ impl InWorld {
         }
     }
 
-    /// `TridentItem.releaseUsing` on the client: a riptide trident let go
+    /// `TridentItem.releaseUsing` on the client.
     fn predict_riptide(&mut self, using: &UsingItem) {
         if using.item_use.animation != UseAnimation::Trident
             || using.item_use.duration - using.remaining < TRIDENT_MIN_HOLD
@@ -182,7 +182,7 @@ impl InWorld {
         }
     }
 
-    /// `LocalPlayer.onSyncedDataUpdated` for the living flags: the server
+    /// `LocalPlayer.onSyncedDataUpdated` for the living flags.
     pub(super) fn sync_using_item(&mut self, living: u8) {
         use crate::network::play::game::{LIVING_OFF_HAND, LIVING_USING_ITEM};
         let using = living & LIVING_USING_ITEM != 0;
@@ -216,14 +216,14 @@ impl InWorld {
         }
     }
 
-    /// Swings `hand` as its item does, faster with Haste and slower with
+    /// Swings `hand` as its item does, faster with Haste and slower with Mining Fatigue.
     fn swing(&mut self, hand: Hand) {
         let mut swing = Swing::of(self.hand_stack(hand));
         swing.duration = self.mining_effects.swing_duration(swing.duration);
         self.hands.swing.start_if_able(hand, swing);
     }
 
-    /// What breaking speed depends on: the main hand, the helmet, the
+    /// What breaking speed depends on.
     fn miner(&self) -> Miner<'_> {
         Miner {
             held: self.inventory.selected_stack(),
@@ -263,7 +263,7 @@ impl InWorld {
         }
     }
 
-    /// `Hud.extractCrosshair`'s `renderMaxAttackIndicator`: a creature that
+    /// `Hud.extractCrosshair`'s `renderMaxAttackIndicator`.
     pub(super) fn attack_target_ready(&self) -> bool {
         let Some(hit) = self.hit_entity() else {
             return false;
@@ -297,7 +297,7 @@ impl InWorld {
         pick::pick(&self.level, eye, dir, block_range, entity_range, boxes)
     }
 
-    /// `Minecraft.startAttack`: hits the entity looked at, starts breaking
+    /// `Minecraft.startAttack`.
     fn start_attack(&mut self) -> bool {
         if self.interaction.miss_time > 0 {
             return false;
@@ -342,7 +342,7 @@ impl InWorld {
         broke
     }
 
-    /// `Minecraft.continueAttack`: holding attack on a block keeps breaking
+    /// `Minecraft.continueAttack`.
     fn continue_attack(&mut self, down: bool) {
         if !down {
             self.interaction.miss_time = 0;
@@ -363,7 +363,7 @@ impl InWorld {
         }
     }
 
-    /// `MultiPlayerGameMode.attack`: tells the server, which works out the
+    /// `MultiPlayerGameMode.attack`.
     fn attack(&mut self, entity: i32) {
         self.joined.session.send_attack(entity);
         self.hands.reset_attack_strength();
@@ -372,7 +372,7 @@ impl InWorld {
         }
     }
 
-    /// `MultiPlayerGameMode.destroyBlock` in creative: the block goes at
+    /// `MultiPlayerGameMode.destroyBlock` in creative.
     fn destroy_block_in_creative(&mut self, pos: [i32; 3]) {
         if breaks_blocks_in_creative(self.inventory.selected_stack()) {
             self.destroy_block(pos);
@@ -553,7 +553,7 @@ impl InWorld {
         true
     }
 
-    /// `MultiPlayerGameMode.sameDestroyTarget`: still the same block with
+    /// `MultiPlayerGameMode.sameDestroyTarget`.
     fn same_destroy_target(&self, pos: [i32; 3]) -> bool {
         self.interaction.destroying.as_ref().is_some_and(|target| {
             target.pos == pos
@@ -572,7 +572,7 @@ impl InWorld {
         self.predict_block(pos, 0);
     }
 
-    /// `Minecraft.startUseItem`: each hand in turn, on the block looked
+    /// `Minecraft.startUseItem`.
     fn start_use_item(&mut self) {
         if self.interaction.destroying.is_some() {
             return;
@@ -648,7 +648,7 @@ impl InWorld {
         }
     }
 
-    /// `MultiPlayerGameMode.interact`: tells the server about a right
+    /// `MultiPlayerGameMode.interact`.
     fn interact(&mut self, hit: EntityHit, hand: Hand) -> EntityUse {
         let Some(entity) = self.entities.get(hit.id) else {
             return EntityUse::Pass;
@@ -687,7 +687,7 @@ impl InWorld {
         entity_interact::predict(target, self.hand_stack(hand), sneaking)
     }
 
-    /// `MultiPlayerGameMode.performUseItemOn`: the block's own use (only
+    /// `MultiPlayerGameMode.performUseItemOn`.
     fn use_item_on(&mut self, hand: Hand, hit: &BlockHit) -> UseOutcome {
         let clicked = self.block_at(hit.pos);
         let holding_any =
@@ -725,7 +725,7 @@ impl InWorld {
         }
     }
 
-    /// `Item.use`: food and shields are held up while use is held, bows and
+    /// `Item.use`.
     fn use_item(&mut self, hand: Hand, at_block: bool) -> UseOutcome {
         let stack = self.hand_stack(hand).clone();
         let key = stack.item.registry_key;
@@ -811,7 +811,7 @@ impl InWorld {
         true
     }
 
-    /// `Level.isUnobstructed`: a block can't go where a body that blocks
+    /// `Level.isUnobstructed`.
     fn placement_obstructed(&self, pos: [i32; 3], state: u16) -> bool {
         let Some(id) = BlockStateId::new(state) else {
             return false;
@@ -914,7 +914,7 @@ fn block_name(state: u16) -> &'static str {
     BlockStateId::new(state).map_or("air", |id| Block::from_state_id(id).name)
 }
 
-/// Blocks whose `useWithoutItem` does something with an empty hand: menus,
+/// Blocks whose `useWithoutItem` does something with an empty hand.
 fn is_interactive_block(state: u16) -> bool {
     let name = block_name(state);
     is_menu_block(name)
@@ -959,7 +959,7 @@ fn is_menu_block(name: &str) -> bool {
     ) || name.ends_with("_shulker_box")
 }
 
-/// `Item.useOn` of the items that do something to the block clicked
+/// `Item.useOn` of the items that do something to the block clicked.
 fn acts_on_block(item: &str, clicked: &str, above_air: bool) -> bool {
     if item.ends_with("_spawn_egg") {
         return true;

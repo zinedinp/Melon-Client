@@ -1,4 +1,4 @@
-//! Shared engine/GUI modules. The `melon` binary is the game client
+//! Shared engine/GUI modules.
 
 pub mod app;
 pub mod assets;

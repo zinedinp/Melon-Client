@@ -1,4 +1,4 @@
-//! Heads: player heads that name a profile, drawn with that player's skin
+//! Heads: player heads that name a profile, drawn with that player's skin.
 
 use glam::{DVec3, IVec3, Mat4, Vec3};
 use pumpkin_data::item_stack::ItemStack;
@@ -40,7 +40,7 @@ pub(super) fn visible_heads(level: &Level, culler: &Culler) -> Vec<[i32; 3]> {
 }
 
 impl InWorld {
-    /// Asks for the skins of the heads near the player, and gets ready
+    /// Asks for the skins of the heads near the player, and uploads those that arrived.
     pub(super) fn prepare_heads(&self, renderer: &mut Renderer, assets: &mut WorldResources) {
         let eye = self.player.tick_eye().as_vec3();
         for (pos, profile) in self.level.heads() {
@@ -100,7 +100,7 @@ impl InWorld {
     }
 }
 
-/// Who wears a head slot and where: the model posed for this frame, the
+/// Who wears a head slot and where.
 pub(super) struct Wearer<'a> {
     pub model: &'a Model,
     pub pose: &'a ModelPose,
@@ -110,7 +110,7 @@ pub(super) struct Wearer<'a> {
 }
 
 impl Wearer<'_> {
-    /// The head part's matrix, through the layer's scale around the
+    /// The head part's matrix, through the layer's scale.
     fn head(&self, root: Mat4) -> Mat4 {
         let t = self.transforms;
         let scale = Vec3::new(t.horizontal_scale, t.vertical_scale, t.horizontal_scale);
@@ -119,13 +119,13 @@ impl Wearer<'_> {
     }
 }
 
-/// What [`submit_worn_head`] places a worn head with: the head part's
+/// What [`submit_worn_head`] places a worn head with.
 pub(super) fn worn_skull_transform(head: Mat4, transforms: HeadTransforms) -> Mat4 {
     head * Mat4::from_translation(Vec3::new(0.0, transforms.skull_y_offset, 0.0))
         * Mat4::from_scale(Vec3::splat(WORN_SCALE))
 }
 
-/// `CustomHeadLayer`: what is worn on the head and isn't armor. A head
+/// `CustomHeadLayer`: what is worn on the head and isn't armor.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn submit_worn_head(
     assets: &WorldResources,
@@ -199,12 +199,12 @@ pub(super) fn submit_worn_head(
     }
 }
 
-/// `HumanoidArmorLayer.shouldRender` for the head: a helmet, drawn by the
+/// `HumanoidArmorLayer.shouldRender` for the head.
 fn worn_as_armor(stack: &ItemStack) -> bool {
     !mobs::armor_textures(stack, ArmorSlot::Head, false).is_empty()
 }
 
-/// Gets ready what [`submit_worn_head`] draws for `stack`: the skin, the
+/// Gets ready what [`submit_worn_head`] draws for `stack`.
 pub(super) fn prepare_worn_head(
     renderer: &mut Renderer,
     assets: &mut WorldResources,
@@ -225,7 +225,7 @@ pub(super) fn prepare_worn_head(
     }
 }
 
-/// The faces `object` components in text show: asks for the skins of the
+/// The faces `object` components in text show.
 pub fn sync_head_objects(
     font: &crate::gui::text::font::Font,
     players: &mut super::entity_models::PlayerModels,

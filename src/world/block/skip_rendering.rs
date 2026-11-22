@@ -1,4 +1,4 @@
-//! `Block.skipRendering`: glass, ice, slime and the like don't draw the
+//! `Block.skipRendering`.
 
 use super::direction::{Direction, Directions};
 use pumpkin_data::{Block, BlockStateId};
@@ -9,7 +9,7 @@ use std::sync::LazyLock;
 enum Rule {
     /// `Block`'s: none.
     None,
-    /// `HalfTransparentBlock`, `PowderSnowBlock`: any face against the same
+    /// `HalfTransparentBlock`, `PowderSnowBlock`.
     SameBlock,
     /// `IronBarsBlock` (panes and bars).
     Bars {
@@ -67,7 +67,7 @@ fn entry(id: u16) -> Entry {
     }
 }
 
-/// `HalfTransparentBlock` and its subclasses: `TransparentBlock` (glass,
+/// `HalfTransparentBlock` and its subclasses.
 pub fn half_transparent(name: &str) -> bool {
     matches!(
         name,

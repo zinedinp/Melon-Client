@@ -1,4 +1,4 @@
-//! The particles' wire formats: `ParticleTypes.STREAM_CODEC` (a type and
+//! The particles' wire formats.
 
 use anyhow::{Result, anyhow};
 
@@ -66,7 +66,7 @@ impl Reader<'_> {
         Ok(ParticleSpec { kind, data })
     }
 
-    /// `ItemStackTemplate.STREAM_CODEC` of an item particle: only the item
+    /// `ItemStackTemplate.STREAM_CODEC` of an item particle.
     fn particle_item(&mut self) -> Result<u16> {
         let stack = self.item_template()?;
         Ok(stack.item.id)
@@ -78,7 +78,7 @@ fn state_id(id: i32) -> u16 {
     u16::try_from(id).unwrap_or(0)
 }
 
-/// `ClientboundLevelParticlesPacket.STREAM_CODEC`: the particle, the
+/// `ClientboundLevelParticlesPacket.STREAM_CODEC`.
 pub(super) fn read_level_particles(r: &mut Reader) -> Result<LevelParticles> {
     let spec = r.particle()?;
     let override_limiter = r.bool()?;

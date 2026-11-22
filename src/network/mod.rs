@@ -1,4 +1,4 @@
-//! Minimal client for Minecraft protocol 777 (MC 1.26.3), hand-rolled rather
+//! Minimal client for Minecraft protocol 777 (MC 1.26.3), hand-rolled.
 
 //!
 

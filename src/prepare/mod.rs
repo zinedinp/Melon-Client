@@ -1,4 +1,4 @@
-//! Find a legal Minecraft 26.3 client on this machine and turn it into
+//! Find a legal Minecraft 26.3 client on this machine and turn it into the assets Melon reads.
 
 use crate::home::{self, VERSION};
 use sha1::{Digest, Sha1};
@@ -29,7 +29,7 @@ pub struct Report {
     pub jar: PathBuf,
 }
 
-/// Looks for 26.3 next to `home` and in the default launcher folders (else
+/// Looks for 26.3 next to `home` and in the default launcher folders.
 pub fn from_local(
     home: &Path,
     assets_dir: &Path,
@@ -165,7 +165,7 @@ fn unzip_minecraft_assets(jar: &Path, dest: &Path, log: &dyn Fn(Progress)) -> Re
     Ok(())
 }
 
-/// Copies objects from an official `assets/objects` store into the tree,
+/// Copies objects from an official `assets/objects` store into the tree.
 fn overlay_index_objects(
     index: &Path,
     objects: &Path,

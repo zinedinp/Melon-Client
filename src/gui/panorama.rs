@@ -27,7 +27,7 @@ pub struct Panorama {
 }
 
 impl Panorama {
-    /// Load `panorama_0..5.png` as a cubemap. `Ok(None)` if missing or still
+    /// Load `panorama_0..5.png` as a cubemap.
     pub fn load(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Option<Self>> {
         let mut faces: Vec<RgbaImage> = Vec::with_capacity(6);
         for &file in &FACE_FILES {

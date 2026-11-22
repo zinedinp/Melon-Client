@@ -1,4 +1,4 @@
-//! A block's sounds (`SoundType`): what it plays when broken, placed, hit,
+//! A block's sounds (`SoundType`).
 
 mod data;
 
@@ -44,7 +44,7 @@ impl SoundType {
         &data::SOUND_TYPES[index]
     }
 
-    /// The sound to play: its event, volume and pitch as vanilla scales
+    /// The sound to play.
     pub fn sound(&self, kind: BlockSound) -> Option<SoundInstance<'static>> {
         let (event, volume, pitch, source) = match kind {
             BlockSound::Break => (

@@ -1,4 +1,4 @@
-//! The benchmark's records: every frame's times, and per phase what the
+//! The benchmark's records.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -11,7 +11,7 @@ use super::nvml::GpuSample;
 use crate::game::subsystems::{Rates, Snapshot};
 use crate::renderer::PassStats;
 
-/// A change smaller than this share is noise, in the comparison: runs of
+/// A change smaller than this share is noise, in the comparison.
 pub const TOLERANCE: f64 = 0.10;
 
 /// One frame.
@@ -329,7 +329,7 @@ impl Recorder {
         })
     }
 
-    /// One row per frame: the phase, the three totals, then each CPU phase
+    /// One row per frame.
     pub fn csv(&self) -> String {
         let mut cpu_names: Vec<&str> = Vec::new();
         let mut gpu_names: Vec<&str> = Vec::new();
@@ -384,7 +384,7 @@ impl Recorder {
         out
     }
 
-    /// Writes `<dir>/<label>-<unix time>.csv` and `.json`; returns the
+    /// Writes `<dir>/<label>-<unix time>.csv` and `.json`; returns the JSON's path.
     pub fn write(&self, dir: &Path) -> std::io::Result<PathBuf> {
         std::fs::create_dir_all(dir)?;
         let stamp = std::time::SystemTime::now()
@@ -451,7 +451,8 @@ fn flatten(prefix: &str, value: &Value, out: &mut BTreeMap<String, f64>) {
     }
 }
 
-/// Whether more of the number at `path` is better (`Some(true)`), worse
+/// Whether more of the number at `path` is better (`Some(true)`), worse (`Some(false)`) or
+/// neither.
 fn more_is_better(path: &str) -> Option<bool> {
     let last = path.rsplit('.').next().unwrap_or(path);
     if last == "max" || last == "backlog_max" {
@@ -476,7 +477,7 @@ fn more_is_better(path: &str) -> Option<bool> {
     path.starts_with("phases.").then_some(false)
 }
 
-/// The comparison of `new` with `old`: one line per number that moved more
+/// The comparison of `new` with `old`.
 pub fn compare(old: &Value, new: &Value) -> String {
     let mut before = BTreeMap::new();
     let mut after = BTreeMap::new();

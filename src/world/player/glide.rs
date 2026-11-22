@@ -1,4 +1,4 @@
-//! Elytra gliding (`travelFallFlying`) and the riptide spin
+//! Elytra gliding (`travelFallFlying`) and the riptide spin.
 
 use super::mode::glide;
 use super::movement::{MoveState, Travel, priority};
@@ -8,7 +8,7 @@ use crate::world::level::Level;
 use crate::world::physics::Aabb;
 use glam::DVec3;
 
-/// `LivingEntity.updateFallFlyingMovement`: one tick of lift, dive and
+/// `LivingEntity.updateFallFlyingMovement`.
 pub(super) fn fall_flying_step(movement: DVec3, look: DVec3, lean: f32, gravity: f64) -> DVec3 {
     let look_horizontal = (look.x * look.x + look.z * look.z).sqrt();
     let move_horizontal = (movement.x * movement.x + movement.z * movement.z).sqrt();
@@ -72,7 +72,7 @@ impl MoveState for Glide {
 }
 
 impl PlayerState {
-    /// Whether a glider is worn in its own slot (`LivingEntity.canGlideUsing`),
+    /// Whether a glider is worn in its own slot (`LivingEntity.canGlideUsing`).
     pub fn set_glider_worn(&mut self, worn: bool) {
         self.glider_worn = worn;
     }
@@ -87,7 +87,7 @@ impl PlayerState {
         self.gliding = gliding;
     }
 
-    /// Whether the start of a glide is still to be sent to the server
+    /// Whether the start of a glide is still to be sent to the server.
     pub fn take_glide_start(&mut self) -> bool {
         std::mem::take(&mut self.glide_start_pending)
     }
@@ -107,7 +107,7 @@ impl PlayerState {
         true
     }
 
-    /// `LivingEntity.travelFallFlying` (the fluid and ground branches are
+    /// `LivingEntity.travelFallFlying`.
     fn travel_fall_flying(&mut self, level: &Level, sneaking: bool) {
         let look = super::forward_vector_for(self.yaw_degrees, self.pitch_degrees);
         let lean = self.pitch_degrees * angle::DEG_TO_RAD;
@@ -127,7 +127,7 @@ impl PlayerState {
         }
     }
 
-    /// `startAutoSpinAttack` for the riptide throw, from the release: the
+    /// `startAutoSpinAttack` for the riptide throw, from the release.
     pub fn start_riptide(&mut self, level: &Level, enchantment: u32) {
         let strength = super::mode::impulse::riptide_strength(enchantment);
         let look = super::forward_vector_for(self.yaw_degrees, self.pitch_degrees);
@@ -160,12 +160,12 @@ impl PlayerState {
         self.spin_ticks = 0;
     }
 
-    /// The box the last tick swept while spinning, to be tested for what it
+    /// The box the last tick swept while spinning, to be tested for what it hit.
     pub fn take_spin_sweep(&mut self) -> Option<Aabb> {
         self.spin_sweep.take()
     }
 
-    /// `checkAutoSpinAttack` once the game knows whether a living entity is
+    /// `checkAutoSpinAttack` once the game knows whether a living entity was hit.
     pub fn resolve_spin_attack(&mut self, hit_living: bool) {
         if hit_living {
             self.spin_ticks = 0;

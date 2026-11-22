@@ -1,4 +1,4 @@
-//! The one place Melon meets Pumpkin's `TextComponent`: item stacks from
+//! The one place Melon meets Pumpkin's `TextComponent`.
 
 use pumpkin_util::text::TextComponent;
 use serde_json::{Map, Value};

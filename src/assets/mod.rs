@@ -1,4 +1,4 @@
-//! The vanilla `assets/` tree: finding it, resolving texture identifiers
+//! The vanilla `assets/` tree.
 
 pub mod atlas_sources;
 pub mod json_model;
@@ -8,7 +8,7 @@ pub mod shaders;
 
 use std::path::{Path, PathBuf};
 
-/// Vanilla's game directory: the folder holding `assets/`, `options.txt`,
+/// Vanilla's game directory.
 pub fn game_dir(assets_root: &Path) -> &Path {
     let mut dir = assets_root;
     if let Some(name) = dir.file_name().and_then(|n| n.to_str())
@@ -29,7 +29,7 @@ pub fn split_id(identifier: &str) -> (&str, &str) {
         .unwrap_or(("minecraft", identifier))
 }
 
-/// A resource file's bytes: `namespace:path` to
+/// A resource file's bytes.
 pub fn resource(
     assets_root: &Path,
     kind: &str,
@@ -73,7 +73,8 @@ pub fn json_resource(
     serde_json::from_slice(packs::meta::strip_bom(&bytes)).ok()
 }
 
-/// A texture's PNG (`textures/<path>.png`) with its `.png.mcmeta`, looked
+/// A texture's PNG (`textures/<path>.png`) with its `.png.mcmeta`, looked up through the
+/// resource packs.
 pub fn texture_with_meta(
     assets_root: &Path,
     identifier: &str,
@@ -93,7 +94,7 @@ pub fn texture_with_meta(
     Some((bytes, meta))
 }
 
-/// A texture, decoded: `textures/<path>.png`, or a paletted permutation
+/// A texture, decoded.
 pub fn texture_image(assets_root: &Path, identifier: &str) -> Option<image::RgbaImage> {
     texture_with_meta(assets_root, identifier)
         .and_then(|(bytes, _)| decode_png(&bytes))
@@ -110,7 +111,7 @@ pub fn texture_image(assets_root: &Path, identifier: &str) -> Option<image::Rgba
         .or_else(|| palette::resolve(assets_root, identifier))
 }
 
-/// Vanilla's `MissingTextureAtlasSprite`: 16x16, magenta and black
+/// Vanilla's `MissingTextureAtlasSprite`.
 pub fn missing_texture() -> image::RgbaImage {
     image::RgbaImage::from_fn(16, 16, |x, y| {
         if (x < 8) == (y < 8) {
@@ -164,7 +165,8 @@ pub fn sound(assets_root: &Path, identifier: &str) -> Option<Vec<u8>> {
     resource(assets_root, "sounds", identifier, "ogg")
 }
 
-/// Every copy of `namespace:path` (vanilla's first, then each pack's), for
+/// Every copy of `namespace:path` (vanilla's first, then each pack's), for files the packs
+/// merge.
 pub fn resource_stack(assets_root: &Path, namespace: &str, path: &str) -> Vec<Vec<u8>> {
     packs::active().find_all(assets_root, namespace, path)
 }
@@ -181,7 +183,7 @@ pub fn namespaces(assets_root: &Path) -> std::collections::BTreeSet<String> {
     packs::active().namespaces(assets_root)
 }
 
-/// The prepared vanilla tree the launcher keeps: the folder from its
+/// The prepared vanilla tree the launcher keeps.
 pub fn launcher_root() -> Option<PathBuf> {
     let home = crate::home::dir();
     let settings = crate::instances::LauncherSettings::load(&home);
@@ -189,7 +191,7 @@ pub fn launcher_root() -> Option<PathBuf> {
     root.join("minecraft").is_dir().then_some(root)
 }
 
-/// The assets for tests and tools: the launcher's tree if it has one,
+/// The assets for tests and tools.
 pub fn default_root() -> PathBuf {
     Assets::discover().map_or_else(
         |_| Path::new(env!("CARGO_MANIFEST_DIR")).join("assets"),
@@ -277,7 +279,7 @@ impl Assets {
         anyhow::bail!("assets/minecraft/ not found.")
     }
 
-    /// Decodes the PNG behind a texture identifier (`namespace:path` to
+    /// Decodes the PNG behind a texture identifier (`namespace:path` to `textures/<path>.png`).
     pub fn image(&self, identifier: &str) -> anyhow::Result<image::RgbaImage> {
         let (namespace, path) = split_id(identifier);
         let bytes = packs::active()
@@ -307,7 +309,7 @@ impl Assets {
             .unwrap_or_else(|| game_dir(&self.root))
     }
 
-    /// The main game folder, where accounts and the launcher's settings
+    /// The main game folder, where accounts and the launcher's settings live.
     pub fn launcher_dir(&self) -> &Path {
         game_dir(&self.root)
     }
@@ -323,7 +325,7 @@ impl Assets {
     }
 }
 
-/// Vanilla `TextureAtlasSprite` tint: multiply RGB by `color/255`, alpha
+/// Vanilla `TextureAtlasSprite` tint.
 pub fn tint(img: &mut image::RgbaImage, color: [u8; 3]) {
     for pixel in img.pixels_mut() {
         for (channel, &tint) in pixel.0.iter_mut().zip(&color) {

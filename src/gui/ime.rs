@@ -1,4 +1,4 @@
-//! Where the text cursor was drawn this frame, for the input method: its
+//! Where the text cursor was drawn this frame, for the input method.
 
 use std::cell::Cell;
 

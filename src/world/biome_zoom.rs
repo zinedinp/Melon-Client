@@ -1,4 +1,4 @@
-//! `BiomeManager.getBiome`: which biome a block is in. Biomes are stored per
+//! `BiomeManager.getBiome`: which biome a block is in.
 
 /// `LinearCongruentialGenerator.next`.
 #[inline]
@@ -17,7 +17,7 @@ fn fiddle(rval: i64) -> f64 {
     (uniform - 0.5) * 0.9
 }
 
-/// The jitter of quart corner `(x, y, z)`: `getFiddledDistance`'s three
+/// The jitter of quart corner `(x, y, z)`.
 pub fn corner_fiddle(seed: i64, [x, y, z]: [i32; 3]) -> [f64; 3] {
     let mut rval = seed;
     for v in [x, y, z, x, y, z] {
@@ -35,13 +35,13 @@ pub fn cell(seed: i64, x: i32, y: i32, z: i32) -> [i32; 3] {
     cell_with(x, y, z, |corner| corner_fiddle(seed, corner))
 }
 
-/// [`cell`] with the corners' fiddles from `fiddles` (see
+/// [`cell`] with the corners' fiddles from `fiddles`.
 #[inline]
 pub fn cell_with(x: i32, y: i32, z: i32, fiddles: impl FnMut([i32; 3]) -> [f64; 3]) -> [i32; 3] {
     corner(parent(x, y, z), nearest_corner(x, y, z, fiddles))
 }
 
-/// The cell `getBiome` looks from for block `(x, y, z)`: corner 0 of the
+/// The cell `getBiome` looks from for block `(x, y, z)`.
 #[inline]
 pub fn parent(x: i32, y: i32, z: i32) -> [i32; 3] {
     [(x - 2) >> 2, (y - 2) >> 2, (z - 2) >> 2]
@@ -57,7 +57,7 @@ pub fn corner(parent: [i32; 3], i: usize) -> [i32; 3] {
     ]
 }
 
-/// Which of the eight corners of [`parent`] block `(x, y, z)` takes its
+/// Which of the eight corners of [`parent`] block `(x, y, z)` takes its biome from.
 #[inline]
 pub fn nearest_corner(
     x: i32,
@@ -82,7 +82,7 @@ pub fn nearest_corner(
     best
 }
 
-/// The biome at block `(x, y, z)`, `noise_biome` giving the one stored at
+/// The biome at block `(x, y, z)`, `noise_biome` giving the one stored at a cell.
 pub fn biome(seed: i64, x: i32, y: i32, z: i32, noise_biome: &dyn Fn(i32, i32, i32) -> u16) -> u16 {
     let [qx, qy, qz] = cell(seed, x, y, z);
     noise_biome(qx, qy, qz)

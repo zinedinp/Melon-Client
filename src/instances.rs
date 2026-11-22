@@ -74,7 +74,7 @@ pub fn dir(main: &Path, id: &str) -> PathBuf {
     main.join(OWN).join(id)
 }
 
-/// What the main folder held for the game before Melon latest had a folder
+/// What the main folder held for the game before Melon latest had a folder of its own.
 const LEGACY_GAME_FILES: &[&str] = &[
     "saves",
     "mods",
@@ -91,7 +91,8 @@ const LEGACY_GAME_FILES: &[&str] = &[
     "command_history.txt",
 ];
 
-/// Moves the game's files out of the main folder into Melon latest's, never
+/// Moves the game's files out of the main folder into Melon latest's, never over files already
+/// there.
 fn migrate_legacy(main: &Path, melon: &Path) {
     for name in LEGACY_GAME_FILES {
         let (from, to) = (main.join(name), melon.join(name));
@@ -187,7 +188,7 @@ pub fn find(main: &Path, query: &str) -> Option<Instance> {
         .cloned()
 }
 
-/// Makes a new, empty instance named `name` at `instances/<slug>/`. An
+/// Makes a new, empty instance named `name` at `instances/<slug>/`.
 pub fn create(main: &Path, name: &str) -> std::io::Result<Instance> {
     create_from(main, name, None)
 }
@@ -322,7 +323,8 @@ pub fn logs_dir(game_dir: &Path) -> PathBuf {
     game_dir.join("logs")
 }
 
-/// Creates `mods/`, `plugins/`, `saves/`, `resourcepacks/` and `logs/` so a
+/// Creates `mods/`, `plugins/`, `saves/`, `resourcepacks/` and `logs/`, so a fresh instance has
+/// them.
 pub fn ensure_dirs(game_dir: &Path) {
     for name in GAME_DIRS {
         if let Err(e) = std::fs::create_dir_all(game_dir.join(name)) {
@@ -340,7 +342,8 @@ pub fn options_dir(main: &Path, instance: &Instance) -> PathBuf {
     }
 }
 
-/// Copy the Melon latest `options.txt` into this instance so the game
+/// Copies the Melon latest `options.txt` into this instance, so the game starts with the global
+/// options.
 pub fn apply_global_options(main: &Path, instance: &Instance) {
     if instance.id == MELON || !instance.use_global_options {
         return;
@@ -354,7 +357,7 @@ pub fn apply_global_options(main: &Path, instance: &Instance) {
     }
 }
 
-/// After Play, copy this instance's `options.txt` back over the global
+/// After Play, copies this instance's `options.txt` back over the global one.
 pub fn collect_global_options(main: &Path, instance_id: Option<&str>) {
     let Some(id) = instance_id.filter(|id| *id != MELON) else {
         return;
@@ -403,7 +406,7 @@ pub fn set_engine(main: &Path, id: &str, engine: Engine) -> std::io::Result<Inst
     find(main, &instance.id).ok_or_else(|| std::io::ErrorKind::NotFound.into())
 }
 
-/// Deletes an instance with everything in it (its worlds too). The default
+/// Deletes an instance with everything in it (its worlds too).
 pub fn delete(main: &Path, id: &str) -> std::io::Result<()> {
     let instance = find(main, id).ok_or(std::io::ErrorKind::NotFound)?;
     if instance.is_default {
@@ -445,7 +448,7 @@ pub struct LauncherSettings {
     /// Run the game with the tester, which writes `logs/probe-<time>.md`
     #[serde(default)]
     pub probe: bool,
-    /// Leave when the game ends instead of coming back (an error still
+    /// Leave when the game ends instead of coming back.
     #[serde(default)]
     pub exit_after_game: bool,
     /// Folder extracted assets live in. None: [`crate::home::default_assets_dir`].
@@ -496,12 +499,12 @@ impl LauncherSettings {
         }
     }
 
-    /// Where this version's `minecraft/` tree is extracted. Always a sibling
+    /// Where this version's `minecraft/` tree is extracted.
     pub fn extract_dir(&self, home: &Path, version: &str) -> PathBuf {
         crate::home::version_assets(&self.assets_dir(home), version)
     }
 
-    /// Folder the game reads for `version`: the versioned tree, or the legacy
+    /// Folder the game reads for `version`.
     pub fn assets_for(&self, home: &Path, version: &str) -> PathBuf {
         let versioned = self.extract_dir(home, version);
         if crate::home::is_prepared_at(&versioned) {
@@ -537,7 +540,7 @@ impl LauncherSettings {
         self.save(home);
     }
 
-    /// The Melon binary Play starts: the saved path, a local scan, or this
+    /// The Melon binary Play starts.
     pub fn melon_exe(&self, home: &Path) -> PathBuf {
         if let Some(path) = self.melon_binary.as_deref() {
             let path = PathBuf::from(path);
@@ -572,7 +575,7 @@ pub fn last_server(game_dir: &Path) -> Option<String> {
     (!address.is_empty()).then(|| address.to_owned())
 }
 
-/// Quick-join address for this instance. Melon latest points at the game
+/// Quick-join address for this instance.
 pub fn quick_join(instance: &Instance) -> Option<String> {
     if instance.id == MELON {
         None
@@ -603,7 +606,7 @@ pub struct Instance {
     pub group: Option<String>,
     pub played_secs: u64,
     pub last_played: Option<u64>,
-    /// When true, language / fullscreen / in-game options come from the
+    /// When true, language, fullscreen and in-game options come from the global `options.txt`.
     pub use_global_options: bool,
 }
 

@@ -20,10 +20,10 @@ use unihex::Lazy;
 /// Standard Minecraft text line height in (unscaled) GUI pixels.
 pub const LINE_HEIGHT: f32 = 9.0;
 
-/// Baseline ascent of the `ascii`/`accented` pages. Vanilla `FontSet` lines
+/// Baseline ascent of the `ascii`/`accented` pages.
 pub(crate) const BASELINE_ASCENT: f32 = 7.0;
 
-/// Vanilla `GlyphInfo.getShadowOffset()` default: shadow drawn 1px right/down
+/// Vanilla `GlyphInfo.getShadowOffset()` default.
 pub(crate) const SHADOW_OFFSET: f32 = 1.0;
 
 /// `ARGB.scaleRGB(textColor, 0.25F)` (`Font.PreparedTextBuilder.getShadowColor`,
@@ -51,7 +51,7 @@ pub enum GlyphKind {
 pub struct Glyph {
     pub kind: GlyphKind,
     pub advance: f32,
-    /// `GlyphInfo.getShadowOffset` and `getBoldOffset`: a pixel for the
+    /// `GlyphInfo.getShadowOffset` and `getBoldOffset`.
     pub shadow: f32,
     pub bold: f32,
 }
@@ -67,7 +67,8 @@ impl Glyph {
     }
 }
 
-/// Text that holds an inline sprite (a `sprite` object component) carries
+/// Text that holds an inline sprite (a `sprite` object component) carries it as a private-use
+/// character.
 pub const SPRITE_FIRST: char = '\u{E000}';
 pub const SPRITE_COUNT: usize = 256;
 const SPRITE_ADVANCE: f32 = 8.0;
@@ -94,7 +95,7 @@ pub const DYNAMIC_PAGE: u32 = 256;
 /// The characters of one font by `ceil(advance)`: `FontSet.glyphsByWidth`.
 type WidthPool = HashMap<i32, Vec<char>>;
 
-/// Glyphs made when a text first needed them, and what still has to go to
+/// Glyphs made when a text first needed them, and what still has to go to the GPU.
 #[derive(Default)]
 struct Dynamic {
     /// The characters asked for that aren't made yet.
@@ -105,7 +106,7 @@ struct Dynamic {
     pages: Vec<(u32, u32)>,
 }
 
-/// What [`Font::bake_pending`] made: pages to create (blank,
+/// What [`Font::bake_pending`] made.
 #[derive(Default)]
 pub struct DynamicWork {
     pub new_pages: usize,
@@ -126,7 +127,7 @@ impl DynamicWork {
     }
 }
 
-/// A font besides the default one (`minecraft:alt`, `minecraft:uniform`, a
+/// A font besides the default one (`minecraft:alt`, `minecraft:uniform`, a pack's).
 struct Face {
     glyphs: GlyphMap,
     unihex: bool,
@@ -256,7 +257,7 @@ impl Font {
         }
     }
 
-    /// The glyph for `c`: from the bitmap fonts, else Unifont's. A Unifont
+    /// The glyph for `c`: from the bitmap fonts, else Unifont's.
     pub fn glyph(&self, c: char) -> Option<Glyph> {
         if let Some(glyph) = self.glyphs.get(&c) {
             return Some(*glyph);
@@ -264,7 +265,7 @@ impl Font {
         self.unihex_glyph(c)
     }
 
-    /// [`Self::glyph`] in the font `font` names (`Style.font`, with or
+    /// [`Self::glyph`] in the font `font` names (`Style.font`).
     pub fn glyph_in(&self, font: Option<&str>, c: char) -> Option<Glyph> {
         // The default font isn't among `faces`: no lookup for its name.
         let font = font.filter(|&id| id != DEFAULT_FONT && id != "default");
@@ -330,7 +331,7 @@ impl Font {
         })
     }
 
-    /// Makes the Unifont glyphs asked for since the last call: where each
+    /// Makes the Unifont glyphs asked for since the last call.
     pub fn bake_pending(&self) -> DynamicWork {
         let mut dynamic = self.dynamic.borrow_mut();
         if dynamic.wanted.is_empty() {
@@ -522,7 +523,7 @@ impl Font {
         lines
     }
 
-    /// Draw `text` top-left at `(x, y)`, with vanilla's default drop shadow
+    /// Draws `text` top-left at `(x, y)`, with vanilla's default drop shadow.
     pub fn push_text(
         &self,
         draw_list: &mut DrawList,
@@ -535,7 +536,7 @@ impl Font {
         self.push_text_with(draw_list, page_textures, text, x, y, color, true)
     }
 
-    /// `GuiGraphics.centeredText`: `text` centred on `center_x`, whole-pixel
+    /// `GuiGraphics.centeredText`.
     pub fn push_centered(
         &self,
         draw_list: &mut DrawList,
@@ -549,7 +550,7 @@ impl Font {
         self.push_text(draw_list, page_textures, text, x, y, color);
     }
 
-    /// `push_text` without the drop shadow (`GuiGraphics.text(..., false)`),
+    /// `push_text` without the drop shadow (`GuiGraphics.text(..., false)`).
     pub fn push_text_flat(
         &self,
         draw_list: &mut DrawList,
@@ -756,7 +757,7 @@ impl Font {
 }
 
 impl Font {
-    /// How plain text with `§` codes is drawn: through the styled path,
+    /// How plain text with `§` codes is drawn.
     fn paint<'a>(&'a self, pages: &'a [TextureId], color: [f32; 4], shadow: bool) -> TextPaint<'a> {
         TextPaint {
             font: self,
@@ -770,7 +771,7 @@ impl Font {
     }
 }
 
-/// Whether `text` has `§` formatting codes, which every string vanilla
+/// The fonts the resource packs define besides the default one, as `namespace:name`.
 fn other_font_ids(assets: &Assets) -> Vec<String> {
     let mut ids = Vec::new();
     let root = assets.root();
@@ -812,7 +813,7 @@ pub fn strip_codes(text: &str) -> std::borrow::Cow<'_, str> {
     std::borrow::Cow::Owned(out)
 }
 
-/// The codes still in force at the end of `text`: the last colour (or
+/// The codes still in force at the end of `text`.
 fn active_codes(text: &str) -> String {
     let mut active = String::new();
     let mut chars = text.chars();

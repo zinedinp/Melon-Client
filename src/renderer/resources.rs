@@ -24,19 +24,19 @@ impl Renderer {
         Ok(self.put_new(made))
     }
 
-    /// A texture sampled linearly (`blur: true` in its `.mcmeta`): the
+    /// A texture sampled linearly (`blur: true` in its `.mcmeta`).
     pub fn load_texture_linear(&mut self, rgba: &RgbaImage) -> anyhow::Result<TextureId> {
         let made = unsafe { self.uploader(self.textures.linear_sampler).image_2d(rgba)? };
         Ok(self.put_new(made))
     }
 
-    /// A texture that repeats outside `0..1` (vanilla's `GL_REPEAT`), so a
+    /// A texture that repeats outside `0..1` (vanilla's `GL_REPEAT`).
     pub fn load_texture_tiled(&mut self, rgba: &RgbaImage) -> anyhow::Result<TextureId> {
         let made = unsafe { self.uploader(self.textures.repeat_sampler).image_2d(rgba)? };
         Ok(self.put_new(made))
     }
 
-    /// Linear and wrapping: the enchanted glint (`blur: true` and UVs that
+    /// Linear and wrapping: the enchanted glint (`blur.
     pub fn load_texture_linear_tiled(&mut self, rgba: &RgbaImage) -> anyhow::Result<TextureId> {
         let made = unsafe {
             self.uploader(self.textures.linear_repeat_sampler)
@@ -59,7 +59,7 @@ impl Renderer {
         }
     }
 
-    /// A texture with its smaller levels (`mips`, each half the size of the
+    /// A texture with its smaller levels (`mips`, each half the size of the last).
     pub fn load_texture_mipmapped(
         &mut self,
         rgba: &RgbaImage,
@@ -72,7 +72,7 @@ impl Renderer {
         Ok(self.put_new(made))
     }
 
-    /// Rewrites part of mip `level` of a texture with `pixels`, top-left at
+    /// Rewrites part of mip `level` of a texture with `pixels`, top-left at `(x, y)`.
     pub fn update_texture(
         &mut self,
         texture: TextureId,
@@ -132,7 +132,7 @@ impl Renderer {
         }
     }
 
-    /// Stores a new texture: in the next slot to reuse, else a freed one,
+    /// Stores a new texture.
     pub(super) fn put_texture(&mut self, tex: texture::Texture) -> TextureId {
         let id = if let Some(id) = self.textures.reuse.pop_front() {
             self.retire(id);
@@ -150,7 +150,7 @@ impl Renderer {
         id
     }
 
-    /// Puts the white texture in slot `id` and destroys what was there
+    /// Puts the white texture in slot `id` and destroys what was there once no frame uses it.
     fn retire(&mut self, id: TextureId) {
         self.retire_picture(id);
         let mut white = self.textures.list[self.textures.white.0];
@@ -173,12 +173,12 @@ impl Renderer {
         self.textures.free.push(id);
     }
 
-    /// The next uploads go into these slots, in order, replacing what they
+    /// The next uploads go into these slots, in order, replacing what they held.
     pub fn begin_texture_reuse(&mut self, ids: Vec<TextureId>) {
         self.textures.reuse = ids.into();
     }
 
-    /// Stops reusing slots. The ones no upload took are freed, or, when the
+    /// Stops reusing slots.
     pub fn end_texture_reuse(&mut self, free: bool) -> Vec<TextureId> {
         let left: Vec<TextureId> = std::mem::take(&mut self.textures.reuse).into();
         if free {
@@ -190,13 +190,13 @@ impl Renderer {
         left
     }
 
-    /// Records the ids of the uploads from now on, until
+    /// Records the ids of the uploads from now on, until [`Self::take_tracked`].
     pub fn track_textures(&mut self) {
         self.textures.tracked = Some(Vec::new());
         self.tracked_meshes = Some(Vec::new());
     }
 
-    /// The textures and meshes uploaded since
+    /// The textures and meshes uploaded since [`Self::track_textures`].
     pub fn take_tracked(&mut self) -> (Vec<TextureId>, Vec<MeshId>) {
         (
             self.textures.tracked.take().unwrap_or_default(),
@@ -296,7 +296,7 @@ impl Renderer {
         Ok(CubeMapId(self.textures.cubemaps.len() - 1))
     }
 
-    /// Uploads a mesh (a list of quads, see [`WorldVertex`]); it can be
+    /// Uploads a mesh (a list of quads, see [`WorldVertex`]).
     pub fn upload_mesh(&mut self, vertices: &[WorldVertex]) -> anyhow::Result<MeshId> {
         let id = unsafe {
             self.meshes
@@ -308,7 +308,7 @@ impl Renderer {
         Ok(MeshId(id))
     }
 
-    /// Frees a mesh from [`upload_mesh`](Self::upload_mesh). Its GPU memory
+    /// Frees a mesh from [`upload_mesh`](Self::upload_mesh).
     pub fn free_mesh(&mut self, mesh: MeshId) {
         self.meshes.free(mesh.0, self.frames.number);
     }
@@ -332,7 +332,7 @@ impl Renderer {
         Ok(QuadMeshId(id))
     }
 
-    /// Frees quads from [`upload_quads`](Self::upload_quads), as
+    /// Frees quads from [`upload_quads`](Self::upload_quads).
     pub fn free_quads(&mut self, quads: QuadMeshId) {
         self.quad_meshes.free(quads.0, self.frames.number);
     }
@@ -356,7 +356,7 @@ impl Renderer {
 }
 
 impl Renderer {
-    /// Draws each program's quads with its shader in `shaders` from now
+    /// Draws each program's quads with its shader in `shaders` from now on.
     pub fn set_gui_shaders(
         &mut self,
         shaders: &[super::GuiShader],

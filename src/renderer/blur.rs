@@ -1,21 +1,21 @@
-//! The menu background blur (`Screen.extractBlurredBackground`), over
+//! The menu background blur (`Screen.extractBlurredBackground`).
 
 use super::{Frame, Renderer, find_memory_type, pipeline};
 use crate::renderer::quad::DrawCall;
 use ash::vk;
 
-/// What blurring needs besides the swapchain: its pipelines and sets, and the
+/// What blurring needs besides the swapchain.
 pub(super) struct Blur {
     /// One colour attachment, left readable: draws the x axis into `scratch`.
     pass: vk::RenderPass,
     /// Built for `pass`.
     horizontal: pipeline::Pass,
-    /// Built for the frame's own render pass: draws the y axis into the
+    /// Built for the frame's own render pass.
     vertical: pipeline::Pass,
     /// Sample [`Targets::copy`] and [`Targets::scratch`].
     sets: [vk::DescriptorSet; 2],
     sampler: vk::Sampler,
-    /// Whether the frame is blurred at half size (the format can be blitted
+    /// Whether the frame is blurred at half size.
     halve: bool,
     targets: Option<Targets>,
 }
@@ -278,7 +278,7 @@ pub(super) const COLOR: vk::ImageSubresourceRange = vk::ImageSubresourceRange {
 };
 
 impl Renderer {
-    /// Whether this frame can be blurred: the swapchain image can be copied
+    /// Whether this frame can be blurred.
     pub(super) unsafe fn prepare_blur(&mut self) -> bool {
         if !self.swapchain.can_copy {
             return false;
@@ -296,7 +296,7 @@ impl Renderer {
         made.is_ok()
     }
 
-    /// Everything after the scene's pass: blurs what it drew, then draws
+    /// Everything after the scene's pass.
     pub(super) unsafe fn record_blur(
         &self,
         cmd: vk::CommandBuffer,

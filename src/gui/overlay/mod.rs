@@ -1,4 +1,4 @@
-//! What opens over a world and keeps it running: the inventories, the
+//! What opens over a world and keeps it running.
 
 pub mod chat;
 pub mod container;
@@ -32,18 +32,18 @@ use creative::CreativeTextures;
 use game_mode_switcher::SwitcherTextures;
 use inventory::InventoryTextures;
 
-/// Which overlay it is, for what the world treats differently: the
+/// Which overlay it is, for what the world treats differently.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OverlayKind {
     Inventory,
     Creative,
     Chat,
     Switcher,
-    /// A server-opened menu (`OPEN_SCREEN`): chest, crafting table, furnace,
+    /// A server-opened menu (`OPEN_SCREEN`).
     Container,
 }
 
-/// `ChatScreen.ExitReason`: why an overlay closes, which decides whether an
+/// `ChatScreen.ExitReason`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChatExit {
     /// Escape: kept only with "Save Chat Drafts" on.
@@ -61,14 +61,14 @@ pub enum OverlayAction {
     Dialog(crate::dialog::DialogClick),
     /// Close the overlay.
     Close(ChatExit),
-    /// Inventory clicks: the world predicts and sends each, `container` the
+    /// Inventory clicks.
     Clicks {
         container: i32,
         clicks: Vec<SlotClick>,
     },
-    /// Several actions, in order (the beacon's Done sends the effects, then
+    /// Several actions, in order.
     Sequence(Vec<OverlayAction>),
-    /// A button of the open menu (a stonecutter recipe, a loom pattern, an
+    /// A button of the open menu (a stonecutter recipe, a loom pattern...).
     MenuButton {
         container: i32,
         button: i32,
@@ -134,10 +134,10 @@ pub struct OverlayContext<'a> {
     pub permission_level: u8,
     /// The listed players' names, for completing chat; only built when asked.
     pub players: &'a dyn Fn() -> Vec<String>,
-    /// `CreativeModeInventoryScreen.selectedTab`, static in vanilla: the
+    /// `CreativeModeInventoryScreen.selectedTab`, static in vanilla.
     pub creative_tab: &'a mut usize,
     pub game_mode: GameMode,
-    /// The player's experience level, which the anvil and the enchanting
+    /// The player's experience level, which the anvil and the enchanting table show.
     pub experience_level: i32,
     pub lang: &'a Lang,
     pub font: &'a Font,
@@ -174,14 +174,14 @@ pub struct OverlayDraw<'a> {
     pub recipe_sets: &'a crate::world::recipes::RecipeSets,
     /// The recipe the server asked the menu to show as ghost items.
     pub ghost: Option<&'a (i32, crate::world::recipes::RecipeDisplay)>,
-    /// The player's experience level and whether materials are free (the
+    /// The player's experience level and whether materials are free (creative).
     pub experience_level: i32,
     pub infinite_materials: bool,
-    /// The texture of the entity the overlay asked to show
+    /// The texture of the entity the overlay asked to show.
     pub entity_preview: Option<crate::renderer::TextureId>,
 }
 
-/// A screen over the running world (vanilla's in-game `Screen`s that don't
+/// A screen over the running world (vanilla's in-game `Screen`s that don't pause it).
 pub trait Overlay {
     fn kind(&self) -> OverlayKind;
 
@@ -206,7 +206,7 @@ pub trait Overlay {
     /// The wheel, `lines` up.
     fn scroll(&mut self, _lines: f32, _ctx: &mut OverlayContext) {}
 
-    /// A key went down: `bind` is its physical bind, if known, `text` what
+    /// A key went down.
     fn key(
         &mut self,
         _bind: Option<&InputBind>,
@@ -216,12 +216,12 @@ pub trait Overlay {
         Vec::new()
     }
 
-    /// A client tick passed: what the overlay has to tell the world about
+    /// A client tick passed.
     fn tick(&mut self, _ctx: &mut OverlayContext) -> Vec<OverlayAction> {
         Vec::new()
     }
 
-    /// Escape: closes the overlay, unless it has something of its own to
+    /// Escape: closes the overlay, unless it has something of its own to close.
     fn escape(&mut self) -> OverlayAction {
         OverlayAction::Close(ChatExit::Intentional)
     }
@@ -242,17 +242,18 @@ pub trait Overlay {
 
     fn draw(&mut self, ui: &mut OverlayDraw);
 
-    /// Where to show the player turned toward the mouse, if anywhere
+    /// Where to show the player turned toward the mouse, if anywhere.
     fn entity_preview(&self) -> Option<crate::gui::entity_preview::EntityPreview> {
         None
     }
 
-    /// Where the panel is, for the list of status effects beside it
+    /// Where the panel is, for the list of status effects beside it.
     fn effects_panel(&self) -> Option<crate::gui::hud::effects::EffectsPanel> {
         None
     }
 
-    /// Hands the stacks it shows to `visit`, for baking their icons; stops
+    /// Hands the stacks it shows to `visit`, for baking their icons; stops when `visit` says
+    /// so.
     fn visit_stacks(
         &self,
         _inventory: &Inventory,

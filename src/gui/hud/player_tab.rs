@@ -20,7 +20,7 @@ pub const MAX_ROWS_PER_COL: usize = 20;
 pub const MAX_PLAYERS: usize = 80;
 /// `Integer.MIN_VALUE`: half-transparent black behind each block.
 const BLOCK_BACKGROUND: [f32; 4] = [0.0, 0.0, 0.0, 0.5];
-/// `options.getBackgroundColor(0x20FFFFFF)` with backgrounds for the chat
+/// `options.getBackgroundColor(0x20FFFFFF)`: a row's background.
 const ROW_BACKGROUND: [f32; 4] = [1.0, 1.0, 1.0, 32.0 / 255.0];
 /// `0x90FFFFFF`: a spectator's name.
 const SPECTATOR_ALPHA: f32 = 144.0 / 255.0;
@@ -71,7 +71,7 @@ fn ping_bars(latency: i32) -> usize {
 /// One listed player, in the order the list shows them.
 pub struct TabEntry<'a> {
     pub id: uuid::Uuid,
-    /// `getNameForDisplay`: the server's display name, else the profile
+    /// `getNameForDisplay`.
     pub name: StyledText,
     pub spectator: bool,
     /// Milliseconds; negative while unknown.
@@ -109,7 +109,7 @@ pub struct PlayerTabOverlay {
 }
 
 impl PlayerTabOverlay {
-    /// `handleTabListCustomisation`; text that says nothing is no header
+    /// `handleTabListCustomisation`; text that says nothing is no header.
     pub fn set_header_footer(&mut self, header: Component, footer: Component) {
         self.header = Some(header);
         self.footer = Some(footer);
@@ -328,7 +328,7 @@ impl PlayerTabOverlay {
         }
     }
 
-    /// `extractTablistHearts`: one heart per two points, at least ten
+    /// `extractTablistHearts`.
     #[allow(clippy::too_many_arguments)]
     fn draw_hearts(
         &mut self,
@@ -423,7 +423,7 @@ impl PlayerTabOverlay {
     }
 }
 
-/// `PlayerTabOverlay.HealthState`: a loss blinks twenty ticks, a gain
+/// `PlayerTabOverlay.HealthState`.
 #[derive(Clone, Copy, Debug)]
 struct HealthState {
     last: i32,

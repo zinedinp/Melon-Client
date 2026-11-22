@@ -1,4 +1,4 @@
-//! `WolfModel` (`AdultWolfModel`, `BabyWolfModel`): a quadruped with a
+//! `WolfModel` (`AdultWolfModel`, `BabyWolfModel`).
 
 use super::{ClientEntity, LayerSpec, ModelId as M, dye_tint};
 use crate::math::angle::{self, PI};
@@ -169,7 +169,7 @@ impl Default for WolfPose {
     }
 }
 
-/// `Wolf.getTailAngle`: raised when angry, drooping with the damage of a
+/// `Wolf.getTailAngle`.
 pub fn tail_angle(angry: bool, tame: bool, health: f32) -> f32 {
     if angry {
         1.539_380_4

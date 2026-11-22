@@ -1,4 +1,4 @@
-//! Angles and the circle functions every part of Melon shares: vanilla's
+//! Angles and the circle functions every part of Melon shares.
 
 use glam::{Mat3, Mat4, Quat, Vec3};
 
@@ -47,7 +47,7 @@ const fn sin_quarter(x: f64) -> f64 {
     x * sum
 }
 
-/// `cos(x)` for small `x` (under a 256th of a turn), Taylor series to
+/// `cos(x)` for small `x` (under a 256th of a turn), as a Taylor series.
 const fn cos_small(x: f64) -> f64 {
     let x2 = x * x;
     let mut sum = 0.0;
@@ -59,7 +59,7 @@ const fn cos_small(x: f64) -> f64 {
     sum
 }
 
-/// A table on its own cache line, so none of it shares a line with
+/// A table on its own cache line, so none of it shares a line with other data.
 #[repr(C, align(64))]
 struct Aligned<T>(T);
 
@@ -83,7 +83,7 @@ static COARSE: Aligned<[f64; COARSE_LEN]> = Aligned({
     table
 });
 
-/// Sine and cosine of the steps between two coarse entries, side by side
+/// Sine and cosine of the steps between two coarse entries, side by side.
 static FINE: Aligned<[[f64; 2]; FINE_LEN]> = Aligned({
     let mut table = [[0.0; 2]; FINE_LEN];
     let mut i = 0;
@@ -95,7 +95,7 @@ static FINE: Aligned<[[f64; 2]; FINE_LEN]> = Aligned({
     table
 });
 
-/// Sine and cosine of vanilla's step `index`: the coarse entry's sine and
+/// Sine and cosine of vanilla's step `index`.
 #[inline]
 fn step(index: i64) -> (f32, f32) {
     let index = (index & (STEPS - 1)) as usize;
@@ -121,7 +121,7 @@ pub fn cos(radians: f32) -> f32 {
     step((radians * STEPS_PER_RADIAN + QUARTER) as i64).0
 }
 
-/// [`sin`] and [`cos`] together. When the cosine's step is the sine's a
+/// [`sin`] and [`cos`] together.
 #[inline]
 pub fn sin_cos(radians: f32) -> (f32, f32) {
     let scaled = radians * STEPS_PER_RADIAN;
@@ -135,13 +135,13 @@ pub fn sin_cos(radians: f32) -> (f32, f32) {
     }
 }
 
-/// Sine and cosine of one and the same table step: on the unit circle,
+/// Sine and cosine of one and the same table step.
 #[inline]
 pub fn unit(radians: f32) -> (f32, f32) {
     step((radians * STEPS_PER_RADIAN) as i64)
 }
 
-/// `(sin, cos)` of an angle in degrees, as vanilla's movement code
+/// `(sin, cos)` of an angle in degrees, as vanilla's movement code takes it.
 #[inline]
 pub fn sin_cos_deg(degrees: f32) -> (f32, f32) {
     sin_cos(degrees * DEG_TO_RAD)
@@ -303,7 +303,7 @@ pub trait Rotation: Sized {
         Self::rot_z(degrees * DEG_TO_RAD)
     }
 
-    /// Euler angles `(x, y, z)` in radians, applied Z first, then Y, then
+    /// Euler angles `(x, y, z)` in radians, applied Z first, then Y, then X.
     fn euler_zyx(radians: Vec3) -> Self;
 }
 
@@ -436,7 +436,7 @@ mod tests {
         }
     }
 
-    /// The tables a frame's pipelines look up (here and nowhere else) stay
+    /// The tables a frame's pipelines look up (here and nowhere else) stay small enough for L1.
     #[test]
     fn tables_stay_small_in_l1() {
         const L1_SHARE: usize = 8 * 1024;

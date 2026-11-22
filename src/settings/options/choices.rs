@@ -1,4 +1,5 @@
-//! The options that pick one of a few values, each with the vanilla
+//! The options that pick one of a few values, each with the vanilla name it has in
+//! `options.txt`.
 
 use super::*;
 
@@ -45,7 +46,7 @@ pub enum PresentMode {
     Mailbox,
     /// Presents at once: lowest latency, may tear.
     Immediate,
-    /// Like FIFO, but at vblank shows the newest finished frame instead of
+    /// Like FIFO, but at vblank shows the newest finished frame instead of the oldest.
     FifoLatestReady,
 }
 
@@ -170,7 +171,7 @@ impl Cycle for SpeakerLayout {
     ];
 }
 
-/// `PrioritizeChunkUpdates`, the "Chunk Builder": which block changes are
+/// `PrioritizeChunkUpdates`, the "Chunk Builder".
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ChunkBuilder {
     /// Threaded: never waited for.
@@ -250,7 +251,7 @@ impl GraphicsPreset {
         Self::ALL.into_iter().find(|p| p.id() == id)
     }
 
-    /// `GraphicsPreset.apply`, for the options Melon has: biome blend,
+    /// `GraphicsPreset.apply`, for the options Melon has.
     pub fn apply(self, config: &mut Config) {
         let (render, builder, simulation, smooth, entities, blend, clouds, cloud_range, weather) =
             match self {
@@ -306,7 +307,7 @@ impl GraphicsPreset {
     }
 }
 
-/// `AttackIndicatorStatus`: where the attack cooldown shows, by its
+/// `AttackIndicatorStatus`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum AttackIndicator {
     Off,

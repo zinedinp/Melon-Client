@@ -1,4 +1,4 @@
-//! `AdultFoxModel` and `BabyFoxModel`: a quadruped that sits, sleeps,
+//! `AdultFoxModel` and `BabyFoxModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};

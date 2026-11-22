@@ -1,4 +1,4 @@
-//! What the player does to the inventory and the hotbar, and the F3 key
+//! What the player does to the inventory and the hotbar, and the F3 key combinations.
 
 use super::InWorld;
 use crate::gui::text::font::Font;
@@ -8,7 +8,7 @@ use crate::network::play::game::PlayerAction;
 use crate::world::inventory::ClickType;
 
 impl InWorld {
-    /// Selects hotbar slot `slot` (`Inventory.setSelectedSlot`) and tells the
+    /// Selects hotbar slot `slot` (`Inventory.setSelectedSlot`) and tells the server.
     pub fn select_hotbar(&mut self, slot: u8) {
         if slot < 9 && slot != self.inventory.selected() {
             self.inventory.select(slot);
@@ -16,7 +16,7 @@ impl InWorld {
         }
     }
 
-    /// The mouse wheel while playing: scrolling down moves right. A
+    /// The mouse wheel while playing: scrolling down moves right.
     pub fn scroll_hotbar(&mut self, lines: f32) {
         if lines == 0.0 {
             return;

@@ -1,4 +1,4 @@
-//! `sounds.json`: which sound files a sound event can play, and how loud
+//! `sounds.json`.
 
 use serde_json::Value;
 use std::collections::HashMap;
@@ -63,14 +63,14 @@ fn number(value: &Value, key: &str, default: f64) -> f32 {
 }
 
 impl SoundEvents {
-    /// Reads `sounds.json`. An entry is a name, or an object with
+    /// Reads `sounds.json`.
     pub fn parse(json: &str) -> Option<Self> {
         let mut events = Self::default();
         events.merge("minecraft", json.as_bytes())?;
         Some(events)
     }
 
-    /// Adds one `sounds.json` of `namespace` on top, as vanilla's
+    /// Adds one `sounds.json` of `namespace` on top, as vanilla's `SoundManager` merges them.
     pub fn merge(&mut self, namespace: &str, json: &[u8]) -> Option<()> {
         let root: Value =
             serde_json::from_slice(crate::assets::packs::meta::strip_bom(json)).ok()?;
@@ -97,7 +97,7 @@ impl SoundEvents {
         Some(())
     }
 
-    /// Just the button click: what plays when the assets have no
+    /// Just the button click.
     pub fn builtin() -> Self {
         let click = Entry {
             kind: Kind::Sound(Sound {
@@ -118,7 +118,7 @@ impl SoundEvents {
         }
     }
 
-    /// Every namespace's `sounds.json`, vanilla's and each resource pack's,
+    /// Every namespace's `sounds.json`, vanilla's and each resource pack's, merged.
     pub fn load(assets_root: &Path) -> Self {
         let mut events = Self::default();
         for namespace in crate::assets::namespaces(assets_root) {
@@ -162,7 +162,7 @@ impl SoundEvents {
         self.subtitles.get(plain(event))
     }
 
-    /// The sound `event` plays this time: a weighted pick, `roll` in
+    /// The sound `event` plays this time.
     pub fn pick(&self, event: &str, roll: f32) -> Option<Sound> {
         if crate::probe::enabled() && !self.events.contains_key(plain(event)) {
             crate::probe::count("sound.unknown", event);

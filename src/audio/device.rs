@@ -58,7 +58,7 @@ fn name_of(device: &Device) -> Option<String> {
     device.description().ok().map(|d| d.name().to_owned())
 }
 
-/// The devices the options offer, by name: the same ones
+/// The devices the options offer, by name.
 pub fn output_device_names() -> Vec<String> {
     let mut names: Vec<String> = usable_devices().iter().filter_map(name_of).collect();
     let mut seen = std::collections::HashSet::new();

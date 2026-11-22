@@ -1,4 +1,4 @@
-//! The uniform blocks vanilla's GUI shaders read (`DynamicTransforms`,
+//! The uniform blocks vanilla's GUI shaders read (`DynamicTransforms`, `Projection`).
 
 use ash::vk;
 
@@ -49,7 +49,7 @@ pub struct GuiFrame {
     pub game_time: f32,
 }
 
-/// `Globals.GameTime` without a world's clock: the client's ticks since
+/// `Globals.GameTime` without a world's clock.
 pub fn game_time() -> f32 {
     static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
     let ticks = START
@@ -60,7 +60,7 @@ pub fn game_time() -> f32 {
     (ticks % 24000.0 / 24000.0) as f32
 }
 
-/// `ProjMat` for GUI coordinates: `(0, 0)` top left to `(w, h)` bottom
+/// `ProjMat` for GUI coordinates.
 fn projection(w: f32, h: f32) -> [f32; 16] {
     [
         2.0 / w,
@@ -98,7 +98,7 @@ struct Frame {
 /// Binding of the item-glint sampler in set 1.
 pub const GLINT_BINDING: u32 = BLOCKS.len() as u32;
 
-/// The set layout: the three blocks at bindings 0, 1, 2, then the glint
+/// The set layout.
 pub(super) unsafe fn create_layout(
     device: &ash::Device,
 ) -> anyhow::Result<vk::DescriptorSetLayout> {

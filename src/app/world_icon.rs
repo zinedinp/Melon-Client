@@ -7,14 +7,14 @@ use crate::game::InWorld;
 
 /// `GameRenderer.lastScreenshotAttempt`: at most one attempt a second.
 const RETRY: Duration = Duration::from_secs(1);
-/// Chunks that must be loaded, and have stopped arriving, before the view
+/// Chunks that must be loaded, and have stopped arriving, before the view is taken.
 const MIN_CHUNKS: usize = 25;
 /// `FaviconTexture`'s size.
 const SIZE: u32 = 64;
 
 pub(super) struct WorldIcon {
     next_attempt: Instant,
-    /// The chunk count at the last attempt: the terrain is settled when
+    /// The chunk count at the last attempt.
     chunks: usize,
 }
 

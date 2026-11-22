@@ -1,4 +1,4 @@
-//! How fast the player breaks blocks: `Player.getDestroySpeed` and
+//! How fast the player breaks blocks.
 
 use pumpkin_data::data_component_impl::{EnchantmentsImpl, ToolImpl};
 use pumpkin_data::item_stack::ItemStack;
@@ -18,7 +18,7 @@ pub struct MiningEffects {
 }
 
 impl MiningEffects {
-    /// `ClientboundUpdateMobEffectPacket`/`RemoveMobEffect` for one of the
+    /// `ClientboundUpdateMobEffectPacket`/`RemoveMobEffect` for one of the mining effects.
     pub fn set(&mut self, effect: i32, amplifier: Option<i32>) {
         match effect {
             HASTE_ID => self.haste = amplifier,
@@ -28,7 +28,7 @@ impl MiningEffects {
         }
     }
 
-    /// `MobEffectUtil.getDigSpeedAmplification`: the stronger of Haste and
+    /// `MobEffectUtil.getDigSpeedAmplification`.
     fn dig_speed(self) -> Option<i32> {
         match (self.haste, self.conduit_power) {
             (Some(a), Some(b)) => Some(a.max(b)),
@@ -36,7 +36,7 @@ impl MiningEffects {
         }
     }
 
-    /// `LivingEntity.getModifiedSwingDuration`: Haste swings faster,
+    /// `LivingEntity.getModifiedSwingDuration`.
     pub fn swing_duration(self, duration: i32) -> i32 {
         if let Some(amplifier) = self.dig_speed() {
             duration - (1 + amplifier)
@@ -106,7 +106,7 @@ impl Miner<'_> {
         speed
     }
 
-    /// `BlockBehaviour.getDestroyProgress`: the share of the block broken
+    /// `BlockBehaviour.getDestroyProgress`.
     pub fn destroy_progress(&self, state: u16) -> f32 {
         let Some(id) = BlockStateId::new(state) else {
             return 0.0;
@@ -130,7 +130,7 @@ impl Miner<'_> {
     }
 }
 
-/// `Item.canDestroyBlock` in creative: swords, the trident and the mace
+/// `Item.canDestroyBlock` in creative.
 pub fn breaks_blocks_in_creative(held: &ItemStack) -> bool {
     held.get_data_component::<ToolImpl>()
         .is_none_or(|tool| tool.can_destroy_blocks_in_creative)

@@ -1,4 +1,4 @@
-//! Entity models on the GPU: each part of a baked
+//! Entity models on the GPU.
 
 use std::collections::HashMap;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -19,7 +19,7 @@ use crate::world::entity::player::{
 use crate::world::entity::skull::SkullModel;
 use crate::world::head_profile::HeadProfile;
 
-/// A model's parts on the GPU, by part index; `None` for parts without
+/// A model's parts on the GPU, by part index; `None` for parts without boxes.
 pub struct ModelMeshes {
     parts: Vec<Option<MeshId>>,
 }
@@ -39,7 +39,7 @@ impl ModelMeshes {
         Ok(Self { parts })
     }
 
-    /// A draw for every part with boxes and a matrix; the matrices are
+    /// A draw for every part with boxes and a matrix.
     pub fn draws(
         &self,
         matrices: &[Option<Mat4>],
@@ -50,7 +50,7 @@ impl ModelMeshes {
         self.draws_filtered(matrices, origin, style, false, None, out);
     }
 
-    /// Overlay parts of a player skin (`entityTranslucent`): drawn after
+    /// Overlay parts of a player skin (`entityTranslucent`).
     pub fn draws_overlay(
         &self,
         matrices: &[Option<Mat4>],
@@ -166,7 +166,7 @@ impl PlayerModelMeshes {
     }
 }
 
-/// Both player models, the eighteen default skins, and the skins fetched
+/// Both player models, the eighteen default skins, and the skins fetched for profiles.
 pub struct PlayerModels {
     pub wide: PlayerModelMeshes,
     pub slim: PlayerModelMeshes,
@@ -174,7 +174,7 @@ pub struct PlayerModels {
     pub head: HeadMeshes,
     /// [`DEFAULT_SKINS`]' textures and images, in its order.
     skins: Vec<(TextureId, RgbaImage)>,
-    /// Skins of profiles asked for: `None` while on the way or when the
+    /// Skins of profiles asked for.
     fetched: HashMap<uuid::Uuid, Option<FetchedSkin>>,
     sender: Sender<(uuid::Uuid, Option<DownloadedSkin>)>,
     arrived: Receiver<(uuid::Uuid, Option<DownloadedSkin>)>,
@@ -186,7 +186,7 @@ struct FetchedSkin {
     model: PlayerModelType,
 }
 
-/// What a player is drawn with: the skin (on the GPU and as an image, for
+/// What a player is drawn with.
 #[derive(Clone, Copy)]
 pub struct PlayerLook<'a> {
     pub texture: TextureId,
@@ -234,7 +234,7 @@ impl PlayerModels {
         }
     }
 
-    /// Fetches `uuid`'s own skin in the background, once: the one the
+    /// Fetches `uuid`'s own skin in the background, once.
     pub fn request(&mut self, uuid: uuid::Uuid, textures: Option<&str>) {
         if (textures.is_none() && uuid.get_version_num() != 4) || self.fetched.contains_key(&uuid) {
             return;
@@ -281,7 +281,7 @@ impl PlayerModels {
         }
     }
 
-    /// Fetches the skin a player head's profile names, once: by its
+    /// Fetches the skin a player head's profile names, once.
     pub fn request_head(&mut self, profile: &HeadProfile) {
         let key = profile.skin_key();
         match (&profile.textures, profile.id, &profile.name) {
@@ -305,7 +305,7 @@ impl PlayerModels {
         }
     }
 
-    /// The skin a player head shows: its profile's once fetched, else the
+    /// The skin a player head shows.
     pub fn for_head(&self, profile: Option<&HeadProfile>) -> PlayerLook<'_> {
         let Some(profile) = profile else {
             return self.default_look(STEVE);
@@ -334,7 +334,7 @@ impl PlayerModels {
         }
     }
 
-    /// The profile's own skin once fetched, else the default skin it gets
+    /// The profile's own skin once fetched, else the default skin it gets by UUID.
     pub fn for_profile(&self, uuid: uuid::Uuid) -> PlayerLook<'_> {
         if let Some(Some(skin)) = self.fetched.get(&uuid) {
             return PlayerLook {
@@ -382,7 +382,7 @@ impl PlayerModels {
 /// Steve with wide arms, in [`DEFAULT_SKINS`].
 const STEVE: usize = 15;
 
-/// Every kind of head on the GPU ([`SkullModel`]), in model pixels around
+/// Every kind of head on the GPU ([`SkullModel`]).
 pub struct HeadMeshes {
     /// By [`SkullType::ALL`].
     skulls: Vec<(SkullModel, ModelMeshes)>,
@@ -434,7 +434,7 @@ impl HeadMeshes {
     }
 }
 
-/// Every mob model ([`ModelId::ALL`]) baked and uploaded, and the mob and
+/// Every mob model ([`ModelId::ALL`]) baked and uploaded, and the textures they use.
 pub struct MobModels {
     assets_root: std::path::PathBuf,
     models: Vec<(MobModel, ModelMeshes)>,
@@ -467,7 +467,7 @@ impl MobModels {
         (mob, meshes)
     }
 
-    /// Loads the texture `id` (an asset id without `.png`) if it hasn't
+    /// Loads the texture `id` (an asset id without `.png`) if it hasn't been yet.
     pub fn prepare_texture(&mut self, renderer: &mut Renderer, id: &str) {
         if self.textures.contains_key(id) {
             return;

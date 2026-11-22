@@ -1,4 +1,4 @@
-//! Riding, the part every vehicle shares: where it seats a rider, who steers
+//! Riding, the part every vehicle shares.
 
 use glam::DVec3;
 use pumpkin_data::entity::{EntityType, MobCategory};
@@ -11,15 +11,15 @@ use crate::world::player::MoveInput;
 /// How a vehicle takes what its rider does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Steering {
-    /// Carries the rider where it goes: a minecart, a mount nobody can
+    /// Carries the rider where it goes.
     Carried,
     /// `AbstractBoat`: the movement keys are the paddles.
     Paddles,
-    /// A saddled `AbstractHorse`: forward and back walk it, strafing turns
+    /// A saddled `AbstractHorse`.
     Horse,
-    /// A saddled pig or strider with its stick: it walks on by itself where
+    /// A saddled pig or strider with its stick.
     Stick,
-    /// A happy ghast or a nautilus under a saddle: swims along the look,
+    /// A happy ghast or a nautilus under a saddle.
     Swimmer { climbs: bool },
 }
 
@@ -53,7 +53,7 @@ impl Controls {
         ..Self::NONE
     };
 
-    /// `input` with what has no effect taken out. The sneak key stays: it
+    /// `input` with what has no effect taken out.
     pub fn filter(self, input: MoveInput) -> MoveInput {
         let forward = match input.forward {
             f if f > 0.0 && !self.forward => 0.0,
@@ -107,7 +107,7 @@ impl Steering {
         self != Self::Carried
     }
 
-    /// Jumping is a charge (`PlayerRideableJumping`): holding builds the
+    /// Jumping is a charge (`PlayerRideableJumping`).
     pub fn charges_jump(self) -> bool {
         self == Self::Horse
     }
@@ -118,7 +118,7 @@ impl Steering {
     }
 }
 
-/// `LocalPlayer.jumpRidingTicks` and `jumpRidingScale`: holding the jump
+/// `LocalPlayer.jumpRidingTicks` and `jumpRidingScale`.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct JumpCharge {
     ticks: i32,
@@ -132,7 +132,7 @@ impl JumpCharge {
         self.scale
     }
 
-    /// Once a tick, with the jump key now. Returns the strength to send
+    /// Once a tick, with the jump key now.
     pub fn tick(&mut self, jump: bool, jumps: bool) -> Option<i32> {
         if !jumps {
             self.scale = 0.0;
@@ -165,7 +165,7 @@ impl JumpCharge {
     }
 }
 
-/// What the client can tell of a vehicle's saddle and gear, and of what the
+/// What the client can tell of a vehicle's saddle and gear, and of what the rider holds.
 #[derive(Clone, Copy)]
 pub struct Gear<'a> {
     /// Something in the saddle slot.
@@ -229,7 +229,7 @@ pub struct Rider<'a> {
     pub kind: EntityKind,
 }
 
-/// `Vec3.yRot` by `-yaw`: a point around the vertical axis as the vehicle
+/// `Vec3.yRot` by `-yaw`.
 pub fn turned(point: DVec3, yaw: f32) -> DVec3 {
     let angle = -f64::from(yaw).to_radians();
     let (sin, cos) = angle.sin_cos();
@@ -289,7 +289,7 @@ fn is_animal(ty: &EntityType) -> bool {
     *ty.category == MobCategory::CREATURE
 }
 
-/// Where a rider's feet go: the seat in the world, less the point on the
+/// Where a rider's feet go.
 pub fn rider_feet(vehicle_pos: DVec3, seat: DVec3, rider: &EntityType) -> DVec3 {
     let [x, y, z] = rider.attachments.vehicle;
     vehicle_pos + seat - DVec3::new(x, y, z)

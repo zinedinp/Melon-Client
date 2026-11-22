@@ -1,4 +1,4 @@
-//! Where the slots and tabs are: the picker grid or the inventory tab's
+//! Where the slots and tabs are.
 
 use super::{
     COLUMNS, CreativeOverlay, DESTROY_SLOT, IMAGE_HEIGHT, IMAGE_WIDTH, ROWS, Slot, TAB_HEIGHT,

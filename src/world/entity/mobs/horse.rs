@@ -1,4 +1,4 @@
-//! `AbstractEquineModel`: horses, donkeys, mules and the undead horses,
+//! `AbstractEquineModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI, QUARTER_PI, SIXTH_PI, THIRD_PI};
@@ -6,7 +6,7 @@ use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::model_part::{Cube, Pose};
 
-/// `AbstractEquineModel.createBodyMesh(g)` at 64x64. The horse's armor
+/// `AbstractEquineModel.createBodyMesh(g)` at 64x64.
 fn adult_root(g: f32) -> PartDefinition {
     let mut root = PartDefinition::root();
     let body = root.add_or_replace_child(
@@ -126,7 +126,7 @@ pub fn saddle() -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 64.0)
 }
 
-/// `DonkeyModel.createBodyLayer`: the horse's mesh with chests and long
+/// `DonkeyModel.createBodyLayer`.
 pub fn donkey() -> LayerDefinition {
     let mut root = adult_root(0.0);
     let chest = || vec![Cube::new((26.0, 21.0), (-4.0, 0.0, -2.0), (8.0, 8.0, 3.0))];
@@ -320,7 +320,7 @@ pub struct EquinePose {
     pub in_water: bool,
 }
 
-/// `AbstractEquineModel.setupAnim`, with `BabyHorseModel`'s and
+/// `AbstractEquineModel.setupAnim`, with `BabyHorseModel`'s changes.
 pub fn setup_anim(
     parts: &EquineParts,
     pose: &mut ModelPose,
@@ -436,7 +436,7 @@ pub struct Amounts {
 }
 
 impl Amounts {
-    /// One tick of the eating, rearing and mouth flags. Rearing stops
+    /// One tick of the eating, rearing and mouth flags.
     pub fn step(&mut self, eating: bool, standing: bool, mouth_open: bool) {
         if eating {
             self.eat = (self.eat + ((1.0 - self.eat) * 0.4 + 0.05)).min(1.0);

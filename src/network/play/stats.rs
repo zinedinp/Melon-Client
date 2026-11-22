@@ -1,4 +1,4 @@
-//! What the connection thread took in, for F3 and the benchmark: bytes and
+//! What the connection thread took in, for F3 and the benchmark.
 
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 

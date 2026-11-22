@@ -1,4 +1,4 @@
-//! Vanilla `SoundOptionsScreen`: the master volume on a row of its own, one
+//! Vanilla `SoundOptionsScreen`.
 
 use crate::audio::source::SoundSource;
 use crate::cycle::Cycle;

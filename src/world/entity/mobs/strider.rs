@@ -1,4 +1,4 @@
-//! `AdultStriderModel` and `BabyStriderModel`: a two-legged walker whose
+//! `AdultStriderModel` and `BabyStriderModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};

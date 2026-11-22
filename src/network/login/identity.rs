@@ -2,7 +2,7 @@
 
 use crate::auth::accounts::Account;
 
-/// Which identity to log in as. Offline join derives its UUID from the
+/// Which identity to log in as.
 pub enum Identity {
     Offline {
         username: String,
@@ -15,7 +15,7 @@ pub enum Identity {
 }
 
 impl Identity {
-    /// The account the launcher selected (`accounts.json` in the game
+    /// The account the launcher selected (`accounts.json` in the game folder).
     pub fn saved(game_dir: &std::path::Path) -> Self {
         match crate::auth::load_or_refresh(game_dir) {
             Some(Account::Offline { username }) => return Identity::Offline { username },

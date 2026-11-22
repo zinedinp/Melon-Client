@@ -1,4 +1,4 @@
-//! The tester: with `--probe` (or `MELON_PROBE=1`, or the launcher's
+//! The tester.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
@@ -8,10 +8,10 @@ use std::time::{Duration, Instant};
 
 static ENABLED: AtomicBool = AtomicBool::new(false);
 static STATE: Mutex<Option<State>> = Mutex::new(None);
-/// When recording began. Separate from [`STATE`] so [`recent_io`] can run
+/// When recording began.
 static STARTED: Mutex<Option<Instant>> = Mutex::new(None);
 
-/// How many different keys one category keeps, so a flood of them can't
+/// How many different keys one category keeps, so a flood of them can't grow the report.
 const MAX_KEYS: usize = 400;
 /// How often the report is written while the game runs.
 const WRITE_EVERY: Duration = Duration::from_secs(20);
@@ -138,7 +138,7 @@ pub fn enabled() -> bool {
     ENABLED.load(Ordering::Relaxed)
 }
 
-/// Writes down that `key` happened in `category`; `detail` (made only the
+/// Writes down that `key` happened in `category`; `detail` is only made the first time.
 pub fn note(category: &'static str, key: impl AsRef<str>, detail: impl FnOnce() -> String) {
     if !enabled() {
         return;
@@ -270,7 +270,7 @@ static IO: Mutex<std::collections::VecDeque<IoLine>> =
     Mutex::new(std::collections::VecDeque::new());
 const IO_KEEP: usize = 240;
 
-/// A movement packet: `tx` is Melon sending, `name` is the protocol name,
+/// A movement packet.
 pub fn trace_io(tx: bool, name: impl Into<String>, detail: impl Into<String>) {
     if !enabled() {
         return;
@@ -337,7 +337,7 @@ pub fn recent_io() -> String {
     format_io_lines(recording_started())
 }
 
-/// The packets of the last `secs` seconds, oldest first, runs of one kind
+/// The packets of the last `secs` seconds, oldest first, runs of one kind folded.
 pub fn recent_packets(secs: u64) -> String {
     let ring = RECENT.lock().unwrap_or_else(|e| e.into_inner());
     let mut out: Vec<(&str, u32)> = Vec::new();
@@ -367,7 +367,7 @@ pub fn count(category: &'static str, key: impl AsRef<str>) {
     note(category, key, String::new);
 }
 
-/// Adds a block of text to the report, under `title` (replacing one of the
+/// Adds a block of text to the report under `title`, replacing one of the same title.
 pub fn section(title: &str, text: String) {
     if !enabled() {
         return;
@@ -483,7 +483,7 @@ fn render(state: &State) -> String {
     out
 }
 
-/// What the active resource packs hold, and which of it Melon has no use
+/// What the active resource packs hold, and which of it Melon has no use for.
 pub fn describe_packs(assets_root: &std::path::Path) {
     if !enabled() {
         return;

@@ -1,4 +1,4 @@
-//! Vanilla `Mth` and `SectionPos` helpers: the circle functions and
+//! Vanilla `Mth` and `SectionPos` helpers.
 
 pub mod angle;
 pub mod bytes;
@@ -34,13 +34,13 @@ pub const fn argb(color: u32) -> [f32; 4] {
 /// Blocks along each side of a section (`SectionPos.SECTION_SIZE`).
 pub const SECTION_SIZE: i32 = 16;
 
-/// `SectionPos.blockToSectionCoord`: which section (or chunk) a block
+/// `SectionPos.blockToSectionCoord`.
 #[inline]
 pub const fn section_coord(block: i32) -> i32 {
     block >> 4
 }
 
-/// `SectionPos.sectionRelative`: a block coordinate within its section,
+/// `SectionPos.sectionRelative`.
 #[inline]
 pub const fn section_relative(block: i32) -> i32 {
     block & 15

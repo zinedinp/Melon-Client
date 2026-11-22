@@ -1,4 +1,4 @@
-//! `IllagerModel`: pillager, vindicator and evoker. A villager's body with
+//! `IllagerModel`: pillager, vindicator and evoker.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};

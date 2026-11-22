@@ -1,4 +1,4 @@
-//! The integrated server: Pumpkin running inside Melon's own process, joined
+//! The integrated server.
 
 use std::io::{self, Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
@@ -27,31 +27,31 @@ use tokio_util::task::TaskTracker;
 
 use crate::singleplayer;
 
-/// The protocol the integrated server speaks. Must be the one
+/// The protocol the integrated server speaks.
 pub const PROTOCOL: i32 = pumpkin_data::packet::CURRENT_MC_VERSION.protocol_version();
 
 /// What the server reports as the player's address. Nothing dials it.
 const CLIENT_ADDRESS: SocketAddr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0));
 
-/// Room for a chunk batch in flight toward the client, and far more than the
+/// Room for a chunk batch in flight toward the client.
 const TO_CLIENT_BYTES: usize = 1024 * 1024;
 const TO_SERVER_BYTES: usize = 256 * 1024;
 
 /// Everything the integrated server needs to open one world.
 pub struct Options {
-    /// The world's folder, `saves/<folder>/`. Pumpkin keeps `level.dat` and
+    /// The world's folder, `saves/<folder>/`.
     pub save_path: PathBuf,
     /// Instance folder: `mods/`, `plugins/`, `saves/`.
     pub game_dir: PathBuf,
-    /// Game mode, difficulty, cheats, and the seed a new world is generated
+    /// Game mode, difficulty, cheats, and the seed a new world is generated from.
     pub settings: singleplayer::WorldSettings,
-    /// The most chunks the server streams around a player; within it, the
+    /// The most chunks the server streams around a player.
     pub view_distance: u8,
-    /// Chunk radius the server ticks (`Options.simulationDistance`). Read
+    /// Chunk radius the server ticks (`Options.simulationDistance`).
     pub simulation_distance: u8,
 }
 
-/// A running world. Dropping it saves the world and stops the server,
+/// A running world.
 pub struct IntegratedServer {
     cancel: CancellationToken,
     thread: Option<JoinHandle<()>>,
@@ -128,7 +128,7 @@ impl Write for ClientPipe {
     }
 }
 
-/// Opens the world and returns once the server is up and waiting for the
+/// Opens the world and returns once the server is up and waiting for the client.
 pub fn start(options: Options) -> Result<(IntegratedServer, ClientPipe)> {
     crate::instances::ensure_dirs(&options.game_dir);
     pumpkin::data::set_data_dir(crate::home::dir().join("cache").join("server"));
@@ -182,7 +182,7 @@ pub fn start(options: Options) -> Result<(IntegratedServer, ClientPipe)> {
     Ok((server, pipe))
 }
 
-/// Pumpkin's worker threads: half the machine. The client needs the rest for
+/// Pumpkin's worker threads: half the machine.
 fn runtime() -> Result<Runtime, String> {
     let available = thread::available_parallelism().map_or(2, NonZero::get);
     Builder::new_multi_thread()
@@ -246,7 +246,7 @@ async fn serve(
     pumpkin.shutdown(&tasks).await;
 }
 
-/// A new world with data packs or experiments gets its `level.dat` before
+/// A new world with data packs or experiments gets its `level.dat` before the server starts.
 fn prepare_new_world(options: &Options) -> std::io::Result<()> {
     let packs = &options.settings.data_packs;
     if packs.is_empty() || options.save_path.join("level.dat").exists() {
@@ -338,7 +338,7 @@ fn plugin_loaders() -> Vec<Arc<dyn PluginLoader>> {
     vec![Arc::new(WasmPluginLoader::new(verify))]
 }
 
-/// Pumpkin's ban, whitelist and operator lists, kept in memory. Its own
+/// Pumpkin's ban, whitelist and operator lists, kept in memory.
 fn vanilla_data() -> VanillaData {
     VanillaData {
         banned_ip_list: RwLock::default(),

@@ -12,14 +12,14 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::{COUNT_CUTS, Count, count_cuts, definition_id, potion_color};
 
-/// Which model a stack shows: its item, and the potion colour for items
+/// Which model a stack shows.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ItemKey {
     pub item: u16,
-    /// What the stack's components add (`item_model`, `custom_model_data`,
+    /// What the stack's components add (`item_model`, `custom_model_data`, ...).
     pub variant: Option<Arc<Variant>>,
     pub potion_color: Option<[u8; 3]>,
-    /// The stack size as far as the item's model tells sizes apart: the
+    /// The stack size as far as the item's model tells sizes apart.
     pub count: u8,
     pub max_stack: u8,
 }
@@ -46,7 +46,7 @@ impl ItemKey {
     }
 }
 
-/// The components of a stack that pick its model: `item_model` (another
+/// The components of a stack that pick its model.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Variant {
     /// The definition named by `item_model`, when it isn't the item's own.

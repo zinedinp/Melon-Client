@@ -1,8 +1,8 @@
-//! How the renderer places a mob: its scale and offsets, the hurt
+//! How the renderer places a mob.
 
 use super::*;
 
-/// How the renderer places the model: what its kind fixes
+/// How the renderer places the model.
 pub fn placement(entity: &ClientEntity, partial: f32) -> Placement {
     let look = entity.kind.look();
     let adult = !entity.appearance.baby;
@@ -83,10 +83,10 @@ pub fn placement(entity: &ClientEntity, partial: f32) -> Placement {
     placement
 }
 
-/// How far a hurt body is mixed toward red: `OverlayTexture`'s red row has
+/// How far a hurt body is mixed toward red.
 pub const HURT_OVERLAY: f32 = 1.0 - 178.0 / 255.0;
 
-/// `hasRedOverlay`: the overlay of a body that is hurt or dying. The one
+/// `hasRedOverlay`: the overlay of a body that is hurt or dying.
 pub const fn hurt_overlay(hurt: bool) -> f32 {
     if hurt { HURT_OVERLAY } else { 0.0 }
 }
@@ -102,7 +102,7 @@ pub fn overlay(entity: &ClientEntity, state: &LivingRenderState, partial: f32) -
     0.0
 }
 
-/// `GlowSquidRenderer.getBlockLightLevel`: the light it gives off, 15
+/// `GlowSquidRenderer.getBlockLightLevel`.
 pub fn block_glow(entity: &ClientEntity) -> u8 {
     match entity.kind {
         EntityKind::MagmaCube

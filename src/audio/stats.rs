@@ -1,4 +1,4 @@
-//! What the sound engine did, for F3 and the benchmark: sounds started and
+//! What the sound engine did, for F3 and the benchmark.
 
 use rodio::{ChannelCount, SampleRate, Source};
 use std::sync::Arc;

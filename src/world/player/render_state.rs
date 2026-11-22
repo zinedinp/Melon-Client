@@ -1,4 +1,4 @@
-//! What the drawn player and the camera see between ticks: the
+//! What the drawn player and the camera see between ticks.
 
 use super::PlayerState;
 use super::first_person;
@@ -12,7 +12,7 @@ use crate::world::entity::player::{Arm, AvatarRenderState, ShownParts};
 use glam::{DVec3, Mat4, Vec3};
 
 impl PlayerState {
-    /// Once a frame: places the drawn player `partial` of the way from the
+    /// Once a frame.
     pub fn update_render(&mut self, partial: f32, dt: f32) {
         let dt = dt.min(0.1);
         self.partial = partial.clamp(0.0, 1.0);
@@ -25,7 +25,7 @@ impl PlayerState {
         self.pitch_bob = self.pitch_degrees + (self.pitch_bob - self.pitch_degrees) * remaining;
     }
 
-    /// `Player.getRopeHoldPosition`: where a lead held by the player ends,
+    /// `Player.getRopeHoldPosition`.
     pub fn rope_hold(&self, main_arm: Arm) -> Vec3 {
         let height = self.box_height() as f32;
         crate::world::entity::leash::player_hold(
@@ -37,7 +37,7 @@ impl PlayerState {
         )
     }
 
-    /// Where the fishing line leaves the hand in a view that isn't the
+    /// Where the fishing line leaves the hand in a view that isn't first person.
     pub fn rod_hand(&self, right: bool) -> Vec3 {
         crate::world::entity::fishing::hand_third_person(
             self.eye().as_vec3(),
@@ -48,12 +48,12 @@ impl PlayerState {
         )
     }
 
-    /// Camera position: feet plus the current pose's eye height
+    /// Camera position.
     pub fn eye(&self) -> DVec3 {
         self.pos + DVec3::new(0.0, f64::from(self.eye_height()), 0.0)
     }
 
-    /// `Camera.setup`'s position: the eye height eased between ticks, so
+    /// `Camera.setup`'s position.
     pub fn camera_eye(&self) -> DVec3 {
         let height = self.camera_eye_old + (self.camera_eye - self.camera_eye_old) * self.partial;
         self.pos + DVec3::new(0.0, f64::from(height), 0.0)
@@ -69,7 +69,7 @@ impl PlayerState {
         self.item_use = item_use;
     }
 
-    /// `GameRenderer.bobView`: the sway of a walking head, in the camera's
+    /// `GameRenderer.bobView`.
     pub fn view_bob(&self) -> Mat4 {
         let partial = self.partial;
         let step = self.walk_dist - self.walk_dist_old;
@@ -81,7 +81,7 @@ impl PlayerState {
             * Mat4::rot_x_deg((angle::cos(walked * PI - 0.2) * bob).abs() * 5.0)
     }
 
-    /// What the body is drawn as this frame: where, facing where, the
+    /// What the body is drawn as this frame.
     pub fn avatar_state(
         &self,
         arms: ArmPoses,
@@ -146,7 +146,7 @@ impl PlayerState {
         self.hand_space(eye) * first_person::player_arm(arm, lowered, attack)
     }
 
-    /// Where first-person hands are drawn from: the camera at `eye`, with
+    /// Where first-person hands are drawn from.
     pub fn hand_space(&self, eye: Vec3) -> Mat4 {
         // The camera's own rotation, so the hand doesn't drift off it.
         let rotation = euler::rotation_matrix(self.look_angles().camera_rotation());

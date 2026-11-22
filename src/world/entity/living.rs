@@ -1,21 +1,21 @@
-//! What every living entity's renderer shares (vanilla
+//! What every living entity's renderer shares (vanilla `LivingEntityRenderer`).
 
 use glam::{Mat4, Vec3};
 
 use crate::math::angle::Rotation;
 use crate::math::wrap_degrees;
 
-/// How a swimming body is laid down: `AvatarRenderer.setupRotations` or
+/// How a swimming body is laid down.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum SwimTurn {
     #[default]
     None,
-    /// A player: flat on the water along the look when in it, else flat
+    /// A player.
     Avatar {
         in_water: bool,
         visually_swimming: bool,
     },
-    /// A drowned: tipped about the middle of its box, `height` blocks tall
+    /// A drowned.
     Drowned { height: f32 },
 }
 
@@ -27,7 +27,7 @@ pub struct Swim {
 }
 
 impl Swim {
-    /// `LivingEntity.updateSwimAmount`'s step, once a tick: 0.09 toward 1
+    /// `LivingEntity.updateSwimAmount`'s step, once a tick.
     pub fn step(amount: f32, swimming: bool) -> f32 {
         if swimming {
             (amount + 0.09).min(1.0)
@@ -61,7 +61,7 @@ pub struct LivingRenderState {
     /// `isPassenger`: sitting on a vehicle, legs bent and no walking.
     pub riding: bool,
     pub swim: Swim,
-    /// Drawn upside down (`isUpsideDown`: a `Dinnerbone`), with the body's
+    /// Drawn upside down (`isUpsideDown`.
     pub upside_down: Option<f32>,
     /// `scale`: the `scale` attribute the whole model grows by, about its
     /// feet.
@@ -89,7 +89,7 @@ impl Default for LivingRenderState {
     }
 }
 
-/// How a renderer places its model: `LivingEntityRenderer.scale`'s own
+/// How a renderer places its model.
 #[derive(Clone, Copy, Debug)]
 pub struct Placement {
     pub scale: Vec3,
@@ -98,7 +98,7 @@ pub struct Placement {
     pub lie_down: f32,
     /// `IronGolemRenderer.setupRotations`: degrees it rocks sideways.
     pub roll_degrees: f32,
-    /// `SquidRenderer.setupRotations`, which replaces the body's turn and
+    /// `SquidRenderer.setupRotations`, which replaces the body's turn.
     pub squid: Option<super::mobs::squid::Tilt>,
     /// A fish's wag, and its flop out of water.
     pub fish: Option<super::mobs::fish::Wobble>,
@@ -175,7 +175,7 @@ pub fn root_transform(state: &LivingRenderState, placement: Placement) -> Mat4 {
         * Mat4::from_translation(placement.offset + Vec3::new(0.0, -1.501, 0.0))
 }
 
-/// The rest of `setupRotations` for a swimmer, after the yaw and the
+/// The rest of `setupRotations` for a swimmer, after the yaw.
 fn swim_rotation(state: &LivingRenderState) -> Mat4 {
     let amount = state.swim.amount;
     match state.swim.turn {
@@ -202,7 +202,7 @@ fn swim_rotation(state: &LivingRenderState) -> Mat4 {
     }
 }
 
-/// `LivingEntity.tickHeadTurn`: the body follows where it is heading
+/// `LivingEntity.tickHeadTurn`.
 pub fn tick_head_turn(body: f32, target: f32, head: f32, max_head: f32) -> f32 {
     let mut body = body + wrap_degrees(target - body) * 0.3;
     let diff = wrap_degrees(head - body);
@@ -212,13 +212,13 @@ pub fn tick_head_turn(body: f32, target: f32, head: f32, max_head: f32) -> f32 {
     body
 }
 
-/// `Mth.rotateIfNecessary`: `current` turned just enough to be within
+/// `Mth.rotateIfNecessary`.
 pub fn rotate_if_necessary(current: f32, target: f32, max: f32) -> f32 {
     let diff = wrap_degrees(target - current);
     target - diff.clamp(-max, max)
 }
 
-/// `BodyRotationControl.clientTick`: how a mob's body follows its head on
+/// `BodyRotationControl.clientTick`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BodyRotation {
     head_stable_time: i32,

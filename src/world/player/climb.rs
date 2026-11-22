@@ -1,4 +1,4 @@
-//! Climbing: ladders, vines, scaffolding and ladder-backed trapdoors
+//! Climbing: ladders, vines, scaffolding and ladder-backed trapdoors.
 
 use super::PlayerState;
 use crate::world::level::Level;
@@ -9,12 +9,12 @@ use pumpkin_data::{Block, BlockStateId};
 
 /// `handleOnClimbable`: the most a climber moves sideways per tick.
 pub(super) const CLIMB_SPEED_LIMIT: f64 = 0.15_f32 as f64;
-/// The upward step of `handleRelativeFrictionAndCalculateMovement` against
+/// The upward step of `handleRelativeFrictionAndCalculateMovement` against a climbable.
 pub(super) const CLIMB_UP_SPEED: f64 = 0.2;
 /// The slowest a climber falls.
 pub(super) const CLIMB_FALL_LIMIT: f64 = -0.15_f32 as f64;
 
-/// Whether a block state can be climbed: the `climbable` tag, or an open
+/// Whether a block state can be climbed.
 pub(super) fn is_climbable_state(state: u16, below: u16) -> bool {
     let Some(id) = BlockStateId::new(state) else {
         return false;
@@ -57,7 +57,7 @@ pub(super) fn clamp_climb(velocity: DVec3, sneaking: bool, in_scaffolding: bool)
 }
 
 impl PlayerState {
-    /// `Player.onClimbable`: a flier, spectator or climbing-while-gliding
+    /// `Player.onClimbable`.
     pub(super) fn compute_on_climbable(&self, level: &Level) -> bool {
         if self.abilities.flying || self.spectator {
             return false;

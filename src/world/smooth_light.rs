@@ -113,7 +113,7 @@ impl Cell {
     }
 }
 
-/// How far around the section faces look: a face whose light comes from
+/// How far around the section faces look.
 const SHELL: i32 = 2;
 /// Side of the cached cube: a section plus the shell on every side.
 const SIDE: usize = 16 + 2 * SHELL as usize;
@@ -396,7 +396,7 @@ const AROUND: [Around; 6] = {
     out
 };
 
-/// Smooth coordinates as a corner: quarter levels, AO in sixtieths that
+/// Smooth coordinates as a corner.
 fn corner(smooth: u32, ao: f32, emission: u8) -> CornerLight {
     let (mut block, mut sky) = (smooth & 0xFF, smooth >> 16 & 0xFF);
     if emission != 0 {
@@ -414,7 +414,7 @@ fn corner(smooth: u32, ao: f32, emission: u8) -> CornerLight {
     }
 }
 
-/// A face's four corners, smooth lit: `prepareQuadAmbientOcclusion` for
+/// A face's four corners, smooth lit.
 pub fn smooth_corners(
     cache: &LightCache,
     shape: &AoShape,

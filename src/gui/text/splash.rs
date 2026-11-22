@@ -37,7 +37,7 @@ pub fn pick_splash(splashes: &[String], username: Option<&str>) -> String {
     splashes[index].clone()
 }
 
-/// Vanilla `1.8F - |sin(t)| * 0.1F` pulse (one cycle per second),
+/// Vanilla `1.8F - |sin(t)| * 0.1F` pulse (one cycle per second).
 pub fn transform(virtual_width: f32, text_width: f32, time_ms: u128) -> Transform2D {
     let t = (time_ms % 1000) as f32 / 1000.0;
     let phase = 1.8 - angle::sin(t * TAU).abs() * 0.1;

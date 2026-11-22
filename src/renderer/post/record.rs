@@ -10,7 +10,8 @@ use crate::renderer::{Renderer, SceneFrame, free_effect_texture};
 pub const OUTLINE_CHAIN: &str = "minecraft:entity_outline";
 
 impl Renderer {
-    /// Loads these chains in place of the ones there are; those that can't
+    /// Loads these chains in place of the ones there are; those that can't be built are left
+    /// out.
     pub fn set_post_chains(
         &mut self,
         sources: Vec<ChainSource>,
@@ -83,7 +84,7 @@ impl Renderer {
         )
     }
 
-    /// Each texture input of `source`'s passes, in order: its image, or the
+    /// Each texture input of `source`'s passes, in order.
     unsafe fn upload_effect_textures(
         &self,
         source: &ChainSource,
@@ -140,7 +141,7 @@ impl Renderer {
         Ok(out)
     }
 
-    /// The chains this frame runs, in order: the entity outline's when
+    /// The chains this frame runs, in order.
     pub(in crate::renderer) fn post_chains(&self, scene: &SceneFrame) -> Vec<String> {
         let mut out = Vec::new();
         let outline_every_frame = scene.world.is_some()
@@ -181,7 +182,7 @@ impl Renderer {
         }
     }
 
-    /// `blitEntityOutline`: the outline over `main`, inside the pass after
+    /// `blitEntityOutline`.
     pub(in crate::renderer) unsafe fn record_outline_blit(
         &self,
         cmd: vk::CommandBuffer,
@@ -211,7 +212,7 @@ impl Renderer {
         self.post.chains.contains_key(id)
     }
 
-    /// Before the chains of a frame: what the scene drew is visible to
+    /// Before the chains of a frame.
     pub(in crate::renderer) unsafe fn begin_post(&self, cmd: vk::CommandBuffer) {
         let device = &self.device;
         device.cmd_pipeline_barrier(
@@ -297,7 +298,7 @@ impl Renderer {
         }
     }
 
-    /// Runs the chain `id`: each pass draws its screen triangle into its
+    /// Runs the chain `id`.
     pub(in crate::renderer) unsafe fn record_post_chain(
         &self,
         cmd: vk::CommandBuffer,
@@ -477,7 +478,7 @@ impl Renderer {
 }
 
 impl Renderer {
-    /// Draws the glowing entities flat into the outline target, which is
+    /// Draws the glowing entities flat into the outline target.
     pub(in crate::renderer) unsafe fn record_outline_pass(
         &self,
         cmd: vk::CommandBuffer,
@@ -553,7 +554,7 @@ impl Renderer {
         self.gpu_timer.mark(device, "outline");
     }
 
-    /// Pack `rendertype_outline`: atlas stamps become table pixels for the
+    /// Pack `rendertype_outline`.
     unsafe fn record_pack_outline(
         &self,
         cmd: vk::CommandBuffer,

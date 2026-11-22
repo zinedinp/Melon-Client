@@ -1,4 +1,4 @@
-//! A post pass's shaders, compiled for the bindings its pipeline has: the
+//! A post pass's shaders, compiled for the bindings its pipeline has.
 
 use std::path::Path;
 
@@ -18,7 +18,7 @@ pub struct Compiled {
     pub fragment: Vec<u32>,
 }
 
-/// The names and places a pass offers: `<sampler_name>Sampler` for each
+/// The names and places a pass offers.
 pub fn resources(pass: &Pass) -> Vec<(String, u32, u32)> {
     let mut out = Vec::new();
     for (i, input) in pass.inputs.iter().enumerate() {
@@ -34,7 +34,7 @@ pub fn resources(pass: &Pass) -> Vec<(String, u32, u32)> {
     out
 }
 
-/// Both of `pass`'s shaders. A shader that can't be found or compiled is
+/// Both of `pass`'s shaders.
 pub fn compile(assets_root: &Path, pass: &Pass) -> anyhow::Result<Compiled> {
     let resources = resources(pass);
     let resources: Vec<(&str, u32, u32)> = resources
@@ -80,7 +80,7 @@ mod tests {
         assert_eq!(find("BlurConfig"), Some((BLOCK_SET, 1)));
     }
 
-    /// Every pass of the chain in `MELON_PACK_JSON` compiles, with the
+    /// Every pass of the chain in `MELON_PACK_JSON` compiles.
     #[test]
     fn real_chains_shaders_compile() {
         use crate::assets::packs::{self, Pack, ResourceStack};

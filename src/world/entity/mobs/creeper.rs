@@ -54,7 +54,7 @@ impl CreeperParts {
     }
 }
 
-/// `CreeperModel.setupAnim`. Its fields swap left and right against the
+/// `CreeperModel.setupAnim`.
 pub fn setup_anim(parts: &CreeperParts, pose: &mut ModelPose, state: &LivingRenderState) {
     look(&mut pose[parts.head].pose, state);
     parts
@@ -62,7 +62,7 @@ pub fn setup_anim(parts: &CreeperParts, pose: &mut ModelPose, state: &LivingRend
         .walk(pose, state.walk_position, state.walk_speed, PI);
 }
 
-/// `CreeperRenderer.scale`: wider and a little taller as the fuse burns,
+/// `CreeperRenderer.scale`.
 pub fn swell_scale(swelling: f32) -> Vec3 {
     let wobble = 1.0 + angle::sin(swelling * 100.0) * swelling * 0.01;
     let g = swelling.clamp(0.0, 1.0).powi(4);
@@ -71,7 +71,7 @@ pub fn swell_scale(swelling: f32) -> Vec3 {
     Vec3::new(s, hs, s)
 }
 
-/// `CreeperRenderer.getWhiteOverlayProgress`, as how far toward white the
+/// `CreeperRenderer.getWhiteOverlayProgress`, as how far toward white the creeper flashes.
 pub fn white_flash(swelling: f32) -> f32 {
     if ((swelling * 10.0) as i32) % 2 == 0 {
         return 0.0;

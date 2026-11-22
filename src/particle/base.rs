@@ -1,4 +1,4 @@
-//! One particle: vanilla `Particle` and `SingleQuadParticle` in one
+//! One particle.
 
 use glam::DVec3;
 
@@ -9,7 +9,7 @@ use super::{Kind, TickCtx};
 use crate::world::java_random::JavaRandom;
 use crate::world::physics::{self, Aabb};
 
-/// `Particle.MAXIMUM_COLLISION_VELOCITY_SQUARED`: faster than this a
+/// `Particle.MAXIMUM_COLLISION_VELOCITY_SQUARED`.
 const MAX_COLLISION_SPEED_SQ: f64 = 100.0 * 100.0;
 
 /// The texture a particle samples.
@@ -42,7 +42,7 @@ pub struct Look {
     pub facing: Facing,
     pub size: SizeCurve,
     pub glow: Glow,
-    /// The sprite follows the age through the type's set
+    /// The sprite follows the age through the type's set.
     pub animated: bool,
 }
 
@@ -124,7 +124,7 @@ impl Particle {
         }
     }
 
-    /// `Particle(level, x, y, z, xa, ya, za)`: thrown off in a random
+    /// `Particle(level, x, y, z, xa, ya, za)`.
     pub fn moving(kind: Kind, pos: DVec3, aux: DVec3, rng: &mut JavaRandom) -> Self {
         let mut p = Self::at(kind, pos, rng);
         let mut jitter = || f64::from((rng.next_float() * 2.0 - 1.0) * 0.4);
@@ -165,7 +165,7 @@ impl Particle {
         Aabb::at_feet(self.pos, f64::from(self.width), f64::from(self.height))
     }
 
-    /// `Particle.move`: against the blocks' collision boxes unless it has
+    /// `Particle.move`.
     pub fn move_by(&mut self, ctx: &TickCtx, delta: DVec3) {
         if self.free_move {
             self.pos += delta;

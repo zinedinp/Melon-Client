@@ -1,4 +1,4 @@
-//! Melon's own settings, the ones vanilla has no screen for: how frames are
+//! Melon's own settings, the ones vanilla has no screen for.
 
 use crate::cycle::Cycle;
 use crate::gui::screen::{ConfigChange, ScreenContext};

@@ -1,10 +1,10 @@
-//! The level after the server sent the player to another dimension: what
+//! The level after the server sent the player to another dimension.
 
 use super::{InWorld, LoadingReason, Received};
 
-/// Ticks to wait for the player's chunk before giving up on the rest of the
+/// Ticks to wait for the player's chunk before giving up on the rest of the loading.
 const TIMEOUT_TICKS: u32 = 30 * 20;
-/// Ticks the surroundings get to mesh once the player's chunk is there, so
+/// Ticks the surroundings get to mesh once the player's chunk is there.
 const MESH_TICKS: u32 = 40;
 
 /// A level being loaded.

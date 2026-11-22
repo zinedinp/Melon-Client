@@ -1,4 +1,4 @@
-//! `AbstractContainerMenu.clicked` for the player's inventory menu: what
+//! `AbstractContainerMenu.clicked` for the player's inventory menu.
 
 use super::{
     ARMOR_SLOTS, CRAFT_SLOTS, Click, ClickType, Drag, HOTBAR_SLOTS, Inventory, MAIN_SLOTS,
@@ -9,7 +9,7 @@ use super::{
 use pumpkin_data::item_stack::ItemStack;
 
 impl Inventory {
-    /// Runs a click locally and returns what to send. `button` is 0/1 for
+    /// Runs a click locally and returns what to send.
     pub fn click(&mut self, slot: i16, button: i8, kind: ClickType, creative: bool) -> Click {
         let before = self.slots.clone();
         let index = usize::try_from(slot).ok().filter(|&i| i < SLOT_COUNT);
@@ -121,7 +121,7 @@ impl Inventory {
         }
     }
 
-    /// `ContainerInput.SWAP`: the slot and hotbar slot `button` (or the
+    /// `ContainerInput.SWAP`.
     pub(super) fn swap(&mut self, index: usize, button: i8) {
         let target = match button {
             0..=8 => HOTBAR_SLOTS.start + button as usize,
@@ -138,7 +138,7 @@ impl Inventory {
         self.slots.swap(index, target);
     }
 
-    /// `InventoryMenu.quickMoveStack` (shift-click): armor to its slot and
+    /// `InventoryMenu.quickMoveStack` (shift-click).
     pub(super) fn quick_move(&mut self, index: usize) {
         if index == RESULT_SLOT || self.slots[index].is_empty() {
             return;
@@ -160,7 +160,7 @@ impl Inventory {
         self.slots[index] = moving;
     }
 
-    /// `AbstractContainerMenu.moveItemStackTo`: first tops up matching
+    /// `AbstractContainerMenu.moveItemStackTo`.
     pub(super) fn move_into(&mut self, moving: &mut ItemStack, targets: std::ops::Range<usize>) {
         if moving.is_stackable() {
             for i in targets.clone() {
@@ -188,7 +188,7 @@ impl Inventory {
         }
     }
 
-    /// `doClick`'s `ContainerInput.QUICK_CRAFT`: a drag starts (stage 0),
+    /// `doClick`'s `ContainerInput.QUICK_CRAFT`.
     pub(super) fn quick_craft(&mut self, slot: i16, button: i8, creative: bool) {
         let stage = button & 3;
         let kind = (button >> 2) & 3;
@@ -246,7 +246,7 @@ impl Inventory {
         }
     }
 
-    /// `doClick`'s `ContainerInput.PICKUP_ALL` (double click): gathers
+    /// `doClick`'s `ContainerInput.PICKUP_ALL` (double click).
     pub(super) fn pickup_all(&mut self, index: usize, button: i8) {
         let clicked = &self.slots[index];
         if self.carried.is_empty() || !clicked.is_empty() {

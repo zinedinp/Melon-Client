@@ -1,4 +1,4 @@
-//! Vanilla `PackSelectionScreen` for resource packs: the packs in the
+//! Vanilla `PackSelectionScreen` for resource packs.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -40,7 +40,7 @@ const DESCRIPTION_W: f32 = 157.0;
 const DESCRIPTION_COLOR: [f32; 3] = [128.0 / 255.0; 3];
 /// `-8978432`: the frame behind an incompatible pack's icon.
 const INCOMPATIBLE_FRAME: [f32; 4] = [119.0 / 255.0, 0.0, 0.0, 1.0];
-/// How often (in frames) the folder is checked for new or removed packs,
+/// How often (in frames) the folder is checked for new or removed packs.
 const RESCAN_TICKS: u32 = 40;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -137,7 +137,7 @@ impl PackSelectionScreen {
         screen
     }
 
-    /// The Data Packs screen of Create World: the data packs in `dir` (a
+    /// The Data Packs screen of Create World.
     pub fn new_data(ctx: &ScreenContext, dir: PathBuf, chosen: Rc<RefCell<Vec<String>>>) -> Self {
         let mut screen = Self::new(ctx);
         screen.pack_dir = dir;
@@ -147,7 +147,7 @@ impl PackSelectionScreen {
         screen
     }
 
-    /// The key a pack's icon is cached under: data packs and resource packs
+    /// The key a pack's icon is cached under.
     fn icon_key(&self, id: &str) -> String {
         if self.data.is_some() {
             format!("data/{id}")
@@ -190,7 +190,7 @@ impl PackSelectionScreen {
         (entries, vanilla)
     }
 
-    /// Reads the folder again; `selected` (ids, lowest first) stay selected
+    /// Reads the folder again; `selected` (ids, lowest first) stay selected.
     fn rescan(&mut self, selected: &[String]) {
         self.fingerprint = fingerprint(&self.pack_dir);
         if self.data.is_some() {
@@ -316,7 +316,7 @@ impl PackSelectionScreen {
         )
     }
 
-    /// `TransferableSelectionList.PackEntry`: an available pack's whole icon
+    /// `TransferableSelectionList.PackEntry`.
     fn icon_layout(&self, side: Side) -> row_icon::Layout {
         match side {
             Side::Available => row_icon::Layout::Whole,
@@ -337,7 +337,7 @@ impl PackSelectionScreen {
         }
     }
 
-    /// What clicking the icon at the mouse would do
+    /// What clicking the icon at the mouse would do.
     fn icon_action(&self, side: Side, row: usize) -> Option<IconAction> {
         if side == Side::Selected && self.entry(side, row).required {
             return None;
@@ -728,7 +728,7 @@ impl PackSelectionScreen {
     }
 }
 
-/// A pack's description as at most two lines of [`DESCRIPTION_W`]; an
+/// A pack's description as at most two lines of [`DESCRIPTION_W`].
 fn description_lines(
     ui: &Ui,
     description: &serde_json::Value,
@@ -770,7 +770,8 @@ fn fingerprint(dir: &Path) -> Vec<(String, u64)> {
     out
 }
 
-/// Pack icons already on the GPU, by pack id, so reopening the screen
+/// Pack icons already on the GPU, by pack id, so reopening the screen doesn't upload them
+/// again.
 fn icon_cache() -> &'static Mutex<HashMap<String, TextureId>> {
     static ICONS: OnceLock<Mutex<HashMap<String, TextureId>>> = OnceLock::new();
     ICONS.get_or_init(Default::default)
@@ -786,7 +787,7 @@ fn remember_icon(id: &str, texture: TextureId) {
     }
 }
 
-/// `PackSelectionScreen.onFilesDrop`: asks, then copies the dropped packs
+/// `PackSelectionScreen.onFilesDrop`.
 fn drop_confirm(paths: Vec<PathBuf>, pack_dir: PathBuf) -> ScreenAction {
     let names: Vec<String> = paths
         .iter()
@@ -838,7 +839,7 @@ fn copy_dir(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-/// `ClientCommonPacketListenerImpl.PackConfirmScreen`: the server asks to
+/// `ClientCommonPacketListenerImpl.PackConfirmScreen`.
 pub struct PackConfirmScreen {
     dialog: DialogScreen,
 }

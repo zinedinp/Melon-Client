@@ -1,4 +1,4 @@
-//! `AdultTurtleModel` and `BabyTurtleModel`: a shell on four flippers that
+//! `AdultTurtleModel` and `BabyTurtleModel`.
 
 use crate::math::angle::HALF_PI as FRAC_PI_2;
 
@@ -116,7 +116,7 @@ impl TurtleParts {
     }
 }
 
-/// What the turtle's pose reads: where it is and whether it lays or
+/// What the turtle's pose reads.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct TurtlePose {
     pub on_land: bool,
@@ -124,7 +124,7 @@ pub struct TurtlePose {
     pub has_egg: bool,
 }
 
-/// `TurtleModel.setupAnim` (over `QuadrupedModel`'s): flippers that sweep
+/// `TurtleModel.setupAnim` (over `QuadrupedModel`'s).
 pub fn setup_anim(
     parts: &TurtleParts,
     pose: &mut ModelPose,

@@ -1,9 +1,9 @@
-//! Small Vulkan helpers: samplers, buffers, the render pass, depth images,
+//! Small Vulkan helpers.
 
 use ash::vk;
 use std::ffi::CStr;
 
-/// `mipmapped`: blends between a texture's levels (vanilla's block atlas,
+/// `mipmapped`.
 pub(super) unsafe fn create_sampler(
     device: &ash::Device,
     filter: vk::Filter,
@@ -158,11 +158,11 @@ pub(super) fn choose_surface_format(
 pub(super) enum PassStart {
     /// Clears colour and depth: the scene.
     Clear,
-    /// Paints over every pixel itself (the blur's last draw), so nothing is
+    /// Paints over every pixel itself (the blur's last draw), so nothing is cleared.
     Overwrite,
-    /// The scene's pass when a post chain follows: like [`Self::Clear`],
+    /// The scene's pass when a post chain follows.
     SceneSplit,
-    /// What follows a post chain: loads what the chain left in colour and
+    /// What follows a post chain.
     Resume,
     /// A [`super::PictureDraw`]'s own target: clears, and leaves the colour
     /// as an attachment for the barrier that hands it to the UI.
@@ -268,7 +268,7 @@ pub(super) unsafe fn create_render_pass(
     Ok(device.create_render_pass(&info, None)?)
 }
 
-/// First supported candidate with `DEPTH_STENCIL_ATTACHMENT` optimal-tiling
+/// First supported candidate with `DEPTH_STENCIL_ATTACHMENT` optimal-tiling support.
 pub(super) unsafe fn find_depth_format(
     instance: &ash::Instance,
     physical_device: vk::PhysicalDevice,

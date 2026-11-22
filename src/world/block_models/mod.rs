@@ -1,4 +1,4 @@
-//! Every block state's model, baked once into quads the mesher copies
+//! Every block state's model, baked once into quads the mesher copies.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -31,18 +31,17 @@ use block_state::{BlockState, ModelRef, Options, condition_holds, parse_block_st
 use tint::bake_tint;
 use variants::{Part, RandomModel, StateModel};
 
-/// One quad of a baked block, in block space (`0..1`).
+/// One quad of a baked block: what the mesher reads per face. Its corners
+/// are in [`BlockModels::corners_of`], once for all equal quads.
 #[derive(Clone, Copy, Debug)]
 pub struct BakedQuad {
-    /// Its corners as ready vertices, counter-clockwise from outside:
-    pub vertices: [WorldVertex; 4],
     /// Dropped when the neighbour on this side is solid.
     pub cullface: Option<Direction>,
-    /// The way its front faces, if along an axis; `None` for slanted quads
+    /// The way its front faces, if along an axis; `None` for slanted quads.
     pub facing: Option<Direction>,
     /// The chunk layer it is drawn in.
     pub layer: ChunkLayer,
-    /// Its place in [`BlockModels::quad_corners`]: what a
+    /// Its corners' place in [`BlockModels::quad_corners`].
     pub index: u32,
     /// Its element's `light_emission`, `0..=15`.
     pub emission: u8,
@@ -52,14 +51,14 @@ pub struct BakedQuad {
     pub tint: TintKind,
 }
 
-/// Vanilla `ChunkSectionLayer`, from the quad's texture
+/// Vanilla `ChunkSectionLayer`, from the quad's texture.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChunkLayer {
     /// Every pixel opaque: drawn without `discard`.
     Solid = 0,
     /// Some pixels fully clear (leaves, plants, glass panes' frames).
     Cutout = 1,
-    /// Partly see-through pixels (ice, stained glass), or a model that
+    /// Partly see-through pixels (ice, stained glass), or a model that forces it.
     Translucent = 2,
 }
 
@@ -87,11 +86,11 @@ pub struct BlockModels {
     corners: Vec<[WorldVertex; 4]>,
     /// What smooth lighting reads off each of them, by the same index.
     shapes: Vec<AoShape>,
-    /// Per state, whether its model takes smooth lighting
+    /// Per state, whether its model takes smooth lighting.
     smooth: Vec<bool>,
-    /// Per state, the texture its model names `particle`, as an index
+    /// Per state, the texture its model names `particle`, as an index into `rects`.
     particle: Vec<u16>,
-    /// Every atlas texture's rectangle and its texels' transparency
+    /// Every atlas texture's rectangle and its texels' transparency.
     rects: Vec<([f32; 4], AlphaMap)>,
 }
 
@@ -112,13 +111,13 @@ pub struct ParticleLook {
     pub tint_source: bool,
 }
 
-/// A texture the atlas holds besides those the block models use: fluids,
+/// A texture the atlas holds besides those the block models use.
 pub struct ExtraTexture {
     pub id: String,
     pub image: Option<RgbaImage>,
 }
 
-/// What the mesher needs to know of a block state before looking at its
+/// What the mesher needs to know of a block state before looking at its quads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MeshFlags(u8);
 
@@ -168,7 +167,7 @@ impl MeshFlags {
         self.0 & Self::DRAWS != 0
     }
 
-    /// Every quad has a cullface and there is no fluid: with solid blocks on
+    /// Every quad has a cullface and there is no fluid.
     #[inline]
     pub fn buried_hidden(self) -> bool {
         self.0 & Self::BURIED_HIDDEN != 0
@@ -258,7 +257,7 @@ impl BlockModels {
         translucent
     }
 
-    /// What the mesher asks of every block, in one lookup. Unknown states
+    /// What the mesher asks of every block, in one lookup.
     #[inline]
     pub fn mesh_flags(&self, state: u16) -> MeshFlags {
         self.flags
@@ -273,7 +272,14 @@ impl BlockModels {
         &self.shapes[quad.index as usize]
     }
 
-    /// Whether a block of `state` may be smooth lit: its model's
+    /// `quad`'s corners as ready vertices in block space (`0..1`),
+    /// counter-clockwise from outside.
+    #[inline]
+    pub fn corners_of(&self, quad: &BakedQuad) -> &[WorldVertex; 4] {
+        &self.corners[quad.index as usize]
+    }
+
+    /// Whether a block of `state` may be smooth lit.
     #[inline]
     pub fn smooth_lighting(&self, state: u16) -> bool {
         self.smooth
@@ -282,12 +288,12 @@ impl BlockModels {
             .unwrap_or(false)
     }
 
-    /// Every distinct baked quad's four corners in index order, for
+    /// Every distinct baked quad's four corners in index order, for the GPU's quad table.
     pub fn quad_corners(&self) -> &[WorldVertex] {
         self.corners.as_flattened()
     }
 
-    /// The vertices `terrain.vert` makes of `quad` in a mesh whose base is
+    /// The vertices `terrain.vert` makes of `quad` in a mesh whose base is `base`.
     pub fn quad_vertices(
         &self,
         quad: TerrainQuad,
@@ -322,7 +328,7 @@ impl BlockModels {
         })
     }
 
-    /// The atlas rectangle `[u0, v0, u1, v1]` of the texture a state shows
+    /// The atlas rectangle `[u0, v0, u1, v1]` of the texture a state shows in particles.
     pub fn particle_sprite(&self, state: u16) -> Option<[f32; 4]> {
         self.particle_texture(state)
             .map(|(rect, _)| rect)
@@ -343,8 +349,9 @@ impl BlockModels {
             if rect.is_none()
                 && let Some(quad) = quads.first()
             {
-                let us = quad.vertices.map(|v| v.uv[0]);
-                let vs = quad.vertices.map(|v| v.uv[1]);
+                let corners = self.corners_of(quad);
+                let us = corners.map(|v| v.uv[0]);
+                let vs = corners.map(|v| v.uv[1]);
                 let min = |a: [f32; 4]| a.into_iter().fold(f32::MAX, f32::min);
                 let max = |a: [f32; 4]| a.into_iter().fold(f32::MIN, f32::max);
                 rect = Some([min(us), min(vs), max(us), max(vs)]);
@@ -353,7 +360,7 @@ impl BlockModels {
         rect
     }
 
-    /// The tint the faces of `state` have: the first tinted one's, as a
+    /// The tint the faces of `state` have.
     pub fn tint_kind(&self, state: u16) -> TintKind {
         let mut kind = TintKind::None;
         self.quads_at(state, [0, 0, 0], |quads| {
@@ -366,7 +373,7 @@ impl BlockModels {
         kind
     }
 
-    /// What a block's particles show (`TerrainParticle`): its particle
+    /// What a block's particles show (`TerrainParticle`).
     pub fn particle_look(&self, state: u16) -> Option<ParticleLook> {
         let (uv, translucent) = match self.particle_texture(state) {
             Some(found) => found,
@@ -414,7 +421,7 @@ impl BlockModels {
         self.rects.get(*self.sprites.get(id)?).cloned()
     }
 
-    /// Bakes every state from the models under `assets_root` and packs one
+    /// Bakes every state from the models under `assets_root` and packs one atlas.
     pub fn bake(
         assets_root: &Path,
         extras: Vec<ExtraTexture>,
@@ -459,14 +466,11 @@ impl BlockModels {
                     quads
                         .iter()
                         .map(|q| {
-                            let mut quad = q.finish(&packed);
-                            quad.index = *index_of
-                                .entry(corner_key(&quad.vertices))
-                                .or_insert_with(|| {
-                                    corners.push(quad.vertices);
-                                    shapes.push(AoShape::of(
-                                        quad.vertices.map(|v| Vec3::from(v.pos)),
-                                    ));
+                            let (vertices, mut quad) = q.finish(&packed);
+                            quad.index =
+                                *index_of.entry(corner_key(&vertices)).or_insert_with(|| {
+                                    corners.push(vertices);
+                                    shapes.push(AoShape::of(vertices.map(|v| Vec3::from(v.pos))));
                                     (corners.len() - 1) as u32
                                 });
                             quad
@@ -572,7 +576,8 @@ struct PendingQuad {
 }
 
 impl PendingQuad {
-    fn finish(&self, packed: &PackedAtlas) -> BakedQuad {
+    /// Its corners as vertices, and the quad still without their index.
+    fn finish(&self, packed: &PackedAtlas) -> ([WorldVertex; 4], BakedQuad) {
         let [u0, v0, u1, v1] = packed.rects[self.texture];
         let (w, h) = packed.sizes[self.texture];
         let texel_inset = (16.0 * UV_INSET).max(packed.longest_side() as f32 / 65535.0);
@@ -580,13 +585,13 @@ impl PendingQuad {
             (texel_inset / w.max(1) as f32).min(0.25),
             (texel_inset / h.max(1) as f32).min(0.25),
         );
-        BakedQuad {
-            vertices: std::array::from_fn(|i| {
-                let uv = self.uvs[i].clamp(inset, Vec2::ONE - inset);
-                let uv = [u0 + uv.x * (u1 - u0), v0 + uv.y * (v1 - v0)];
-                WorldVertex::new(self.corners[i].to_array(), uv, self.color)
-                    .with_face(self.shade_face.index() as u8)
-            }),
+        let vertices = std::array::from_fn(|i| {
+            let uv = self.uvs[i].clamp(inset, Vec2::ONE - inset);
+            let uv = [u0 + uv.x * (u1 - u0), v0 + uv.y * (v1 - v0)];
+            WorldVertex::new(self.corners[i].to_array(), uv, self.color)
+                .with_face(self.shade_face.index() as u8)
+        });
+        let quad = BakedQuad {
             cullface: self.cullface,
             facing: facing_of(&self.corners),
             layer: ChunkLayer::of(self.alpha.judge(&packed.alpha[self.texture])),
@@ -594,7 +599,8 @@ impl PendingQuad {
             emission: self.emission,
             ambient_occlusion: self.ambient_occlusion,
             tint: self.tint,
-        }
+        };
+        (vertices, quad)
     }
 }
 
@@ -616,7 +622,7 @@ struct Baker<'a> {
     assets_root: &'a Path,
     states: HashMap<&'static str, Option<BlockState>>,
     models: HashMap<String, Option<Arc<ResolvedModel>>>,
-    /// Baked models per block and distinct model lists, so 30k states
+    /// Baked models per block and distinct model lists, so 30k states share them.
     baked: HashMap<(String, String), StateModel<PendingQuad>>,
     /// Each weighted option's quads, per block (the tint) and model ref.
     options: HashMap<(String, String), Arc<[PendingQuad]>>,
@@ -697,7 +703,7 @@ impl<'a> Baker<'a> {
         model
     }
 
-    /// The texture a state's model names `particle`: the first part's
+    /// The texture a state's model names `particle`.
     fn particle(&mut self, id: u16) -> Option<usize> {
         let state = BlockStateId::new(id)?;
         let block = Block::from_state_id(state);
@@ -746,7 +752,7 @@ impl<'a> Baker<'a> {
         quads
     }
 
-    /// The models a state with `props` shows: whether they come from a
+    /// The models a state with `props` shows.
     fn model_refs(&mut self, block: &'static str, props: &[(&str, &str)]) -> (bool, Vec<Options>) {
         let assets_root = self.assets_root;
         let parsed = self.states.entry(block).or_insert_with(|| {
@@ -875,7 +881,7 @@ impl<'a> Baker<'a> {
     }
 }
 
-/// The tester: a block whose blockstates a pack replaces (a custom block),
+/// The tester.
 fn probe_block_state(assets_root: &Path, block: &str, parsed: Option<&BlockState>) {
     let name = block.trim_start_matches("minecraft:");
     let from_pack = crate::assets::packs::active()
@@ -900,13 +906,13 @@ fn probe_block_state(assets_root: &Path, block: &str, parsed: Option<&BlockState
     }
 }
 
-/// `BlockModelRotation`: `x` then `y`, both clockwise looking down their
+/// `BlockModelRotation`.
 fn variant_rotation(x: i64, y: i64) -> Mat3 {
     let turn = Mat3::rot_y(-(y as f32).to_radians()) * Mat3::rot_x(-(x as f32).to_radians());
     Mat3::from_cols_array(&turn.to_cols_array().map(f32::round))
 }
 
-/// `uvlock`: the texture follows the world, not the turned model - each
+/// `uvlock`.
 fn locked_uvs(corners: &[Vec3; 4], normal: Vec3) -> [Vec2; 4] {
     let face = nearest_direction(normal);
     corners.map(|c| {
@@ -954,6 +960,11 @@ mod tests {
 
     fn state_of(block: &Block) -> u16 {
         block.default_state.id.as_u16()
+    }
+
+    #[test]
+    fn a_baked_quad_is_only_what_the_mesher_reads() {
+        assert!(std::mem::size_of::<BakedQuad>() <= 12);
     }
 
     impl BlockModels {
@@ -1007,7 +1018,11 @@ mod tests {
         assert!(models.smooth_lighting(state_of(&Block::STONE)));
         assert!(!models.smooth_lighting(state_of(&Block::POPPY)));
         let poppy = models.quads(state_of(&Block::POPPY));
-        assert!(poppy.iter().all(|q| q.vertices[0].color[..3] == [255; 3]));
+        assert!(
+            poppy
+                .iter()
+                .all(|q| models.corners_of(q)[0].color[..3] == [255; 3])
+        );
         let eyeblossom = models.quads(state_of(&Block::OPEN_EYEBLOSSOM));
         assert!(eyeblossom.iter().any(|q| q.emission == 15));
         assert!(eyeblossom.iter().any(|q| q.emission == 0));
@@ -1023,11 +1038,11 @@ mod tests {
         let uvs_at = |state: u16, pos: [i32; 3]| {
             let mut uvs = Vec::new();
             models.quads_at(state, pos, |quads| {
-                uvs.extend(
-                    quads
-                        .iter()
-                        .flat_map(|q| q.vertices.map(|v| (v.pos.map(f32::to_bits), v.uv))),
-                );
+                uvs.extend(quads.iter().flat_map(|q| {
+                    models
+                        .corners_of(q)
+                        .map(|v| (v.pos.map(f32::to_bits), v.uv))
+                }));
             });
             uvs
         };
@@ -1085,14 +1100,19 @@ mod tests {
         assert_eq!(slab.len(), 6);
         let top = slab
             .iter()
-            .find(|q| q.vertices.iter().all(|v| (v.pos[1] - 0.5).abs() < 1e-4))
+            .find(|q| {
+                models
+                    .corners_of(q)
+                    .iter()
+                    .all(|v| (v.pos[1] - 0.5).abs() < 1e-4)
+            })
             .expect("a top face at half height");
         assert_eq!(top.cullface, None);
 
         let stairs = models.quads(state_of(&Block::OAK_STAIRS));
         assert!(stairs.len() >= 10);
         for quad in stairs {
-            for v in quad.vertices {
+            for v in *models.corners_of(&quad) {
                 let c = Vec3::from(v.pos);
                 assert!(
                     c.min_element() > -1e-4 && c.max_element() < 1.0 + 1e-4,
@@ -1150,6 +1170,7 @@ mod tests {
                 tint: TintKind::None,
             }
             .finish(&packed)
+            .1
             .layer
         };
         assert_eq!(quad(0.0, 0.25, None), ChunkLayer::Solid);

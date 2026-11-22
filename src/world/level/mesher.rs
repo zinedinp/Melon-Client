@@ -1,4 +1,4 @@
-//! The mesh worker threads (vanilla `SectionRenderDispatcher`): a section
+//! The mesh worker threads (vanilla `SectionRenderDispatcher`).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -19,7 +19,7 @@ use crate::world::terrain::{self, MeshContext, Neighborhood, SectionMesh};
 pub(super) struct Job {
     pub pos: SectionPos,
     pub version: u64,
-    /// The section's chunk at the centre (index 4) and the eight around
+    /// The section's chunk at the centre (index 4) and the eight around it.
     pub chunks: [Option<Arc<Chunk>>; 9],
     /// The "Smooth Lighting" option.
     pub smooth_lighting: bool,
@@ -40,7 +40,7 @@ pub(super) struct Done {
     pub mesh: SectionMesh,
 }
 
-/// Meshes section `s` of the chunk at the centre of `chunks`, its
+/// Meshes section `s` of the chunk at the centre of `chunks`.
 pub(super) fn mesh(
     chunks: &[Option<Arc<Chunk>>; 9],
     (x, s, z): SectionPos,
@@ -62,7 +62,7 @@ pub(super) fn mesh(
     Some(mesh)
 }
 
-/// Half the hardware threads, at most eight: the integrated server and the
+/// Half the hardware threads, at most eight.
 pub(super) struct Mesher {
     jobs: Option<Sender<Job>>,
     results: Receiver<Done>,
@@ -72,10 +72,10 @@ pub(super) struct Mesher {
     models: Arc<BlockModels>,
     fluids: FluidSprites,
     workers: Vec<JoinHandle<()>>,
-    /// Set when the mesher is dropped: the workers leave the jobs still
+    /// Set when the mesher is dropped.
     stop: Arc<AtomicBool>,
     pub in_flight: usize,
-    /// Jobs handed out at a time: enough to keep the workers busy, few
+    /// Jobs handed out at a time.
     pub limit: usize,
 }
 
@@ -151,28 +151,6 @@ impl Mesher {
     /// Meshes `jobs` before returning (`compileSync`), spread over the
     /// helpers and this thread.
     pub fn mesh_now(&self, jobs: Vec<Job>) -> Vec<Done> {
-        if std::env::var_os("AB_SCOPE").is_some() {
-            let threads = std::thread::available_parallelism().map_or(2, |n| n.get());
-            let per_thread = jobs.len().div_ceil(threads).max(1);
-            let build_all = |batch: &[Job]| {
-                batch
-                    .iter()
-                    .filter_map(|job| build(job, &self.models, self.fluids))
-                    .collect::<Vec<_>>()
-            };
-            let mut batches = jobs.chunks(per_thread);
-            let first = batches.next().unwrap_or_default();
-            return std::thread::scope(|scope| {
-                let others: Vec<_> = batches
-                    .map(|batch| scope.spawn(move || build_all(batch)))
-                    .collect();
-                let mut built = build_all(first);
-                for other in others {
-                    built.extend(other.join().unwrap_or_default());
-                }
-                built
-            });
-        }
         let Some(urgent) = &self.urgent else {
             return Vec::new();
         };

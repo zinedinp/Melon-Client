@@ -1,4 +1,4 @@
-//! `AdultRabbitModel` and `BabyRabbitModel`: hopping and the idle head tilt
+//! `AdultRabbitModel` and `BabyRabbitModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::animations::{baby_rabbit, rabbit};
@@ -36,7 +36,7 @@ const VARIANTS: [(i32, &str); 7] = [
 /// A stand-in for the coat of a rabbit named `Toast`, which no variant id has.
 pub const TOAST: i32 = -1;
 
-/// The texture of a rabbit of this variant (unknown ids are brown,
+/// The texture of a rabbit of this variant (unknown ids are brown).
 pub fn texture(variant: i32, baby: bool) -> &'static str {
     if variant == TOAST {
         return if baby {
@@ -235,7 +235,7 @@ impl RabbitParts {
     }
 }
 
-/// `RabbitModel.setupAnim` before the animations: the head follows the look
+/// `RabbitModel.setupAnim` before the animations.
 pub fn setup_anim(
     parts: &RabbitParts,
     pose: &mut ModelPose,
@@ -249,7 +249,7 @@ pub fn setup_anim(
     }
 }
 
-/// `Rabbit`'s client-side timers: a hop lasts 15 ticks from the server's
+/// `Rabbit`'s client-side timers.
 #[derive(Clone, Copy, Debug)]
 pub struct RabbitClock {
     jump_ticks: i32,
@@ -286,7 +286,7 @@ impl RabbitClock {
         self.jump_ticks = 0;
     }
 
-    /// One tick: `setupAnimationStates` (the clocks, with the entity's
+    /// One tick.
     pub fn tick(&mut self, anim: &mut [AnimationState], tick_count: i32, leashed: bool) {
         if self.idle_timeout <= 0 && !leashed {
             self.idle_timeout = self.next_timeout();

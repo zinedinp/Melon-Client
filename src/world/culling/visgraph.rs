@@ -1,13 +1,13 @@
-//! Vanilla `VisGraph` / `VisibilitySet`: for one 16³ section, which pairs of
+//! Vanilla `VisGraph` / `VisibilitySet`.
 
 use crate::world::block::direction::{Direction, Directions};
 
 const SIZE: usize = 16;
 const CELLS: usize = SIZE * SIZE * SIZE;
-/// `VisGraph.LEN`-style shortcut: fewer solid blocks than one full layer
+/// `VisGraph.LEN`-style shortcut.
 const SPARSE_LIMIT: usize = SIZE * SIZE;
 
-/// Symmetric 6×6 face-to-face bits: bit `a * 6 + b` means a line of sight
+/// Symmetric 6×6 face-to-face bits.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct VisibilitySet(u64);
 
@@ -20,7 +20,7 @@ impl VisibilitySet {
         self.0 >> (from.index() * 6 + to.index()) & 1 != 0
     }
 
-    /// Whether a line of sight entering through any of `entered` can leave
+    /// Whether a line of sight entering through any of `entered` can leave through `exit`.
     #[inline]
     pub fn any_visible(self, entered: Directions, exit: Direction) -> bool {
         entered.iter().any(|from| self.visible_between(from, exit))
@@ -48,7 +48,7 @@ impl VisibilitySet {
     }
 }
 
-/// `VisGraph.resolve`: flood-fills every open region that touches the
+/// `VisGraph.resolve`.
 pub fn compute(solid: impl Fn(usize) -> bool) -> VisibilitySet {
     let mut rows = [0u16; ROWS];
     for (row, bits) in rows.iter_mut().enumerate() {
@@ -65,12 +65,11 @@ const ROWS: usize = SIZE * SIZE;
 /// TODO(perf): reinvestigate. 0.9 µs a section (`perf_world`, 2026-11-15),
 /// ~1% of meshing, so low priority. Cheap first step: the `stack` below is
 /// a heap allocation on every call; a fixed array (or one kept per thread)
-/// removes it. Bigger idea, measure before: flood-fill the whole section
-/// as one 4096-bit set (eight AVX-512 registers, 16 AVX2) by dilating
-/// (`±x` within the 16-bit rows, `±z` a row, `±y` 16 rows) and masking with
+/// removes it. Bigger idea, measure before: flood-fill the whole section as
+/// one 4096-bit set (eight AVX-512 registers, 16 AVX2) by dilating (`±x`
+/// within the 16-bit rows, `±z` a row, `±y` 16 rows) and masking with
 /// `open` until nothing changes. Steps grow with the longest path, so a
 /// winding cave can take hundreds; keep the row walk as the fallback.
-/// [`compute`] from the section's solid blocks as rows (index `y * 16 + z`,
 pub fn compute_rows(solid: &[u16; ROWS]) -> VisibilitySet {
     let solid_count: u32 = solid.iter().map(|row| row.count_ones()).sum();
     if (solid_count as usize) < SPARSE_LIMIT {
@@ -131,7 +130,7 @@ pub fn compute_rows(solid: &[u16; ROWS]) -> VisibilitySet {
     set
 }
 
-/// `cells` (all of them in `open`) grown along the row through `open` as
+/// `cells` (all of them in `open`) grown along the row through `open`.
 #[inline]
 fn grow_in_row(cells: u16, open: u16) -> u16 {
     let (mut up, mut through_up) = (cells, open);
@@ -172,7 +171,7 @@ fn faces_of_row(filled: u16, y: usize, z: usize) -> u8 {
 mod tests {
     use super::*;
 
-    /// Index steps in `Section.blocks` order (`y*256 + z*16 + x`), by direction
+    /// Index steps in `Section.blocks` order (`y*256 + z*16 + x`), by direction.
     const INDEX_STEP: [isize; 6] = [-256, 256, -16, 16, -1, 1];
     /// The section's faces block `(x, y, z)` touches.
     fn edge_faces(x: usize, y: usize, z: usize) -> Directions {

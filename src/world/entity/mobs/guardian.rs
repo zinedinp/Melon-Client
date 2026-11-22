@@ -1,4 +1,4 @@
-//! `GuardianModel`: a spiked head with an eye and a three-part tail. Its
+//! `GuardianModel`: a spiked head with an eye and a three-part tail.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
@@ -130,7 +130,7 @@ pub struct GuardianPose {
     pub tail: f32,
 }
 
-/// `GuardianModel.setupAnim`. The eye looks straight ahead: where
+/// `GuardianModel.setupAnim`.
 pub fn setup_anim(
     parts: &GuardianParts,
     pose: &mut ModelPose,

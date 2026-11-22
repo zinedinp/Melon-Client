@@ -1,4 +1,4 @@
-//! Vanilla `AbstractSelectionList` (`ObjectSelectionList`): rows of one
+//! Vanilla `AbstractSelectionList` (`ObjectSelectionList`).
 
 use std::time::{Duration, Instant};
 
@@ -10,7 +10,7 @@ const SCROLLBAR_W: f32 = 6.0;
 /// `AbstractSelectionList.extractItem`: `isFocused() ? -1 : -8355712`.
 const OUTLINE_FOCUSED: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const OUTLINE_UNFOCUSED: [f32; 4] = [128.0 / 255.0, 128.0 / 255.0, 128.0 / 255.0, 1.0];
-/// A second click on the same row within this long is a double click
+/// A second click on the same row within this long is a double click.
 const DOUBLE_CLICK: Duration = Duration::from_millis(250);
 
 /// What a click on the list did.
@@ -39,7 +39,7 @@ pub struct ScrollList {
     /// `AbstractScrollArea.scrolling`: last mouse y while dragging the thumb.
     scrollbar_drag: Option<f32>,
     selected: Option<usize>,
-    /// `AbstractSelectionList.isFocused()`: the screen's focus is on the
+    /// `AbstractSelectionList.isFocused()`.
     focused: bool,
     last_click: Option<(usize, Instant)>,
     mouse: (f32, f32),
@@ -69,7 +69,7 @@ impl ScrollList {
         self.set_area(0.0, top, bottom, width);
     }
 
-    /// [`Self::set_bounds`] for a list that takes only part of the
+    /// [`Self::set_bounds`] for a list that takes only part of the screen.
     pub fn set_area(&mut self, left: f32, top: f32, bottom: f32, width: f32) {
         self.top = top;
         self.bottom = bottom.max(top);
@@ -121,7 +121,7 @@ impl ScrollList {
         self.focused
     }
 
-    /// `AbstractSelectionList.keyPressed`'s Up/Down and Page Up/Down: moves
+    /// `AbstractSelectionList.keyPressed`'s Up/Down and Page Up/Down.
     pub fn move_selection(&mut self, delta: isize) -> bool {
         if self.len == 0 {
             return false;
@@ -170,14 +170,14 @@ impl ScrollList {
         self.scroll = self.scroll.clamp(0.0, self.max_scroll());
     }
 
-    /// `centerScrollOn`: scrolls so row `index` is in the middle of a
+    /// `centerScrollOn`.
     pub fn center_on(&mut self, index: usize, viewport_h: f32) {
         let y = index as f32 * self.row_h + self.row_h / 2.0;
         self.scroll = y - viewport_h / 2.0;
         self.clamp_scroll();
     }
 
-    /// `getRowLeft()`: `getX() + this.width / 2 - getRowWidth() / 2`, both
+    /// `getRowLeft()`.
     pub fn row_left(&self) -> f32 {
         self.left + (self.width / 2.0).floor() - (self.row_w / 2.0).floor()
     }
@@ -194,7 +194,7 @@ impl ScrollList {
             .clamp(32.0, viewport - 8.0)
     }
 
-    /// `AbstractScrollArea.scrollBarY`, entirely in `int` arithmetic: the
+    /// `AbstractScrollArea.scrollBarY`, entirely in `int` arithmetic.
     fn scroller_y(&self) -> f32 {
         let max_scroll = self.max_scroll();
         if max_scroll <= 0.0 {
@@ -273,12 +273,12 @@ impl ScrollList {
         self.scrollbar_drag = None;
     }
 
-    /// `AbstractScrollArea.defaultSettings(defaultEntryHeight / 2)`: one
+    /// `AbstractScrollArea.defaultSettings(defaultEntryHeight / 2)`.
     pub fn on_scroll(&mut self, delta: f32) {
         self.scroll = (self.scroll - delta * self.row_h / 2.0).clamp(0.0, self.max_scroll());
     }
 
-    /// A click: grabs the scrollbar or selects a row, which moves the
+    /// A click.
     pub fn on_click(&mut self, x: f32, y: f32) -> ListClick {
         if self.over_scrollbar(x, y) {
             self.scrollbar_drag = Some(y);
@@ -298,7 +298,7 @@ impl ScrollList {
         ListClick::Row { index, double }
     }
 
-    /// `extractScrollbar`: `RESIZE_NS` while dragging the thumb,
+    /// `extractScrollbar`.
     pub fn cursor(&self) -> Option<CursorKind> {
         if self.scrollbar_drag.is_some() {
             Some(CursorKind::ResizeNs)
@@ -309,7 +309,7 @@ impl ScrollList {
         }
     }
 
-    /// The tiled background, the rows clipped to the viewport (the
+    /// The tiled background, the rows clipped to the viewport, and the scroll bar.
     pub fn draw(&self, ui: &mut Ui, draw_row: impl FnMut(&mut Ui, usize, Rect)) {
         ui.list_background(self.top, self.bottom);
         self.draw_rows(ui, draw_row);

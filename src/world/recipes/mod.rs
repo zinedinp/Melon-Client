@@ -1,4 +1,4 @@
-//! Recipes, the way the 26.3 client sees them (`ClientRecipeBook`,
+//! Recipes, the way the 26.3 client sees them (`ClientRecipeBook`).
 
 pub mod book;
 pub mod display;

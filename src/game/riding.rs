@@ -25,14 +25,14 @@ impl InWorld {
         self.entities.own_steering(main, off)
     }
 
-    /// Whether the inventory key opens the mount's inventory instead of the
+    /// Whether the inventory key opens the mount's inventory instead of the player's.
     pub(super) fn rides_with_inventory(&self) -> bool {
         self.entities
             .own_vehicle_kind()
             .is_some_and(|kind| kind.is_equine() || kind == EntityKind::Nautilus)
     }
 
-    /// `Keybinds` while riding: the inventory key asks the server for the
+    /// `Keybinds` while riding.
     pub(super) fn open_mount_inventory(&self) {
         self.joined
             .session

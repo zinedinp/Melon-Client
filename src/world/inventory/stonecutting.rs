@@ -1,10 +1,10 @@
-//! The stonecutter's recipes. The server never sends them (vanilla's
+//! The stonecutter's recipes.
 
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 use pumpkin_data::recipes::RECIPES_STONECUTTING;
 
-/// What `input` cuts into: what the server's last recipe update lists, in
+/// What `input` cuts into.
 pub fn options_from(sets: &crate::world::recipes::RecipeSets, input: &ItemStack) -> Vec<ItemStack> {
     if !sets.received() {
         return options(input);
@@ -15,7 +15,7 @@ pub fn options_from(sets: &crate::world::recipes::RecipeSets, input: &ItemStack)
         .collect()
 }
 
-/// What `input` cuts into, in the recipes' order; nothing for an empty
+/// What `input` cuts into, in the recipes' order; nothing for an empty stack.
 pub fn options(input: &ItemStack) -> Vec<ItemStack> {
     if input.is_empty() {
         return Vec::new();

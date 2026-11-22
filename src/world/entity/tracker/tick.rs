@@ -1,9 +1,9 @@
-//! A tracked entity's client tick: the timers, turns and animation state
+//! A tracked entity's client tick.
 
 use super::*;
 
 impl ClientEntity {
-    /// The client-side tick: interpolation, turning, the walk cycle and
+    /// The client-side tick.
     pub(super) fn tick(&mut self) {
         self.prev_pos = self.pos;
         self.prev_yaw = self.yaw;
@@ -265,7 +265,7 @@ impl ClientEntity {
         self.swim_amount = Swim::step(self.swim_amount, self.appearance.visually_swimming());
     }
 
-    /// The swimming box, which `isInWater` tests: a player in the swimming
+    /// The swimming box, which `isInWater` tests.
     pub(super) fn water_box(&self) -> Aabb {
         let (w, h) = self.size();
         let h = if self.kind.is_avatar() && self.appearance.visually_swimming() {
@@ -294,7 +294,7 @@ impl ClientEntity {
         }
     }
 
-    /// `LivingEntity.tick`'s `yBodyRotT`: the walking direction, flipped
+    /// `LivingEntity.tick`'s `yBodyRotT`.
     pub(super) fn walk_direction(&self, moved: DVec3) -> f32 {
         if self.swing.current().is_some() {
             return self.yaw;
@@ -367,7 +367,7 @@ impl ClientEntity {
         self.axolotl.factors(partial)
     }
 
-    /// `AbstractCubeMob.tick`'s squish: it follows `targetSquish`, which a
+    /// `AbstractCubeMob.tick`'s squish.
     pub(super) fn tick_squish(&mut self) {
         self.prev_squish = self.squish;
         self.squish += (self.target_squish - self.squish) * 0.5;
@@ -392,7 +392,7 @@ impl ClientEntity {
         }
     }
 
-    /// Works out what the custom name makes renderers do, with the text
+    /// Works out what the custom name makes renderers do, with the text `text_of` gives.
     pub fn resolve_name(&mut self, text_of: &impl Fn(&Component) -> String) {
         if !std::mem::take(&mut self.name_pending) {
             return;
@@ -413,7 +413,7 @@ impl ClientEntity {
         self.age as f32 + partial
     }
 
-    /// `LivingEntityRenderer.isEntityUpsideDown`: a `Dinnerbone`. A player's
+    /// `LivingEntityRenderer.isEntityUpsideDown`: a `Dinnerbone`.
     pub fn upside_down(&self) -> bool {
         !self.kind.is_avatar() && self.appearance.magic == Magic::UpsideDown
     }

@@ -1,4 +1,4 @@
-//! The pictures `object` components put in text (`AtlasGlyphProvider`,
+//! The pictures `object` components put in text (`AtlasGlyphProvider`).
 
 use std::collections::HashMap;
 
@@ -13,7 +13,7 @@ pub struct ObjectQuad {
     pub uv: [f32; 4],
 }
 
-/// What an object is drawn as: one quad, and for a head the hat layer over
+/// What an object is drawn as.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ObjectQuads {
     pub face: ObjectQuad,
@@ -21,7 +21,7 @@ pub struct ObjectQuads {
 }
 
 impl ObjectQuads {
-    /// `PlayerGlyphProvider.Instance`: the skin's face (8, 8) and, with the
+    /// `PlayerGlyphProvider.Instance`.
     pub fn head(texture: TextureId, hat: bool) -> Self {
         let layer = |u: f32| ObjectQuad {
             texture,
@@ -65,7 +65,7 @@ impl Font {
         None
     }
 
-    /// The atlas sprites asked for that aren't made, once. A head stays
+    /// The atlas sprites asked for that aren't made, once.
     pub fn take_wanted_objects(&self) -> Vec<ObjectInfo> {
         let mut objects = self.objects.borrow_mut();
         let (atlas, heads) = std::mem::take(&mut objects.wanted)
@@ -106,7 +106,7 @@ fn folders(atlas: &str) -> &'static [&'static str] {
     }
 }
 
-/// The image of an atlas sprite: its first frame when it is an animation
+/// The image of an atlas sprite.
 pub fn sprite_image(root: &std::path::Path, sprite: &AtlasSprite) -> Option<image::RgbaImage> {
     let (namespace, path) = sprite.sprite.split_once(':')?;
     folders(&sprite.atlas).iter().find_map(|folder| {

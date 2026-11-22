@@ -1,4 +1,4 @@
-//! Vanilla `ChatScreen` (T, or / for a command): the input line at the
+//! Vanilla `ChatScreen` (T, or / for a command).
 
 use crate::component::ClickEvent;
 
@@ -58,9 +58,9 @@ pub struct ChatInput {
     mouse: (f32, f32),
     /// The left button went down on the input line and is still held.
     selecting: bool,
-    /// `formatChat`: the colour of each character of the command it was
+    /// `formatChat`.
     colors: Option<(String, Vec<[f32; 3]>)>,
-    /// `commandUsage`: what may follow, or why the command can't be right,
+    /// `commandUsage`.
     usage: Vec<StyledText>,
     /// The character the usage lines start over.
     usage_start: usize,
@@ -193,7 +193,7 @@ impl ChatInput {
         }
     }
 
-    /// `mouseScrolled`: the completion list, else the chat; seven lines a
+    /// `mouseScrolled`.
     fn on_scroll(&mut self, lines: f32, shift: bool, chat: &mut Chat) {
         let step = lines.clamp(-1.0, 1.0);
         if self.suggestions.is_some() {
@@ -284,13 +284,13 @@ impl ChatInput {
     }
 }
 
-/// `normalizeChatMessage`: trimmed, runs of whitespace made one space,
+/// `normalizeChatMessage`.
 pub fn normalize(message: &str) -> String {
     let joined = message.split_whitespace().collect::<Vec<_>>().join(" ");
     joined.chars().take(MAX_LENGTH).collect()
 }
 
-/// `ChatAbilities` for the chat visibility: commands need at least
+/// `ChatAbilities` for the chat visibility.
 fn may_send(message: &str, settings: &ChatSettings) -> bool {
     match settings.visibility {
         ChatVisibility::Full => true,
@@ -370,7 +370,7 @@ impl Overlay for ChatInput {
         }
     }
 
-    /// `ChatScreen.removed`: the chat scrolls back down, and an unsent
+    /// `ChatScreen.removed`.
     fn closed(&mut self, exit: ChatExit, ctx: &mut OverlayContext) {
         ctx.chat.reset_scroll();
         let keep = match exit {

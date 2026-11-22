@@ -1,6 +1,6 @@
-//! The scroll bar of the stonecutter, the loom and the villager's trade
+//! The scroll bar of the stonecutter, the loom and the villager's trade list.
 
-/// A scroll bar over a list that shows `visible_rows` of its rows at a
+/// A scroll bar over a list that shows `visible_rows` of its rows at a time.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Scroller {
     offs: f32,
@@ -39,19 +39,19 @@ impl Scroller {
         (self.offs * offscreen_rows as f32 + 0.5) as usize * columns
     }
 
-    /// The thumb's offset from the top of its track of `travel` pixels
+    /// The thumb's offset from the top of its track of `travel` pixels.
     pub fn thumb(&self, travel: f32) -> f32 {
         (travel * self.offs).floor()
     }
 
-    /// The wheel, `lines` up, over a list with `offscreen_rows` rows to
+    /// The wheel, `lines` up, over a list with `offscreen_rows` rows to scroll.
     pub fn wheel(&mut self, lines: f32, offscreen_rows: usize) {
         if offscreen_rows > 0 {
             self.offs = (self.offs - lines / offscreen_rows as f32).clamp(0.0, 1.0);
         }
     }
 
-    /// The thumb dragged to the mouse at `y`, on a track from `top` that is
+    /// The thumb dragged to the mouse at `y`, on a track from `top` that is `track` tall.
     pub fn drag_to(&mut self, y: f32, top: f32, track: f32, thumb: f32) {
         self.offs = ((y - top - thumb / 2.0) / (track - thumb)).clamp(0.0, 1.0);
     }

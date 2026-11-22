@@ -1,4 +1,4 @@
-//! `SlotDisplay` and `RecipeDisplay`: how a recipe is drawn, not how it is
+//! `SlotDisplay` and `RecipeDisplay`.
 
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
@@ -28,7 +28,7 @@ pub enum ItemSet {
 }
 
 impl ItemSet {
-    /// The items in the set, in the registry's order. An unknown tag is
+    /// The items in the set, in the registry's order.
     pub fn items(&self) -> Vec<&'static Item> {
         match self {
             Self::Items(items) => items.clone(),
@@ -62,15 +62,15 @@ impl ItemSet {
     }
 }
 
-/// One slot of a recipe: what it shows, possibly cycling through several
+/// One slot of a recipe.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SlotDisplay {
     Empty,
     /// TODO(fuel): the client has no fuel list (`minecraft:cooking_fuel`
     AnyFuel,
-    /// TODO(potions): list one stack per potion (`WithAnyPotion`); needs the
+    /// TODO(potions): list one stack per potion (`WithAnyPotion`).
     WithAnyPotion(Box<SlotDisplay>),
-    /// TODO(components): filter by the component once stacks carry theirs
+    /// TODO(components): filter by the component once stacks carry theirs.
     OnlyWithComponent(Box<SlotDisplay>, i32),
     Item(&'static Item),
     Stack(Shown),
@@ -191,7 +191,7 @@ impl RecipeDisplay {
         }
     }
 
-    /// The input slots as the crafting grid or the machine lays them out,
+    /// The input slots as the crafting grid or the machine lays them out.
     pub fn ghost_slots(&self, grid_width: usize) -> Vec<(usize, &SlotDisplay)> {
         match self {
             Self::Shapeless { ingredients, .. } => ingredients

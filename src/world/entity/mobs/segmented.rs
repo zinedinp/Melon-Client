@@ -1,4 +1,4 @@
-//! `EndermiteModel` and `SilverfishModel`: a row of boxes that wriggle
+//! `EndermiteModel` and `SilverfishModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
@@ -14,7 +14,7 @@ struct Shape {
     texs: &'static [[i32; 2]],
     /// Yaw and sideways sway, per segment away from the middle one.
     sway: (f32, f32),
-    /// Extra boxes laid over a segment: texture, box and which segment
+    /// Extra boxes laid over a segment.
     layers: &'static [Layer],
 }
 
@@ -22,7 +22,7 @@ struct Layer {
     tex: [i32; 2],
     /// Left edge, width and height.
     span: (f32, f32, f32),
-    /// The segment whose depth sets the box's start (half of it, back
+    /// The segment whose depth sets the box's start.
     start_of: usize,
     depth_of: usize,
     y: f32,
@@ -176,7 +176,7 @@ impl SegmentedParts {
     }
 }
 
-/// `setupAnim`: each segment turns and slides with a phase a little
+/// `setupAnim`.
 pub fn setup_anim(parts: &SegmentedParts, pose: &mut ModelPose, state: &LivingRenderState) {
     let shape = parts.kind.shape();
     let count = shape.sizes.len();

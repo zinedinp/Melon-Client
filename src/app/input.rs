@@ -1,4 +1,4 @@
-//! The window's keys and mouse: to the world while playing, else to the top
+//! The window's keys and mouse.
 
 use std::time::Instant;
 
@@ -32,13 +32,14 @@ pub(super) struct InputState {
     pub last_input: Instant,
     /// Whether the cursor is grabbed for looking around.
     grabbed: bool,
-    /// Whether the cursor was last asked to be grabbed, so a failing grab
+    /// Whether the cursor was last asked to be grabbed, so a failing grab isn't retried every
+    /// frame.
     grab_wanted: bool,
-    /// The cursor was let go and sent to the centre, but is still locked
+    /// The cursor was let go and sent to the centre, but is still locked.
     release_pending: bool,
     /// Whether the window takes composed text (an input method editor:
     ime_allowed: bool,
-    /// Where the input method's candidate window was last put (physical
+    /// Where the input method's candidate window was last put, in physical pixels.
     ime_area: Option<(i32, i32)>,
 }
 
@@ -59,7 +60,7 @@ impl InputState {
         }
     }
 
-    /// Grabs or frees the cursor, asked once per change so a refused grab
+    /// Grabs or frees the cursor, asked once per change so a refused grab isn't retried.
     pub fn want_grab(&mut self, window: &Window, want: bool) -> bool {
         if self.release_pending && !want {
             self.release_cursor(window);
@@ -84,7 +85,7 @@ impl InputState {
         true
     }
 
-    /// `MouseHandler.releaseMouse`: the cursor goes to the window's centre,
+    /// `MouseHandler.releaseMouse`.
     fn center_cursor(&mut self, window: &Window) {
         let size = window.inner_size();
         let center =
@@ -102,7 +103,7 @@ impl InputState {
     }
 }
 
-/// Best-effort pointer lock: `Locked` (relative motion, no OS cursor) falls
+/// Best-effort pointer lock.
 fn grab_cursor(window: &Window) -> bool {
     let grabbed = window
         .set_cursor_grab(CursorGrabMode::Locked)
@@ -115,7 +116,7 @@ fn grab_cursor(window: &Window) -> bool {
     grabbed
 }
 
-/// What a key typed, as text events: the editing keys by name with their
+/// What a key typed, as text events.
 pub fn text_events(event: &KeyEvent, shift: bool, control: bool) -> Vec<TextEvent> {
     let word = control;
     let shortcut = match (&event.logical_key, event.physical_key) {
@@ -176,7 +177,7 @@ impl RunningState {
             .to_virtual((self.input.cursor.x, self.input.cursor.y))
     }
 
-    /// Grabs the cursor while playing with no screen or overlay, and frees
+    /// Grabs the cursor while playing with no screen or overlay, and frees it otherwise.
     pub(super) fn sync_cursor(&mut self) {
         if self.world.is_none() || self.bench.is_some() {
             return;
@@ -187,7 +188,7 @@ impl RunningState {
         }
     }
 
-    /// `AbstractWidget.handleCursor`: pointer/text over an active widget,
+    /// `AbstractWidget.handleCursor`.
     fn update_os_cursor(&self) {
         let Some(cursor) = self.screens.cursor() else {
             return;
@@ -370,7 +371,7 @@ impl RunningState {
         }
     }
 
-    /// Hands a key to the world (when no screen pauses it) and acts on what
+    /// Hands a key to the world (when no screen pauses it) and acts on what it asks for.
     fn world_key(
         &mut self,
         key: &Key,
@@ -387,7 +388,7 @@ impl RunningState {
         self.apply(action, event_loop);
     }
 
-    /// Lets the window take composed text where text can be typed (a screen
+    /// Lets the window take composed text where text can be typed (a screen or the chat).
     pub(super) fn sync_ime(&mut self) {
         let want = !self.playing();
         if want != self.input.ime_allowed {
@@ -396,7 +397,7 @@ impl RunningState {
         }
     }
 
-    /// `Ime::Commit`: composed text, typed like keys of those characters
+    /// `Ime::Commit`.
     fn ime_commit(&mut self, text: &str, event_loop: &ActiveEventLoop) {
         let mut events = vec![TextEvent::Preedit(String::new())];
         events.extend(
@@ -407,7 +408,7 @@ impl RunningState {
         self.ime_events(events, event_loop);
     }
 
-    /// What an input method typed, to the world's overlay (the chat) or
+    /// What an input method typed, to the world's overlay (the chat) or the top screen.
     fn ime_events(&mut self, events: Vec<TextEvent>, event_loop: &ActiveEventLoop) {
         if self.world.is_some() && !self.paused() {
             self.world_key(
@@ -432,7 +433,7 @@ impl RunningState {
         }
     }
 
-    /// After the frame: the input method's candidate window goes beside the
+    /// After the frame.
     pub(super) fn sync_ime_area(&mut self) {
         let Some((x, y, height)) = crate::gui::ime::take_cursor() else {
             return;

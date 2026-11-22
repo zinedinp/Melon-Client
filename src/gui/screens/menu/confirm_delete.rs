@@ -10,7 +10,7 @@ use crate::singleplayer;
 const QUESTION_COLOR: [f32; 4] = [1.0, 0.5, 0.5, 1.0];
 const WARNING_COLOR: [f32; 4] = [0.85, 0.85, 0.85, 1.0];
 
-/// Deletes a world's whole folder: Melon's sidecar and the integrated
+/// Deletes a world's whole folder.
 pub fn confirm_delete_world(folder: String, world_name: &str, ctx: &ScreenContext) -> DialogScreen {
     let warning = ctx.lang.format("selectWorld.deleteWarning", &[world_name]);
     DialogScreen::new()

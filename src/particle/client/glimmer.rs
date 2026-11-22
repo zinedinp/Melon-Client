@@ -1,4 +1,4 @@
-//! `Block.animateTick` of the blocks that glimmer, drip and shed: portals,
+//! `Block.animateTick` of the blocks that glimmer, drip and shed.
 
 use glam::{DVec3, IVec3};
 
@@ -180,7 +180,7 @@ fn random_direction(rng: &mut JavaRandom) -> Direction {
     Direction::ALL[rng.next_int(6) as usize]
 }
 
-/// Whether the neighbour toward `dir` closes that side (`canOcclude` and
+/// Whether the neighbour toward `dir` closes that side (`canOcclude` and a full face).
 fn sturdy_toward(world: &World, pos: IVec3, dir: Direction) -> bool {
     let [dx, dy, dz] = dir.step();
     let at = pos + IVec3::new(dx, dy, dz);
@@ -209,7 +209,7 @@ fn end_rod(state: u16, base: DVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) 
     }
 }
 
-/// `NetherPortalBlock.animateTick`: four motes flying out of the portal's
+/// `NetherPortalBlock.animateTick`.
 fn nether_portal(
     world: &World,
     base: DVec3,
@@ -266,7 +266,7 @@ fn wet_sponge(world: &World, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spa
     out.push(Spawn::simple(Kind::DrippingWater, at, DVec3::ZERO));
 }
 
-/// `SporeBlossomBlock.animateTick`: one falling spore, and fourteen tries
+/// `SporeBlossomBlock.animateTick`.
 fn spore_blossom(world: &World, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     let falling = pos.as_dvec3() + DVec3::new(rng.next_double(), 0.7, rng.next_double());
     out.push(Spawn::simple(
@@ -311,7 +311,7 @@ fn redstone_ore(world: &World, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<S
     }
 }
 
-/// `EnchantingTableBlock.animateTick`: glyphs from each bookshelf two away
+/// `EnchantingTableBlock.animateTick`.
 fn enchanting_table(world: &World, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     let block_at = |at: IVec3| block_name(world.level.block_state(at.x, at.y, at.z).unwrap_or(0));
     for z in -2..=2 {
@@ -364,7 +364,7 @@ fn repeater(state: u16, base: DVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>)
     ));
 }
 
-/// The rolls of an ambient sound Melon's block sounds don't play: the
+/// The rolls of an ambient sound Melon's block sounds don't play.
 fn sound_roll(rng: &mut JavaRandom, one_in: i32, extra: u32) {
     if rng.next_int(one_in) == 0 {
         for _ in 0..extra {
@@ -401,7 +401,7 @@ fn spawn_below(pos: IVec3, rng: &mut JavaRandom) -> DVec3 {
     )
 }
 
-/// `FallingParticlesLeavesBlock.animateTick`: now and then a leaf from
+/// `FallingParticlesLeavesBlock.animateTick`.
 fn falling_leaves(
     world: &World,
     name: &str,
@@ -507,7 +507,7 @@ fn redstone_wire(state: u16, base: DVec3, rng: &mut JavaRandom, out: &mut Vec<Sp
     }
 }
 
-/// `PointedDripstoneBlock.animateTick`: a free hanging tip drips what
+/// `PointedDripstoneBlock.animateTick`.
 fn dripstone(world: &World, state: u16, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     let tip = prop(state, "thickness").as_deref() == Some("tip");
     let wet = prop(state, "waterlogged").as_deref() == Some("true");
@@ -526,7 +526,7 @@ fn dripstone(world: &World, state: u16, pos: IVec3, rng: &mut JavaRandom, out: &
     }
 }
 
-/// `PointedDripstoneBlock.spawnDripParticle` (level event 1504): the drip
+/// `PointedDripstoneBlock.spawnDripParticle` (level event 1504).
 pub fn dripstone_drip(world: &World, state: u16, pos: IVec3) -> Option<Spawn> {
     if block_name(state) != "pointed_dripstone" || !hangs(state) {
         return None;
@@ -540,7 +540,7 @@ fn hangs(state: u16) -> bool {
     prop(state, "vertical_direction").as_deref() == Some("down")
 }
 
-/// `getFluidAboveStalactite`: up through the dripstone to the block it
+/// `getFluidAboveStalactite`.
 fn fluid_above_stalactite(
     world: &World,
     pos: IVec3,
@@ -579,7 +579,7 @@ fn drip_of(state: u16, pos: IVec3, fluid: Option<crate::world::fluid::FluidKind>
     Spawn::simple(kind, drip, DVec3::ZERO)
 }
 
-/// `BeehiveBlock.trySpawnDripParticles`: a full hive drips honey from its
+/// `BeehiveBlock.trySpawnDripParticles`.
 fn honey_drip(world: &World, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     if rng.next_float() < 0.3 {
         return;
@@ -599,7 +599,7 @@ fn honey_drip(world: &World, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spa
     out.push(Spawn::simple(Kind::DrippingHoney, at, DVec3::ZERO));
 }
 
-/// The blocks that fall and dust below (`FallingBlock`, and the
+/// The blocks that fall and dust below (`FallingBlock`).
 fn falls(name: &str) -> bool {
     matches!(
         name,
@@ -616,7 +616,7 @@ fn falls(name: &str) -> bool {
     ) || name.ends_with("_concrete_powder")
 }
 
-/// `FallingBlock.animateTick`: now and then dust under a block with
+/// `FallingBlock.animateTick`.
 fn falling_dust(world: &World, state: u16, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     if rng.next_int(16) != 0 {
         return;

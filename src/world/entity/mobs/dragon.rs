@@ -1,4 +1,4 @@
-//! `EnderDragonModel`: a head, five neck bones, a body with wings and
+//! `EnderDragonModel`.
 
 use super::{LayerSpec, ModelId as M};
 use crate::math::angle::{self, DEG_TO_RAD, PI, wrap_degrees};
@@ -323,7 +323,7 @@ fn pose_limbs(
     pose[front_foot].pose.rotation.x = 0.75 + bounce * 0.1;
 }
 
-/// `EnderDragonModel.setupAnim` for idle flight: a straight history (no
+/// `EnderDragonModel.setupAnim` for idle flight.
 pub fn setup_anim(parts: &DragonParts, pose: &mut ModelPose, dragon: DragonPose) {
     let flap = dragon.flap_time * (PI * 2.0);
     pose[parts.jaw].pose.rotation.x = (angle::sin(flap) + 1.0) * 0.2;

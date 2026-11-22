@@ -1,4 +1,4 @@
-//! The packets of the scoreboard and the tab list: objectives, scores,
+//! The packets of the scoreboard and the tab list.
 
 use crate::component::Component;
 use crate::network::protocol::packet::Reader;
@@ -94,7 +94,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<ScorePacket>> {
     Ok(Some(ScorePacket::Scoreboard(update)))
 }
 
-/// `NumberFormatTypes.OPTIONAL_STREAM_CODEC`: by the registry order of
+/// `NumberFormatTypes.OPTIONAL_STREAM_CODEC`.
 fn optional_number_format(r: &mut Reader) -> Result<Option<NumberFormat>> {
     if !r.bool()? {
         return Ok(None);

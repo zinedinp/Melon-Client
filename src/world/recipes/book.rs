@@ -1,4 +1,4 @@
-//! `ClientRecipeBook`: the recipes the server unlocked, grouped the way
+//! `ClientRecipeBook`.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
@@ -96,7 +96,7 @@ impl Category {
             .and_then(|i| Self::ALL.get(i).copied())
     }
 
-    /// The book that lists this category, if one does (the stonecutter,
+    /// The book that lists this category, if one does.
     pub fn book(self) -> Option<BookType> {
         Some(match self {
             Self::CraftingBuildingBlocks
@@ -130,7 +130,7 @@ impl Category {
     }
 }
 
-/// A tab of a book: all of its recipes (`SearchRecipeBookCategory`), or one
+/// A tab of a book.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tab {
     Search(BookType),
@@ -158,7 +158,7 @@ impl Tab {
     }
 }
 
-/// `RecipeDisplayId`. The server numbers its recipes from 0; the recipes of
+/// `RecipeDisplayId`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct RecipeId(pub i32);
 
@@ -176,7 +176,7 @@ pub struct Entry {
     /// Recipes of one group in one category share a button.
     pub group: Option<i32>,
     pub category: Category,
-    /// What the recipe takes, one set per slot; `None` when it can't be
+    /// What the recipe takes, one set per slot; `None` when it can't be told.
     pub requirements: Option<Vec<ItemSet>>,
 }
 
@@ -193,7 +193,7 @@ impl Stock {
         Self(counts)
     }
 
-    /// Whether every set in `requirements` can be given a distinct item
+    /// Whether every set in `requirements` can be given a distinct item.
     pub fn can_craft(&self, requirements: &[ItemSet]) -> bool {
         let options: Vec<Vec<u16>> = requirements
             .iter()
@@ -216,7 +216,7 @@ impl Stock {
         })
     }
 
-    /// Kuhn's augmenting path: give `req` an item, or free one by moving
+    /// Kuhn's augmenting path.
     fn assign(
         &self,
         req: usize,
@@ -321,7 +321,7 @@ impl RecipeBook {
         self.highlight.contains(&id)
     }
 
-    /// Changes whenever the recipes or the settings do, for whoever caches
+    /// Changes whenever the recipes or the settings do, for whoever caches what they show.
     pub fn revision(&self) -> u64 {
         self.revision
     }
@@ -351,7 +351,7 @@ impl RecipeBook {
         self.known.values().chain(self.local.iter())
     }
 
-    /// Regroups after a change (`rebuildCollections`): recipes with the
+    /// Regroups after a change (`rebuildCollections`).
     pub fn rebuild(&mut self) {
         self.revision += 1;
         let server_results: HashSet<(Category, Vec<u16>)> =

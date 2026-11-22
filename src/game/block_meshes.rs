@@ -9,7 +9,7 @@ use crate::world::block_tint::TintKind;
 /// What one block state draws as: its tint, and a mesh per colour of it.
 struct Entry {
     kind: TintKind,
-    /// `None` for a state with nothing to draw (air, a fluid). Almost
+    /// `None` for a state with nothing to draw (air, a fluid).
     meshes: Vec<([u8; 3], Option<MeshId>)>,
 }
 
@@ -22,7 +22,7 @@ fn tint_kind(models: &BlockModels, state: u16) -> TintKind {
     models.tint_kind(state)
 }
 
-/// The vertices of block `state` as an entity mesh: the baked quads at the
+/// The vertices of block `state` as an entity mesh.
 pub fn vertices(models: &BlockModels, state: u16, rgb: [u8; 3]) -> Vec<WorldVertex> {
     let mut out = Vec::new();
     models.quads_at(state, [0, 0, 0], |quads| {
@@ -32,7 +32,7 @@ pub fn vertices(models: &BlockModels, state: u16, rgb: [u8; 3]) -> Vec<WorldVert
             } else {
                 rgb
             };
-            out.extend(quad.vertices.map(|v| WorldVertex {
+            out.extend(models.corners_of(quad).map(|v| WorldVertex {
                 light: WorldVertex::SENTINEL_LIGHT,
                 color: [
                     mul(v.color[0], tint[0]),
@@ -55,7 +55,7 @@ fn mul(a: u8, b: u8) -> u8 {
 }
 
 impl BlockMeshes {
-    /// Makes sure `state` can be drawn by [`Self::mesh`]. `tint` is asked
+    /// Makes sure `state` can be drawn by [`Self::mesh`].
     pub fn prepare(
         &mut self,
         renderer: &mut Renderer,
@@ -87,7 +87,7 @@ impl BlockMeshes {
         entry.meshes.push((rgb, mesh));
     }
 
-    /// The mesh of `state` as [`Self::prepare`] made it for the same
+    /// The mesh of `state` as [`Self::prepare`] made it, tinted by `tint`.
     pub fn mesh(&self, state: u16, tint: impl FnOnce(TintKind) -> [u8; 3]) -> Option<MeshId> {
         let entry = self.by_state.get(&state)?;
         let rgb = if entry.kind == TintKind::None {

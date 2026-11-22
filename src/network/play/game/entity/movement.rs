@@ -1,4 +1,4 @@
-//! How the server moves entities in 26.3: relative moves
+//! How the server moves entities in 26.3.
 
 use anyhow::{Result, bail};
 
@@ -9,7 +9,7 @@ use crate::network::protocol::packet::Reader;
 #[derive(Clone, Debug, PartialEq)]
 pub struct MoveEntity {
     pub id: i32,
-    /// `VecDelta`: in 1/4096 blocks, each step against the one before it
+    /// `VecDelta`.
     pub steps: Vec<[i16; 3]>,
     /// Yaw and pitch, degrees.
     pub rotation: Option<[f32; 2]>,
@@ -23,7 +23,7 @@ pub struct SetPosition {
     pub pos: [f64; 3],
     pub yaw: f32,
     pub pitch: f32,
-    /// `Relative` bits of a teleport (0 for a sync): set ones add to the
+    /// `Relative` bits of a teleport (0 for a sync).
     pub relative: i32,
     pub on_ground: bool,
     /// The velocity a teleport carries (`PositionMoveRotation.deltaMovement`);
@@ -48,7 +48,7 @@ fn properties(r: &mut Reader<'_>) -> Result<(bool, usize)> {
     Ok((properties & 1 != 0, (properties >> 1) as usize))
 }
 
-/// `VecDelta.read`: three shorts for none or one step, else `ticks` and
+/// `VecDelta.read`.
 fn vec_delta(r: &mut Reader<'_>, steps: usize) -> Result<Vec<[i16; 3]>> {
     let short3 =
         |r: &mut Reader<'_>| Ok::<_, anyhow::Error>([r.i16_be()?, r.i16_be()?, r.i16_be()?]);
@@ -97,7 +97,7 @@ pub fn read_move_rot(r: &mut Reader<'_>) -> Result<MoveEntity> {
     })
 }
 
-/// `ClientboundEntityPositionSyncPacket`: a `PositionPath` (linear: the
+/// `ClientboundEntityPositionSyncPacket`: a `PositionPath` (linear.
 pub fn read_position_sync(r: &mut Reader<'_>) -> Result<SetPosition> {
     let id = r.var_int()?;
     let pos = match r.var_int()? {
@@ -124,7 +124,7 @@ pub fn read_position_sync(r: &mut Reader<'_>) -> Result<SetPosition> {
     })
 }
 
-/// `ClientboundTeleportEntityPacket`: `PositionMoveRotation`, the relative
+/// `ClientboundTeleportEntityPacket`.
 pub fn read_teleport(r: &mut Reader<'_>) -> Result<SetPosition> {
     let id = r.var_int()?;
     let pos = r.vec3_f64()?;

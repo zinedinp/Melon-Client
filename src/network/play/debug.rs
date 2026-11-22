@@ -1,4 +1,4 @@
-//! The packet debugger: `MELON_PACKET_DEBUG` makes the connection thread
+//! The packet debugger.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::File;
@@ -11,7 +11,7 @@ use anyhow::{Context, Result, bail};
 
 /// How many of each unresolved packet are written out in full.
 const SHOWN: u32 = 3;
-/// Bytes of a body shown as hex. Item stacks with lore/custom_data are
+/// Bytes of a body shown as hex.
 const DUMP: usize = 2048;
 
 /// `packets.json` of Pumpkin, which names the protocol's packets.
@@ -71,7 +71,7 @@ pub struct PacketDebug {
     unresolved: bool,
     all: bool,
     traced: HashSet<i32>,
-    /// Per packet id: how many were unresolved, how many bytes, and the
+    /// Per packet id.
     seen: BTreeMap<i32, Seen>,
 }
 
@@ -220,7 +220,7 @@ fn start_capture(path: &Path) -> Result<Capture> {
     })
 }
 
-/// One packet: milliseconds since the start, id and length (each 4 bytes,
+/// One packet.
 fn record(capture: &mut Capture, pid: i32, body: &[u8]) -> std::io::Result<()> {
     let millis = capture.start.elapsed().as_millis() as u32;
     capture.out.write_all(&millis.to_be_bytes())?;
@@ -253,7 +253,7 @@ fn read_capture(path: &Path) -> Result<Vec<(u32, i32, Vec<u8>)>> {
     Ok(packets)
 }
 
-/// `melon --packets <file>`: a capture through the decoders; what nothing
+/// `melon --packets <file>`.
 pub fn replay(path: &Path) -> Result<()> {
     let packets = read_capture(path)?;
     let spec = std::env::var("MELON_PACKET_DEBUG").unwrap_or_else(|_| "unresolved".into());
@@ -302,7 +302,7 @@ fn dump(body: &[u8], show: bool) -> String {
     format!("\n        {}{more}\n        |{text}|", hex.join(" "))
 }
 
-/// The readable runs in a body (text of a dialog, titles, commands), so a
+/// The readable runs in a body (text of a dialog, titles, commands).
 fn strings(body: &[u8]) -> String {
     let mut out = Vec::new();
     let mut run = String::new();

@@ -1,4 +1,4 @@
-//! The game's side of the glide and the riptide spin: whether a glider is
+//! The game's side of the glide and the riptide spin.
 
 use super::InWorld;
 use crate::network::play::game::PlayerCommand;
@@ -10,7 +10,7 @@ use pumpkin_data::item_stack::ItemStack;
 /// `InventoryMenu`'s armor slots: head, chest, legs, feet.
 const ARMOR_SLOTS: std::ops::Range<usize> = 5..9;
 
-/// `LivingEntity.canGlideUsing`: a glider in the slot it is made for, and
+/// `LivingEntity.canGlideUsing`.
 fn glides_in(stack: &ItemStack, index: usize) -> bool {
     if stack.get_data_component::<GliderImpl>().is_none() {
         return false;
@@ -45,7 +45,7 @@ impl InWorld {
             .any(|i| slots.get(i).is_some_and(|stack| glides_in(stack, i)))
     }
 
-    /// After the player's tick: tell the server a glide began
+    /// After the player's tick.
     pub(super) fn after_airborne_tick(&mut self) {
         if self.player.take_glide_start() {
             self.joined

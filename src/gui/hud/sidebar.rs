@@ -1,11 +1,11 @@
-//! Vanilla `Hud.displayScoreboardSidebar`: the objective's title over its
+//! Vanilla `Hud.displayScoreboardSidebar`.
 
 use crate::gui::hud::item_slot::ItemPainter;
 use crate::gui::text::{self, StyledText, colors};
 use crate::math::argb;
 use crate::renderer::quad::DrawList;
 
-/// `Options.getBackgroundColor(0.3F)` and `(0.4F)`: the rows' and the
+/// `Options.getBackgroundColor(0.3F)` and `(0.4F)`.
 const ROWS_BACKGROUND: u32 = 0x4C00_0000;
 const TITLE_BACKGROUND: u32 = 0x6600_0000;
 const LINE: i32 = 9;

@@ -129,7 +129,7 @@ pub struct Biome {
     pub dry_foliage_color: Option<Rgb>,
     pub grass_modifier: GrassModifier,
     pub visuals: Visuals,
-    /// `minecraft:visual/ambient_particles`: what drifts in the air, with
+    /// `minecraft:visual/ambient_particles`.
     pub ambient_particles: Vec<(crate::particle::Kind, f32)>,
     /// `minecraft:audio/ambient_sounds`; `None` leaves the dimension's.
     pub ambient_sounds: Option<AmbientSounds>,
@@ -240,7 +240,7 @@ impl Biome {
         )
     }
 
-    /// `Biome.getPrecipitationAt` without the height curve: snow when the
+    /// `Biome.getPrecipitationAt` without the height curve.
     pub fn precipitation(&self) -> crate::world::weather::Precipitation {
         use crate::world::weather::Precipitation;
         if !self.has_precipitation {
@@ -348,7 +348,7 @@ impl ChunkBiomes {
         }
     }
 
-    /// The biome at section-local block coordinates: `x` and `z` in `0..16`,
+    /// The biome at section-local block coordinates.
     pub fn at(&self, x: i32, y: i32, z: i32) -> u16 {
         let Some(last) = self.sections.len().checked_sub(1) else {
             return 0;

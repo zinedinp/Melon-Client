@@ -1,4 +1,4 @@
-//! `CreakingModel`: walk is a keyframe cycle while it can move; attack,
+//! `CreakingModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::animations::creaking as anim;
@@ -113,7 +113,7 @@ impl CreakingParts {
     }
 }
 
-/// `CreakingModel.setupAnim`: the head looks, and it walks only while
+/// `CreakingModel.setupAnim`.
 pub fn setup_anim(
     parts: &CreakingParts,
     walk: &KeyframeAnimation,

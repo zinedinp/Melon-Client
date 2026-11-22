@@ -1,16 +1,16 @@
-//! Vanilla `Lightmap` / `core/lightmap.fsh`: per-block sky and block light
+//! Vanilla `Lightmap` / `core/lightmap.fsh`.
 
 /// `BLOCK_LIGHT_TINT`'s default (`DimensionDefaults` -10100 → RGB 0xFFD88C).
 pub const DEFAULT_BLOCK_LIGHT_TINT: [f32; 3] = [1.0, 216.0 / 255.0, 140.0 / 255.0];
-/// The overworld's `AMBIENT_LIGHT_COLOR` (RGB 0x0A0A0A): the floor every
+/// The overworld's `AMBIENT_LIGHT_COLOR` (RGB 0x0A0A0A).
 pub const OVERWORLD_AMBIENT: [f32; 3] = [10.0 / 255.0; 3];
-/// `LightmapRenderState.blockFactor`: `1.4` plus a small torch flicker
+/// `LightmapRenderState.blockFactor`.
 pub const BLOCK_FACTOR: f32 = 1.4;
 
 /// What the lightmap depends on besides the light levels.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LightmapParams {
-    /// `SKY_LIGHT_COLOR` times `SKY_LIGHT_FACTOR`: white by day, dim blue
+    /// `SKY_LIGHT_COLOR` times `SKY_LIGHT_FACTOR`.
     pub sky: [f32; 3],
     /// `Options.gamma`.
     pub gamma: f32,
@@ -38,7 +38,7 @@ pub fn get_brightness(level: u8) -> f32 {
     v / (4.0 - 3.0 * v)
 }
 
-/// `lightmap.fsh`: ambient plus sky plus block light, then
+/// `lightmap.fsh`.
 pub fn sample(block: u8, sky: u8, params: &LightmapParams) -> [f32; 3] {
     let block_b = get_brightness(block) * BLOCK_FACTOR;
     let sky_b = get_brightness(sky);

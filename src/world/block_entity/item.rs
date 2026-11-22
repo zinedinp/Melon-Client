@@ -1,4 +1,4 @@
-//! Block entity models as items: what a `minecraft:special` item model
+//! Block entity models as items.
 
 use super::DYES;
 use super::models::{self, ChestHalf, SkullType};
@@ -21,7 +21,7 @@ pub struct ItemPart {
     pub texture_size: Vec2,
 }
 
-/// The parts the special model `spec` (its `type` and options) draws, or
+/// The parts the special model `spec` (its `type` and options) draws, or `None`.
 pub fn special_parts(spec: &Value) -> Option<Vec<ItemPart>> {
     let kind = spec["type"].as_str()?.trim_start_matches("minecraft:");
     let option = |key: &str| {
@@ -120,7 +120,7 @@ pub fn special_parts(spec: &Value) -> Option<Vec<ItemPart>> {
     })
 }
 
-/// The image of a texture [`special_parts`] composed rather than loaded
+/// The image of a texture [`special_parts`] composed rather than loaded.
 pub fn texture_image(assets_root: &Path, id: &str) -> Option<RgbaImage> {
     let color = (0..DYES.len()).find(|&color| banner_texture(color) == id)?;
     banner_flag(assets_root, color)

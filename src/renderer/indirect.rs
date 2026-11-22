@@ -1,4 +1,4 @@
-//! The terrain's quad draws as indirect multi-draws, like vanilla's
+//! The terrain's quad draws as indirect multi-draws.
 
 use ash::vk;
 
@@ -45,7 +45,7 @@ impl Mapped {
     }
 }
 
-/// One frame in flight's buffers and the descriptor set binding its
+/// One frame in flight's buffers and the descriptor set binding them.
 #[derive(Default)]
 struct FrameDraws {
     commands: Mapped,
@@ -108,7 +108,7 @@ impl DrawBuffers {
         })
     }
 
-    /// Room for `draws` draws in frame slot `frame`; call once its fence
+    /// Room for `draws` draws in frame slot `frame`; call once its fence signalled.
     pub unsafe fn prepare(
         &mut self,
         device: &ash::Device,

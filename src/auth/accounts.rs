@@ -1,4 +1,4 @@
-//! The accounts the launcher offers: Microsoft logins and offline profiles
+//! The accounts the launcher offers.
 
 use super::{StoredAccount, secrets};
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ impl Account {
         matches!(self, Account::Microsoft(_))
     }
 
-    /// What tells accounts apart: the Mojang UUID, or the offline name
+    /// What tells accounts apart.
     pub fn key(&self) -> String {
         match self {
             Account::Microsoft(account) => account.uuid.clone(),
@@ -51,7 +51,7 @@ pub struct Meta {
     pub play_secs: u64,
 }
 
-/// The UUID an offline profile gets: vanilla's own derivation for a client
+/// The UUID an offline profile gets.
 pub fn offline_uuid(name: &str) -> uuid::Uuid {
     uuid::Builder::from_md5_bytes(super::md5::digest(
         format!("OfflinePlayer:{name}").as_bytes(),
@@ -100,7 +100,7 @@ struct Tokens {
 }
 
 impl Accounts {
-    /// `accounts.json`, or the single account an earlier version kept in
+    /// `accounts.json`, or the single account an earlier version kept in `account.json`.
     pub fn load(game_dir: &Path) -> Self {
         if let Some(mut accounts) = crate::json_file::load::<Accounts>(&path(game_dir)) {
             accounts.take_from_keyring();
@@ -119,7 +119,7 @@ impl Accounts {
         }
     }
 
-    /// Writes `accounts.json`, readable by its owner only. The tokens of
+    /// Writes `accounts.json`, readable by its owner only.
     pub fn save(&self, game_dir: &Path) -> std::io::Result<()> {
         let mut on_disk = self.clone();
         on_disk.put_in_keyring();
@@ -127,7 +127,7 @@ impl Accounts {
         crate::json_file::save_private(&file, &on_disk)
     }
 
-    /// Moves the tokens of every account that has them to the keyring and
+    /// Moves the tokens of every account that has them to the keyring.
     fn put_in_keyring(&mut self) {
         for account in &mut self.accounts {
             let Account::Microsoft(account) = account else {
@@ -192,7 +192,7 @@ impl Accounts {
         }
     }
 
-    /// Adds an offline profile and selects it (an existing one of that
+    /// Adds an offline profile and selects it; `false` for an invalid name.
     pub fn add_offline(&mut self, name: &str) -> bool {
         if !valid_offline_name(name) {
             return false;
@@ -204,7 +204,7 @@ impl Accounts {
         true
     }
 
-    /// Saves a Microsoft account's fresh tokens. With `add` it joins the
+    /// Saves a Microsoft account's fresh tokens.
     pub fn store(&mut self, account: Account, add: bool) {
         let key = account.key();
         match self.accounts.iter().position(|a| a.key() == key) {
@@ -217,7 +217,7 @@ impl Accounts {
         }
     }
 
-    /// Swaps the account at `index` with its neighbour `by` places away
+    /// Swaps the account at `index` with its neighbour `by` places away.
     pub fn move_account(&mut self, index: usize, by: isize) -> bool {
         let Some(target) = index.checked_add_signed(by) else {
             return false;
@@ -265,7 +265,7 @@ impl Accounts {
         }
     }
 
-    /// Gives the offline profile at `index` another name. That changes its
+    /// Gives the offline profile at `index` another name.
     pub fn rename_offline(&mut self, index: usize, name: &str) -> bool {
         let Some(Account::Offline { .. }) = self.accounts.get(index) else {
             return false;

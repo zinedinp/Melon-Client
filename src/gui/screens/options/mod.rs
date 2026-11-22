@@ -1,4 +1,4 @@
-//! Vanilla `OptionsScreen`: the title, an FOV slider beside "Online...",
+//! Vanilla `OptionsScreen`.
 
 pub mod accessibility;
 pub mod chat;
@@ -133,7 +133,7 @@ pub fn percent_label(lang: &Lang, caption: &'static str, value: f64) -> String {
     lang.format("options.percent_value", &[lang.get(caption), &percent])
 }
 
-/// `CycleButton.onOffBuilder`'s caption: "<caption>: ON/OFF".
+/// `CycleButton.onOffBuilder`'s caption: `<caption>: ON/OFF`.
 pub fn on_off_label(lang: &Lang, caption: &'static str, on: bool) -> String {
     let state = lang.get(if on { "options.on" } else { "options.off" });
     value_label(lang, caption, state)

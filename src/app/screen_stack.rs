@@ -1,4 +1,4 @@
-//! Vanilla `minecraft.setScreen` as a plain stack: the menus, or while in a
+//! Vanilla `minecraft.setScreen` as a plain stack.
 
 use crate::gui::screen::{CursorKind, Screen, ScreenContext};
 use crate::i18n::Lang;
@@ -91,7 +91,7 @@ impl ScreenStack {
         self.screens.clear();
     }
 
-    /// Pops one screen and resumes the one below. In a world, an empty
+    /// Pops one screen and resumes the one below.
     pub fn close_top(&mut self, in_world: bool, ctx: &ScreenContext) {
         if in_world || self.screens.len() > 1 {
             self.screens.pop();
@@ -101,7 +101,7 @@ impl ScreenStack {
         }
     }
 
-    /// Closes the top screen after a language change, unless it is the
+    /// Closes the top screen after a language change, unless it is the last one.
     pub fn pop_unless_last(&mut self) {
         if self.screens.len() > 1 {
             self.screens.pop();
@@ -122,7 +122,7 @@ impl ScreenStack {
         }
     }
 
-    /// The GUI's size changed: every screen is laid out again, the ones set
+    /// The GUI's size changed.
     pub fn resize(&mut self, ctx: &ScreenContext) {
         for screen in self.screens.iter_mut().chain(&mut self.menus) {
             screen.resize(ctx);
@@ -138,7 +138,7 @@ impl ScreenStack {
         }
     }
 
-    /// The world was left: back to the menus it was joined from, down to the
+    /// The world was left.
     pub fn leave_world(&mut self, integrated: bool) {
         self.screens = std::mem::take(&mut self.menus);
         while self.screens.len() > 1
@@ -156,7 +156,7 @@ impl ScreenStack {
         self.top().map(Screen::cursor)
     }
 
-    /// `Screen.shouldCloseOnEsc` for the top screen; an empty stack has
+    /// `Screen.shouldCloseOnEsc` for the top screen; an empty stack has none to close.
     pub fn top_closes_on_escape(&self) -> bool {
         self.top().is_none_or(Screen::closes_on_escape)
     }

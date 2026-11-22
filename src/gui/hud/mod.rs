@@ -1,4 +1,4 @@
-//! The in-game HUD (vanilla `client/gui/Hud.java`): the crosshair and the
+//! The in-game HUD (vanilla `client/gui/Hud.java`).
 
 pub mod bars;
 pub mod boss;
@@ -107,9 +107,9 @@ pub struct PlayerStatus {
     pub experience_level: i32,
     pub game_mode: GameMode,
     pub hardcore: bool,
-    /// The jump bar's fill (0 to 1) while riding a mount that jumps; it
+    /// The jump bar's fill (0 to 1) while riding a mount that jumps.
     pub jump_bar: Option<f32>,
-    /// `Attributes.MAX_HEALTH` and `ARMOR`, as the server set them, and the
+    /// `Attributes.MAX_HEALTH` and `ARMOR`, as the server set them, and the absorption.
     pub max_health: f32,
     pub armor: i32,
     pub absorption: f32,
@@ -184,7 +184,7 @@ pub struct Hud {
 const DEFAULT_TITLE_TIMES: [i32; 3] = [10, 70, 20];
 
 impl Hud {
-    /// `Hud.tick`: once a game tick. `selected_name` is the selected stack's
+    /// `Hud.tick`: once a game tick.
     pub fn tick(
         &mut self,
         selected: &ItemStack,
@@ -269,7 +269,7 @@ impl Hud {
         }
     }
 
-    /// `Hud.extractTitle`: the title at four times and the subtitle at
+    /// `Hud.extractTitle`.
     pub fn draw_title(
         &self,
         draw_list: &mut DrawList,
@@ -315,7 +315,7 @@ impl Hud {
         }
     }
 
-    /// `Hud.extractOverlayMessage`: the action bar text above the hotbar,
+    /// `Hud.extractOverlayMessage`.
     pub fn draw_overlay_message(
         &self,
         draw_list: &mut DrawList,
@@ -491,11 +491,11 @@ pub struct AttackCooldown {
     pub strength: f32,
     pub indicator: AttackIndicator,
     pub main_arm: Arm,
-    /// A creature that can be hurt is under the crosshair and the weapon
+    /// A creature that can be hurt is under the crosshair and the weapon is charged.
     pub target_ready: bool,
 }
 
-/// `Hud.extractCrosshair`'s attack indicator: a bar under the crosshair,
+/// `Hud.extractCrosshair`'s attack indicator.
 fn push_crosshair_cooldown(
     draw_list: &mut DrawList,
     textures: &HudTextures,

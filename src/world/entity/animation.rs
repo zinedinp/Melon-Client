@@ -33,7 +33,7 @@ pub fn bob_arms(right_arm: &mut Pose, left_arm: &mut Pose, age_in_ticks: f32) {
     bob_model_part(left_arm, age_in_ticks, -1.0);
 }
 
-/// `AnimationUtils.animateZombieArms`: both arms held out in front, higher
+/// `AnimationUtils.animateZombieArms`.
 pub fn animate_zombie_arms(
     left_arm: &mut Pose,
     right_arm: &mut Pose,
@@ -55,7 +55,7 @@ pub fn animate_zombie_arms(
     left_arm.rotation = glam::Vec3::new(x_rot, if raise { y_rot } else { -y_rot }, 0.0);
 }
 
-/// `AnimationUtils.animateCrossbowHold`: a loaded crossbow aimed ahead,
+/// `AnimationUtils.animateCrossbowHold`.
 pub fn animate_crossbow_hold(
     right_arm: &mut Pose,
     left_arm: &mut Pose,
@@ -74,7 +74,7 @@ pub fn animate_crossbow_hold(
     shooting.rotation.x = -1.5 + head.0;
 }
 
-/// `AnimationUtils.animateCrossbowCharge`: the free arm pulls the string
+/// `AnimationUtils.animateCrossbowCharge`.
 pub fn animate_crossbow_charge(
     right_arm: &mut Pose,
     left_arm: &mut Pose,

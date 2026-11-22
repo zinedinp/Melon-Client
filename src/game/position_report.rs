@@ -1,4 +1,4 @@
-//! `LocalPlayer.sendPosition`: what of the player's movement the server
+//! `LocalPlayer.sendPosition`.
 
 use glam::DVec3;
 

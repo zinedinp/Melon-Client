@@ -1,4 +1,4 @@
-//! What F3+B and F3+G draw into the world: entity hitboxes
+//! What F3+B and F3+G draw into the world.
 
 use std::path::{Path, PathBuf};
 
@@ -45,7 +45,7 @@ pub struct DebugView {
 }
 
 impl DebugView {
-    /// The settings in `game_dir`, or the defaults; also sets what lives
+    /// The settings in `game_dir`, or the defaults; also whether they were saved before.
     pub fn load(game_dir: &Path) -> (Self, bool) {
         let path = game_dir.join(FILE);
         let saved: DebugSettings = crate::json_file::load(&path).unwrap_or_default();
@@ -76,7 +76,7 @@ impl DebugView {
     }
 }
 
-/// A world point moved so that, through the camera's sway ([`Camera::bob`]),
+/// A world point moved so that it stays put through the camera's sway ([`Camera::bob`]).
 fn still_in_view(camera: &Camera) -> impl Fn(DVec3) -> DVec3 {
     let mut rotation = camera.view;
     rotation.w_axis = glam::Vec4::W;
@@ -153,7 +153,7 @@ impl InWorld {
         );
     }
 
-    /// `DebugCrosshairRenderer`: the world's three axes, a black line (4
+    /// `DebugCrosshairRenderer`.
     fn crosshair_gizmos(&self, gizmos: &mut Gizmos, camera: &Camera) {
         let to_camera = -self.player.forward_vector().as_dvec3();
         let length = 0.01 * f64::from(self.debug_view.gui_scale.max(1.0));
@@ -179,7 +179,7 @@ impl InWorld {
         }
     }
 
-    /// `EntityHitboxDebugRenderer.showHitboxes`: the box (white), its
+    /// `EntityHitboxDebugRenderer.showHitboxes`.
     fn hitbox_gizmos(&self, gizmos: &mut Gizmos, visible: &[i32], partial: f32) {
         let white = argb(0xFFFF_FFFF);
         let red = argb(0xFFFF_0000);
@@ -244,7 +244,7 @@ impl InWorld {
         }
     }
 
-    /// `ChunkBorderRenderer.emitGizmos`: the borders of the 3×3 chunks
+    /// `ChunkBorderRenderer.emitGizmos`.
     fn chunk_border_gizmos(&self, gizmos: &mut Gizmos) {
         let (min_y, sections) = self.level.height();
         let (y_min, y_max) = (f64::from(min_y), f64::from(min_y + sections * 16));

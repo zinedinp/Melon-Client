@@ -1,4 +1,4 @@
-//! `AdultCamelModel` and `BabyCamelModel`: walk, sit, dash and idle are
+//! `AdultCamelModel` and `BabyCamelModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::world::entity::animations::{camel as adult_anim, camel_baby as baby_anim};
@@ -259,7 +259,7 @@ impl CamelClock {
         (self.rng % 40) as i32 + 80
     }
 
-    /// `Camel.setupAnimationStates`, given whether it sits, is sitting
+    /// `Camel.setupAnimationStates`, given whether it sits.
     pub fn tick(
         &mut self,
         anim: &mut [AnimationState],

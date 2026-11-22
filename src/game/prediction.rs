@@ -1,4 +1,4 @@
-//! `BlockStatePredictionHandler`: the blocks the player's own click changes
+//! `BlockStatePredictionHandler`.
 
 use super::InWorld;
 use std::collections::HashMap;
@@ -29,7 +29,7 @@ impl Predictions {
         self.last_teleport = Some(self.sequence);
     }
 
-    /// `retainKnownServerState`: the first old state and position of a
+    /// `retainKnownServerState`.
     fn retain(&mut self, pos: [i32; 3], old: u16, sequence: i32, player: glam::DVec3) {
         self.verified
             .entry(pos)

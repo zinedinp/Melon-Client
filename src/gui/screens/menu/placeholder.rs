@@ -1,4 +1,4 @@
-//! Shared not-implemented stub: heading, a note, and Back. Realms, Friends,
+//! Shared not-implemented stub: heading, a note, and Back.
 
 use crate::gui::screen::ScreenAction;
 use crate::gui::widgets::dialog::DialogScreen;

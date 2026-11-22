@@ -6,7 +6,7 @@ pub enum Command {
     Play(LaunchOptions),
     /// `--connect <address>`: join, print what the server sent, exit.
     Connect(String),
-    /// `--packets <file>`: a capture (`MELON_PACKET_CAPTURE`) through the
+    /// `--packets <file>`.
     Packets(String),
 }
 

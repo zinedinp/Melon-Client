@@ -60,7 +60,7 @@ pub struct DebugContext<'a> {
     /// `Minecraft.getGpuUtilization`: the GPU's busy share of a frame, in
     /// percent; `None` without GPU timings.
     pub gpu_utilization: Option<f64>,
-    /// The connection, sound, server and CPU per thread
+    /// The connection, sound, server and CPU per thread.
     pub subsystems: Vec<String>,
     /// Overworld day count and ticks into the day (`DebugEntryDayCount`).
     pub day: i64,

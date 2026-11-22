@@ -1,4 +1,4 @@
-//! Water and lava (vanilla `FlowingFluid` for the state, `FluidRenderer` for
+//! Water and lava (vanilla `FlowingFluid` for the state, `FluidRenderer` for the mesh).
 
 mod mesh;
 mod state;
@@ -34,7 +34,7 @@ pub(crate) const WATER_TINT: [f32; 3] = [
     0x76 as f32 / 255.0,
     0xE4 as f32 / 255.0,
 ];
-/// `FluidRenderer.MAX_FLUID_HEIGHT`: a surface under a solid block, and
+/// `FluidRenderer.MAX_FLUID_HEIGHT`.
 pub(crate) const MAX_FLUID_HEIGHT: f32 = 0.888_888_9;
 /// Sides and the top are pulled this far in, against z-fighting.
 pub(crate) const OFFSET: f32 = 0.001;

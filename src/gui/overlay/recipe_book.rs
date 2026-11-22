@@ -1,4 +1,4 @@
-//! The recipe book beside a crafting grid or a furnace
+//! The recipe book beside a crafting grid or a furnace.
 
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
@@ -18,7 +18,7 @@ use crate::world::recipes::{BookType, Category, RecipeBook, RecipeDisplay, Recip
 
 const WIDTH: f32 = 147.0;
 const HEIGHT: f32 = 166.0;
-/// `RecipeBookComponent.OFFSET_X_POSITION`: how far left of the centre the
+/// `RecipeBookComponent.OFFSET_X_POSITION`.
 const OFFSET_X: f32 = 86.0;
 /// Recipe buttons on a page, and their pitch.
 const PER_PAGE: usize = 20;
@@ -28,7 +28,7 @@ const TAB_H: f32 = 27.0;
 /// Ticks one recipe of a button is shown before the next (`TICKS_TO_SWAP_SLOT`).
 const SWAP_TICKS: f32 = 30.0;
 
-/// TODO(book): vanilla's squeeze animation of tabs and buttons with new
+/// TODO(book): vanilla's squeeze animation of tabs and buttons with new recipes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RecipeAction {
     /// `ServerboundPlaceRecipePacket`.
@@ -56,7 +56,7 @@ fn click(mut actions: Vec<OverlayAction>) -> Vec<OverlayAction> {
 /// Which menu the book belongs to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
-    /// A crafting grid `grid` wide and high: the inventory's 2x2 or the
+    /// A crafting grid `grid` wide and high.
     Crafting {
         grid: usize,
     },
@@ -128,7 +128,7 @@ pub struct RecipeBookSprites {
     button_highlighted: GuiSprite,
     tab: GuiSprite,
     tab_selected: GuiSprite,
-    /// Enabled, disabled, enabled highlighted, disabled highlighted; the
+    /// Enabled, disabled, enabled highlighted, disabled highlighted.
     filter: [[GuiSprite; 4]; 2],
     page_forward: [GuiSprite; 2],
     page_backward: [GuiSprite; 2],
@@ -187,7 +187,7 @@ impl RecipeBookSprites {
 
 /// One button of the page: recipes that share it.
 struct Cell {
-    /// What it cycles through: the craftable ones when filtering, else all
+    /// What it cycles through.
     recipes: Vec<(RecipeId, Vec<ItemStack>)>,
     craftable: bool,
     highlight: bool,
@@ -295,7 +295,7 @@ impl RecipeBookPanel {
         self.visible
     }
 
-    /// Where the menu's left edge is (`updateScreenPosition`): shifted right
+    /// Where the menu's left edge is (`updateScreenPosition`).
     pub fn menu_left(&self, width: f32, image_width: f32) -> f32 {
         if self.visible && !self.too_narrow(width) {
             (177.0 + ((width - image_width - 200.0) / 2.0).floor()).floor()
@@ -333,7 +333,7 @@ impl RecipeBookPanel {
         self.tabs[self.tab.min(self.tabs.len() - 1)].tab
     }
 
-    /// Follows the server's settings and rebuilds the buttons when what they
+    /// Follows the server's settings and rebuilds the buttons when what they show changed.
     pub fn tick(
         &mut self,
         book: &mut RecipeBook,
@@ -836,7 +836,7 @@ impl RecipeBookPanel {
         }
     }
 
-    /// The tooltip of the button under the mouse and the popup, over
+    /// The tooltip of the button under the mouse and the popup, over everything else.
     pub fn draw_overlay(&self, ui: &mut OverlayDraw, sprites: &RecipeBookSprites) {
         if !self.visible {
             return;
@@ -906,7 +906,7 @@ impl RecipeBookPanel {
         }
     }
 
-    /// The ghost recipe in the menu's slots: the items it wants, translucent,
+    /// The ghost recipe in the menu's slots.
     pub fn draw_ghost(&self, ui: &mut OverlayDraw, layout: &MenuLayout, display: &RecipeDisplay) {
         let grid = match self.mode {
             Mode::Crafting { grid } => grid,
@@ -933,7 +933,7 @@ impl RecipeBookPanel {
     }
 }
 
-/// What the inventory holds that can go into a recipe: the 36 main slots,
+/// What the inventory holds that can go into a recipe.
 pub fn stock_of(
     inventory: &crate::world::inventory::Inventory,
     menu: Option<&crate::world::inventory::OpenContainer>,

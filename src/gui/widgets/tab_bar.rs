@@ -1,4 +1,4 @@
-//! Vanilla `MenuTabBar` / `TabNavigationBar`: a row of tabs across the top
+//! Vanilla `MenuTabBar` / `TabNavigationBar`.
 
 use crate::gui::text::font::LINE_HEIGHT;
 use crate::gui::widgets::{Rect, Ui};
@@ -44,7 +44,7 @@ impl TabBar {
         self.selected
     }
 
-    /// `MenuTabBar.arrangeElements`: the row is `min(400, width) - 28` wide,
+    /// `MenuTabBar.arrangeElements`.
     pub fn resize(&mut self, width: f32) {
         self.resize_at(0.0, 0.0, width);
     }
@@ -84,7 +84,7 @@ impl TabBar {
         self.selected = tab.min(self.titles.len().saturating_sub(1));
     }
 
-    /// `MenuTabBar.extractWidgetRenderState`: `HEADER_SEPARATOR` only in the
+    /// `MenuTabBar.extractWidgetRenderState`.
     pub fn draw(&self, ui: &mut Ui) {
         let separator_y = self.y + HEIGHT - 2.0;
         let right = self.x + self.tab_w * self.titles.len() as f32;
@@ -114,7 +114,7 @@ impl TabBar {
         }
     }
 
-    /// One `MenuTabBar.MenuTabButton`: sprite, then (when selected) the menu
+    /// One `MenuTabBar.MenuTabButton`.
     fn draw_tab(&self, ui: &mut Ui, index: usize) {
         let x = self.x + index as f32 * self.tab_w;
         let w = self.tab_w;

@@ -1,4 +1,4 @@
-//! Vanilla `JoinMultiplayerScreen`: the saved servers with their status (MOTD,
+//! Vanilla `JoinMultiplayerScreen`.
 
 use std::cell::OnceCell;
 use std::collections::HashMap;
@@ -35,7 +35,7 @@ const LAYOUT: HeaderFooter = HeaderFooter::new(33.0, 60.0);
 /// `ServerSelectionList`: `getRowWidth() = 305`, rows 36 high.
 const ROW_W: f32 = 305.0;
 const ROW_H: f32 = 36.0;
-/// `AbstractSelectionList.Entry.CONTENT_PADDING`: an entry's content sits
+/// `AbstractSelectionList.Entry.CONTENT_PADDING`.
 const PADDING: f32 = 2.0;
 /// `OnlineServerEntry.ICON_SIZE` and `SPACING`.
 const ICON: f32 = row_icon::SIZE;
@@ -112,7 +112,7 @@ impl MultiplayerScreen {
         screen
     }
 
-    /// Re-reads `servers.json` and pings every server again. A server keeps
+    /// Re-reads `servers.json` and pings every server again.
     fn reload(&mut self, ctx: &ScreenContext) {
         let known_icons: HashMap<String, TextureId> = self
             .servers

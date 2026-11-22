@@ -1,4 +1,4 @@
-//! `AbstractMountInventoryScreen`: the saddle and armor slots' backs and
+//! `AbstractMountInventoryScreen`.
 
 use super::{Loader, MenuDraw, MenuScreen};
 use crate::gui::sprite::GuiSprite;

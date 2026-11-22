@@ -1,4 +1,4 @@
-//! `ParrotModel`: a standing, flying, sitting, dancing or shoulder-perched
+//! `ParrotModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI, SIXTH_PI};

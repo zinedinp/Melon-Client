@@ -1,4 +1,4 @@
-//! The chunks of a joined world (vanilla `ClientChunkCache`) and their
+//! The chunks of a joined world (vanilla `ClientChunkCache`) and their meshes.
 
 mod light;
 mod mesh_queue;
@@ -25,9 +25,9 @@ use crate::world::terrain::SectionMesh;
 use mesh_queue::MeshQueue;
 
 struct LoadedChunk {
-    /// Shared with mesh jobs in flight; a block change copies it if one
+    /// Shared with mesh jobs in flight; a block change copies it if one holds it.
     chunk: Arc<Chunk>,
-    /// What can be seen through each section, bottom to top; open until
+    /// What can be seen through each section, bottom to top.
     visibility: Vec<VisibilitySet>,
     /// World positions of the blocks a block entity renderer draws.
     block_entities: Vec<[i32; 3]>,
@@ -36,7 +36,7 @@ struct LoadedChunk {
 }
 
 impl LoadedChunk {
-    /// Takes the chunk's [`ChunkScan`](crate::world::chunk::ChunkScan),
+    /// Takes the chunk's [`ChunkScan`](crate::world::chunk::ChunkScan).
     fn new(mut chunk: Chunk) -> Self {
         let scan = std::mem::take(&mut chunk.scan);
         Self {
@@ -52,7 +52,7 @@ impl LoadedChunk {
         !self.block_entities.is_empty() || !self.heads.is_empty()
     }
 
-    /// Keeps the block entity positions up to date for one block that
+    /// Keeps the block entity positions up to date for one block that changed.
     fn block_changed(&mut self, pos: [i32; 3], old: u16, new: u16) {
         if block_entity::kind_of(old).is_some() {
             self.block_entities.retain(|&p| p != pos);
@@ -70,7 +70,7 @@ impl LoadedChunk {
 pub struct FinishedMesh {
     pub pos: SectionPos,
     pub mesh: SectionMesh,
-    /// Built for the coming frame (the Chunk Builder's): shown at once,
+    /// Built for the coming frame (the Chunk Builder's).
     pub sync: bool,
 }
 
@@ -82,12 +82,12 @@ pub struct Level {
     furnished: Vec<(i32, i32)>,
     /// What needs meshing, and the workers meshing it.
     meshing: MeshQueue,
-    /// Bumped whenever a mesh or a chunk changes, so the occlusion walk knows
+    /// Bumped whenever a mesh or a chunk changes, so the occlusion walk knows to run again.
     revision: u64,
-    /// The dimension the chunks are of: how tall they are, and whether sky
+    /// The dimension the chunks are of.
     height: Height,
     has_skylight: bool,
-    /// How the dimension shades faces by direction, relative to the
+    /// How the dimension shades faces by direction, relative to the default.
     cardinal: [f32; 6],
     /// Biome colours and the blend radius, for the mesh workers.
     tints: TintSettings,
@@ -112,7 +112,7 @@ impl Default for Level {
 /// What F3 shows of the meshing (vanilla's `pC`/`pU`).
 #[derive(Clone, Copy, Default)]
 pub struct MeshStats {
-    /// Sections waiting for a mesh whose chunk has its neighbours (the
+    /// Sections waiting for a mesh whose chunk has its neighbours.
     pub waiting: usize,
     /// Section mesh jobs on the worker threads.
     pub in_flight: usize,
@@ -131,7 +131,7 @@ const AROUND: [(i32, i32); 8] = [
 ];
 
 impl Level {
-    /// A chunk arrived. A resent chunk replaces the old one; the game
+    /// A chunk arrived.
     pub fn insert(&mut self, mut chunk: Chunk) {
         if chunk.height != self.height {
             return;
@@ -166,7 +166,7 @@ impl Level {
         true
     }
 
-    /// Sets one block, as `ClientboundBlockUpdatePacket` says or the
+    /// Sets one block, as `ClientboundBlockUpdatePacket` says or the player did.
     pub fn set_block(&mut self, [x, y, z]: [i32; 3], state: u16, from_player: bool) -> Option<u16> {
         let key = (section_coord(x), section_coord(z));
         let old = {
@@ -196,7 +196,7 @@ impl Level {
         Some(old)
     }
 
-    /// `ClientboundLightUpdatePacket`: patch this column and remesh it
+    /// `ClientboundLightUpdatePacket`.
     pub fn apply_light(&mut self, x: i32, z: i32, update: &LightUpdate) -> bool {
         let Some(loaded) = self.chunks.get_mut(&(x, z)) else {
             return false;
@@ -208,7 +208,7 @@ impl Level {
         true
     }
 
-    /// `ClientChunkCache.replaceBiomes`: the column's biomes, then its
+    /// `ClientChunkCache.replaceBiomes`.
     pub fn replace_biomes(
         &mut self,
         x: i32,
@@ -235,7 +235,7 @@ impl Level {
         self.meshing.set_smooth_lighting(on);
     }
 
-    /// The "Chunk Builder" option: which changes are meshed before the
+    /// The "Chunk Builder" option.
     pub fn set_chunk_builder(&mut self, builder: ChunkBuilder) {
         self.meshing.set_chunk_builder(builder);
     }
@@ -246,7 +246,7 @@ impl Level {
         self.tints = tints;
     }
 
-    /// The biome colour `kind` faces get at a block, as the terrain's
+    /// The biome colour `kind` faces get at a block, as the terrain's mesher picks it.
     pub fn tint_at(&self, kind: crate::world::block_tint::TintKind, pos: [i32; 3]) -> [u8; 3] {
         self.tints
             .sampler(|qx, qy, qz| self.biome_at(qx * 4, qy * 4, qz * 4).unwrap_or(0))
@@ -272,7 +272,7 @@ impl Level {
         self.revision += 1;
     }
 
-    /// A level of another dimension, as vanilla's respawn makes a new
+    /// A level of another dimension, as vanilla's respawn makes a new one.
     pub fn set_dimension(&mut self, dimension: &DimensionType) {
         self.clear();
         self.height = dimension.height;
@@ -280,7 +280,7 @@ impl Level {
         self.cardinal = dimension.cardinal_light.relative();
     }
 
-    /// Builds the sections the Chunk Builder wants now, takes what the
+    /// Builds the sections the Chunk Builder wants now and takes what the workers finished.
     pub fn mesh_pending(
         &mut self,
         models: &Arc<BlockModels>,
@@ -327,7 +327,7 @@ impl Level {
         self.revision
     }
 
-    /// Where the world starts and how many sections it has from there to
+    /// Where the world starts and how many sections it has from there.
     pub fn height(&self) -> (i32, i32) {
         (self.height.min_y, self.height.sections() as i32)
     }
@@ -342,7 +342,7 @@ impl Level {
         self.has_skylight
     }
 
-    /// The occlusion walk ([`occlusion::walk`]) from section `camera` out to
+    /// The occlusion walk ([`occlusion::walk`]) from section `camera` out to the view distance.
     pub fn occlusion_job(
         &self,
         camera: SectionPos,
@@ -384,7 +384,7 @@ impl Level {
         SectionState::Loaded(visibility)
     }
 
-    /// `ClientboundBlockEntityDataPacket` for a player head: the profile
+    /// `ClientboundBlockEntityDataPacket` for a player head.
     pub fn set_head(&mut self, [x, y, z]: [i32; 3], profile: Option<HeadProfile>) {
         if !self.block_state(x, y, z).is_some_and(is_player_head) {
             return;
@@ -446,7 +446,7 @@ impl Level {
             .contains_key(&(section_coord(x), section_coord(z)))
     }
 
-    /// The block-state ID at a world position: `None` while its chunk hasn't
+    /// The block-state ID at a world position.
     pub fn block_state(&self, x: i32, y: i32, z: i32) -> Option<u16> {
         let loaded = self.chunks.get(&(section_coord(x), section_coord(z)))?;
         let Some(section) = usize::try_from(section_coord(y - self.height.min_y))
@@ -458,7 +458,7 @@ impl Level {
         Some(section.get(Section::index_of_block(x, y, z)))
     }
 
-    /// `ClientLevel.getBiome`: the biome block `(x, y, z)` is in, its cell
+    /// `ClientLevel.getBiome`.
     pub fn biome(&self, x: i32, y: i32, z: i32) -> Option<u16> {
         let own = self.biome_at(x, y, z)?;
         let Some(seed) = self.tints.zoom_seed() else {
@@ -469,13 +469,13 @@ impl Level {
         Some(crate::world::biome_zoom::biome(seed, x, y, z, &noise))
     }
 
-    /// The registry index of the biome stored for a world position's 4×4×4
+    /// The registry index of the biome stored for a world position's 4×4×4 cell.
     pub fn biome_at(&self, x: i32, y: i32, z: i32) -> Option<u16> {
         let loaded = self.chunks.get(&(section_coord(x), section_coord(z)))?;
         Some(loaded.chunk.biomes.at(x, y - self.height.min_y, z))
     }
 
-    /// Approximate `Heightmap.Types.MOTION_BLOCKING`: one above the highest
+    /// Approximate `Heightmap.Types.MOTION_BLOCKING`.
     pub fn motion_blocking_height(&self, x: i32, z: i32) -> i32 {
         let (min_y, sections) = self.height();
         let Some(loaded) = self.chunks.get(&(section_coord(x), section_coord(z))) else {
@@ -527,7 +527,7 @@ impl Level {
         if blocks { "0" } else { "1" }
     }
 
-    /// Block and sky light at a world position, `(0, 0)` if the column is
+    /// Block and sky light at a world position, `(0, 0)` if the column isn't loaded.
     pub fn light_at(&self, x: i32, y: i32, z: i32) -> (u8, u8) {
         self.chunks
             .get(&(section_coord(x), section_coord(z)))
@@ -535,7 +535,7 @@ impl Level {
     }
 }
 
-/// Adds the sections of the 3×3×3 blocks around `pos` to `out`: one to
+/// Adds the sections of the 3×3×3 blocks around `pos` to `out`.
 pub(super) fn sections_around([x, y, z]: [i32; 3], min_y: i32, out: &mut SectionSet) {
     let span = |coord: i32| {
         let section = section_coord(coord);

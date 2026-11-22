@@ -1,4 +1,4 @@
-//! `MerchantScreen`: the list of a villager's trades (seven rows, scrolled
+//! `MerchantScreen`.
 
 use pumpkin_data::item_stack::ItemStack;
 
@@ -78,7 +78,7 @@ fn scroll_for(y: f32, top: f32, count: usize) -> usize {
     scrolling.clamp(0.0, max) as usize
 }
 
-/// The thumb's offset below the track's top for the scroll position
+/// The thumb's offset below the track's top for the scroll position.
 fn thumb_offset(count: usize, scroll_off: usize) -> Option<i32> {
     let steps = (count + 1).saturating_sub(ROWS) as i32;
     if steps <= 1 {
@@ -98,7 +98,7 @@ impl MerchantScreen {
         offers(menu).get(self.selected)
     }
 
-    /// The experience the picked trade would give, while its payment is in
+    /// The experience the picked trade would give, while its payment is in the slots.
     fn future_xp(&self, menu: &OpenContainer) -> i32 {
         let Some(offer) = self.selected_offer(menu) else {
             return 0;
@@ -311,7 +311,7 @@ impl MenuScreen for MerchantScreen {
 }
 
 impl MerchantScreen {
-    /// `extractProgressBar`: the villager's experience towards the next
+    /// `extractProgressBar`.
     fn progress_bar(&self, draw: &mut MenuDraw, level: i32, xp: i32) {
         if level >= 5 {
             return;

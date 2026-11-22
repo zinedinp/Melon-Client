@@ -1,4 +1,5 @@
-//! Wraps the byte stream (a `TcpStream`, or the in-memory pipe to the
+//! Wraps the byte stream (a `TcpStream`, or the in-memory pipe to the integrated server) with
+//! framing, compression and encryption.
 
 use super::packet;
 use aes::Aes128;
@@ -9,7 +10,8 @@ use std::io::{self, Read, Write};
 
 /// Anything the protocol can be spoken over.
 pub trait Stream: Read + Write + Send {
-    /// Splits into independent read and write ends, so one thread can block
+    /// Splits into independent read and write ends, so one thread can block on reading while
+    /// another writes.
     fn split(self: Box<Self>) -> io::Result<(Box<dyn Read + Send>, Box<dyn Write + Send>)>;
 }
 
@@ -25,7 +27,7 @@ pub struct Connection {
     read_ahead: ReadAhead,
     encryptor: Option<Encryptor<Aes128>>,
     decryptor: Option<Decryptor<Aes128>>,
-    /// Threshold from `ClientboundLoginCompressionPacket`, or `None` while
+    /// Threshold from `ClientboundLoginCompressionPacket`, or `None` while uncompressed.
     compression: Option<i32>,
 }
 
@@ -40,7 +42,7 @@ impl Connection {
         }
     }
 
-    /// Switches the connection to encrypted mode from this point on. Called
+    /// Switches the connection to encrypted mode from this point on.
     pub fn enable_encryption(&mut self, key: &[u8; 16]) {
         self.encryptor = Some(Encryptor::new(key.into(), key.into()));
         self.decryptor = Some(Decryptor::new(key.into(), key.into()));
@@ -88,7 +90,7 @@ impl Write for Connection {
 }
 
 impl Connection {
-    /// Splits once logged in: [`ReadHalf`] for the thread that reads
+    /// Splits once logged in.
     pub fn into_split(self) -> io::Result<(ReadHalf, WriteHalf)> {
         let (read, write) = self.stream.split()?;
         Ok((
@@ -132,7 +134,7 @@ pub struct WriteHalf {
     stream: Box<dyn Write + Send>,
     encryptor: Option<Encryptor<Aes128>>,
     compression: Option<i32>,
-    /// Past the configuration phase: packets sent from other threads (a
+    /// Past the configuration phase.
     pub play: bool,
 }
 
@@ -166,7 +168,7 @@ impl Write for WriteHalf {
     }
 }
 
-/// Bytes read from the stream but not yet taken. The packet reader asks
+/// Bytes read from the stream but not yet taken.
 #[derive(Default)]
 struct ReadAhead {
     buf: Vec<u8>,
@@ -218,7 +220,7 @@ fn read_decrypted(
     Ok(n)
 }
 
-/// Encrypts the whole buffer once, when encryption is on, then writes it
+/// Encrypts the whole buffer once, when encryption is on, then writes it.
 fn write_encrypted(
     stream: &mut (impl Write + ?Sized),
     encryptor: Option<&mut Encryptor<Aes128>>,
@@ -241,7 +243,7 @@ mod tests {
     use std::collections::VecDeque;
     use std::sync::{Arc, Mutex};
 
-    /// A stream whose incoming bytes the test adds as it goes, handed out
+    /// A stream whose incoming bytes the test adds as it goes.
     #[derive(Clone)]
     struct Trickle {
         incoming: Arc<Mutex<VecDeque<u8>>>,

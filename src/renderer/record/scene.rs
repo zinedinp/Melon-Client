@@ -10,7 +10,7 @@ use crate::renderer::{
 use ash::vk;
 use glam::{Mat4, Vec3};
 
-/// Which layers of the scene a pass draws: all of them, or (with a post
+/// Which layers of the scene a pass draws.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(in crate::renderer) enum ScenePart {
     All,
@@ -45,7 +45,7 @@ impl ScenePart {
 }
 
 impl Renderer {
-    /// Pass 1: the world, layer by layer in [`RenderLayer::ORDER`], the
+    /// Pass 1.
     pub(in crate::renderer) unsafe fn record_scene(
         &self,
         cmd: vk::CommandBuffer,
@@ -344,7 +344,7 @@ impl Renderer {
         self.gpu_timer.close_pass();
     }
 
-    /// How the fog finds the distance of a model drawn in `layer`: from its
+    /// How the fog finds the distance of a model drawn in `layer`.
     fn model_fog(&self, world: &WorldDraw, layer: RenderLayer) -> FogInput {
         if layer == RenderLayer::Hand {
             return FogInput::None;
@@ -354,7 +354,7 @@ impl Renderer {
         FogInput::Model(globals::inverse_scale(&projection))
     }
 
-    /// The world camera's `projection * rotation` for `layer`, with the
+    /// The world camera's `projection * rotation` for `layer`.
     pub(in crate::renderer) fn world_view_projection(
         &self,
         world: &WorldDraw,
@@ -375,7 +375,7 @@ impl Renderer {
             * Mat4::from_translation(-world.eye_fraction())
     }
 
-    /// Resets the depth buffer inside the render pass, for a layer drawn on
+    /// Resets the depth buffer inside the render pass, for a layer drawn on top.
     pub(in crate::renderer) unsafe fn clear_depth(&self, cmd: vk::CommandBuffer) {
         let clear = vk::ClearAttachment {
             aspect_mask: vk::ImageAspectFlags::DEPTH,
@@ -560,7 +560,7 @@ impl Renderer {
         true
     }
 
-    /// Glint overlay: item atlas at set 0 (the alpha mask), glint texture
+    /// Glint overlay.
     pub(in crate::renderer) unsafe fn bind_glint_pass(
         &self,
         cmd: vk::CommandBuffer,
@@ -607,7 +607,7 @@ impl Renderer {
         );
     }
 
-    /// Binds the terrain quad pipeline for `mode` (solid, cutout or
+    /// Binds the terrain quad pipeline for `mode` (solid, cutout or translucent).
     pub(in crate::renderer) unsafe fn bind_terrain_pass(
         &self,
         cmd: vk::CommandBuffer,
@@ -699,7 +699,7 @@ impl Renderer {
         true
     }
 
-    /// Draws `vertices` of a mesh (all of it for `None`) with the bound
+    /// Draws `vertices` of a mesh (all of it for `None`) with the bound pipeline.
     pub(in crate::renderer) unsafe fn draw_world_mesh(
         &self,
         cmd: vk::CommandBuffer,
@@ -833,7 +833,7 @@ impl Renderer {
         self.flush_run(cmd, layout, view_proj, light, run);
     }
 
-    /// Draws a run of [`Self::draw_terrain_multi`]: `(buffer, first entry,
+    /// Draws a run of [`Self::draw_terrain_multi`].
     unsafe fn flush_run(
         &self,
         cmd: vk::CommandBuffer,
@@ -865,7 +865,7 @@ impl Renderer {
         );
     }
 
-    /// Draws `quads` of a terrain quad mesh with the bound terrain pass, as
+    /// Draws `quads` of a terrain quad mesh with the bound terrain pass.
     pub(in crate::renderer) unsafe fn draw_terrain_quads(
         &self,
         cmd: vk::CommandBuffer,
@@ -887,7 +887,7 @@ impl Renderer {
         }
     }
 
-    /// Binds mesh buffer `buffer` as the terrain shader's quads (set 4),
+    /// Binds mesh buffer `buffer` as the terrain shader's quads (set 4).
     unsafe fn bind_quads(
         &self,
         cmd: vk::CommandBuffer,
@@ -971,7 +971,7 @@ impl Renderer {
     }
 }
 
-/// The draws of quads `range` of a mesh of `count` quads: `(first quad,
+/// The draws of quads `range` of a mesh of `count` quads.
 fn quad_draws(range: &std::ops::Range<u32>, count: u32) -> impl Iterator<Item = (u32, u32)> {
     let end = range.end.min(count);
     (range.start..end)
@@ -979,7 +979,7 @@ fn quad_draws(range: &std::ops::Range<u32>, count: u32) -> impl Iterator<Item = 
         .map(move |first| (first, (end - first).min(mesh_arena::QUADS_PER_DRAW)))
 }
 
-/// The `vertexOffset` that makes `gl_VertexIndex` count corners from quad
+/// The `vertexOffset` that makes `gl_VertexIndex` count corners from quad `quad`.
 fn corner_offset(quad: u32) -> i32 {
     (quad * 4) as i32
 }

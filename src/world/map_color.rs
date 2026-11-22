@@ -1,4 +1,4 @@
-//! `MapColor`: the colour each block shows on a map, and in particles that
+//! `MapColor`.
 
 /// `MapColor.col` by id, `0xRRGGBB`.
 const COLORS: [u32; 64] = [

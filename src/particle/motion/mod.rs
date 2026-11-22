@@ -1,4 +1,4 @@
-//! Particles that go somewhere: toward a point, a block or an entity, or
+//! Particles that go somewhere.
 
 use glam::DVec3;
 
@@ -8,7 +8,7 @@ use super::{EntityBox, TickCtx};
 
 pub mod emitter;
 
-/// `PortalParticle.tick`: flies out from its start along its velocity
+/// `PortalParticle.tick`.
 pub fn portal(p: &mut Particle, start: DVec3) {
     p.begin_tick();
     if p.age_out() {
@@ -34,7 +34,7 @@ pub fn reverse_portal(p: &mut Particle) {
     p.pos += p.vel * speed;
 }
 
-/// `FlyTowardsPositionParticle.tick`: from `start + velocity` to `start`,
+/// `FlyTowardsPositionParticle.tick`.
 pub fn fly_towards(p: &mut Particle, start: DVec3) {
     p.begin_tick();
     if p.age_out() {
@@ -52,7 +52,7 @@ pub fn fly_towards(p: &mut Particle, start: DVec3) {
     );
 }
 
-/// `TrailParticle.tick`: closes in on `target` to arrive at the end of its
+/// `TrailParticle.tick`.
 pub fn trail(p: &mut Particle, target: DVec3) {
     p.begin_tick();
     if p.age_out() {
@@ -77,7 +77,7 @@ pub fn destination(to: PositionSource, ctx: &TickCtx) -> Option<DVec3> {
     }
 }
 
-/// The yaw and pitch from `to` back to `from` (`VibrationSignalParticle`'s
+/// The yaw and pitch from `to` back to `from` (`VibrationSignalParticle`'s rotation).
 pub fn heading(from: DVec3, to: DVec3) -> (f32, f32) {
     let d = from - to;
     let rot = d.x.atan2(d.z) as f32;
@@ -85,7 +85,7 @@ pub fn heading(from: DVec3, to: DVec3) -> (f32, f32) {
     (rot, pitch)
 }
 
-/// `VibrationSignalParticle.tick`: closes in on the block or entity,
+/// `VibrationSignalParticle.tick`.
 pub fn vibration(p: &mut Particle, ctx: &TickCtx) {
     use super::behavior::Behavior;
     p.begin_tick();

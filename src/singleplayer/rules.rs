@@ -1,4 +1,4 @@
-//! A world's game rules, as the integrated server keeps them in
+//! A world's game rules, as the integrated server keeps them.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -17,7 +17,7 @@ pub enum Value {
 /// The rules that differ from their default, by name.
 pub type Changes = BTreeMap<String, Value>;
 
-/// `GameRuleCategory`, in the order of its ids (the order the screen lists
+/// `GameRuleCategory`, in the order of its ids.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Category {
     Chat,
@@ -48,7 +48,7 @@ impl Category {
     }
 }
 
-/// One rule: its registry entry, snake-case name, default and what vanilla's
+/// One rule.
 pub struct Rule {
     pub name: String,
     pub default: Value,
@@ -56,7 +56,7 @@ pub struct Rule {
     /// An integer rule's range.
     pub min: i64,
     pub max: i64,
-    /// The feature pack that has to be on for the rule to show
+    /// The feature pack that has to be on for the rule to show.
     pub feature: Option<&'static str>,
 }
 
@@ -76,7 +76,7 @@ impl Rule {
     }
 }
 
-/// `GameRules`' registrations: category, and for numbers the range and the
+/// `GameRules`' registrations.
 const META: &[(&str, Category, i64, i64, Option<&str>)] = &[
     ("advance_time", Category::Updates, 0, 0, None),
     ("advance_weather", Category::Updates, 0, 0, None),
@@ -240,7 +240,7 @@ pub fn all() -> Vec<Rule> {
     rules
 }
 
-/// The language key of a rule's caption, `gamerule.<camelCase>`; vanilla's
+/// The language key of a rule's caption, `gamerule.<camelCase>`.
 pub fn lang_key(name: &str) -> String {
     let mut key = String::from("gamerule.");
     let mut upper = false;
@@ -283,7 +283,7 @@ pub fn read_changes(world_dir: &Path) -> Changes {
         .collect()
 }
 
-/// Writes the world's rules: the defaults with `changes`. A rule the server
+/// Writes the world's rules: the defaults with `changes`.
 pub fn write_changes(world_dir: &Path, changes: &Changes) -> std::io::Result<()> {
     let mut registry = GameRuleRegistry::default();
     for rule in GameRule::all() {

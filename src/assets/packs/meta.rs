@@ -1,4 +1,4 @@
-//! `pack.mcmeta`: a pack's description, the formats it was made for
+//! `pack.mcmeta`.
 
 use regex::Regex;
 use serde_json::Value;
@@ -6,7 +6,7 @@ use serde_json::Value;
 /// A pack format: major and minor version (`PackFormat`).
 pub type Format = (u32, u32);
 
-/// The resource pack format of the version Melon plays
+/// The resource pack format of the version Melon plays.
 pub const GAME_FORMAT: Format = (97, 1);
 
 /// `PackCompatibility`: how a pack's formats compare to [`GAME_FORMAT`].
@@ -40,7 +40,7 @@ impl Compatibility {
     }
 }
 
-/// One `filter.block` entry (`IdentifierPattern`); a missing pattern
+/// One `filter.block` entry (`IdentifierPattern`); a missing pattern matches everything.
 pub struct FilterRule {
     namespace: Option<Regex>,
     path: Option<Regex>,
@@ -104,7 +104,7 @@ impl PackMeta {
         Compatibility::for_range(self.formats)
     }
 
-    /// The overlay folders for [`GAME_FORMAT`], in the order listed (later
+    /// The overlay folders for [`GAME_FORMAT`], in the order listed (later ones win).
     pub fn active_overlays(&self) -> Vec<String> {
         self.overlays
             .iter()
@@ -136,7 +136,7 @@ pub fn strip_bom(bytes: &[u8]) -> &[u8] {
     bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes)
 }
 
-/// The pack's format range from `min_format`/`max_format`, else the old
+/// The pack's format range from `min_format`/`max_format`, else the old `pack_format`.
 fn pack_formats(pack: &serde_json::Map<String, Value>) -> Option<(Format, Format)> {
     if let (Some(min), Some(max)) = (
         pack.get("min_format").and_then(|v| format(v, 0)),
@@ -186,7 +186,7 @@ fn format(value: &Value, default_minor: u32) -> Option<Format> {
     }
 }
 
-/// `InclusiveRange<Integer>`: `n`, `[min, max]` or
+/// `InclusiveRange<Integer>`.
 fn int_range(value: &Value) -> Option<(u32, u32)> {
     let int = |v: &Value| v.as_u64().and_then(|n| u32::try_from(n).ok());
     match value {

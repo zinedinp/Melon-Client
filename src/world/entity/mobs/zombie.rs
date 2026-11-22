@@ -13,7 +13,7 @@ pub fn baby() -> LayerDefinition {
     baby_grown(0.0)
 }
 
-/// `DrownedModel.createBodyLayer(g)`: the zombie with a left arm and leg
+/// `DrownedModel.createBodyLayer(g)`.
 pub fn drowned(g: f32) -> LayerDefinition {
     let mut root = humanoid::create_mesh(g, 0.0);
     root.add_or_replace_child(

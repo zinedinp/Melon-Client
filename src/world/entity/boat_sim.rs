@@ -1,4 +1,4 @@
-//! A boat the local player steers, as the client runs it
+//! A boat the local player steers, as the client runs it.
 
 use glam::{DVec3, IVec3};
 
@@ -30,7 +30,7 @@ pub struct BoatInput {
 }
 
 impl BoatInput {
-    /// `controlBoat`'s paddle state: the left paddle turns the boat right,
+    /// `controlBoat`'s paddle state.
     pub fn paddles(self) -> (bool, bool) {
         (
             self.right && !self.left || self.up,
@@ -139,7 +139,7 @@ impl BoatSim {
         }
     }
 
-    /// `checkInWater`: the water the boat's bottom touches, and how high
+    /// `checkInWater`.
     fn check_in_water(&mut self, level: &Level, bounds: &Aabb) -> bool {
         let (x0, x1) = (bounds.min.x.floor() as i32, bounds.max.x.ceil() as i32);
         let (y0, y1) = (
@@ -270,7 +270,7 @@ impl BoatSim {
         self.paddles = input.paddles();
     }
 
-    /// `Entity.move(MoverType.SELF, deltaMovement)`: against the blocks
+    /// `Entity.move(MoverType.SELF, deltaMovement)`.
     fn move_by_velocity(&mut self, level: &Level, colliders: &[Aabb], body: &mut BoatBody) {
         let delta = self.velocity;
         let moved = physics::collide(level, colliders, body.bounds(), delta, 0.0, self.on_ground);
@@ -293,7 +293,7 @@ impl BoatSim {
     }
 }
 
-/// `isUnderwater`: the boat's top below the surface, in flowing water or
+/// `isUnderwater`.
 fn under_water(level: &Level, bounds: &Aabb) -> Option<Status> {
     let top = bounds.max.y + 0.001;
     let (x0, x1) = (bounds.min.x.floor() as i32, bounds.max.x.ceil() as i32);
@@ -317,7 +317,7 @@ fn under_water(level: &Level, bounds: &Aabb) -> Option<Status> {
     under.then_some(Status::UnderWater)
 }
 
-/// `getGroundFriction`: the mean slipperiness of the blocks the boat's
+/// `getGroundFriction`.
 fn ground_friction(level: &Level, bounds: &Aabb) -> f32 {
     let underside = Aabb {
         min: bounds.min,

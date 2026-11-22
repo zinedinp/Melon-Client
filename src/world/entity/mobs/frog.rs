@@ -1,4 +1,4 @@
-//! `FrogModel`: a keyframe-driven hopper. Walk and swim follow the walk
+//! `FrogModel`: a keyframe-driven hopper.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::animations::frog as anim;
@@ -137,7 +137,7 @@ impl FrogParts {
     }
 }
 
-/// Walk or swim by whether it is in the water, then hide the throat
+/// Walk or swim by whether it is in the water, then hide the throat.
 pub fn setup_anim(
     parts: &FrogParts,
     pose: &mut ModelPose,

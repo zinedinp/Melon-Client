@@ -4,7 +4,7 @@ use crate::network::play::game::PlayerInput;
 use crate::settings::input::{Action, InputBind, InputSettings};
 use crate::world::player::MoveInput;
 
-/// WASD, Space, Left Shift (`keyShift`, sneak) and Left Control
+/// WASD, Space, Left Shift (`keyShift`, sneak) and Left Control (`keySprint`).
 #[derive(Default)]
 pub struct Keys {
     pub forward: bool,
@@ -19,10 +19,10 @@ pub struct Keys {
     pub load_hotbar: bool,
     /// `keyPlayerList` (Tab): the player list shows while it is held.
     pub player_list: bool,
-    /// F3 held (`keyDebugModifier`), and whether it was used for a combo
+    /// F3 held (`keyDebugModifier`), and whether it was used for a combination.
     pub f3_held: bool,
     pub f3_used: bool,
-    /// The mouse in GUI pixels, and which buttons are down (left, right,
+    /// The mouse in GUI pixels, and which buttons are down (left, right, middle).
     pub mouse: (f32, f32),
     pub buttons: [bool; 3],
     pub attack: bool,
@@ -119,7 +119,7 @@ impl Keys {
         consume(&mut self.pick_clicks)
     }
 
-    /// `MouseHandler.releaseMouse` while a screen opens: attack/use/pick
+    /// `MouseHandler.releaseMouse` while a screen opens.
     pub fn clear_clicks(&mut self) {
         self.attack_clicks = 0;
         self.use_clicks = 0;

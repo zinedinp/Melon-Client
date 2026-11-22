@@ -1,4 +1,4 @@
-//! Vanilla's entity model structure, as data: a [`PartDefinition`] tree
+//! Vanilla's entity model structure, as data.
 
 use glam::{Mat4, Vec2, Vec3};
 
@@ -26,7 +26,7 @@ impl PartDefinition {
         }
     }
 
-    /// `addOrReplaceChild`: a child of that name gets the new boxes and
+    /// `addOrReplaceChild`.
     pub fn add_or_replace_child(
         &mut self,
         name: &'static str,
@@ -53,7 +53,7 @@ impl PartDefinition {
         &mut self.children[index]
     }
 
-    /// Keeps the boxes of the parts named in `keep` (and, if `children`,
+    /// Keeps the boxes of the parts named in `keep` (and, if `children`, of their children).
     pub fn retain_cubes(&mut self, keep: &[&str], children: bool) {
         if keep.contains(&self.name) {
             if !children {
@@ -147,12 +147,12 @@ pub struct Model {
     texture_size: Vec2,
 }
 
-/// One part's pose for this frame: `ModelPart`'s `x`/`y`/`z`, `xRot`/
+/// One part's pose for this frame.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PartState {
     pub pose: Pose,
     pub visible: bool,
-    /// `ModelPart.skipDraw`: this part's boxes stay hidden while children
+    /// `ModelPart.skipDraw`.
     pub skip_draw: bool,
 }
 
@@ -169,7 +169,7 @@ impl Clone for ModelPose {
         }
     }
 
-    /// Into the parts already there: no new allocation for a pose of the
+    /// Into the parts already there.
     fn clone_from(&mut self, source: &Self) {
         self.parts.clone_from(&source.parts);
     }
@@ -241,13 +241,13 @@ impl Model {
         PartId(0)
     }
 
-    /// The part named `name` anywhere in the tree (`getChild` down the
+    /// The part named `name` anywhere in the tree (`getChild` down the parts).
     pub fn part(&self, name: &str) -> PartId {
         self.find(name)
             .unwrap_or_else(|| panic!("model part {name} is missing"))
     }
 
-    /// The part named `name`, if the model has one (a baby chicken has no
+    /// The part named `name`, if the model has one.
     pub fn find(&self, name: &str) -> Option<PartId> {
         self.nodes.iter().position(|n| n.name == name).map(PartId)
     }
@@ -293,14 +293,14 @@ impl Model {
         false
     }
 
-    /// Each part's matrix from model pixels to the world, `None` for the
+    /// Each part's matrix from model pixels to the world, `None` for the hidden ones.
     pub fn part_matrices(&self, pose: &ModelPose, root: Mat4) -> Vec<Option<Mat4>> {
         let mut out = Vec::with_capacity(self.nodes.len());
         self.part_matrices_into(pose, root, &mut out);
         out
     }
 
-    /// [`Self::part_matrices`] into `out`, replacing what it held and
+    /// [`Self::part_matrices`] into `out`, replacing what it held.
     pub fn part_matrices_into(&self, pose: &ModelPose, root: Mat4, out: &mut Vec<Option<Mat4>>) {
         out.clear();
         TURNS.with_borrow_mut(|Turns { angles, sin, cos }| {
@@ -357,7 +357,7 @@ impl Model {
         }
     }
 
-    /// Whether `other`'s parts hang off each other the way this model's
+    /// Whether `other`'s parts hang off each other the way this model's do.
     pub fn shares_tree(&self, other: &Model) -> bool {
         self.nodes.len() == other.nodes.len()
             && self
@@ -367,7 +367,7 @@ impl Model {
                 .all(|(a, b)| a.parent == b.parent)
     }
 
-    /// The matrices of `part` and the parts below it only, `part` placed
+    /// The matrices of `part` and the parts below it only.
     pub fn subtree_matrices(
         &self,
         pose: &ModelPose,
@@ -404,7 +404,7 @@ impl Model {
             .placed_in(self.parent_transform(pose, part, root))
     }
 
-    /// The matrix `part`'s own pose is applied in: its parent's
+    /// The matrix `part`'s own pose is applied in.
     pub fn parent_transform(&self, pose: &ModelPose, part: PartId, root: Mat4) -> Mat4 {
         match self.nodes[part.0].parent {
             Some(parent) => self.part_transform(pose, PartId(parent), root),
@@ -412,7 +412,7 @@ impl Model {
         }
     }
 
-    /// Every face of `part`'s own boxes in its space (blocks, Y down,
+    /// Every face of `part`'s own boxes in its space (blocks, Y down).
     pub fn part_faces(&self, part: PartId, visit: &mut impl FnMut(ModelFace)) {
         let node = &self.nodes[part.0];
         if node.cubes.is_empty() {
@@ -432,7 +432,7 @@ impl Model {
         );
     }
 
-    /// `part`'s own boxes as vertices in its space (blocks, Y down, before
+    /// `part`'s own boxes as vertices in its space (blocks, Y down).
     pub fn part_vertices(&self, part: PartId) -> Vec<Vertex> {
         let mut out = Vec::new();
         self.part_faces(part, &mut |face| {

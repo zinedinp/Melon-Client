@@ -7,7 +7,7 @@ use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinit
 use crate::world::entity::quadruped::look;
 use crate::world::model_part::{Cube, Pose};
 
-/// The legs from the back pair forward: name, z, yaw and roll of the right
+/// The legs from the back pair forward.
 const LEGS: [(&str, &str, f32, f32, f32); 4] = [
     ("right_hind_leg", "left_hind_leg", 2.0, PI / 4.0, -PI / 4.0),
     (
@@ -93,7 +93,7 @@ impl SpiderParts {
     }
 }
 
-/// `SpiderModel.setupAnim`: each pair swings back and forth and lifts,
+/// `SpiderModel.setupAnim`.
 pub fn setup_anim(parts: &SpiderParts, pose: &mut ModelPose, state: &LivingRenderState) {
     look(&mut pose[parts.head].pose, state);
     let position = state.walk_position * 0.6662;

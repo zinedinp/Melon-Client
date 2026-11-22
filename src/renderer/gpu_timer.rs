@@ -1,4 +1,4 @@
-//! GPU time per pass for F3, from timestamp queries: what the GPU spends
+//! GPU time per pass for F3, from timestamp queries.
 
 use ash::vk;
 use std::cell::{Cell, RefCell};
@@ -79,7 +79,7 @@ pub(super) struct GpuTimer {
 }
 
 impl GpuTimer {
-    /// `valid_bits` is the queue family's `timestampValidBits`; 0, or a
+    /// `valid_bits` is the queue family's `timestampValidBits`; 0 means no timer.
     pub(super) unsafe fn new(
         device: &ash::Device,
         limits: &vk::PhysicalDeviceLimits,
@@ -144,7 +144,7 @@ impl GpuTimer {
         }
     }
 
-    /// Starts frame slot `slot` on `cmd`, outside any render pass: takes in
+    /// Starts frame slot `slot` on `cmd`, outside any render pass.
     pub(super) unsafe fn begin(
         &mut self,
         device: &ash::Device,
@@ -265,7 +265,7 @@ impl GpuTimer {
         }
     }
 
-    /// Ends the frame's recording; its times are read when its slot comes
+    /// Ends the frame's recording; its times are read when its slot comes round again.
     pub(super) fn end(&mut self, slot: usize) {
         unsafe { self.close_pass() };
         self.cmd.set(vk::CommandBuffer::null());
@@ -294,7 +294,7 @@ impl GpuTimer {
         labels.push(label);
     }
 
-    /// Folds one frame's timestamps into the averages: each label gets the
+    /// Folds one frame's timestamps into the averages.
     fn take_in(&mut self, labels: &[&'static str], ticks: &[u64]) {
         let ms = |from: u64, to: u64| {
             let delta = to.wrapping_sub(from) & self.valid_mask;
@@ -326,7 +326,7 @@ impl GpuTimer {
         self.last_total_ms = total;
     }
 
-    /// The newest frame the GPU finished: its time and each pass's. It is
+    /// The newest frame the GPU finished: its time and each pass's.
     pub(super) fn last_frame(&self) -> (f32, &[(&'static str, f32)]) {
         (self.last_total_ms, &self.last)
     }

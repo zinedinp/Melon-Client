@@ -1,4 +1,4 @@
-//! Vanilla `ConnectScreen`: joins a server or the integrated server on a
+//! Vanilla `ConnectScreen`.
 
 use std::sync::mpsc::{Receiver, TryRecvError, channel};
 use std::thread;
@@ -16,7 +16,7 @@ use crate::network::{ClientInfo, Identity};
 /// `DisconnectedScreen`'s title colour (`-6250336`, `0xA0A0A0`).
 const FAILURE_TITLE_COLOR: [f32; 4] = [0.63, 0.63, 0.63, 1.0];
 
-/// `DisconnectedScreen`: why a join failed (`connect.failed`, Back) or a
+/// `DisconnectedScreen`.
 pub fn disconnected_screen(
     title_key: &'static str,
     reason: String,

@@ -1,4 +1,4 @@
-//! Vanilla `Entity.collide`: an axis-aligned box moved against the collision
+//! Vanilla `Entity.collide`.
 
 use glam::DVec3;
 use pumpkin_data::BlockStateId;
@@ -17,7 +17,7 @@ pub struct Aabb {
 }
 
 impl Aabb {
-    /// `EntityDimensions.makeBoundingBox`: centred on `feet` horizontally,
+    /// `EntityDimensions.makeBoundingBox`.
     pub fn at_feet(feet: DVec3, width: f64, height: f64) -> Self {
         let half = width / 2.0;
         Self {
@@ -84,12 +84,12 @@ impl Aabb {
     }
 }
 
-/// The block-state ID at a block position, or air outside loaded chunks
+/// The block-state ID at a block position, or air outside loaded chunks.
 pub fn block_at(level: &Level, x: i32, y: i32, z: i32) -> u16 {
     level.block_state(x, y, z).unwrap_or(0)
 }
 
-/// The block cells `region` reaches into, grown by `grow` on every side
+/// The block cells `region` reaches into, grown by `grow` on every side.
 pub(crate) fn cells(
     region: &Aabb,
     grow: f64,
@@ -118,14 +118,14 @@ pub fn block_shapes(level: &Level, (x, y, z): (i32, i32, i32)) -> impl Iterator<
         })
 }
 
-/// Every block collision box that intersects `region`. Scans one block
+/// Every block collision box that intersects `region`.
 pub fn block_boxes(level: &Level, region: &Aabb) -> Vec<Aabb> {
     let mut out = Vec::new();
     block_boxes_into(level, region, &mut out);
     out
 }
 
-/// [`block_boxes`] into a buffer that is emptied first, so a caller that
+/// [`block_boxes`] into a buffer that is emptied first, so a caller can reuse it.
 pub fn block_boxes_into(level: &Level, region: &Aabb, out: &mut Vec<Aabb>) {
     out.clear();
     out.extend(
@@ -142,14 +142,14 @@ thread_local! {
     };
 }
 
-/// `Entity.mainSupportingBlockPos` with `onGroundNoBlocks`: what holds an
+/// `Entity.mainSupportingBlockPos` with `onGroundNoBlocks`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Support {
     pub block: Option<(i32, i32, i32)>,
     no_blocks: bool,
 }
 
-/// `Entity.checkSupportingBlock`: after a move that ended `on_ground` (or
+/// `Entity.checkSupportingBlock`.
 pub fn update_support(
     level: &Level,
     aabb: &Aabb,
@@ -179,7 +179,7 @@ pub fn update_support(
     }
 }
 
-/// `CollisionGetter.findSupportingBlock`: of the blocks whose shapes touch
+/// `CollisionGetter.findSupportingBlock`.
 pub fn find_supporting_block(
     level: &Level,
     region: &Aabb,
@@ -227,7 +227,7 @@ pub fn no_collision(level: &Level, region: &Aabb) -> bool {
         .any(|aabb| aabb.intersects(region))
 }
 
-/// `Entity.collideWithShapes`: Y first, then whichever of X/Z moves further,
+/// `Entity.collideWithShapes`.
 fn collide_with_boxes(boxes: &[Aabb], mover: Aabb, mut delta: DVec3) -> DVec3 {
     for b in boxes {
         delta.y = b.clip(&mover, 1, delta.y);
@@ -250,7 +250,7 @@ fn collide_with_boxes(boxes: &[Aabb], mover: Aabb, mut delta: DVec3) -> DVec3 {
     delta
 }
 
-/// `Entity.collide`: how far `mover` actually gets when trying to move
+/// `Entity.collide`.
 pub fn collide(
     level: &Level,
     colliders: &[Aabb],
@@ -314,7 +314,7 @@ pub fn collide(
     })
 }
 
-/// `Player.canFallAtLeast`: nothing solid (blocks or `colliders`) in the
+/// `Player.canFallAtLeast`.
 pub fn can_fall_at_least(
     level: &Level,
     colliders: &[Aabb],
@@ -337,7 +337,7 @@ pub fn can_fall_at_least(
     no_collision(level, &probe) && !colliders.iter().any(|b| b.intersects(&probe))
 }
 
-/// `Player.maybeBackOffFromEdge`: while sneaking on the ground, shortens a
+/// `Player.maybeBackOffFromEdge`.
 pub fn back_off_from_edge(
     level: &Level,
     colliders: &[Aabb],
@@ -379,7 +379,7 @@ pub fn back_off_from_edge(
     delta
 }
 
-/// Whether any block overlapping `region` holds a fluid (water, lava, or a
+/// Whether any block overlapping `region` holds a fluid, and which.
 pub fn touches_fluid(level: &Level, region: &Aabb) -> Option<FluidKind> {
     let mut found = None;
     for (x, y, z) in cells(region, -EPSILON, 0) {
@@ -411,7 +411,7 @@ pub fn fluid_height(level: &Level, block: glam::IVec3, kind: FluidKind) -> Optio
     Some(if covered { 1.0 } else { fluid.own_height() })
 }
 
-/// The top of the fluid in a cell as `FluidState.getHeight`: full under
+/// The top of the fluid in a cell as `FluidState.getHeight`.
 fn fluid_top(level: &Level, (x, y, z): (i32, i32, i32), fluid: fluid::FluidState) -> f64 {
     let above = block_at(level, x, y + 1, z);
     let full = fluid::fluid_of(above).is_some_and(|f| f.kind == fluid.kind);
@@ -423,7 +423,7 @@ fn fluid_top(level: &Level, (x, y, z): (i32, i32, i32), fluid: fluid::FluidState
         }
 }
 
-/// `FlowingFluid.isSolidFace`: whether the block at `(x, y, z)` shuts
+/// `FlowingFluid.isSolidFace`.
 fn solid_face(level: &Level, (x, y, z): (i32, i32, i32), kind: FluidKind, up: bool) -> bool {
     let id = block_at(level, x, y, z);
     if fluid::fluid_of(id).is_some_and(|f| f.kind == kind) {
@@ -438,7 +438,7 @@ fn solid_face(level: &Level, (x, y, z): (i32, i32, i32), kind: FluidKind, up: bo
     !is_ice && state_flags::is_solid(id)
 }
 
-/// `FlowingFluid.getFlow`: the horizontal direction the fluid in this cell
+/// `FlowingFluid.getFlow`.
 pub fn fluid_flow(level: &Level, (x, y, z): (i32, i32, i32), fluid: fluid::FluidState) -> DVec3 {
     const SIDES: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
     let own = f64::from(fluid.own_height());
@@ -496,7 +496,7 @@ pub struct FluidCurrent {
     pub count: u32,
 }
 
-/// `EntityFluidInteraction.update` for one fluid: `region` is the
+/// `EntityFluidInteraction.update` for one fluid.
 pub fn fluid_current(level: &Level, region: &Aabb, feet_y: f64, kind: FluidKind) -> FluidCurrent {
     let mut current = FluidCurrent::default();
     for cell in cells(region, -EPSILON, 0) {

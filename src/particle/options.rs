@@ -1,8 +1,8 @@
-//! `ParticleOptions`: a particle type and the data some types carry
+//! `ParticleOptions`.
 
 use super::Kind;
 
-/// Where a vibration goes (`PositionSource`): a block's centre or an
+/// Where a vibration goes (`PositionSource`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PositionSource {
     Block([i32; 3]),

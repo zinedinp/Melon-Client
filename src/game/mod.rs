@@ -1,4 +1,4 @@
-//! A joined world, where the layers meet for play: the connection's events
+//! A joined world, where the layers meet for play.
 
 mod actions;
 mod airborne;
@@ -114,9 +114,9 @@ impl Default for PlayerEntry {
     }
 }
 
-/// A joined world: every chunk the server streams, meshed, walkable with
+/// A joined world.
 pub struct InWorld {
-    /// Dropped when the world is left: disconnects, then saves and stops a
+    /// Dropped when the world is left.
     joined: Joined,
     level: Level,
     /// The level's terrain on the GPU.
@@ -129,7 +129,7 @@ pub struct InWorld {
     fog: environment::FogState,
     /// The clouds' and the weather's meshes.
     sky: atmosphere::SkyMeshes,
-    /// The new level after a respawn into another dimension, until it is
+    /// The new level after a respawn into another dimension, until it is ready.
     loading: Option<loading::LevelLoad>,
     /// The loading finished since the screens were told.
     level_became_ready: bool,
@@ -175,7 +175,7 @@ pub struct InWorld {
     tick_time: f32,
     /// What the server last heard of the keys, sprinting and position.
     sent: position_report::LastSent,
-    /// What riding makes of the keys: the jump charge and the paddles last
+    /// What riding makes of the keys.
     ride: riding::RideState,
     keys: Keys,
     camera_mode: CameraMode,
@@ -219,7 +219,7 @@ pub struct InWorld {
     recipes: crate::world::recipes::RecipeBook,
     recipe_sets: crate::world::recipes::RecipeSets,
     level_settings: crate::world::level_settings::LevelSettings,
-    /// `BlockStatePredictionHandler`: what the server said of the blocks the
+    /// `BlockStatePredictionHandler`.
     predictions: prediction::Predictions,
     /// The attack and use keys' delays and the block being broken.
     interaction: interaction::Interaction,
@@ -231,11 +231,11 @@ pub struct InWorld {
     audio: sounds::SoundState,
     /// The plugin channels the server registered (`melon:swap`).
     server_channels: Vec<String>,
-    /// `Minecraft.hitResult`: the block or entity looked at, picked every
+    /// `Minecraft.hitResult`.
     hit_result: Option<crate::world::pick::Hit>,
     /// Haste, Conduit Power and Mining Fatigue on the player.
     mining_effects: crate::world::player::mining::MiningEffects,
-    /// Every status effect on the player, for the HUD, the inventory, the
+    /// Every status effect on the player, for the HUD, the inventory and the movement.
     status_effects: crate::world::player::status_effects::ActiveEffects,
     /// The hands: swing, item in use, first-person heights.
     hands: crate::world::player::hands::Hands,
@@ -269,11 +269,11 @@ pub struct DebugFrame {
 pub struct Received {
     pub died: bool,
     pub revived: bool,
-    /// The player was sent to another dimension: the screen to show while
+    /// The player was sent to another dimension.
     pub loading: Option<LoadingReason>,
     /// The level the loading screen waited for is ready.
     pub loaded: bool,
-    /// The server ended a reconfiguration with a new world: its login and
+    /// The server ended a reconfiguration with a new world.
     pub rejoined: Option<(
         Box<crate::network::JoinInfo>,
         Vec<crate::network::WorldEvent>,
@@ -428,7 +428,8 @@ impl InWorld {
         self.bench.as_ref().map(bench::BenchDriver::phase)
     }
 
-    /// The integrated world's `icon.png` path while the world has none and
+    /// The integrated world's `icon.png` path while the world has none and the view is ready
+    /// for one.
     pub fn missing_icon(&self) -> Option<std::path::PathBuf> {
         if self.loading.is_some() {
             return None;
@@ -565,7 +566,8 @@ impl InWorld {
         self.level.set_biome_blend(radius);
     }
 
-    /// Builds the sections the Chunk Builder wants for this frame, takes
+    /// Builds the sections the Chunk Builder wants for this frame and takes the finished
+    /// meshes.
     pub fn mesh(&mut self, renderer: &mut Renderer, assets: &WorldResources) {
         let eye = self.player.tick_eye().as_vec3();
         let finished = self.level.mesh_pending(&assets.models, assets.fluids, eye);
@@ -628,7 +630,7 @@ impl InWorld {
         self.level.remesh_all();
     }
 
-    /// The same connection in a new world (`WorldEvent::Rejoined`): this
+    /// The same connection in a new world (`WorldEvent::Rejoined`).
     pub fn rejoin(
         mut self,
         renderer: &mut Renderer,
@@ -655,12 +657,12 @@ impl InWorld {
         self.preview.release(renderer);
     }
 
-    /// What this frame is cleared to: the fog's colour, as vanilla clears
+    /// What this frame is cleared to.
     pub fn sky_clear_color(&self) -> [f32; 4] {
         self.fog.clear_color
     }
 
-    /// Why the world ended on its own, if it did: kicked, connection lost,
+    /// Why the world ended on its own, if it did.
     pub fn ended(&mut self) -> Option<String> {
         if let Some(reason) = self.joined.session.ended() {
             return Some(reason.to_owned());

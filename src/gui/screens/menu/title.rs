@@ -146,7 +146,7 @@ impl Screen for TitleScreen {
         }
     }
 
-    /// Menu contents only. Background (panorama or gradient) is composed
+    /// Menu contents only.
     fn draw(&self, ui: &mut Ui, _ctx: &ScreenContext) {
         let (width, height) = (ui.width, ui.height);
         let assets = ui.assets;

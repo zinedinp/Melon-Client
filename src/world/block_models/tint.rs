@@ -1,4 +1,4 @@
-//! The colours tinted faces get (vanilla `BlockColors`). Biome colours are
+//! The colours tinted faces get (vanilla `BlockColors`).
 
 use crate::world::block_tint::TintKind;
 
@@ -10,7 +10,7 @@ pub(super) const fn rgb(hex: u32) -> [f32; 3] {
     ]
 }
 
-/// Colour baked into the quad (`1,1,1` when the mesher applies a biome
+/// Colour baked into the quad (`1,1,1` when the mesher applies a biome colour).
 pub(super) fn bake_tint(
     block: &str,
     tintindex: Option<usize>,

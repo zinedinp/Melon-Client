@@ -1,4 +1,4 @@
-//! `ClientLevel.tickWeatherEffects`'s particles: rain splashing on the
+//! `ClientLevel.tickWeatherEffects`'s particles.
 
 use glam::{DVec3, IVec3};
 
@@ -8,7 +8,7 @@ use crate::settings::options::ParticleStatus;
 use crate::world::fluid::{self, FluidKind};
 use crate::world::java_random::JavaRandom;
 
-/// The rain's splashes this tick. `rains_at`: whether the biome at a block
+/// The rain's splashes this tick.
 #[allow(clippy::too_many_arguments)]
 pub fn rain_splashes(
     world: &World,

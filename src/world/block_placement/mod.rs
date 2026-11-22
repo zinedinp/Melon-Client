@@ -410,7 +410,7 @@ pub(crate) fn state_for(ctx: &Ctx, block: &'static Block) -> Option<Edit> {
     Some(edit)
 }
 
-/// One more of what's there: double slab, snow layer, candle, …
+/// One more of what's there.
 fn merge_into(here: u16) -> Option<Edit> {
     let mut edit = Edit::of_state(here);
     if edit.has(|p| matches!(p, Property::SlabType(_))) {

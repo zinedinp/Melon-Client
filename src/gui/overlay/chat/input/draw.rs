@@ -1,4 +1,4 @@
-//! Drawing the chat input: the strip, the text with its command colours,
+//! Drawing the chat input.
 
 use super::*;
 
@@ -38,7 +38,7 @@ impl ChatInput {
         Some(offset + ((my - top) / 12.0) as usize)
     }
 
-    /// `extractRenderState`: the strip, the input, the completions, and a
+    /// `extractRenderState`.
     pub(super) fn draw_screen(
         &mut self,
         draw_list: &mut DrawList,

@@ -1,4 +1,4 @@
-//! `WardenModel`: walk, idle wobble and tendrils are procedural; emerge,
+//! `WardenModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI};

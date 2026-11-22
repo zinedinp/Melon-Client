@@ -1,4 +1,4 @@
-//! Vanilla `ControlsScreen`, cut to the options Melon has: Mouse Settings
+//! Vanilla `ControlsScreen`, cut to the options Melon has.
 
 use crate::gui::screen::{ConfigChange, ScreenAction, ScreenContext};
 use crate::gui::screens::options::keybinds::KeyBindsScreen;

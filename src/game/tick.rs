@@ -1,4 +1,4 @@
-//! The client tick: player movement at 20 a second, and what it sends
+//! The client tick.
 
 use super::position_report::Report;
 use super::{InWorld, controls, keys, minecraft_yaw};
@@ -9,7 +9,7 @@ use crate::network::play::game::PlayerCommand;
 use crate::world::player::{self};
 
 impl InWorld {
-    /// Runs the ticks that fit into `dt` seconds (`Minecraft.tick` via its
+    /// Runs the ticks that fit into `dt` seconds (`Minecraft.tick` via its timer).
     pub fn advance(&mut self, dt: f32, blocked: bool, ui: &controls::WorldContext) -> u32 {
         let mut input = if blocked {
             player::MoveInput::default()
@@ -207,7 +207,7 @@ impl InWorld {
         self.joined.session.send_client_tick_end();
     }
 
-    /// What the entities around shove the player by (`pushEntities` of
+    /// What the entities around shove the player by (`pushEntities` of `LivingEntity`).
     fn push_player(&mut self) {
         if self.player.riding() || !self.player.is_pushable() || self.status.health <= 0.0 {
             return;
@@ -243,7 +243,7 @@ impl InWorld {
         }
     }
 
-    /// `InventoryScreen.containerTick` and its creative twin: the open
+    /// `InventoryScreen.containerTick` and its creative twin.
     pub(super) fn follow_game_mode(&mut self, ui: &controls::WorldContext) {
         let creative = self.game_mode.current.has_infinite_materials();
         let spectator = self.game_mode.current.is_spectator();

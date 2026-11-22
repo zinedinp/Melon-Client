@@ -41,7 +41,7 @@ pub fn lit(state: u16) -> bool {
     prop(state, "lit").as_deref() == Some("true")
 }
 
-/// The biome's ambient particles at a block, with each one's chance a
+/// The biome's ambient particles at a block, with each one's chance a tick.
 pub type AmbientAt<'a> = &'a dyn Fn(IVec3) -> &'a [(Kind, f32)];
 
 /// `ClientLevel.animateTick`: random blocks within 16 and 32 of `center`

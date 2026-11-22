@@ -48,7 +48,7 @@ pub fn adult() -> LayerDefinition {
     LayerDefinition::new(base(), 64.0, 64.0)
 }
 
-/// `ColdCowModel`: a shaggy coat and long horns, turned by vanilla's own
+/// `ColdCowModel`.
 #[allow(clippy::approx_constant)]
 pub fn cold() -> LayerDefinition {
     let mut root = base();

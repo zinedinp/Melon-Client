@@ -1,4 +1,4 @@
-//! What animates on block entities: chest and shulker lids, bells,
+//! What animates on block entities.
 
 use super::{BlockEntities, Kind, kind_of};
 use crate::math::angle::{PI, TAU};
@@ -14,7 +14,7 @@ impl BlockEntities {
         (self.seed.wrapping_mul(0x2545_F491_4F6C_DD1D) >> 33) as i32 % bound as i32
     }
 
-    /// `BlockEntity.triggerEvent`: what a `ClientboundBlockEventPacket` at
+    /// `BlockEntity.triggerEvent`.
     pub fn event(&mut self, level: &Level, pos: [i32; 3], action: u8, param: u8) {
         let Some(kind) = level.block_state(pos[0], pos[1], pos[2]).and_then(kind_of) else {
             return;
@@ -57,7 +57,7 @@ impl BlockEntities {
         }
     }
 
-    /// One client tick for every animation. `player` is the player's
+    /// One client tick for every animation.
     pub fn tick(&mut self, level: &Level, player: Vec3) {
         self.ticks += 1;
         if self.seed == 0 {
@@ -234,7 +234,7 @@ pub(super) enum Anim {
 }
 
 impl Anim {
-    /// Whether it changes the model from one frame to the next, at client
+    /// Whether it changes the model from one frame to the next.
     pub(super) fn is_running(&self, now: u64) -> bool {
         match *self {
             Anim::Lid(lid) => lid.old != lid.openness,

@@ -1,4 +1,4 @@
-//! The fish: cod, salmon (three sizes), pufferfish (three states) and
+//! The fish.
 
 use glam::Vec3;
 
@@ -425,7 +425,7 @@ pub fn tadpole() -> LayerDefinition {
     LayerDefinition::new(r, 16.0, 16.0)
 }
 
-/// `TropicalFishSmallModel.createBodyLayer(g)`: the pattern's copy is a
+/// `TropicalFishSmallModel.createBodyLayer(g)`.
 pub fn tropical_small(grow: f32) -> LayerDefinition {
     let mut r = PartDefinition::root();
     let g = |c: Cube| c.grown(grow);
@@ -632,7 +632,7 @@ impl Wobble {
     }
 }
 
-/// `TropicalFish.Pattern`'s packed id (`base | index << 8`) to the shape
+/// `TropicalFish.Pattern`'s packed id (`base | index << 8`) to the shape and pattern.
 pub fn tropical_pattern(packed: i32) -> (bool, usize) {
     let large = packed & 0xFF == 1;
     (large, ((packed >> 8) & 0xFF).clamp(0, 5) as usize)

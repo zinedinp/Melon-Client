@@ -1,4 +1,4 @@
-//! The local player: vanilla's movement tick (`LocalPlayer.aiStep` into
+//! The local player.
 
 use crate::world::game_mode::Abilities;
 use crate::world::physics::Aabb;
@@ -62,9 +62,9 @@ const DOLPHINS_GRACE_DRAG: f32 = 0.96;
 const FLUID_JUMP: f64 = 0.04;
 /// `FoodConstants.MAX_FOOD * 0.3`: below this the player can't sprint.
 const SPRINT_FOOD_LEVEL: i32 = 6;
-/// `Options.sprintWindow`'s default: how many ticks after tapping forward a
+/// `Options.sprintWindow`'s default.
 pub const SPRINT_WINDOW_DEFAULT: u32 = 7;
-/// `Player.jumpTriggerTime`: the window for the second jump tap that
+/// `Player.jumpTriggerTime`.
 const FLY_TOGGLE_WINDOW_TICKS: u32 = 7;
 /// `Player.travel`: what is left of the vertical speed each tick in flight.
 const FLYING_VERTICAL_DRAG: f64 = 0.6;
@@ -83,7 +83,7 @@ pub struct MoveInput {
 }
 
 pub struct PlayerState {
-    /// The boxes of the entities that stop it near it (boats, a happy
+    /// The boxes of the entities that stop it near it (boats, ...).
     colliders: Vec<crate::world::physics::Aabb>,
     /// Feet position after the last tick.
     feet: DVec3,
@@ -99,9 +99,9 @@ pub struct PlayerState {
     pitch_degrees: f32,
     on_ground: bool,
     horizontal_collision: bool,
-    /// `minorHorizontalCollision`: the wall only deflected the move a little
+    /// `minorHorizontalCollision`.
     minor_horizontal_collision: bool,
-    /// This tick's input as a horizontal world direction (vanilla's
+    /// This tick's input as a horizontal world direction.
     intent: DVec3,
     no_jump_delay: u32,
     /// `onClimbable()` as of this tick's start (ladder, vine, scaffolding).
@@ -115,28 +115,28 @@ pub struct PlayerState {
     /// `Entity.stuckSpeedMultiplier`: set by cobwebs and the like, spent by the next move.
     stuck: DVec3,
     jump_boost: u32,
-    /// `Entity.fallDistance`, reset while climbing. Only the edge rules of
+    /// `Entity.fallDistance`, reset while climbing.
     fall_distance: f64,
     /// The fall distance of the last move that ended on the ground
     /// (`Entity.checkFallDamage` hands it to `Block.fallOn`), for the sounds.
     landed_fall: Option<f64>,
-    /// `Camera.eyeHeight` and a tick ago: the pose's eye height, chased by
+    /// `Camera.eyeHeight` and a tick ago.
     camera_eye: f32,
     camera_eye_old: f32,
     /// `Entity.mainSupportingBlockPos`: the block the player stands on.
     support: crate::world::physics::Support,
     /// `LivingEntity.walkAnimation`: the limbs' swing, advanced each tick.
     walk: crate::world::entity::walk::WalkAnimation,
-    /// `LocalPlayer.yBob`/`xBob`: a lagging copy of the look angles, chasing
+    /// `LocalPlayer.yBob`/`xBob`: a lagging copy of the look angles.
     yaw_bob: f32,
     pitch_bob: f32,
-    /// `ageInTicks`: ticks lived, advanced every frame, for the arms' idle
+    /// `ageInTicks`.
     age_ticks: f32,
-    /// `LocalPlayer.crouching`. Vanilla additionally keeps this on when the
+    /// `LocalPlayer.crouching`.
     crouching: bool,
     /// `Entity.isSwimming()`: sprinting in water with the head under it.
     swimming: bool,
-    /// `Pose.SWIMMING`: swimming, or squeezed through a gap too low for a
+    /// `Pose.SWIMMING`.
     swim_pose: bool,
     /// `Entity.isInWater` and `wasEyeInWater`, as of the tick.
     in_water: bool,
@@ -144,11 +144,11 @@ pub struct PlayerState {
     /// `LivingEntity.swimAmount` now and a tick ago.
     swim_amount: f32,
     swim_amount_old: f32,
-    /// `Entity.isSprinting()`, which the double-tap and the sprint key both
+    /// `Entity.isSprinting()`, which the double-tap and the sprint key both set.
     sprinting: bool,
     /// `LocalPlayer.sprintTriggerTime`, in ticks.
     sprint_trigger_ticks: u32,
-    /// `LocalPlayer.aiStep`'s `hasForwardImpulse`, sampled *before* the
+    /// `LocalPlayer.aiStep`'s `hasForwardImpulse`, sampled *before* the movement input updates.
     had_forward_impulse: bool,
     /// What the server allows: flying, and how fast.
     abilities: Abilities,
@@ -168,21 +168,22 @@ pub struct PlayerState {
     spin_ticks: u32,
     /// The box the last tick swept while spinning.
     spin_sweep: Option<Aabb>,
-    /// Set when the player started or stopped flying, for the server
+    /// Set when the player started or stopped flying, for the server.
     abilities_changed: bool,
-    /// `ClientAvatarState.walkDist` now and a tick ago: the distance walked,
+    /// `ClientAvatarState.walkDist` now and a tick ago.
     walk_dist: f32,
     walk_dist_old: f32,
-    /// `ClientAvatarState.bob` now and a tick ago: how strongly the view
+    /// `ClientAvatarState.bob` now and a tick ago.
     bob: f32,
     bob_old: f32,
     /// The tick fraction of the frame being drawn.
     partial: f32,
-    /// The item being used, if any: its `UseEffects` slow the player and
+    /// The item being used, if any.
     item_use: Option<hands::ItemUse>,
     /// What Speed and Slowness make of `MOVEMENT_SPEED`
     speed_effects: f32,
-    /// Seated on a vehicle (`isPassenger`), and the turn of its body, last
+    /// Seated on a vehicle (`isPassenger`), and the turn of its body, last tick's and this
+    /// tick's.
     riding: bool,
     ride_body: Option<(f32, f32)>,
     /// The ways of moving, by priority, and the one the last tick used.
@@ -196,7 +197,7 @@ pub struct PlayerState {
 }
 
 impl PlayerState {
-    /// The boxes of the entities near the player that stop it, for this
+    /// The boxes of the entities near the player that stop it, for this tick.
     pub fn set_colliders(&mut self, colliders: Vec<crate::world::physics::Aabb>) {
         self.colliders = colliders;
     }
@@ -315,7 +316,7 @@ impl PlayerState {
         self.feet
     }
 
-    /// Eye position after the last tick (`Entity.getEyePosition`), from
+    /// Eye position after the last tick (`Entity.getEyePosition`).
     pub fn tick_eye(&self) -> DVec3 {
         self.feet + DVec3::new(0.0, f64::from(self.eye_height()), 0.0)
     }
@@ -468,7 +469,7 @@ impl PlayerState {
         }
     }
 
-    /// `AbstractClientPlayer.getFieldOfViewModifier` without the item in
+    /// `AbstractClientPlayer.getFieldOfViewModifier` without the item in use.
     pub fn fov_modifier(&self) -> f32 {
         let mut modifier = 1.0;
         if self.abilities.flying {
@@ -488,13 +489,13 @@ impl PlayerState {
             .from_packet(flags, flying_speed, walking_speed);
     }
 
-    /// `Minecraft.handleScroll` for a spectator: the scroll wheel changes
+    /// `Minecraft.handleScroll` for a spectator.
     pub fn scroll_flying_speed(&mut self, lines: f32) {
         let speed = &mut self.abilities.flying_speed;
         *speed = (*speed + lines.signum() * 0.005).clamp(0.0, 0.2);
     }
 
-    /// Whether flight was toggled since the last call: the abilities packet
+    /// Whether flight was toggled since the last call.
     pub fn take_abilities_changed(&mut self) -> bool {
         std::mem::take(&mut self.abilities_changed)
     }
@@ -511,7 +512,7 @@ impl PlayerState {
         }
     }
 
-    /// The server moved the player: no interpolation from the old spot
+    /// The server moved the player.
     pub fn teleport(&mut self, feet: DVec3, velocity: DVec3, prev_feet: DVec3) {
         self.feet = feet;
         self.prev_feet = prev_feet;
@@ -536,7 +537,7 @@ impl PlayerState {
         self.update_supporting_block(level, DVec3::ZERO);
     }
 
-    /// `Player.isColliding(pos, state)`: the block at `pos` has a shape the
+    /// `Player.isColliding(pos, state)`.
     pub fn is_colliding_with_block(
         &self,
         level: &crate::world::level::Level,
@@ -567,7 +568,7 @@ impl PlayerState {
         self.riding
     }
 
-    /// `LocalPlayer.rideTick`: the passenger stays on its seat, at rest,
+    /// `LocalPlayer.rideTick`.
     pub fn ride_tick(&mut self, seat_feet: DVec3, body: Option<(f32, f32)>) {
         self.riding = true;
         self.ride_body = body;
@@ -600,7 +601,7 @@ impl PlayerState {
         self.velocity
     }
 
-    /// `ClientboundSetEntityMotionPacket` for this player: knockback, a
+    /// `ClientboundSetEntityMotionPacket` for this player.
     pub fn set_velocity(&mut self, velocity: DVec3) {
         self.velocity = velocity;
     }
@@ -740,7 +741,7 @@ mod tests {
         assert!((player.movement_speed() - 0.12).abs() < 1e-7);
     }
 
-    /// Stone (state 1) from the bottom up to y = 63 around the origin, and
+    /// Stone (state 1) from the bottom up to y = 63 around the origin.
     fn flat_world(wall: bool) -> Level {
         let mut level = Level::default();
         for cx in -2..=2 {

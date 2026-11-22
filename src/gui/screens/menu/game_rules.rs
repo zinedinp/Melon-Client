@@ -1,4 +1,4 @@
-//! Vanilla `WorldCreationGameRulesScreen` (`AbstractGameRulesScreen`): a
+//! Vanilla `WorldCreationGameRulesScreen` (`AbstractGameRulesScreen`).
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -67,7 +67,7 @@ pub struct GameRulesScreen {
 }
 
 impl GameRulesScreen {
-    /// `enabled` are the data packs and experiments on; a rule that needs a
+    /// `enabled` are the data packs and experiments on; a rule that needs another is left out.
     pub fn new(output: Rc<RefCell<Changes>>, enabled: &[String]) -> Self {
         let rules: Vec<Rule> = rules::all()
             .into_iter()
@@ -113,7 +113,7 @@ impl GameRulesScreen {
         self.work.get(&rule.name).copied().unwrap_or(rule.default)
     }
 
-    /// `GameRules.set`: records `value`, or forgets the change when it is the
+    /// `GameRules.set`.
     fn set(&mut self, index: usize, value: Value) {
         let rule = &self.rules[index];
         if value == rule.default {
@@ -138,7 +138,7 @@ impl GameRulesScreen {
         lang.has(&key).then(|| lang.get_dynamic(&key).to_owned())
     }
 
-    /// `RuleList.populateChildren`: the rules matching the filter by id,
+    /// `RuleList.populateChildren`.
     fn populate(&mut self, lang: &crate::i18n::Lang) {
         let needle = self.widgets.field(Id::Search).value().to_lowercase();
         let mut shown: Vec<(Category, String, usize)> = self
@@ -232,7 +232,7 @@ impl GameRulesScreen {
         }
     }
 
-    /// `IntegerRuleEntry`'s responder: a valid number is the value, anything
+    /// `IntegerRuleEntry`'s responder.
     fn number_edited(&mut self, index: usize) {
         let text = self.inputs[&index].value();
         match self.rules[index].parse_int(&text) {

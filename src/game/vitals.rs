@@ -99,7 +99,7 @@ impl InWorld {
         self.tick_vitals();
     }
 
-    /// The bars' numbers out of the local player's synced data: absorption,
+    /// The bars' numbers out of the local player's synced data.
     pub(super) fn own_vitals_data(&mut self, values: &[(u8, DataValue)]) {
         for (index, value) in values {
             if *index == player::DATA_PLAYER_ABSORPTION_ID.id.0 {
@@ -112,7 +112,7 @@ impl InWorld {
         }
     }
 
-    /// Once a tick: what the effects, the water and the mount make of the
+    /// Once a tick.
     pub(super) fn tick_vitals(&mut self) {
         let effects = &self.status_effects;
         self.status.hunger = effects.get(HUNGER_ID).is_some();

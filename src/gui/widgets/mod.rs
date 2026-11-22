@@ -1,4 +1,4 @@
-//! What every widget shares: its rectangle, its label, the painter it draws
+//! What every widget shares.
 
 pub mod button;
 pub mod checkbox;
@@ -50,7 +50,7 @@ impl Rect {
     }
 }
 
-/// A widget's text: a translation key looked up whenever it is drawn, so a
+/// A widget's text.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Label {
     Key(&'static str),
@@ -86,7 +86,7 @@ impl From<String> for Label {
     }
 }
 
-/// The painter screens and widgets draw with: the frame's draw list plus
+/// The painter screens and widgets draw with.
 pub struct Ui<'a> {
     pub draw_list: &'a mut DrawList,
     pub assets: &'a GuiAssets,
@@ -205,7 +205,7 @@ impl<'a> Ui<'a> {
         crate::gui::text::width(&self.assets.font, text)
     }
 
-    /// A list's section header, as vanilla's `OptionsList.HeaderEntry` and
+    /// A list's section header, as vanilla's `OptionsList.HeaderEntry` draws it.
     pub fn section_header(&mut self, text: &str, y: f32) {
         let style = crate::gui::text::TextStyle {
             bold: true,
@@ -242,7 +242,7 @@ impl<'a> Ui<'a> {
         self.centered(text, center, y, color);
     }
 
-    /// A widget's `Tooltip`: `text` wrapped at [`tooltip::MAX_WIDTH`],
+    /// A widget's `Tooltip`.
     pub fn widget_tooltip(&mut self, text: &str, mouse: (f32, f32), widget: Rect) {
         let lines: Vec<_> = self
             .assets
@@ -287,7 +287,7 @@ impl<'a> Ui<'a> {
         }
     }
 
-    /// Styled text, the runs without their own colour in `color`. Returns
+    /// Styled text, the runs without their own colour in `color`.
     pub fn styled(
         &mut self,
         text: &crate::gui::text::StyledText,
@@ -308,7 +308,7 @@ impl<'a> Ui<'a> {
         crate::gui::text::wrap(&self.assets.font, text, max_width)
     }
 
-    /// `GuiGraphics.setTooltipForNextFrame` with lines: a tooltip beside the
+    /// `GuiGraphics.setTooltipForNextFrame` with lines.
     pub fn mouse_tooltip(&mut self, lines: &[crate::gui::text::StyledText], mouse: (f32, f32)) {
         let paint = self.paint(crate::gui::text::colors::WHITE);
         let at = tooltip::beside_mouse(
@@ -325,7 +325,7 @@ impl<'a> Ui<'a> {
         );
     }
 
-    /// A sprite over a rectangle, scaled as its `.mcmeta` says (a plain
+    /// A sprite over a rectangle, scaled as its `.mcmeta` says.
     pub fn sprite(&mut self, sprite: impl Into<crate::gui::sprite::GuiSprite>, rect: Rect) {
         sprite
             .into()

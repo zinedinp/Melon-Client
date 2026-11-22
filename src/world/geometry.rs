@@ -1,4 +1,4 @@
-//! What every mesher shares: the directional shading, atlas coordinates,
+//! What every mesher shares.
 
 use glam::Vec3;
 
@@ -16,7 +16,7 @@ pub const SHADE_DOWN: f32 = 0.5;
 pub const SHADE_NORTH_SOUTH: f32 = 0.8;
 pub const SHADE_EAST_WEST: f32 = 0.6;
 
-/// `CardinalLighting.DEFAULT.byFace`: a block face's shade by the way it
+/// `CardinalLighting.DEFAULT.byFace`.
 pub fn cardinal_shade(direction: Direction) -> f32 {
     match direction {
         Direction::Down => SHADE_DOWN,
@@ -26,7 +26,7 @@ pub fn cardinal_shade(direction: Direction) -> f32 {
     }
 }
 
-/// `FaceBakery.findClosestDirection`: the direction the normal points most
+/// `FaceBakery.findClosestDirection`.
 pub fn closest_direction(normal: Vec3) -> Option<Direction> {
     if !normal.is_finite() {
         return None;
@@ -44,7 +44,7 @@ pub fn closest_direction(normal: Vec3) -> Option<Direction> {
     best
 }
 
-/// Vanilla's directional shade (`BlockAndTintGetter.getShade` with the
+/// Vanilla's directional shade (`BlockAndTintGetter.getShade` with the default lighting).
 pub fn shade(normal: Vec3) -> f32 {
     let up = if normal.y > 0.0 { SHADE_UP } else { SHADE_DOWN };
     (normal.x * normal.x * SHADE_EAST_WEST
@@ -53,10 +53,10 @@ pub fn shade(normal: Vec3) -> f32 {
         .min(1.0)
 }
 
-/// `TextureAtlasSprite.uvShrinkRatio`: keep samples a hair inside the
+/// `TextureAtlasSprite.uvShrinkRatio`.
 pub const UV_INSET: f32 = 1.0 / 512.0;
 
-/// `TextureAtlasSprite.getU`/`getV`: `(u, v)` in `0..=1` across the
+/// `TextureAtlasSprite.getU`/`getV`: `(u, v)` in `0..=1` across the sprite `rect`.
 pub fn atlas_uv(rect: [f32; 4], u: f32, v: f32) -> [f32; 2] {
     let u = u.clamp(UV_INSET, 1.0 - UV_INSET);
     let v = v.clamp(UV_INSET, 1.0 - UV_INSET);
@@ -66,7 +66,8 @@ pub fn atlas_uv(rect: [f32; 4], u: f32, v: f32) -> [f32; 2] {
     ]
 }
 
-/// One quad's corners, counter-clockwise from the front; `flipped` writes
+/// One quad's corners, counter-clockwise from the front; `flipped` writes them the other way
+/// round.
 pub fn push_quad(
     out: &mut Vec<Vertex>,
     corners: [([f32; 3], [f32; 2]); 4],

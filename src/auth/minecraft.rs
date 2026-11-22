@@ -49,7 +49,7 @@ struct JoinServerRequest<'a> {
     server_id: &'a str,
 }
 
-/// `MinecraftSessionService.joinServer`: tells Mojang this session is about
+/// `MinecraftSessionService.joinServer`.
 pub fn join_server(access_token: &str, uuid: &str, server_id_hash: &str) -> anyhow::Result<()> {
     let body = JoinServerRequest {
         access_token,

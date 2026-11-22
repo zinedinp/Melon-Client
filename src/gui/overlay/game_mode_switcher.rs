@@ -1,4 +1,4 @@
-//! Vanilla `GameModeSwitcherScreen` (F3 + F4): four slots with the game
+//! Vanilla `GameModeSwitcherScreen` (F3 + F4).
 
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
@@ -73,7 +73,7 @@ pub struct GameModeSwitcher {
 }
 
 impl GameModeSwitcher {
-    /// `getDefaultSelected`: the previous mode, or survival from creative
+    /// `getDefaultSelected`.
     pub fn new(mode: LocalGameMode) -> Self {
         let hovered = mode
             .previous

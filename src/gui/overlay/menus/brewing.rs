@@ -1,4 +1,4 @@
-//! `BrewingStandScreen`: the fuel gauge, the arrow filling as the brew
+//! `BrewingStandScreen`.
 
 use super::{Loader, MenuDraw, MenuScreen, MenuSprites};
 use crate::gui::sprite::GuiSprite;
@@ -9,7 +9,7 @@ const BREW_TICKS: usize = 0;
 const FUEL: usize = 1;
 const BREW_TOTAL: usize = 2;
 const FUEL_TOTAL: usize = 3;
-/// What a brew and a full gauge are when the server doesn't say
+/// What a brew and a full gauge are when the server doesn't say.
 const DEFAULT_BREW_TOTAL: i16 = 400;
 const DEFAULT_FUEL_TOTAL: i16 = 20;
 /// `BUBBLELENGTHS`: how tall the bubbles are as the ticks go by.

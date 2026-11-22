@@ -1,4 +1,4 @@
-//! `ClientboundCommandsPacket`: the server's Brigadier command tree, which
+//! `ClientboundCommandsPacket`.
 
 use anyhow::{Result, bail};
 
@@ -11,7 +11,7 @@ const EXECUTABLE: u8 = 4;
 const HAS_REDIRECT: u8 = 8;
 const HAS_SUGGESTION_TYPE: u8 = 16;
 
-/// What an argument's parser (`ArgumentTypeInfos`) means for completing
+/// What an argument's parser (`ArgumentTypeInfos`) means for completing it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Parser {
     /// `brigadier:bool`.
@@ -37,9 +37,9 @@ pub struct Argument {
     pub parser_id: i32,
     /// Takes the rest of the line (a greedy string or a message).
     pub greedy: bool,
-    /// The words it spans otherwise: three for `block_pos` and `vec3`,
+    /// The words it spans otherwise.
     pub words: usize,
-    /// The node's custom suggestion provider (`minecraft:ask_server`,
+    /// The node's custom suggestion provider (`minecraft:ask_server`, ...).
     pub suggestions: Option<Box<str>>,
 }
 
@@ -136,7 +136,7 @@ fn read_parser(r: &mut Reader, parser: i32) -> Result<(Parser, bool)> {
     Ok((kind, greedy))
 }
 
-/// The command's words with their byte offsets: split at spaces, except
+/// The command's words with their byte offsets.
 pub fn split_words(command: &str) -> Vec<(usize, &str)> {
     let mut words = Vec::new();
     let mut start = 0;
@@ -226,7 +226,7 @@ impl CommandTree {
         Ok(Self { nodes, root })
     }
 
-    /// Walks `command` (no slash) down the tree as Brigadier parses it,
+    /// Walks `command` (no slash) down the tree as Brigadier parses it.
     pub fn complete(&self, command: &str) -> Completion {
         let words = split_words(command);
         let last = words.len() - 1;
@@ -397,7 +397,7 @@ impl CommandTree {
         }
     }
 
-    /// `CommandSuggestions.fillNodeUsage`: `getSmartUsage` of the
+    /// `CommandSuggestions.fillNodeUsage`.
     pub fn smart_usage(&self, node: usize) -> Vec<String> {
         let optional = self.nodes[node].executable;
         self.children(node)

@@ -1,4 +1,4 @@
-//! `DolphinModel` and `BabyDolphinModel`: a body that follows the look,
+//! `DolphinModel` and `BabyDolphinModel`.
 
 use crate::math::angle::THIRD_PI as THIRD;
 
@@ -119,7 +119,7 @@ impl DolphinParts {
     }
 }
 
-/// `DolphinModel.setupAnim`: the body turns with the look and, swimming,
+/// `DolphinModel.setupAnim`.
 pub fn setup_anim(
     parts: &DolphinParts,
     pose: &mut ModelPose,

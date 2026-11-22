@@ -81,7 +81,7 @@ impl BatParts {
     }
 }
 
-/// `BatModel.setupAnim` before the animations: a resting bat turns its
+/// `BatModel.setupAnim` before the animations.
 pub fn setup_anim(
     parts: &BatParts,
     pose: &mut ModelPose,

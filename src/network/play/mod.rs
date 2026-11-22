@@ -1,4 +1,4 @@
-//! The session once in the world: the connection thread that reads the
+//! The session once in the world.
 
 pub mod chat;
 pub mod debug;

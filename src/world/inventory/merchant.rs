@@ -5,7 +5,7 @@ use pumpkin_data::item_stack::ItemStack;
 /// `MerchantOffer`.
 #[derive(Clone)]
 pub struct Offer {
-    /// `getBaseCostA`: what the first payment costs without the villager's
+    /// `getBaseCostA`.
     pub base_cost_a: ItemStack,
     /// `getCostB`; empty for a trade with one payment.
     pub cost_b: ItemStack,
@@ -20,7 +20,7 @@ pub struct Offer {
 }
 
 impl Offer {
-    /// `getCostA`: the base cost raised by demand and moved by the player's
+    /// `getCostA`.
     pub fn cost_a(&self) -> ItemStack {
         let base = i32::from(self.base_cost_a.item_count);
         let demand = (base as f32 * self.demand as f32 * self.price_multiplier)
@@ -39,7 +39,7 @@ pub struct Offers {
     /// `villagerLevel`, 1 (novice) to 5 (master).
     pub level: i32,
     pub xp: i32,
-    /// Whether the experience bar shows (a villager, not a wandering
+    /// Whether the experience bar shows (a villager, not a wandering trader).
     pub show_progress: bool,
     pub can_restock: bool,
 }

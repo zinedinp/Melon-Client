@@ -42,7 +42,7 @@ pub fn layer() -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 32.0)
 }
 
-/// `CarriedBlockLayer`'s transform, from the entity's root: the block (in
+/// `CarriedBlockLayer`'s transform, from the entity's root.
 pub fn carried_block_transform(root: glam::Mat4) -> glam::Mat4 {
     use crate::math::angle::Rotation;
     use glam::{Mat4, Vec3};
@@ -54,7 +54,7 @@ pub fn carried_block_transform(root: glam::Mat4) -> glam::Mat4 {
         * Mat4::rot_y_deg(90.0)
 }
 
-/// `EndermanRenderer.getRenderOffset`: a creepy enderman trembles, a
+/// `EndermanRenderer.getRenderOffset`.
 pub fn creepy_shake(age_in_ticks: f32, scale: f32) -> (f32, f32) {
     let mut state = age_in_ticks.to_bits().wrapping_mul(2_654_435_761) | 1;
     let mut uniform = || {
@@ -77,7 +77,7 @@ pub struct EndermanPose {
     pub creepy: bool,
 }
 
-/// `EndermanModel.setupAnim` after the humanoid's: the swing is halved
+/// `EndermanModel.setupAnim` after the humanoid's.
 pub fn setup_anim(parts: &HumanoidParts, pose: &mut ModelPose, enderman: EndermanPose) {
     for limb in [
         parts.right_arm,

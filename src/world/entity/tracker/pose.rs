@@ -1,4 +1,4 @@
-//! What a tracked entity looks like this frame: positions, boxes and the
+//! What a tracked entity looks like this frame.
 
 use super::*;
 
@@ -38,7 +38,7 @@ impl ClientEntity {
         }
     }
 
-    /// What the type's dimensions are multiplied by: half for a baby,
+    /// What the type's dimensions are multiplied by.
     pub fn scale(&self) -> f32 {
         if self.kind.is_cube() {
             // `AbstractCubeMob.getDefaultDimensions`: by size alone, a baby
@@ -84,7 +84,7 @@ impl ClientEntity {
         self.velocity
     }
 
-    /// `Entity.blocksBuilding`: the living, armor stands and vehicles stop
+    /// `Entity.blocksBuilding`.
     pub fn blocks_building(&self) -> bool {
         if self.is_living() {
             return self.appearance.health > 0.0 && self.kind != EntityKind::ArmorStand
@@ -93,7 +93,7 @@ impl ClientEntity {
         matches!(self.kind, EntityKind::Boat)
     }
 
-    /// The box that stops what walks into it (`canBeCollidedWith`), for
+    /// The box that stops what walks into it (`canBeCollidedWith`).
     pub fn collider(&self, other_feet: f64) -> Option<Aabb> {
         if self.appearance.health <= 0.0 && self.is_living() {
             return None;
@@ -108,7 +108,7 @@ impl ClientEntity {
         solid.then_some(bounds)
     }
 
-    /// The box the crosshair hits (`getBoundingBox` at this tick's
+    /// The box the crosshair hits (`getBoundingBox` at this tick's position).
     pub fn pick_box(&self) -> Option<Aabb> {
         if !self.pickable || (self.kind == EntityKind::ArmorStand && self.appearance.stand_marker())
         {
@@ -178,7 +178,7 @@ impl ClientEntity {
         self.paddles.rowing(self.appearance.paddles, partial)
     }
 
-    /// `getPreciseBodyRotation`: the body's yaw between ticks, in vanilla's
+    /// `getPreciseBodyRotation`.
     pub fn body_yaw(&self, partial: f32) -> f32 {
         rot_lerp(partial, self.prev_body, self.body)
     }
@@ -233,7 +233,7 @@ impl ClientEntity {
         self.pos(partial).as_vec3() + Vec3::Y * self.ty.eye_height * self.scale()
     }
 
-    /// `Entity.getViewVector`: where its head looks between ticks, a unit
+    /// `Entity.getViewVector`.
     pub fn view_vector(&self, partial: f32) -> Vec3 {
         let yaw = rot_lerp(partial, self.prev_head, self.head).to_radians();
         let pitch = (self.prev_pitch + (self.pitch - self.prev_pitch) * partial).to_radians();
@@ -244,7 +244,7 @@ impl ClientEntity {
         )
     }
 
-    /// `extractRenderState`: the pose's inputs between ticks, in Melon's
+    /// `extractRenderState`.
     pub fn living_state(&self, partial: f32) -> LivingRenderState {
         let head = rot_lerp(partial, self.prev_head, self.head);
         let body = match self.vehicle_body {

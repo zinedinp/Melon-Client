@@ -1,4 +1,4 @@
-//! `SnifferModel` and `SniffletModel`: walk (or a searching walk) is a
+//! `SnifferModel` and `SniffletModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::world::entity::animations::sniffer as anim;
@@ -245,7 +245,7 @@ impl SnifferParts {
     }
 }
 
-/// `SnifferModel.setupAnim`: the head looks, then walk or the searching
+/// `SnifferModel.setupAnim`.
 pub fn setup_anim(
     parts: &SnifferParts,
     pose: &mut ModelPose,
@@ -266,7 +266,7 @@ pub fn setup_anim(
     }
 }
 
-/// Start happy/scent/sniff/dig/rise from `DATA_STATE`. Searching drives
+/// Start happy/scent/sniff/dig/rise from `DATA_STATE`.
 pub fn tick_anim(anim: &mut [AnimationState], tick: i32, state: i32) {
     for slot in [HAPPY, SCENTING, SNIFFING, SEARCHING, DIG, STAND_UP] {
         anim[slot].stop();

@@ -1,4 +1,4 @@
-//! The block entity models, transcribed from their `createBodyLayer`s
+//! The block entity models, transcribed from their `createBodyLayer`s.
 
 use glam::Vec2;
 
@@ -262,7 +262,7 @@ pub fn bell() -> Part {
     )])
 }
 
-/// `BookModel`: 64x32. Parts in order: left lid, right lid, seam, left
+/// `BookModel`: 64x32.
 pub const BOOK_TEXTURE: Vec2 = Vec2::new(64.0, 32.0);
 
 pub fn book() -> Vec<Part> {
@@ -305,7 +305,7 @@ pub fn book() -> Vec<Part> {
     ]
 }
 
-/// `DecoratedPotRenderer.createBaseLayer` (32x32: neck, top, bottom) and
+/// `DecoratedPotRenderer.createBaseLayer` (32x32.
 pub const POT_BASE_TEXTURE: Vec2 = Vec2::splat(32.0);
 pub const POT_SIDE_TEXTURE: Vec2 = Vec2::splat(16.0);
 
@@ -365,7 +365,7 @@ pub const SHIELD_TEXTURE: Vec2 = Vec2::splat(64.0);
 
 pub const TRIDENT_TEXTURE: Vec2 = Vec2::splat(32.0);
 
-/// `TridentModel.createLayer`: the pole and the head's base and three
+/// `TridentModel.createLayer`.
 pub fn trident() -> [Part; 5] {
     let part = |cube: Cube| Part::new(Pose::ZERO, vec![cube]);
     [

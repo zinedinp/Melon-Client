@@ -1,4 +1,4 @@
-//! Input while in a world and not paused (vanilla `Minecraft.handleKeybinds`,
+//! Input while in a world and not paused (vanilla `Minecraft.handleKeybinds`).
 
 use crate::gui::text::font::Font;
 use crate::i18n::Lang;

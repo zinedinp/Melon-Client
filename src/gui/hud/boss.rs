@@ -76,7 +76,7 @@ impl Bar {
 pub struct BossBars(Vec<Bar>);
 
 impl BossBars {
-    /// `BossHealthOverlay.update`. A packet for a bar that does not exist
+    /// `BossHealthOverlay.update`.
     pub fn apply(&mut self, event: BossEvent, lang: &crate::i18n::Lang) {
         let find = |bars: &mut Vec<Bar>, id: Uuid| bars.iter().position(|bar| bar.id == id);
         match event {

@@ -1,11 +1,11 @@
-//! Where a container screen's panel, slots and labels are: vanilla
+//! Where a container screen's panel, slots and labels are.
 
 /// A slot's pitch: 16 pixels of item and a 2-pixel frame.
 pub const SLOT_PITCH: f32 = 18.0;
 /// The item area of a slot.
 pub const SLOT_SIZE: f32 = 16.0;
 
-/// A horizontal strip of the panel's sheet: drawn at `y` in the panel from
+/// A horizontal strip of the panel's sheet.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Strip {
     pub y: f32,
@@ -19,21 +19,21 @@ pub struct MenuLayout {
     height: f32,
     left: f32,
     top: f32,
-    /// Top-left of each slot's item area, relative to the panel, by menu
+    /// Top-left of each slot's item area, relative to the panel, by menu slot.
     slots: Vec<(f32, f32)>,
     strips: Vec<Strip>,
     title: (f32, f32),
     /// Whether the title is centred on the panel instead of at `title.0`.
     title_centered: bool,
-    /// Whether the screen leaves the title to itself (the beacon has none,
+    /// Whether the screen leaves the title out (the beacon has none).
     title_hidden: bool,
     inventory_label: Option<(f32, f32)>,
-    /// The size of the sheet the panel is cut from: 256x256, the
+    /// The size of the sheet the panel is cut from.
     sheet: (f32, f32),
 }
 
 impl MenuLayout {
-    /// A `width` x `height` panel drawn from the sheet's top-left, with the
+    /// A `width` x `height` panel drawn from the sheet's top-left.
     pub fn new(width: f32, height: f32) -> Self {
         Self {
             width,
@@ -54,7 +54,7 @@ impl MenuLayout {
         }
     }
 
-    /// Draws the panel from these strips of the sheet instead of one piece
+    /// Draws the panel from these strips of the sheet instead of one piece.
     pub fn strips(mut self, strips: Vec<Strip>) -> Self {
         self.strips = strips;
         self
@@ -111,7 +111,7 @@ impl MenuLayout {
         self
     }
 
-    /// `AbstractContainerMenu.addStandardInventorySlots`: the 27 main
+    /// `AbstractContainerMenu.addStandardInventorySlots`.
     pub fn player_inventory(self, x: f32, y: f32) -> Self {
         self.grid(x, y, 9, 3).grid(x, y + 58.0, 9, 1)
     }
@@ -122,7 +122,7 @@ impl MenuLayout {
         self.top = ((height - self.height) / 2.0).floor();
     }
 
-    /// [`Self::place`], with the panel's left edge at `left` (a recipe book
+    /// [`Self::place`], with the panel's left edge at `left` (a recipe book beside it).
     pub fn place_at(&mut self, left: f32, height: f32) {
         self.left = left;
         self.top = ((height - self.height) / 2.0).floor();
@@ -194,7 +194,7 @@ impl MenuLayout {
         (0..self.slots.len()).filter_map(|slot| Some((slot, self.slot_origin(slot)?)))
     }
 
-    /// `AbstractContainerScreen.getHoveredSlot`: the slot whose item area
+    /// `AbstractContainerScreen.getHoveredSlot`.
     pub fn slot_at(&self, (mx, my): (f32, f32)) -> Option<usize> {
         self.slot_origins().find_map(|(slot, (x, y))| {
             (mx >= x - 1.0 && mx < x + SLOT_SIZE + 1.0 && my >= y - 1.0 && my < y + SLOT_SIZE + 1.0)
@@ -210,7 +210,7 @@ impl MenuLayout {
             || my >= self.top + self.height
     }
 
-    /// The slots whose item area doesn't lie inside the panel, which would
+    /// The slots whose item area doesn't lie inside the panel.
     pub fn slots_outside_panel(&self) -> Vec<usize> {
         self.slots
             .iter()

@@ -1,4 +1,4 @@
-//! The open in-world overlay (inventory, creative inventory, chat, game
+//! The open in-world overlay (inventory, creative inventory, chat, game mode switcher...).
 
 use super::InWorld;
 use crate::game::controls::WorldContext;
@@ -37,7 +37,7 @@ impl InWorld {
         self.overlay.as_ref().map(|overlay| overlay.kind())
     }
 
-    /// Runs `f` on the open overlay with what it may read and change of
+    /// Runs `f` on the open overlay with what it may read and change of the world.
     pub(super) fn with_overlay<R>(
         &mut self,
         ui: &WorldContext,
@@ -71,7 +71,7 @@ impl InWorld {
         Some(f(overlay, &mut ctx))
     }
 
-    /// Opens `overlay`: over the world the mouse starts at the centre, as
+    /// Opens `overlay`.
     pub(super) fn open_overlay(&mut self, overlay: Box<dyn Overlay>, ui: &WorldContext) {
         let recenter = self.overlay.is_none();
         self.open_overlay_with(overlay, recenter, ui);
@@ -94,7 +94,7 @@ impl InWorld {
         self.with_overlay(ui, |overlay, ctx| overlay.mouse_moved(x, y, false, ctx));
     }
 
-    /// Closes whatever overlay is open, as if something else interrupted
+    /// Closes whatever overlay is open, as if something else interrupted it.
     pub fn close_overlay(&mut self, ui: &WorldContext) {
         self.close_overlay_with(ChatExit::Interrupted, ui);
     }
@@ -131,7 +131,7 @@ impl InWorld {
         }
     }
 
-    /// Escape over an overlay. `true` when it took the key; otherwise the
+    /// Escape over an overlay.
     pub fn escape(&mut self, ui: &WorldContext) -> bool {
         let Some(action) = self.overlay.as_mut().map(|overlay| overlay.escape()) else {
             return false;
@@ -156,7 +156,7 @@ impl InWorld {
         });
     }
 
-    /// `keyInventory`: the creative screen for those with infinite
+    /// `keyInventory`.
     pub(super) fn open_inventory(&mut self, ui: &WorldContext) {
         let mode = self.game_mode.current;
         if mode.is_spectator() {

@@ -1,4 +1,4 @@
-//! Resource packs' replacements for vanilla's GUI shaders. Each kind of GUI
+//! Resource packs' replacements for vanilla's GUI shaders.
 
 use std::path::Path;
 
@@ -15,7 +15,7 @@ struct Pipeline {
     interface: Interface<'static>,
 }
 
-/// `DefaultVertexFormat.POSITION_TEX_COLOR`'s elements, at the locations
+/// `DefaultVertexFormat.POSITION_TEX_COLOR`'s elements, at the locations Melon's pipelines use.
 const POSITION_TEX_COLOR: &[(&str, u32)] = &[("Position", 0), ("UV0", 1), ("Color", 2)];
 /// `DefaultVertexFormat.POSITION_COLOR`.
 const POSITION_COLOR: &[(&str, u32)] = &[("Position", 0), ("Color", 2)];
@@ -62,7 +62,7 @@ const PIPELINES: [Pipeline; 3] = [
     },
 ];
 
-/// The GUI shaders the active resource packs replace, compiled. One that
+/// The GUI shaders the active resource packs replace, compiled.
 pub fn compile(assets_root: &Path) -> Vec<GuiShader> {
     PIPELINES
         .iter()
@@ -79,7 +79,7 @@ pub fn compile(assets_root: &Path) -> Vec<GuiShader> {
         .collect()
 }
 
-/// Every GUI pipeline's shaders, replaced or not: vanilla's own when no
+/// Every GUI pipeline's shaders, replaced or not.
 #[cfg(test)]
 pub(crate) fn compile_all(assets_root: &Path) -> anyhow::Result<Vec<GuiShader>> {
     PIPELINES
@@ -150,7 +150,7 @@ fn compile_one(assets_root: &Path, pipeline: &Pipeline) -> anyhow::Result<Option
 mod tests {
     use super::*;
 
-    /// Vanilla's three GUI shaders, if `assets/` has them, compile against
+    /// Vanilla's three GUI shaders, if `assets/` has them, compile against Melon's pipelines.
     #[test]
     fn vanilla_gui_shaders_fit_their_pipelines() {
         let root = crate::assets::default_root();

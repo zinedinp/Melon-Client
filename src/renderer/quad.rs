@@ -39,11 +39,11 @@ pub enum BlendMode {
     Invert,
     /// `BlendFunction.ADDITIVE`: `src + dst` (`GUI_TEXT_HIGHLIGHT`).
     Additive,
-    /// The vignette's (`RenderPipelines.VIGNETTE`): `dst * (1 - src)`, so
+    /// The vignette's (`RenderPipelines.VIGNETTE`).
     Vignette,
 }
 
-/// Which of vanilla's GUI shaders a draw call stands for, so a resource
+/// Which of vanilla's GUI shaders a draw call stands for, so a resource pack's can replace it.
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub enum Program {
     /// Sprites and textures: `core/position_tex_color`.
@@ -67,7 +67,7 @@ impl Program {
 
 pub struct DrawCall {
     pub texture: TextureId,
-    /// The first index and the index count: six per quad (two triangles
+    /// The first index and the index count.
     pub first: u32,
     pub count: u32,
     /// `[x, y, w, h]` in GUI coords, or `None` for the full window.
@@ -76,7 +76,7 @@ pub struct DrawCall {
     pub program: Program,
 }
 
-/// Immediate-mode quad list, rebuilt each frame. Every quad is four
+/// Immediate-mode quad list, rebuilt each frame.
 pub struct DrawList {
     pub vertices: Vec<Vertex>,
     pub calls: Vec<DrawCall>,
@@ -99,7 +99,7 @@ impl DrawList {
         }
     }
 
-    /// The index of the next call, which starts a call of its own: the
+    /// The index of the next call, which starts a call of its own.
     pub fn seal(&mut self) -> usize {
         self.sealed = self.calls.len();
         self.sealed
@@ -120,7 +120,7 @@ impl DrawList {
         self.vertices.len()
     }
 
-    /// Scales every vertex pushed since `start` about the origin: a
+    /// Scales every vertex pushed since `start` about the origin.
     pub fn scale_since(&mut self, start: usize, scale: f32) {
         for vertex in &mut self.vertices[start..] {
             vertex.pos = vertex.pos.map(|p| p * scale);
@@ -144,17 +144,17 @@ impl DrawList {
         self.current_scissor
     }
 
-    /// Blend function for later quads. Callers must set it back to
+    /// Blend function for later quads.
     pub fn set_blend(&mut self, blend: BlendMode) {
         self.current_blend = blend;
     }
 
-    /// Which GUI shader later quads stand for; returns the one before, to
+    /// Which GUI shader later quads stand for; returns the one before, to restore it.
     pub fn set_program(&mut self, program: Program) -> Program {
         std::mem::replace(&mut self.current_program, program)
     }
 
-    /// A whole texture, untinted (vanilla `blitSprite` of a sprite that
+    /// A whole texture, untinted (vanilla `blitSprite` of a plain sprite).
     pub fn push_sprite(&mut self, texture: TextureId, x: f32, y: f32, w: f32, h: f32) {
         self.push_rect(texture, x, y, w, h, [0.0, 0.0, 1.0, 1.0], [1.0; 4]);
     }
@@ -210,7 +210,7 @@ impl DrawList {
         self.push_corners(texture, corners, uvs, [color; 4], self.current_program);
     }
 
-    /// A quad of any four corners, in the order they go round, each with
+    /// A quad of any four corners, in the order they go round, each with its UV.
     pub fn push_quad(
         &mut self,
         texture: TextureId,
@@ -240,7 +240,7 @@ impl DrawList {
         self.push_corners(texture, corners, uvs, [color; 4], self.current_program);
     }
 
-    /// `push_rect` as a parallelogram: top edge shifted by `shear_top`, bottom
+    /// `push_rect` as a parallelogram.
     #[allow(clippy::too_many_arguments)]
     pub fn push_rect_sheared(
         &mut self,
@@ -265,7 +265,7 @@ impl DrawList {
         self.push_corners(texture, corners, uvs, [color; 4], self.current_program);
     }
 
-    /// Repeats `texture` (native width `tile_w`) across `[x, x+w)` instead of
+    /// Repeats `texture` (native width `tile_w`) across `[x, x+w)` instead of stretching it.
     #[allow(clippy::too_many_arguments)]
     pub fn push_rect_tiled_x(
         &mut self,
@@ -282,7 +282,7 @@ impl DrawList {
         }
     }
 
-    /// Solid vertical gradient on the white texture. Menu background stand-in
+    /// Solid vertical gradient on the white texture.
     #[allow(clippy::too_many_arguments)]
     pub fn push_vgradient(
         &mut self,

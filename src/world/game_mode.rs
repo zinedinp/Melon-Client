@@ -1,4 +1,4 @@
-//! Vanilla `GameType` and `Abilities`: what each game mode lets the player
+//! Vanilla `GameType` and `Abilities`.
 
 /// `GameType`, by its network id.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -47,7 +47,7 @@ impl GameMode {
         }
     }
 
-    /// `MultiPlayerGameMode.canHurtPlayer`: health, food and experience
+    /// `MultiPlayerGameMode.canHurtPlayer`.
     pub fn can_hurt(self) -> bool {
         matches!(self, Self::Survival | Self::Adventure)
     }
@@ -61,7 +61,7 @@ impl GameMode {
         self == Self::Spectator
     }
 
-    /// `GameType.updatePlayerAbilities`: what a mode gives before the
+    /// `GameType.updatePlayerAbilities`.
     pub fn abilities(self, previous: Abilities) -> Abilities {
         let (may_fly, instabuild, invulnerable) = match self {
             Self::Creative => (true, true, true),
@@ -138,7 +138,7 @@ impl Abilities {
     }
 }
 
-/// `MultiPlayerGameMode`'s local mode: the current one and the one before,
+/// `MultiPlayerGameMode`'s local mode.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LocalGameMode {
     pub current: GameMode,
@@ -146,7 +146,7 @@ pub struct LocalGameMode {
 }
 
 impl LocalGameMode {
-    /// `MultiPlayerGameMode.setLocalMode(GameType)`: the old mode becomes the
+    /// `MultiPlayerGameMode.setLocalMode(GameType)`.
     pub fn set(&mut self, mode: GameMode) {
         if mode != self.current {
             self.previous = Some(self.current);

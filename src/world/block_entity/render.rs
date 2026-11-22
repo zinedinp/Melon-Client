@@ -1,4 +1,4 @@
-//! Building the block entities' geometry: those at rest once, the moving
+//! Building the block entities' geometry.
 
 use super::anim::pot_duration;
 use super::models::{ChestHalf, SkullType};
@@ -100,7 +100,7 @@ impl BlockEntities {
         drawn
     }
 
-    /// Whether the block entity at `pos` looks different from one frame to
+    /// Whether the block entity at `pos` looks different from one frame to the next.
     pub(super) fn is_moving(&self, pos: [i32; 3], kind: &Kind) -> bool {
         let runs = |pos| {
             self.anims
@@ -400,7 +400,7 @@ pub(super) fn facing_rotation(direction: Direction) -> Mat4 {
     }
 }
 
-/// Whether the block entity at `pos` is a player head with a profile, drawn
+/// Whether the block entity at `pos` is a player head with a profile, drawn with its skin.
 fn drawn_with_skin(level: &Level, pos: [i32; 3], kind: &Kind) -> bool {
     matches!(
         kind,
@@ -432,7 +432,7 @@ pub fn skull_transform(placement: Placement) -> Mat4 {
     }
 }
 
-/// `TheEndPortalRenderer`: the portal's top (at 0.75) and bottom (at
+/// `TheEndPortalRenderer`.
 pub(super) fn end_cube(min: Vec3, gateway: bool, rect: [f32; 4], out: &mut Vec<Vertex>) {
     let (bottom, top) = if gateway { (0.0, 1.0) } else { (0.375, 0.75) };
     let uv = [

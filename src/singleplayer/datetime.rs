@@ -11,7 +11,7 @@ pub struct Local {
     pub second: u32,
 }
 
-/// `millis` since the epoch in the machine's time zone, as
+/// `millis` since the epoch in the machine's time zone.
 pub fn local(millis: i64) -> Local {
     use chrono::{Datelike, TimeZone, Timelike};
     let time = chrono::Local
@@ -37,7 +37,7 @@ pub fn backup_stamp(millis: i64) -> String {
     )
 }
 
-/// `Util.localizedDateFormatter(FormatStyle.SHORT)` for the system locale
+/// `Util.localizedDateFormatter(FormatStyle.SHORT)` for the system locale.
 pub fn short(millis: i64) -> String {
     format_short(local(millis), &system_locale())
 }

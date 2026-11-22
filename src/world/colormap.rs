@@ -1,4 +1,4 @@
-//! Grass, foliage and dry-foliage colour maps (vanilla `GrassColor`,
+//! Grass, foliage and dry-foliage colour maps (vanilla `GrassColor`, `FoliageColor`).
 
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
@@ -44,7 +44,7 @@ impl ColorMap {
         }
     }
 
-    /// `ColorMapColorUtil.get`: `rain` is multiplied by `temp`, then both
+    /// `ColorMapColorUtil.get`.
     pub fn get(&self, temp: f32, rain: f32) -> u32 {
         let temp = temp.clamp(0.0, 1.0);
         let rain = (rain.clamp(0.0, 1.0) * temp) as f64;
@@ -71,7 +71,7 @@ pub const DRY_FOLIAGE_DEFAULT: u32 = 0xFF5C_3C32;
 const GRASS_MISSING: u32 = 0xFFFF_00FF;
 
 impl ColorMaps {
-    /// Reads the PNGs under `assets_root`; a missing file is a solid
+    /// Reads the PNGs under `assets_root`; a missing file is a solid default colour.
     pub fn load(assets_root: &Path) -> Self {
         let load = |name: &str, default| {
             ColorMap::load(

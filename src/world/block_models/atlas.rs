@@ -1,4 +1,4 @@
-//! Packing every block texture into one atlas (vanilla `Stitcher` and
+//! Packing every block texture into one atlas (vanilla `Stitcher`).
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -9,7 +9,7 @@ use super::mipmap;
 use crate::world::texture_animation::{self, Frames, SpriteAnimation, TextureAnimator};
 use crate::world::transparency::AlphaMap;
 
-/// The packed atlas: its image, each texture's rectangle, which textures
+/// The packed atlas.
 pub(super) struct PackedAtlas {
     pub(super) image: RgbaImage,
     /// [`mipmap::LEVELS`] smaller levels of `image`.
@@ -146,7 +146,7 @@ fn cell(n: u32) -> u32 {
     n.max(1).div_ceil(mipmap::ALIGN) * mipmap::ALIGN
 }
 
-/// A texture handed in, else its animation's frames, else its PNG; a
+/// A texture handed in, else its animation's frames, else its PNG.
 fn load(assets_root: &Path, id: String, image: Option<RgbaImage>) -> Sprite {
     if let Some(image) = image {
         return Sprite {
@@ -174,7 +174,7 @@ fn load(assets_root: &Path, id: String, image: Option<RgbaImage>) -> Sprite {
     }
 }
 
-/// Halves the biggest sprites (and their frames) until all of them fit an
+/// Halves the biggest sprites (and their frames) until all of them fit an atlas of `max_side`.
 fn fit(sprites: &mut [Sprite], max_side: u32) {
     let budget = u64::from(max_side) * u64::from(max_side) * 7 / 8;
     let area = |sprites: &[Sprite], cap: u32| -> u64 {
@@ -220,7 +220,7 @@ fn scaled_size((mut w, mut h): (u32, u32), cap: u32) -> (u32, u32) {
     (w, h)
 }
 
-/// Places `cells` (all multiples of [`mipmap::ALIGN`]) in the atlas with
+/// Places `cells` (all multiples of [`mipmap::ALIGN`]) in the atlas.
 fn pack(cells: &[(u32, u32)], max_side: u32) -> (u32, u32, Vec<(u32, u32)>) {
     let mut order: Vec<usize> = (0..cells.len()).collect();
     order.sort_by_key(|&i| std::cmp::Reverse((cells[i].1, cells[i].0)));

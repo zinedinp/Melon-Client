@@ -3,7 +3,7 @@
 use crate::game::InWorld;
 
 impl InWorld {
-    /// `ChatScreen.handleChatInput`: a command without its slash, or a
+    /// `ChatScreen.handleChatInput`.
     pub fn send_chat(&mut self, message: &str) {
         if message.is_empty() {
             return;

@@ -1,4 +1,4 @@
-//! Rain and snow columns (vanilla `WeatherEffectRenderer`). Each column's
+//! Rain and snow columns (vanilla `WeatherEffectRenderer`).
 
 use std::sync::OnceLock;
 
@@ -59,7 +59,7 @@ impl WeatherLevels {
     }
 }
 
-/// A column's part that holds while the camera stays in its block and the
+/// A column's part that holds while the camera stays in its block.
 #[derive(Clone, Copy, Debug)]
 pub struct Prepared {
     x: i32,
@@ -118,7 +118,7 @@ impl Prepared {
     }
 }
 
-/// What [`prepare`]'s result stands for: the camera's block, the world's
+/// What [`prepare`]'s result stands for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PrepareKey {
     pub block: [i32; 3],

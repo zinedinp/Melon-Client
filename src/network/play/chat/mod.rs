@@ -1,4 +1,4 @@
-//! Chat on the wire (vanilla `ClientPacketListener`'s chat handlers and
+//! Chat on the wire (vanilla `ClientPacketListener`'s chat handlers).
 
 pub mod command_suggestions;
 pub mod commands;
@@ -57,7 +57,7 @@ fn style_of<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Option<
 pub struct ChatTypes(Vec<ChatDecoration>);
 
 impl ChatTypes {
-    /// Vanilla's built-in types, for servers that leave the data out because
+    /// Vanilla's built-in types, for servers that leave the data out.
     fn vanilla(name: &str) -> ChatDecoration {
         let (key, params): (&str, &[&str]) = match name.trim_start_matches("minecraft:") {
             "emote_command" => ("chat.type.emote", &["sender", "content"]),
@@ -107,7 +107,7 @@ impl ChatTypes {
         Ok(Some(Self(types)))
     }
 
-    /// A `ChatType.Bound`'s type: `holder` ids are the registry id plus one,
+    /// A `ChatType.Bound`'s type.
     pub fn get(&self, holder_id: i32) -> std::borrow::Cow<'_, ChatDecoration> {
         usize::try_from(holder_id - 1)
             .ok()
@@ -132,7 +132,7 @@ pub struct BoundChatType {
 pub enum ChatEvent {
     /// `ClientboundSystemChatPacket`: `overlay` puts it above the hotbar.
     System { content: Component, overlay: bool },
-    /// `ClientboundPlayerChatPacket`: a player's message. `signature` is
+    /// `ClientboundPlayerChatPacket`: a player's message.
     Player {
         sender: uuid::Uuid,
         signature: Option<Box<[u8; 256]>>,
@@ -142,7 +142,7 @@ pub enum ChatEvent {
         fully_filtered: bool,
         bound: BoundChatType,
     },
-    /// `ClientboundDisguisedChatPacket`: a decorated message without a
+    /// `ClientboundDisguisedChatPacket`.
     Disguised {
         message: Component,
         bound: BoundChatType,
@@ -161,13 +161,13 @@ pub enum ChatEvent {
     },
     /// `ClientboundClearTitlesPacket`: `reset` also restores the times.
     ClearTitles { reset: bool },
-    /// `ClientboundDeleteChatPacket` with a full signature (cache ids are
+    /// `ClientboundDeleteChatPacket` with a full signature.
     Delete(Box<[u8; 256]>),
     /// `ClientboundCommandSuggestionsPacket`.
     Suggestions(Suggestions),
 }
 
-/// Tab completions for the text the client asked about: they replace
+/// Tab completions for the text the client asked about.
 #[derive(Clone, Debug, Default)]
 pub struct Suggestions {
     pub transaction: i32,
@@ -177,7 +177,7 @@ pub struct Suggestions {
 }
 
 impl Reader<'_> {
-    /// A text component (NBT since 1.20.3), turned into JSON by Pumpkin's
+    /// A text component (NBT since 1.20.3), turned into JSON by Pumpkin's reader.
     pub fn component(&mut self) -> Result<Component> {
         let tag = self
             .remaining()
@@ -193,7 +193,7 @@ impl Reader<'_> {
         Ok(self.component()?.plain_text())
     }
 
-    /// A `Style` on its own (`Style.Serializer.TRUSTED_STREAM_CODEC`): the
+    /// A `Style` on its own (`Style.Serializer.TRUSTED_STREAM_CODEC`).
     pub fn style(&mut self) -> Result<Style> {
         let tag = self
             .remaining()
@@ -317,7 +317,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<ChatEvent>> {
     }))
 }
 
-/// `ServerboundChatPacket`, unsigned: no signature, and the messages seen
+/// `ServerboundChatPacket`, unsigned.
 pub fn write_chat(buf: &mut Vec<u8>, message: &str, offset: i32) -> Result<()> {
     if message.encode_utf16().count() > 256 {
         bail!("chat message longer than 256");
@@ -346,7 +346,7 @@ pub fn write_ack(buf: &mut Vec<u8>, offset: i32) -> Result<()> {
     Ok(write_var_int(buf, offset)?)
 }
 
-/// `ServerboundCommandSuggestionPacket`: the text before the cursor,
+/// `ServerboundCommandSuggestionPacket`.
 pub fn write_suggestion_request(buf: &mut Vec<u8>, transaction: i32, text: &str) -> Result<()> {
     write_var_int(buf, transaction)?;
     packet::write_string(buf, text)

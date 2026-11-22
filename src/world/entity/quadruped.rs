@@ -1,4 +1,4 @@
-//! Vanilla `QuadrupedModel`: head, body and four legs (`createBodyMesh`,
+//! Vanilla `QuadrupedModel`.
 
 use super::living::LivingRenderState;
 use super::model::{Model, ModelPose, PartDefinition, PartId};
@@ -27,7 +27,7 @@ pub fn create_body_mesh(
     root
 }
 
-/// `QuadrupedModel.createLegs`: four legs of `leg_size` pixels, the left
+/// `QuadrupedModel.createLegs`.
 pub fn create_legs(
     root: &mut PartDefinition,
     mirror_left: bool,
@@ -77,7 +77,7 @@ impl Legs {
         }
     }
 
-    /// The trot: diagonal legs swing together. `phase_shift` is π for the
+    /// The trot: diagonal legs swing together.
     pub fn walk(&self, pose: &mut ModelPose, position: f32, speed: f32, phase_shift: f32) {
         let swing =
             |offset: f32| angle::cos(position * 0.6662 + offset + phase_shift) * 1.4 * speed;

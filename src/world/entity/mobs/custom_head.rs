@@ -1,4 +1,4 @@
-//! Which models wear what is in the head slot (`CustomHeadLayer`), on
+//! Which models wear what is in the head slot (`CustomHeadLayer`).
 
 use super::{MobModel, Rig};
 use crate::world::entity::kind::EntityKind;
@@ -11,7 +11,7 @@ pub struct HeadTransforms {
     pub y_offset: f32,
     /// Up or down for a worn head (`skullYOffset`).
     pub skull_y_offset: f32,
-    /// The scale around the wearer, sideways and up (`horizontalScale`,
+    /// The scale around the wearer, sideways and up (`horizontalScale`, `verticalScale`).
     pub horizontal_scale: f32,
     pub vertical_scale: f32,
 }
@@ -24,14 +24,14 @@ impl HeadTransforms {
         horizontal_scale: 1.0,
         vertical_scale: 1.0,
     };
-    /// `VillagerRenderer.CUSTOM_HEAD_TRANSFORMS`: lower, over the bigger
+    /// `VillagerRenderer.CUSTOM_HEAD_TRANSFORMS`.
     pub const VILLAGER: Self = Self {
         y_offset: -0.117_187_5,
         skull_y_offset: -0.074_218_75,
         horizontal_scale: 1.0,
         vertical_scale: 1.0,
     };
-    /// `PiglinRenderer.PIGLIN_CUSTOM_HEAD_TRANSFORMS`: a hair wider, over
+    /// `PiglinRenderer.PIGLIN_CUSTOM_HEAD_TRANSFORMS`.
     pub const PIGLIN: Self = Self {
         y_offset: 0.0,
         skull_y_offset: 0.0,
@@ -40,7 +40,7 @@ impl HeadTransforms {
     };
 }
 
-/// Where a model of `kind` wears its head slot: the head part and the
+/// Where a model of `kind` wears its head slot.
 pub fn custom_head(kind: EntityKind, mob: &MobModel) -> Option<(PartId, HeadTransforms)> {
     match &mob.rig {
         Rig::Humanoid(parts) => Some((parts.head, HeadTransforms::DEFAULT)),

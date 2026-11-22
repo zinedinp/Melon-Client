@@ -1,4 +1,4 @@
-//! Where a 26.3 client jar already lives: this Melon folder, then the
+//! Where a 26.3 client jar already lives.
 
 use super::VERSION;
 use std::fs;
@@ -121,7 +121,8 @@ fn known_installs() -> Vec<Found> {
     out
 }
 
-/// Official `versions/<id>/<id>.jar`, Modrinth `meta/versions/`, Prism maven jars,
+/// Official `versions/<id>/<id>.jar`, Modrinth `meta/versions/` and Prism maven jars under
+/// `root`.
 fn scan_root(root: &Path, label: &str) -> Vec<Found> {
     let mut out = version_jars(root, label);
     out.extend(version_jars(&root.join("meta"), label));
@@ -175,7 +176,7 @@ fn version_jars(root: &Path, label: &str) -> Vec<Found> {
     out
 }
 
-/// Prism/MultiMC: `instances/<id>/.minecraft`. XMCL: `instances/<id>/` (versions often
+/// Prism/MultiMC: `instances/<id>/.minecraft`.
 fn instance_jars(root: &Path, label: &str) -> Vec<Found> {
     let Ok(entries) = fs::read_dir(root.join("instances")) else {
         return Vec::new();

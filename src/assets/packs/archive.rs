@@ -31,7 +31,7 @@ struct Entry {
 
 pub struct ZipPack {
     file: File,
-    /// File name to entry, folders left out. With the same name twice the
+    /// File name to entry, folders left out.
     index: HashMap<Box<str>, Entry>,
 }
 
@@ -241,7 +241,7 @@ mod tests {
         std::fs::remove_dir_all(&dir).ok();
     }
 
-    /// `MELON_ZIP=<file> cargo test reads_a_real_zip -- --ignored`: every
+    /// `MELON_ZIP=<file> cargo test reads_a_real_zip -- --ignored`.
     #[test]
     #[ignore = "needs a zip in MELON_ZIP"]
     fn reads_a_real_zip() {
@@ -258,7 +258,7 @@ mod tests {
         assert!(pack.read("pack.mcmeta").is_some());
     }
 
-    /// What extraction "protection" does to a server pack: local headers
+    /// What extraction "protection" does to a server pack.
     #[test]
     fn reads_protected_zips_like_java() {
         let dir = std::env::temp_dir().join(format!("melon-zip-prot-{}", std::process::id()));

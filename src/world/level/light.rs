@@ -28,13 +28,13 @@ fn emission(state: u16) -> u8 {
     BlockStateId::new(state).map_or(0, |id| id.to_state().luminance)
 }
 
-/// `LightEngine.hasDifferentLightProperties`: whether going from `old` to
+/// `LightEngine.hasDifferentLightProperties`.
 fn changes_light(old: u16, new: u16) -> bool {
     opacity(old) != opacity(new) || emission(old) != emission(new)
 }
 
 impl Level {
-    /// Lights the world again after the block at `pos` went from `old` to
+    /// Lights the world again after the block at `pos` went from `old` to `state`.
     pub(super) fn update_light(&mut self, pos: [i32; 3], old: u16, state: u16) -> SectionSet {
         let mut touched = SectionSet::default();
         if !changes_light(old, state) {
@@ -117,7 +117,7 @@ impl Level {
         }
     }
 
-    /// The light at `pos`: `None` in a column that isn't loaded and below
+    /// The light at `pos`.
     fn light(&self, sky: bool, [x, y, z]: [i32; 3]) -> Option<u8> {
         let loaded = self.chunks.get(&(section_coord(x), section_coord(z)))?;
         if y >= self.height.light_max_y() {
@@ -159,7 +159,7 @@ mod tests {
 
     const STONE: u16 = 1;
 
-    /// Air over a stone floor at Y 63, lit as the server would: sky 15
+    /// Air over a stone floor at Y 63, lit as the server would.
     fn flat_world() -> Level {
         let mut level = Level::default();
         let min_y = Height::OVERWORLD.min_y;

@@ -1,4 +1,4 @@
-//! The world's 2D layers: HUD, chat, the open overlay, F3, and the item
+//! The world's 2D layers.
 
 use super::camera::CameraMode;
 use super::world_resources::WorldResources;
@@ -152,7 +152,7 @@ impl InWorld {
         }
     }
 
-    /// The stacks drawn in the player's hands, each with whether it is in
+    /// The stacks drawn in the player's hands, each with whether it is in use.
     pub fn held_stacks(
         &self,
     ) -> Vec<(
@@ -171,7 +171,7 @@ impl InWorld {
         stacks
     }
 
-    /// Hands the stacks drawn this frame to `visit`, for baking their
+    /// Hands the stacks drawn this frame to `visit`, for baking their icons.
     pub fn visit_shown_stacks(
         &self,
         visit: &mut dyn FnMut(&pumpkin_data::item_stack::ItemStack) -> bool,
@@ -266,7 +266,7 @@ impl InWorld {
     }
 }
 
-/// `Minecraft.getFps()`: frames completed in the last whole second, not an
+/// `Minecraft.getFps()`.
 pub(super) struct FpsCounter {
     pub(super) frames: u32,
     pub(super) last_second: Instant,

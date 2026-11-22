@@ -1,4 +1,4 @@
-//! A chunk column's blocks: sections of 16x16x16 block states, as many as
+//! A chunk column's blocks.
 
 use std::sync::Arc;
 
@@ -29,7 +29,7 @@ impl LightSection {
         }
     }
 
-    /// A `DataLayer` from the wire: anything but 2048 bytes, or all zero,
+    /// A `DataLayer` from the wire.
     pub fn from_bytes(bytes: &[u8]) -> Self {
         if bytes.len() != LIGHT_NIBBLES || bytes.iter().all(|&b| b == 0) {
             return Self::Empty;
@@ -65,7 +65,7 @@ impl LightSection {
     }
 }
 
-/// Sky and block light for one chunk column, including the extra sections
+/// Sky and block light for one chunk column, including the extra sections below and above.
 #[derive(Clone, Debug)]
 pub struct ChunkLight {
     height: Height,
@@ -105,7 +105,7 @@ impl ChunkLight {
         self.sky.fill(LightSection::Empty);
     }
 
-    /// Sky light `level` in every world section of an overworld column
+    /// Sky light `level` in every world section of an overworld column.
     #[cfg(test)]
     pub fn filled_sky(level: u8) -> Self {
         Self::filled_sky_in(Height::OVERWORLD, level)
@@ -171,7 +171,7 @@ impl ChunkLight {
         }
     }
 
-    /// One layer at world `(x, y, z)`: sky light for `sky`, block light
+    /// One layer at world `(x, y, z)`.
     pub fn layer_at(&self, sky: bool, x: i32, y: i32, z: i32) -> Option<u8> {
         let i = self.slot(y)?;
         let (lx, ly, lz) = ((x & 15) as usize, (y & 15) as usize, (z & 15) as usize);
@@ -248,7 +248,7 @@ fn bit(words: &[u64], i: usize) -> bool {
         .is_some_and(|w| w & (1u64 << (i % 64)) != 0)
 }
 
-/// One `ClientboundLightUpdatePacketData`: which light sections changed
+/// One `ClientboundLightUpdatePacketData`.
 #[derive(Clone, Debug, Default)]
 pub struct LightUpdate {
     pub sky_mask: Vec<u64>,
@@ -259,7 +259,7 @@ pub struct LightUpdate {
     pub block: Vec<LightSection>,
 }
 
-/// Cheap to clone: the sections are shared, so changing a block while a
+/// Cheap to clone.
 #[derive(Clone)]
 pub struct Chunk {
     pub x: i32,
@@ -270,11 +270,11 @@ pub struct Chunk {
     pub light: Arc<ChunkLight>,
     /// The biome of each 4x4x4 cell.
     pub biomes: Arc<ChunkBiomes>,
-    /// What the blocks held when the chunk was built. Not kept up to date
+    /// What the blocks held when the chunk was built.
     pub scan: ChunkScan,
 }
 
-/// What the level indexes when a chunk arrives, worked out where the chunk
+/// What the level indexes when a chunk arrives, worked out where the chunk is decoded.
 #[derive(Clone, Default, Debug)]
 pub struct ChunkScan {
     /// World positions of the blocks a block entity renderer draws.
@@ -296,7 +296,6 @@ impl ChunkScan {
     /// is then read block by block (`Section::iter`, one `get` each, on the
     /// connection thread). Mark the matching palette indices once and scan
     /// the decoded section (`Section::copy_to`) or its packed indices.
-    /// Adds what section `s` of chunk `(x, z)` holds, in a level starting
     pub fn add_section(&mut self, x: i32, z: i32, min_y: i32, s: usize, section: &Section) {
         let kinds = &*crate::world::block_entity::KIND_STATES;
         if !section.may_hold(|id| kinds.contains(id)) {
@@ -313,7 +312,7 @@ impl ChunkScan {
 }
 
 impl Chunk {
-    /// An overworld-based column of `sections`, for tests: as tall as it has
+    /// An overworld-based column of `sections`, for tests.
     #[cfg(test)]
     pub fn new(x: i32, z: i32, sections: Vec<Section>) -> Self {
         let height = Height {
@@ -331,7 +330,7 @@ impl Chunk {
         }
     }
 
-    /// A chunk from sections already shared, with what they hold already
+    /// A chunk from sections already shared.
     pub fn from_shared(
         x: i32,
         z: i32,
@@ -373,7 +372,7 @@ impl Chunk {
     }
 }
 
-/// `id` is a registry block-state ID, not a block ID - `air`/`stone` happen to
+/// `id` is a registry block-state ID, not a block ID.
 fn block_name(id: u16) -> String {
     match id {
         0 => "air".to_string(),
@@ -385,7 +384,7 @@ fn block_name(id: u16) -> String {
 }
 
 impl Chunk {
-    /// One line per non-empty section: its Y range and a count of each
+    /// One line per non-empty section.
     pub fn describe(&self) -> String {
         use std::collections::BTreeMap;
         use std::fmt::Write;

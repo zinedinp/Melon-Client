@@ -37,10 +37,10 @@ pub struct LevelEvent {
     pub global: bool,
 }
 
-/// `LevelEvent.PARTICLES_DESTROY_BLOCK`: a block broke; the data is its
+/// `LevelEvent.PARTICLES_DESTROY_BLOCK`.
 pub const BREAK_BLOCK: i32 = 2001;
 
-/// A `Holder<SoundEvent>`: a registry id plus one, or 0 and then the name
+/// A `Holder<SoundEvent>`.
 fn read_event(r: &mut Reader) -> Result<String> {
     let id = r.var_int()?;
     if id == 0 {
@@ -73,7 +73,7 @@ pub struct Explosion {
     pub debris: Vec<Debris>,
 }
 
-/// `ClientboundExplodePacket`: center, radius, block count, optional
+/// `ClientboundExplodePacket`.
 pub(super) fn read_explosion(r: &mut Reader) -> Result<Explosion> {
     let center = r.vec3_f64()?;
     let radius = r.f32_be()?;
@@ -113,7 +113,7 @@ fn read_source(r: &mut Reader) -> Result<SoundSource> {
         .unwrap_or(SoundSource::Master))
 }
 
-/// `ClientboundSoundPacket`: event, source, the position in eighths of a
+/// `ClientboundSoundPacket`.
 pub(super) fn read_sound(r: &mut Reader) -> Result<ServerSound> {
     let event = read_event(r)?;
     let source = read_source(r)?;

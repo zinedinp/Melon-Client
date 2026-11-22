@@ -1,4 +1,4 @@
-//! Vanilla `ChatOptionsScreen`: the chat options (and the accessibility screen's text background) in an
+//! Vanilla `ChatOptionsScreen`.
 
 use crate::cycle::Cycle;
 use crate::gui::screen::{ConfigChange, ScreenContext};

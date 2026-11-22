@@ -1,4 +1,4 @@
-//! `ShulkerModel`: a lid and a base that hide a head. The lid lifts by the
+//! `ShulkerModel`: a lid and a base that hide a head.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
@@ -105,7 +105,7 @@ impl ShulkerParts {
     }
 }
 
-/// `ShulkerModel.setupAnim`: the lid lifts (and spins once it is open
+/// `ShulkerModel.setupAnim`.
 pub fn setup_anim(
     parts: &ShulkerParts,
     pose: &mut ModelPose,

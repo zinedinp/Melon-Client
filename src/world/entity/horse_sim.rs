@@ -1,4 +1,4 @@
-//! A saddled horse the local player steers, as the client runs it
+//! A saddled horse the local player steers, as the client runs it.
 
 use crate::world::block_motion::block_below;
 use glam::DVec3;
@@ -31,7 +31,7 @@ pub struct HorseInput {
 }
 
 impl HorseInput {
-    /// `LocalPlayer.modifyInput` then `AbstractHorse.getRiddenInput`: the
+    /// `LocalPlayer.modifyInput` then `AbstractHorse.getRiddenInput`.
     pub fn from_keys(forward: f32, strafe: f32, yaw: f32, pitch: f32) -> Self {
         let (forward, left) = damped_keys(forward, -strafe);
         Self {
@@ -65,7 +65,7 @@ impl HorseSim {
         }
     }
 
-    /// `PlayerRideableJumping.onPlayerJump`: the packet's 0-100 into the
+    /// `PlayerRideableJumping.onPlayerJump`.
     pub fn on_player_jump(&mut self, power: i32) {
         let power = power.max(0);
         self.jump_pending = if power >= 90 {
@@ -75,7 +75,7 @@ impl HorseSim {
         };
     }
 
-    /// `travelRidden` plus `tickRidden`: turn with the rider, jump if one
+    /// `travelRidden` plus `tickRidden`.
     pub fn tick(
         &mut self,
         level: &Level,
@@ -238,7 +238,7 @@ impl HorseBody {
     }
 }
 
-/// `LocalPlayer.modifyInput` without sneak or item-use: unit, damped, then
+/// `LocalPlayer.modifyInput` without sneak or item-use.
 fn damped_keys(forward: f32, left: f32) -> (f32, f32) {
     let (mut x, mut z) = (left, forward);
     let len = (x * x + z * z).sqrt();

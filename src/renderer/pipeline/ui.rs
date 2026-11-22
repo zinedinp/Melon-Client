@@ -22,7 +22,7 @@ pub const BLENDS: [BlendMode; 4] = [
 pub struct Shaders<'a> {
     pub vert: &'a [u8],
     pub frag: &'a [u8],
-    /// The vertex attribute locations the vertex shader reads; `None` for
+    /// The vertex attribute locations the vertex shader reads; `None` for Melon's own shaders.
     pub inputs: Option<&'a [u32]>,
 }
 
@@ -40,7 +40,7 @@ pub const GLINT: Shaders<'static> = Shaders {
     inputs: None,
 };
 
-/// The UI's pipelines: Melon's for each blend mode, and those of a pack's
+/// The UI's pipelines.
 pub struct UiPipelines {
     pub built_in: [Pass; 4],
     pub pack: [Option<[Pass; 4]>; 3],
@@ -116,7 +116,7 @@ pub unsafe fn create_all(
 /// `vec2 viewport_size` (GUI coordinate system of the vertices).
 pub const PUSH_CONSTANT_SIZE: u32 = 8;
 
-/// Same vertex format, shaders and layout for every [`BlendMode`] - only the
+/// Same vertex format, shaders and layout for every [`BlendMode`]; only the blend differs.
 pub unsafe fn create(
     device: &ash::Device,
     render_pass: vk::RenderPass,

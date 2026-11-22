@@ -1,4 +1,4 @@
-//! One frame: the background join or a world that ended, then the menus
+//! One frame.
 
 use std::time::{Duration, Instant};
 
@@ -10,7 +10,7 @@ use crate::gui::hud::item_slot::ItemPainter;
 use crate::gui::widgets::Ui;
 use crate::renderer::{Blur, Frame};
 
-/// `Options.menuBackgroundBlurriness`'s default: the blur radius, in pixels,
+/// `Options.menuBackgroundBlurriness`'s default.
 const MENU_BACKGROUND_BLURRINESS: f32 = 5.0;
 
 impl RunningState {
@@ -390,7 +390,7 @@ fn render_failed(e: &anyhow::Error) -> bool {
     false
 }
 
-/// The blur behind `screen`, if it has one: everything in `draw_list` so far
+/// The blur behind `screen`, if it has one.
 fn menu_blur(
     screen: &dyn crate::gui::screen::Screen,
     draw_list: &mut crate::renderer::quad::DrawList,

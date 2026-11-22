@@ -38,7 +38,7 @@ pub struct BlockEntities {
 }
 
 impl BlockEntities {
-    /// Changes whenever [`Self::build_still`] could build something else
+    /// Changes whenever [`Self::build_still`] could build something else.
     pub fn still_revision(&self) -> u64 {
         self.still_revision
     }

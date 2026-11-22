@@ -52,7 +52,7 @@ pub fn version_assets(base: &Path, version: &str) -> PathBuf {
     base.join(version_folder(version).unwrap_or(VERSION))
 }
 
-/// Folder-picker result: if the user picked `…/assets/<version>/`, the
+/// Folder-picker result.
 pub fn assets_base_from_pick(path: &Path) -> PathBuf {
     let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
         return path.to_owned();

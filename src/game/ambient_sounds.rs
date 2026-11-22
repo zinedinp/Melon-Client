@@ -205,7 +205,7 @@ impl InWorld {
         }
     }
 
-    /// `ClientLevel.tickRain`'s sound: a patch of rain somewhere near,
+    /// `ClientLevel.tickRain`'s sound.
     fn tick_rain_sounds(&mut self, radius: i32) {
         let rain = self.weather.rain;
         if rain <= 0.0 || radius <= 0 {

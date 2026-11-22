@@ -1,4 +1,4 @@
-//! `Hud.extractFood`: ten icons from the right, in the hunger colours while
+//! `Hud.extractFood`.
 
 use super::{Layout, fill};
 use crate::gui::hud::{ICON, JavaRandom, PlayerStatus};
@@ -24,7 +24,7 @@ impl Sprites {
     }
 }
 
-/// Whether the icons shake this tick, which is not every tick: an empty
+/// Whether the icons shake this tick, which is not every tick.
 pub fn shakes(status: &PlayerStatus, ticks: u32) -> bool {
     status.saturation <= 0.0 && ticks.is_multiple_of(status.food.clamp(0, 20) as u32 * 3 + 1)
 }

@@ -1,4 +1,4 @@
-//! Vanilla `AbstractContainerScreen` for server-opened menus: generic 9×N
+//! Vanilla `AbstractContainerScreen` for server-opened menus.
 
 use pumpkin_data::item_stack::ItemStack;
 
@@ -144,7 +144,7 @@ impl ContainerOverlay {
     }
 }
 
-/// Each menu's panel and slots, in menu slot order: the container's own
+/// Each menu's panel and slots, in menu slot order.
 pub fn menu_layout(kind: ContainerKind) -> MenuLayout {
     match kind {
         ContainerKind::Generic { rows } => {
@@ -501,7 +501,7 @@ impl Overlay for ContainerOverlay {
         draw_container(self, ui, menu);
     }
 
-    /// `AbstractMountInventoryScreen.extractBackground`: the animal in the
+    /// `AbstractMountInventoryScreen.extractBackground`.
     fn entity_preview(&self) -> Option<EntityPreview> {
         let ContainerKind::Mount { look, .. } = self.kind else {
             return None;
@@ -617,7 +617,7 @@ pub fn draw_panel(draw_list: &mut DrawList, texture: TextureId, layout: &MenuLay
 /// Vanilla `AbstractContainerScreen` label colour (`4210752`).
 const LABEL_COLOR: [f32; 3] = [0x40 as f32 / 255.0; 3];
 
-/// The container's title and "Inventory", flat like vanilla's labels. The
+/// The container's title and "Inventory", flat like vanilla's labels.
 fn draw_titles(layout: &MenuLayout, ui: &mut OverlayDraw, menu: &OpenContainer) {
     if layout.shows_title() {
         let (x, y) = layout.title_origin(text::width(ui.painter.font, &menu.title));

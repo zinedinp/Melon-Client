@@ -1,4 +1,4 @@
-//! `SquidModel` and the swimming that drives it (`Squid.aiStep`): the
+//! `SquidModel` and the swimming that drives it (`Squid.aiStep`).
 
 use glam::DVec3;
 
@@ -109,7 +109,7 @@ pub struct Swim {
 }
 
 impl Swim {
-    /// A squid of this `id`: `tentacleSpeed` starts as
+    /// A squid of this `id`.
     pub fn new(id: i32) -> Self {
         let hash = (id as u32).wrapping_mul(2_654_435_761) >> 8;
         let random = (hash & 0xFFFF) as f32 / 65_536.0;
@@ -133,7 +133,7 @@ impl Swim {
         self.tentacle_movement = 0.0;
     }
 
-    /// `Squid.aiStep` on the client: `moved` is how far it went this tick,
+    /// `Squid.aiStep` on the client.
     pub fn tick(&mut self, in_water: bool, moved: DVec3) {
         self.old_x_body = self.x_body;
         self.old_z_body = self.z_body;

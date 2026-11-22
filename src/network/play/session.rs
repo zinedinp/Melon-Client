@@ -1,4 +1,4 @@
-//! A joined session: the reader thread that answers the server and passes
+//! A joined session.
 
 use super::level::chunk;
 use super::level::chunk_batch::ChunkBatchSizeCalculator;
@@ -22,7 +22,7 @@ pub enum WorldEvent {
     ChunkLoaded(crate::world::chunk::Chunk),
     /// `ClientboundForgetLevelChunkPacket`: chunk `(x, z)` left view distance.
     ChunkUnloaded(i32, i32),
-    /// `ClientboundChunksBiomesPacket`: new biomes for loaded columns
+    /// `ClientboundChunksBiomesPacket`.
     BiomesChanged(Vec<(i32, i32, crate::world::biome::ChunkBiomes)>),
     /// `ClientboundLightUpdatePacket`: sky/block light for one column.
     LightUpdated {
@@ -36,12 +36,12 @@ pub enum WorldEvent {
     Movement(pumpkin_protocol::java::melon_movement::MovementPayload),
     /// `minecraft:register` from the server: the plugin channels it takes.
     ServerChannels(Vec<String>),
-    /// `ClientboundPingPacket` in play: the game loop sends the matching
+    /// `ClientboundPingPacket` in play.
     Ping(i32),
     Game(game::GameEvent),
-    /// `ClientboundStartConfigurationPacket`: the server took the player
+    /// `ClientboundStartConfigurationPacket`.
     Reconfiguring,
-    /// The configuration ended and a new `Login` came: a new world, as on
+    /// The configuration ended and a new `Login` came.
     Rejoined(Box<JoinInfo>, Vec<WorldEvent>),
 }
 
@@ -71,7 +71,7 @@ impl Teleport {
     /// The player's own motion turns with the change of look first.
     pub const ROTATE_DELTA: i32 = 1 << 8;
 
-    /// `PositionMoveRotation.calculateAbsolute` for one value: `new` alone,
+    /// `PositionMoveRotation.calculateAbsolute` for one value.
     pub fn resolve(&self, flag: i32, current: f64, new: f64) -> f64 {
         if self.relative & flag != 0 {
             current + new
@@ -81,7 +81,7 @@ impl Teleport {
     }
 }
 
-/// A joined server. A background thread reads everything the server sends,
+/// A joined server.
 pub struct Session {
     pub info: JoinInfo,
     /// What arrived while joining, handed out by the first [`Session::poll`].
@@ -139,7 +139,7 @@ impl Session {
         &self.stats
     }
 
-    /// Everything received since the last call, in order, starting with
+    /// Everything received since the last call, in order.
     pub fn poll(&mut self) -> Vec<WorldEvent> {
         let mut out = std::mem::take(&mut self.joining);
         let joining = out.len();
@@ -162,7 +162,7 @@ impl Session {
         self.end_reason.as_deref()
     }
 
-    /// `ServerboundMovePlayerPacket.PosRot`: where the player is, so the
+    /// `ServerboundMovePlayerPacket.PosRot`.
     pub fn send_accept_teleport(&self, id: i32, pos: (f64, f64, f64), yaw: f32, pitch: f32) {
         if crate::probe::enabled() {
             crate::probe::trace_io(
@@ -300,14 +300,14 @@ impl Session {
         });
     }
 
-    /// `ServerboundContainerClosePacket`. Also sent for the player's own
+    /// `ServerboundContainerClosePacket`.
     pub fn send_container_close(&self, container: i32) {
         self.send(game::id::SB_CONTAINER_CLOSE, |buf| {
             Ok(varint::write_var_int(buf, container)?)
         });
     }
 
-    /// `ServerboundContainerButtonClickPacket`: button `button` of the open
+    /// `ServerboundContainerButtonClickPacket`.
     pub fn send_container_button(&self, container: i32, button: i32) {
         self.send(game::id::SB_CONTAINER_BUTTON_CLICK, |buf| {
             varint::write_var_int(buf, container)?;
@@ -315,7 +315,7 @@ impl Session {
         });
     }
 
-    /// `ServerboundPlaceRecipePacket`: fill the open crafting menu's grid
+    /// `ServerboundPlaceRecipePacket`.
     pub fn send_place_recipe(&self, container: i32, recipe: i32, use_max: bool) {
         self.send(crate::network::play::game::id::SB_PLACE_RECIPE, |buf| {
             varint::write_var_int(buf, container)?;
@@ -324,7 +324,7 @@ impl Session {
         });
     }
 
-    /// `ServerboundRecipeBookChangeSettingsPacket`: a book opened, closed or
+    /// `ServerboundRecipeBookChangeSettingsPacket`.
     pub fn send_recipe_book_settings(&self, book: i32, open: bool, filtering: bool) {
         self.send(
             crate::network::play::game::id::SB_RECIPE_BOOK_CHANGE_SETTINGS,
@@ -426,7 +426,7 @@ impl Session {
         });
     }
 
-    /// `ServerboundSpectatorActionPacket`: watch through `entity`'s eyes,
+    /// `ServerboundSpectatorActionPacket`.
     pub fn send_spectate(&self, entity: Option<i32>) {
         let value = entity.map_or(0, |id| id.wrapping_add(1));
         self.send(game::id::SB_SPECTATOR_ACTION, |buf| {
@@ -435,12 +435,12 @@ impl Session {
         });
     }
 
-    /// `ServerboundPunchPacket`: an attack, which swings the arm for the
+    /// `ServerboundPunchPacket`.
     pub fn send_punch(&self) {
         self.send(game::id::SB_PUNCH, |_| Ok(()));
     }
 
-    /// `ServerboundUseItemPacket`: right-click with an item, at nothing or
+    /// `ServerboundUseItemPacket`.
     pub fn send_use_item(&self, hand: Hand, sequence: i32, yaw: f32, pitch: f32) {
         self.send(game::id::SB_USE_ITEM, |buf| {
             varint::write_var_int(buf, hand.id())?;
@@ -512,7 +512,7 @@ impl Session {
         });
     }
 
-    /// `ServerboundMovePlayerPacket.Rot`: what a passenger sends in place of
+    /// `ServerboundMovePlayerPacket.Rot`.
     pub fn send_rotation(&self, yaw: f32, pitch: f32, on_ground: bool, horizontal: bool) {
         if crate::probe::enabled() {
             crate::probe::trace_io(
@@ -549,7 +549,7 @@ impl Session {
         });
     }
 
-    /// `ServerboundPlayerInputPacket`: which movement keys are held, sent
+    /// `ServerboundPlayerInputPacket`.
     pub fn send_player_input(&self, input: game::PlayerInput) {
         if crate::probe::enabled() {
             crate::probe::trace_io(true, "player_input", format!("bits={:#04x}", input.bits()));
@@ -574,7 +574,7 @@ impl Session {
         });
     }
 
-    /// `ServerboundChatPacket`: a message, unsigned. `offset` acknowledges
+    /// `ServerboundChatPacket`: a message, unsigned.
     pub fn send_chat(&self, message: &str, offset: i32) {
         self.send(chat::id::SB_CHAT, |buf| {
             chat::write_chat(buf, message, offset)
@@ -623,7 +623,7 @@ impl Session {
         });
     }
 
-    /// `ServerboundPlayerLoadedPacket`: the level around the player is
+    /// `ServerboundPlayerLoadedPacket`.
     pub fn send_player_loaded(&self) {
         if crate::probe::enabled() {
             crate::probe::trace_io(
@@ -642,13 +642,13 @@ impl Session {
         });
     }
 
-    /// A new world on the same connection ([`WorldEvent::Rejoined`]): its
+    /// A new world on the same connection ([`WorldEvent::Rejoined`]).
     pub fn rejoined(&mut self, info: JoinInfo, events: Vec<WorldEvent>) {
         self.info = info;
         self.joining = events;
     }
 
-    /// Writes one packet. Errors surface through [`ended`](Self::ended) once
+    /// Writes one packet.
     pub(crate) fn send(&self, id: i32, body: impl FnOnce(&mut Vec<u8>) -> Result<()>) {
         let mut writer = self
             .writer
@@ -698,14 +698,14 @@ pub(crate) enum Play {
     Nothing,
 }
 
-/// `ClientPacketListener`'s part Melon implements, shared by the join and
+/// `ClientPacketListener`'s part Melon implements, shared by the join and the session.
 pub(crate) struct PlayListener {
     batches: ChunkBatchSizeCalculator,
     /// The dimension types the server registered.
     dimensions: DimensionTypes,
-    /// How tall the level is whose chunks arrive: the dimension type of the
+    /// How tall the level is whose chunks arrive.
     height: Height,
-    /// Join has no game loop yet, so spawn teleports are acked here with
+    /// Join has no game loop yet, so spawn teleports are acked here.
     ack_teleports: bool,
     /// `MELON_PACKET_DEBUG`: reports the packets nothing resolves.
     debug: super::debug::PacketDebug,
@@ -947,7 +947,7 @@ fn handle_play_packet(
     })
 }
 
-/// The session's packet loop: [`PlayListener::handle`] until the server
+/// The session's packet loop.
 pub(crate) fn read_loop(
     reader: &mut ReadHalf,
     listener: &mut PlayListener,
@@ -990,7 +990,7 @@ pub(crate) fn read_loop(
     }
 }
 
-/// `ClientPacketListener.handleConfigurationStart`: acknowledge, and the
+/// `ClientPacketListener.handleConfigurationStart`.
 fn reconfigure(
     reader: &mut ReadHalf,
     listener: &mut PlayListener,
@@ -1022,7 +1022,7 @@ fn reconfigure(
     Ok(WorldEvent::Rejoined(Box::new(info), joined))
 }
 
-/// What a read that waited longer than the socket's timeout (30 s of
+/// What a read that waited longer than the socket's timeout turns into.
 fn timed_out(e: anyhow::Error) -> anyhow::Error {
     let timeout = e.chain().any(|cause| {
         cause.downcast_ref::<std::io::Error>().is_some_and(|io| {
@@ -1039,10 +1039,10 @@ fn timed_out(e: anyhow::Error) -> anyhow::Error {
     }
 }
 
-/// The end reason of a connection that timed out: a translation key
+/// The end reason of a connection that timed out.
 pub const TIMEOUT_REASON: &str = "disconnect.timeout";
 
-/// `ClientboundPlayerPositionPacket`: teleport ID, position, delta movement,
+/// `ClientboundPlayerPositionPacket`.
 pub(crate) fn read_player_position(r: &mut Reader) -> Result<Teleport> {
     let id = r.var_int()?;
     let [x, y, z] = r.vec3_f64()?;
@@ -1061,7 +1061,7 @@ pub(crate) fn read_player_position(r: &mut Reader) -> Result<Teleport> {
     })
 }
 
-/// 26.3 `ServerboundAcceptTeleportationPacket`: id plus the resulting feet
+/// 26.3 `ServerboundAcceptTeleportationPacket`.
 pub(crate) fn confirm_teleport(
     teleport_id: i32,
     pos: (f64, f64, f64),

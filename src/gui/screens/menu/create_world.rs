@@ -1,4 +1,4 @@
-//! Vanilla `CreateWorldScreen`: `MenuTabBar` Game/World/More (`GameTab`/`WorldTab`/
+//! Vanilla `CreateWorldScreen`.
 
 use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::gui::screens::menu::connecting::ConnectingScreen;
@@ -24,7 +24,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-/// `CreateWorldScreen.repositionElements` sets the header height from the
+/// `CreateWorldScreen.repositionElements` sets the header height from the tab bar.
 const LAYOUT: HeaderFooter = HeaderFooter::new(tab_bar::HEIGHT, 33.0);
 
 /// `CommonLayouts.labeledElement`: a 9px label, `LABEL_SPACING` (4), the field.
@@ -38,13 +38,13 @@ const NAME_W: f32 = 208.0;
 const GAME_GRID_W: f32 = TAB_BUTTON_W;
 const GAME_GRID_H: f32 = LABELED_H + (SPACING + BUTTON_H) * 3.0;
 
-/// `WorldTab.WORLD_TAB_WIDTH`; its grid is 2 columns of 150 with
+/// `WorldTab.WORLD_TAB_WIDTH`; its grid is 2 columns of 150 with 10 between.
 const WORLD_GRID_W: f32 = 310.0;
 const WORLD_COL_W: f32 = 150.0;
 const WORLD_COL_SPACING: f32 = 10.0;
 /// `WorldTab.seedEdit`: `new EditBox(font, 308, 20, ..)`.
 const SEED_W: f32 = 308.0;
-/// `SwitchGrid.DEFAULT_SWITCH_BUTTON_WIDTH` and its `rowSpacing` (4). The grid
+/// `SwitchGrid.DEFAULT_SWITCH_BUTTON_WIDTH` and its `rowSpacing` (4).
 const SWITCH_W: f32 = 44.0;
 const SWITCH_ROW_SPACING: f32 = 4.0;
 const SWITCH_GRID_H: f32 = (SWITCH_ROW_SPACING + BUTTON_H) * 2.0;
@@ -65,7 +65,7 @@ const PUMPKIN_STRUCTURES_SWITCH: bool = false;
 const PUMPKIN_BONUS_CHEST: bool = false;
 const PUMPKIN_PRESET_EDITOR: bool = false;
 
-/// `FrameLayout.alignInDimension`: `(int)Mth.lerp(align, 0, length - widget)`,
+/// `FrameLayout.alignInDimension`.
 fn align_in(pos: f32, length: f32, widget: f32, align: f32) -> f32 {
     pos + (align * (length - widget)).trunc()
 }
@@ -81,7 +81,7 @@ fn step<T: Copy + PartialEq>(list: &[T], current: T, delta: isize) -> T {
     list[(at + delta).rem_euclid(list.len() as isize) as usize]
 }
 
-/// `GridLayoutTab.doLayout`: a tab's grid aligned `(0.5, 1/6)` inside the
+/// `GridLayoutTab.doLayout`.
 fn grid_origin(width: f32, height: f32, grid_w: f32, grid_h: f32) -> (f32, f32) {
     let area_h = LAYOUT.bottom(height) - LAYOUT.top();
     (
@@ -146,11 +146,11 @@ fn is_cycle(id: Id) -> bool {
 
 pub struct CreateWorldScreen {
     state: CreationState,
-    /// The game rules that differ from the defaults, shared with the Game
+    /// The game rules that differ from the defaults, shared with the Game Rules screen.
     rules: Rc<RefCell<Changes>>,
-    /// The enabled data packs and experiments (without `vanilla`), shared
+    /// The enabled data packs and experiments (without `vanilla`), shared with their screens.
     packs: Rc<RefCell<Vec<String>>>,
-    /// `tempDataPackDir`: where packs added in the Data Packs screen wait
+    /// `tempDataPackDir`.
     temp_packs: Option<PathBuf>,
     /// Packs of the world this one was made from, copied when it opens.
     source_packs: Option<PathBuf>,
@@ -165,7 +165,7 @@ impl CreateWorldScreen {
         Self::build(state, Changes::new(), Vec::new(), None)
     }
 
-    /// `CreateWorldScreen.openCreateWorldScreen` from `recreateWorld`: a new
+    /// `CreateWorldScreen.openCreateWorldScreen` from `recreateWorld`.
     pub fn new_recreate(entry: &WorldEntry, ctx: &ScreenContext) -> Self {
         let mut settings = entry.settings();
         if let Some(seed) = singleplayer::read_seed(ctx.game_dir, &entry.folder) {
@@ -235,7 +235,7 @@ impl CreateWorldScreen {
         screen
     }
 
-    /// `CreateWorldScreen`'s listeners: which buttons are active for the
+    /// `CreateWorldScreen`'s listeners.
     fn update_enabled(&mut self) {
         let state = &self.state;
         let enabled = [
@@ -272,7 +272,7 @@ impl CreateWorldScreen {
         }
     }
 
-    /// One column, `rowSpacing(8)`. The labeled name element is the only
+    /// One column, `rowSpacing(8)`.
     fn layout_game_tab(&mut self, width: f32, height: f32) {
         let (x, y) = grid_origin(width, height, GAME_GRID_W, GAME_GRID_H);
         self.widgets.set_position(
@@ -288,7 +288,7 @@ impl CreateWorldScreen {
         );
     }
 
-    /// Two 150 columns with `columnSpacing(10)`; the labeled seed field and
+    /// Two 150 columns with `columnSpacing(10)`.
     fn layout_world_tab(&mut self, width: f32, height: f32) {
         let (x, y) = grid_origin(width, height, WORLD_GRID_W, WORLD_GRID_H);
         self.widgets
@@ -316,7 +316,7 @@ impl CreateWorldScreen {
         self.state.seed = self.widgets.field(Id::Seed).value();
     }
 
-    /// `CycleButton.cycleValue` on one of the cycle buttons; `alt` is the
+    /// `CycleButton.cycleValue` on one of the cycle buttons; `alt` is the alternate step.
     fn cycle(&mut self, id: Id, delta: isize, alt: bool) {
         let state = &mut self.state;
         match id {
@@ -377,7 +377,7 @@ impl CreateWorldScreen {
         ScreenAction::None
     }
 
-    /// `getOrCreateTempDataPackDir`: a folder for the packs picked here, with
+    /// `getOrCreateTempDataPackDir`.
     fn pack_dir(&mut self) -> PathBuf {
         if let Some(dir) = &self.temp_packs {
             return dir.clone();
@@ -424,7 +424,7 @@ impl CreateWorldScreen {
         })
     }
 
-    /// The tooltip of a widget: vanilla's info texts, and the reason a
+    /// The tooltip of a widget.
     fn tooltip(&self, id: Id, ctx: &ScreenContext) -> Option<String> {
         let lang = ctx.lang;
         let state = &self.state;
@@ -504,7 +504,7 @@ impl CreateWorldScreen {
         }
     }
 
-    /// Saves the world's settings, then plays the new world right away
+    /// Saves the world's settings, then plays the new world right away.
     fn save(&mut self, ctx: &ScreenContext) -> ScreenAction {
         if !self.state.world_type.pumpkin_supported() {
             return ScreenAction::None;

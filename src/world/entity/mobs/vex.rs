@@ -1,4 +1,4 @@
-//! `VexModel`: a small humanoid (head, body, two arms) with a pair of
+//! `VexModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::{self, DEG_TO_RAD, PI};

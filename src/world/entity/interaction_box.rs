@@ -1,4 +1,4 @@
-//! `Interaction` entities: invisible boxes a server places for its own
+//! `Interaction` entities.
 
 use crate::network::play::game::DataValue;
 

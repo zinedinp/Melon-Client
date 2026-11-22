@@ -1,4 +1,4 @@
-//! The text and cursor behind every text field: `EditBox`, the chat line and
+//! The text and cursor behind every text field.
 
 use std::cell::{Cell, RefCell};
 use std::time::{Duration, Instant};
@@ -8,7 +8,7 @@ use crate::gui::text::font::Font;
 use crate::renderer::TextureId;
 use crate::renderer::quad::{BlendMode, DrawList};
 
-/// `TextCursorUtils.isCursorVisible`: a text cursor blinks every 300ms,
+/// `TextCursorUtils.isCursorVisible`.
 pub fn cursor_visible(since: Instant) -> bool {
     (since.elapsed().as_millis() / 300).is_multiple_of(2)
 }
@@ -31,17 +31,17 @@ pub struct TextInput {
     chars: Vec<char>,
     /// Character index, `0..=chars.len()`.
     cursor: usize,
-    /// `EditBox.highlightPos`: the selection's other end; the cursor when
+    /// `EditBox.highlightPos`.
     highlight: usize,
     /// `EditBox.setMaxLength`, in characters.
     max_len: usize,
     /// When the cursor last restarted its blink: the last edit or focus.
     blink_start: Instant,
-    /// `EditBox.displayPos`: the first character shown, when the text is
+    /// `EditBox.displayPos`.
     display_start: Cell<usize>,
     /// The text an input method is composing at the cursor.
     preedit: String,
-    /// The advance of each character shown, from `display_start`, as last
+    /// The advance of each character shown, from `display_start`, as last drawn.
     advances: RefCell<Vec<f32>>,
     /// Insert was pressed: typing replaces the character after the cursor.
     overwrite: bool,
@@ -142,7 +142,7 @@ impl TextInput {
         self.display_start.get()
     }
 
-    /// `EditBox.scrollTo`: the characters shown in a box `width` wide,
+    /// `EditBox.scrollTo`.
     pub fn window(&self, font: &Font, width: f32) -> (usize, usize) {
         let cursor = self.cursor;
         let mut start = self.display_start.get().min(cursor);
@@ -171,7 +171,7 @@ impl TextInput {
         (start, end)
     }
 
-    /// `TextCursorUtils`: the blinking cursor of text shown from character
+    /// `TextCursorUtils`.
     #[allow(clippy::too_many_arguments)]
     pub fn draw_cursor(
         &self,
@@ -203,7 +203,7 @@ impl TextInput {
         }
     }
 
-    /// The text being composed, over what follows the cursor: on a dark
+    /// The text being composed, over what follows the cursor.
     fn draw_preedit(
         &self,
         draw_list: &mut DrawList,
@@ -227,7 +227,7 @@ impl TextInput {
         &self.preedit
     }
 
-    /// The text in a box `width` wide at `(x, y)`, scrolled to the cursor,
+    /// The text in a box `width` wide at `(x, y)`, scrolled to the cursor.
     #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &self,
@@ -248,7 +248,7 @@ impl TextInput {
         self.draw_selection(draw_list, font, white, (start, end), (x, y));
     }
 
-    /// `GuiGraphicsExtractor.textHighlight` over the selected part of the
+    /// `GuiGraphicsExtractor.textHighlight` over the selected part of the text.
     pub fn draw_selection(
         &self,
         draw_list: &mut DrawList,
@@ -338,7 +338,7 @@ impl TextInput {
         self.blink_start = Instant::now();
     }
 
-    /// `EditBox.insertText`: typed or pasted text in place of the
+    /// `EditBox.insertText`.
     pub fn insert(&mut self, text: &str) -> bool {
         self.preedit.clear();
         let range = self.selection();
@@ -363,7 +363,7 @@ impl TextInput {
         changed
     }
 
-    /// `EditBox.getWordPosition(dir)` from the cursor: past the next space
+    /// `EditBox.getWordPosition(dir)` from the cursor.
     fn word_position(&self, forward: bool) -> usize {
         self.word_position_from(self.cursor, forward)
     }
@@ -391,7 +391,7 @@ impl TextInput {
         at
     }
 
-    /// `EditBox.deleteCharsToPos`: the selection if there is one, else
+    /// `EditBox.deleteCharsToPos`.
     fn delete_to(&mut self, to: usize) -> Edit {
         if self.chars.is_empty() {
             return Edit::Moved;
@@ -409,7 +409,7 @@ impl TextInput {
         Edit::Changed
     }
 
-    /// One key or typed character: the editing and cursor keys. Everything
+    /// One key or typed character: the editing and cursor keys.
     pub fn handle(&mut self, event: &TextEvent) -> Edit {
         self.restart_blink();
         let changed = |changed: bool| if changed { Edit::Changed } else { Edit::Moved };

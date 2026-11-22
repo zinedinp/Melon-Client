@@ -1,4 +1,4 @@
-//! Vanilla `BlockBehaviour.OffsetType`: plants (grass, ferns, flowers,
+//! Vanilla `BlockBehaviour.OffsetType`.
 
 use std::sync::LazyLock;
 
@@ -97,7 +97,7 @@ static BY_STATE: LazyLock<Vec<u8>> = LazyLock::new(|| {
     table
 });
 
-/// The kinds by number minus one; `terrain.vert`'s `OFFSET_LIMIT` lists
+/// The kinds by number minus one.
 const KINDS: [Offset; 4] = [PLANT_XZ, PLANT_XYZ, SPELEOTHEM, SMALL_DRIPLEAF];
 
 fn kind_of(state: u16) -> Option<Offset> {
@@ -110,12 +110,12 @@ pub fn has_offset(state: u16) -> bool {
     kind_of(state).is_some()
 }
 
-/// `BlockState.getOffset` for `state` in column `(x, z)`: zero for blocks
+/// `BlockState.getOffset` for `state` in column `(x, z)`.
 pub fn offset(state: u16, x: i32, z: i32) -> [f32; 3] {
     kind_of(state).map_or([0.0; 3], |kind| column_offset(kind, x, z))
 }
 
-/// `state`'s offset in column `(x, z)` for a
+/// `state`'s offset in column `(x, z)`, packed.
 pub fn packed(state: u16, x: i32, z: i32) -> u16 {
     let kind = *BY_STATE.get(usize::from(state)).unwrap_or(&0);
     if kind == 0 {
@@ -149,7 +149,7 @@ fn nibble_offset(kind: Offset, seed: i64) -> [f32; 3] {
     [horizontal(0), y, horizontal(8)]
 }
 
-/// [`offset`] minus the one at column `(0, 0)`: Pumpkin's outline and
+/// [`offset`] minus the one at column `(0, 0)`.
 pub fn shape_delta(state: u16, x: i32, z: i32) -> glam::DVec3 {
     let Some(kind) = kind_of(state) else {
         return glam::DVec3::ZERO;

@@ -1,4 +1,4 @@
-//! `Options`' chat settings, grouped as `ChatScreen` and the chat HUD
+//! `Options`' chat settings, grouped as `ChatScreen` and the chat HUD use them.
 
 use super::*;
 

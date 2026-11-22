@@ -1,4 +1,4 @@
-//! What an item looks like in 3D, from the vanilla item definitions
+//! What an item looks like in 3D, from the vanilla item definitions.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -45,7 +45,7 @@ impl Count {
     };
 }
 
-/// The counts at which an item's model changes (`minecraft:count` range
+/// The counts at which an item's model changes (`minecraft:count` range dispatch), by item.
 static COUNT_CUTS: Mutex<Option<HashMap<String, Vec<i32>>>> = Mutex::new(None);
 
 /// Drops what is known of the items' count thresholds.
@@ -80,7 +80,7 @@ fn count_cuts(model: &Value, max_stack: i32, out: &mut Vec<i32>) {
     }
 }
 
-/// `(count per unit, scale)` of a `minecraft:count` dispatch: the value it
+/// `(count per unit, scale)` of a `minecraft:count` dispatch.
 fn count_unit(model: &Value, max_stack: i32) -> (f64, f64) {
     let normalize = model["normalize"].as_bool().unwrap_or(true);
     let unit = if normalize {
@@ -127,13 +127,13 @@ pub(crate) struct Layer {
 }
 
 pub(crate) enum Source {
-    /// A JSON model, with the tint for each `tintindex` and each tint's
+    /// A JSON model, with the tint for each `tintindex`.
     Model {
         model: String,
         tints: Vec<[u8; 3]>,
         tint_kinds: Vec<String>,
     },
-    /// A special renderer (`spec`, its `type` and options) with the model
+    /// A special renderer (`spec`, its `type` and options) with the model `base`.
     Special { base: String, spec: Value },
 }
 
@@ -149,18 +149,18 @@ impl Source {
 
 /// An item definition resolved for a GUI slot or a hand.
 pub struct ItemModel {
-    /// The first layer's JSON model: its display transforms, GUI light,
+    /// The first layer's JSON model.
     pub model: Model,
     layers: Vec<Layer>,
 }
 
 impl ItemModel {
-    /// The item with registry key `key` (e.g. `stone`), with `potion` for
+    /// The item with registry key `key` (e.g.
     pub fn resolve(assets_root: &Path, key: &str, potion: Option<[u8; 3]>) -> Option<Self> {
         Self::resolve_in_use(assets_root, key, potion, (false, Count::ONE), None)
     }
 
-    /// [`Self::resolve`] for an item being used or not: the
+    /// [`Self::resolve`] for an item being used or not.
     pub fn resolve_in_use(
         assets_root: &Path,
         key: &str,
@@ -178,7 +178,7 @@ impl ItemModel {
         )
     }
 
-    /// [`Self::resolve_in_use`] with the item's [`ItemDisplayContext`]
+    /// [`Self::resolve_in_use`] with the item's `ItemDisplayContext`.
     pub fn resolve_for_display(
         assets_root: &Path,
         key: &str,
@@ -245,7 +245,7 @@ impl ItemModel {
         Some(Self { model, layers })
     }
 
-    /// A block's JSON model drawn as it is (`BlockModelResolver` with a
+    /// A block's JSON model drawn as it is (`BlockModelResolver` with a block's model).
     pub fn block(assets_root: &Path, model: &str) -> Option<Self> {
         let mut resolved = Model::resolve(assets_root, model)?;
         resolved.displays.clear();
@@ -262,7 +262,7 @@ impl ItemModel {
         })
     }
 
-    /// Whether this is one flat sprite stack (`item/generated`), drawn as
+    /// Whether this is one flat sprite stack (`item/generated`), drawn as a single layer.
     pub fn is_flat(&self) -> bool {
         self.model.generated && self.layers.len() == 1
     }
@@ -285,7 +285,7 @@ impl ItemModel {
             .collect()
     }
 
-    /// Every face, counter-clockwise from outside. Composed textures (a
+    /// Every face, counter-clockwise from outside.
     pub fn quads(&self, assets_root: &Path, textures: &mut TextureCache) -> Vec<ItemQuad> {
         let mut quads = Vec::new();
         for layer in &self.layers {
@@ -340,7 +340,7 @@ impl ItemModel {
         bake_held(&poses, &mut textures, sprites)
     }
 
-    /// [`Self::held`] with `skin` in place of Steve's: a player head
+    /// [`Self::held`] with `skin` in place of Steve's.
     pub fn held_with_skin(
         &self,
         assets_root: &Path,
@@ -531,7 +531,7 @@ fn bake_held(
     })
 }
 
-/// How an item is held, each with its own `display` transform
+/// How an item is held, each with its own `display` transform.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum HandPose {
     FirstPersonRight,
@@ -540,7 +540,7 @@ pub enum HandPose {
     ThirdPersonLeft,
     /// `ItemDisplayContext.GROUND`: what a villager holds in crossed arms.
     Ground,
-    /// `ItemDisplayContext.HEAD`: an item worn on the head that isn't
+    /// `ItemDisplayContext.HEAD`.
     Head,
     /// `ItemDisplayContext.FIXED`: an item in a frame or an item display.
     Fixed,
@@ -624,7 +624,7 @@ impl HandPose {
         )
     }
 
-    /// The `display` entries: the left hand's falls back to the right's
+    /// The `display` entries.
     fn contexts(self) -> [&'static str; 2] {
         match self {
             HandPose::FirstPersonRight => ["firstperson_righthand"; 2],
@@ -640,7 +640,7 @@ impl HandPose {
         }
     }
 
-    /// `ItemTransform.apply` for `model`, ending with the move from the
+    /// `ItemTransform.apply` for `model`, ending with the move from the model's centre.
     fn display(self, model: &Model) -> Mat4 {
         if self == HandPose::Raw {
             return Mat4::IDENTITY;
@@ -660,7 +660,8 @@ impl HandPose {
             * centre
     }
 
-    /// Turns the item's normals (after its display transform) to roughly
+    /// Turns the item's normals (after its display transform) to roughly where the light sees
+    /// them.
     fn shade_frame(self) -> Mat3 {
         match self {
             HandPose::FirstPersonRight | HandPose::FirstPersonLeft => Mat3::IDENTITY,
@@ -723,7 +724,7 @@ impl HeldAnimation {
     }
 }
 
-/// The frames of `textures`' animations packed like [`pack_textures`] does,
+/// The frames of `textures`' animations packed like [`pack_textures`] does.
 fn animate_packed(
     quads: &[ItemQuad],
     textures: &mut TextureCache,
@@ -755,7 +756,7 @@ fn animate_packed(
     (animation.frames.len() > 1).then_some(animation)
 }
 
-/// Every texture `quads` sample side by side in one image. Each texture's
+/// Every texture `quads` sample side by side in one image.
 #[allow(clippy::type_complexity)]
 fn pack_textures(
     quads: &[ItemQuad],
@@ -785,7 +786,7 @@ fn pack_textures(
     Some((packed, places))
 }
 
-/// Follows an item model's selectors: `condition` uses its false branch
+/// Follows an item model's selectors.
 fn collect_layers(
     model: &Value,
     transform: Mat4,
@@ -949,7 +950,7 @@ fn collect_layers(
     Some(())
 }
 
-/// What a held stack is doing, as far as its model tells: the part of
+/// What a held stack is doing, as far as its model tells.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum HeldUse {
     #[default]
@@ -1027,7 +1028,7 @@ fn highest_entry(model: &Value, value: f64) -> Option<&Value> {
         .map(|entry| &entry["model"])
 }
 
-/// The entry a `minecraft:count` dispatch picks for `count`: the one with
+/// The entry a `minecraft:count` dispatch picks for `count`.
 fn count_entry(model: &Value, count: Count) -> Option<&Value> {
     let (unit, scale) = count_unit(model, count.max_stack);
     let value = f64::from(count.value) / unit * scale;
@@ -1051,7 +1052,7 @@ fn matches_display_context(when: &Value, name: &str) -> bool {
     }
 }
 
-/// `Transformation`: translation, left rotation, scale, right rotation,
+/// `Transformation`.
 fn transformation(value: &Value) -> Mat4 {
     if let Some(rows) = value.as_array() {
         let numbers: Vec<f32> = rows
@@ -1117,7 +1118,7 @@ fn tint_color(source: &Value, variant: Option<&Variant>) -> [u8; 3] {
     }
 }
 
-/// One face of an item, in the item's model space (blocks, `0..1` for a
+/// One face of an item, in the item's model space.
 #[derive(Clone)]
 pub struct ItemQuad {
     /// Counter-clockwise from outside.
@@ -1134,7 +1135,7 @@ pub struct ItemQuad {
     pub alpha: AlphaRule,
 }
 
-/// `layer`'s faces through its transform into `out`: a JSON model's
+/// `layer`'s faces through its transform into `out`.
 fn layer_quads(
     assets_root: &Path,
     layer: &Layer,
@@ -1214,7 +1215,7 @@ fn layer_quads(
     }
 }
 
-/// `ItemModelGenerator`: a flat item's sprites as elements, in model
+/// `ItemModelGenerator`.
 fn extruded_elements(model: &Model, textures: &mut TextureCache) -> Vec<Value> {
     const SHRINK: f32 = 0.1;
     let mut elements = Vec::new();
@@ -1613,7 +1614,7 @@ mod tests {
             .then_some(root)
     }
 
-    /// The world pipeline culls back faces, so every face must wind
+    /// The world pipeline culls back faces, so every face must wind around its normal.
     #[test]
     fn faces_wind_around_their_normals() {
         let Some(root) = assets() else {

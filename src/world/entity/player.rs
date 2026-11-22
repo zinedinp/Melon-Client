@@ -53,7 +53,7 @@ pub const DEFAULT_SKINS: [(&str, PlayerModelType); 18] = {
     ]
 };
 
-/// `DefaultPlayerSkin.get(UUID)`: `floorMod(uuid.hashCode(), 18)`, an
+/// `DefaultPlayerSkin.get(UUID)`.
 pub fn default_skin(uuid: uuid::Uuid) -> usize {
     let (high, low) = uuid.as_u64_pair();
     let both = high ^ low;
@@ -138,7 +138,7 @@ pub fn create_layer(model: PlayerModelType) -> LayerDefinition {
     }
 }
 
-/// `PlayerModelPart`, in its bit order: the cape and the skin's outer
+/// `PlayerModelPart`, in its bit order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PlayerModelPart {
     Cape,
@@ -196,7 +196,7 @@ impl PlayerModelPart {
     }
 }
 
-/// Which [`PlayerModelPart`]s show, as the mask `ClientInformation` sends
+/// Which [`PlayerModelPart`]s show, as the mask `ClientInformation` sends.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ShownParts(u8);
 
@@ -228,7 +228,7 @@ impl ShownParts {
     }
 }
 
-/// What `PlayerModel.setupAnim` and `AvatarRenderer` read of
+/// What `PlayerModel.setupAnim` and `AvatarRenderer` read of a player.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AvatarRenderState {
     pub humanoid: HumanoidRenderState,
@@ -243,19 +243,19 @@ pub struct AvatarRenderState {
     pub death_time: f32,
     /// Swimming: how far down, and how the body lies in the water.
     pub swim: Swim,
-    /// Drawn upside down, with the body's height (see
+    /// Drawn upside down, with the body's height.
     pub upside_down: Option<f32>,
     /// `LivingEntity.getScale`.
     pub scale: f32,
 }
 
 impl AvatarRenderState {
-    /// `AvatarRenderer.isEntityUpsideDown`: a player named `Dinnerbone` or
+    /// `AvatarRenderer.isEntityUpsideDown`.
     pub fn wants_upside_down(name: &str, shown: ShownParts) -> bool {
         shown.shows(PlayerModelPart::Cape) && Magic::of(name) == Magic::UpsideDown
     }
 
-    /// Turns the body over, its head's angles inverted
+    /// Turns the body over, its head's angles inverted.
     pub fn turn_upside_down(&mut self, height: f32) {
         self.upside_down = Some(height);
         self.humanoid.x_rot = -self.humanoid.x_rot;
@@ -263,7 +263,7 @@ impl AvatarRenderState {
     }
 }
 
-/// `HumanoidArm`: which arm, for the hand-held items, the first-person arm
+/// `HumanoidArm`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Arm {
     #[default]
@@ -363,7 +363,7 @@ impl PlayerModel {
         pose
     }
 
-    /// From model pixels to the world: [`living::root_transform`] with
+    /// From model pixels to the world.
     pub fn root_transform(state: &AvatarRenderState) -> Mat4 {
         let crouch = if state.humanoid.crouching {
             -2.0 / 16.0
@@ -405,7 +405,7 @@ impl PlayerModel {
         self.humanoid.arm(arm)
     }
 
-    /// `PlayerModel.translateToHand`: the arm's transform, a slim arm's
+    /// `PlayerModel.translateToHand`.
     pub fn hand_transform(&self, pose: &ModelPose, arm: Arm, root: Mat4) -> Mat4 {
         let outward = match self.kind {
             PlayerModelType::Slim => 0.5,
@@ -414,7 +414,7 @@ impl PlayerModel {
         humanoid::hand_transform(&self.model, &self.humanoid, pose, arm, outward, root)
     }
 
-    /// `AvatarRenderer.renderHand`: the arm alone, reset to its
+    /// `AvatarRenderer.renderHand`.
     pub fn first_person_arm_pose(&self, arm: Arm, sleeve: bool) -> ModelPose {
         let mut pose = self.model.initial_pose();
         pose[self.left_sleeve].visible = sleeve;
@@ -428,7 +428,7 @@ impl PlayerModel {
     }
 }
 
-/// `ItemInHandLayer.submitArmWithItem` from the hand: where a held item's
+/// `ItemInHandLayer.submitArmWithItem` from the hand.
 pub fn item_in_hand(hand: Mat4, arm: Arm) -> Mat4 {
     let side = match arm {
         Arm::Right => 1.0,

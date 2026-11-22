@@ -1,4 +1,4 @@
-//! `Block.animateTick` of the blocks that smoke and burn, and the
+//! `Block.animateTick` of the blocks that smoke and burn.
 
 use glam::{DVec3, IVec3};
 
@@ -95,7 +95,7 @@ fn facing(state: u16) -> Direction {
         .unwrap_or(Direction::North)
 }
 
-/// `AbstractCandleBlock.addParticlesAndSound`: a small flame, sometimes
+/// `AbstractCandleBlock.addParticlesAndSound`.
 fn candle_flame(at: DVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     if rng.next_float() < 0.3 {
         out.push(Spawn::simple(Kind::Smoke, at, DVec3::ZERO));
@@ -125,7 +125,7 @@ fn candle_offsets(state: u16, name: &str) -> Vec<DVec3> {
     }
 }
 
-/// `FireBlock.animateTick`: large smoke from the burning sides, or rising
+/// `FireBlock.animateTick`.
 fn fire(world: &World, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     let state_at = |p: IVec3| world.level.block_state(p.x, p.y, p.z).unwrap_or(0);
     let below = state_at(pos - IVec3::Y);
@@ -174,7 +174,7 @@ fn fire(world: &World, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
 /// A point by a burning side: `(random, inset)` to a block-relative spot.
 type SidePoint = fn(&mut JavaRandom, f64) -> DVec3;
 
-/// `FireBlock.canBurn`: what fire spreads to, its `igniteOdds` above
+/// `FireBlock.canBurn`.
 fn burns(state: u16) -> bool {
     let Some(id) = pumpkin_data::BlockStateId::new(state) else {
         return false;
@@ -186,7 +186,7 @@ fn burns(state: u16) -> bool {
     ignites && prop(state, "waterlogged").as_deref() != Some("true")
 }
 
-/// `CampfireBlockEntity.particleTick`: the column of smoke from every lit
+/// `CampfireBlockEntity.particleTick`.
 pub fn campfires(world: &World, rng: &mut JavaRandom, near: IVec3, out: &mut Vec<Spawn>) {
     for pos in world.level.block_entities() {
         let pos = IVec3::from_array(pos);

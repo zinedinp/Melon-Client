@@ -1,4 +1,4 @@
-//! `SkeletonModel`: a humanoid with thin limbs that draws its bow at a
+//! `SkeletonModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
@@ -28,7 +28,7 @@ pub fn layer() -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 32.0)
 }
 
-/// `STRAY_OUTER_LAYER`: `HumanoidModel.createMesh(grow 0.25)`, the stray's
+/// `STRAY_OUTER_LAYER`.
 pub fn clothes() -> LayerDefinition {
     LayerDefinition::new(humanoid::create_mesh(0.25, 0.0), 64.0, 32.0)
 }
@@ -99,7 +99,7 @@ impl BoggedParts {
     }
 }
 
-/// `SkeletonModel.setupAnim`'s melee: an aggressive skeleton without a bow
+/// `SkeletonModel.setupAnim`'s melee.
 pub fn melee(parts: &HumanoidParts, pose: &mut ModelPose, swing: f32, age_in_ticks: f32) {
     let swing2 = angle::sin(swing * PI);
     let swing1 = angle::sin((1.0 - (1.0 - swing) * (1.0 - swing)) * PI);

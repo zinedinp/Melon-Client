@@ -1,4 +1,4 @@
-//! `FluidState.animateTick` and the drips under fluids
+//! `FluidState.animateTick` and the drips under fluids.
 
 use glam::{DVec3, IVec3};
 
@@ -6,7 +6,7 @@ use super::super::{Kind, Spawn, World};
 use crate::world::fluid::{self, FluidKind};
 use crate::world::java_random::JavaRandom;
 
-/// The fluid in `state`'s animation: water's specks, lava's pops, and a
+/// The fluid in `state`'s animation.
 pub fn animate(world: &World, state: u16, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     let Some(here) = fluid::fluid_of(state) else {
         return;
@@ -41,7 +41,7 @@ pub fn animate(world: &World, state: u16, pos: IVec3, rng: &mut JavaRandom, out:
     }
 }
 
-/// `trySpawnDripParticles`: a drop forms on the underside of the block
+/// `trySpawnDripParticles`.
 fn drip_below(
     world: &World,
     pos: IVec3,

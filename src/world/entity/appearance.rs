@@ -1,4 +1,4 @@
-//! What an entity's synced data (`SET_ENTITY_DATA`) says about how it
+//! What an entity's synced data (`SET_ENTITY_DATA`) says about how it looks.
 
 use pumpkin_data::dye_color::DyeColor;
 use pumpkin_data::tracked_data::{
@@ -111,21 +111,21 @@ pub struct Appearance {
     pub villager: (i32, i32, i32),
     /// `AbstractVillager.getUnhappyCounter() > 0`.
     pub unhappy: bool,
-    /// A zombie villager curing (`isConverting`), a zombie drowning into a
+    /// A zombie villager curing (`isConverting`), a zombie drowning into a drowned, ...
     pub converting: bool,
     /// `DATA_IMMUNE_TO_ZOMBIFICATION` of a piglin.
     pub immune_to_zombification: bool,
-    /// A piglin that is turning into a zombified one (`isConverting`: not
+    /// A piglin that is turning into a zombified one (`isConverting`.
     pub zombifying: bool,
     /// `DATA_TICKS_FROZEN`.
     pub frozen_ticks: i32,
     pub powered: bool,
     pub ignited: bool,
-    /// An enderman holds a block (`DATA_CARRY_STATE` is a state), and
+    /// An enderman holds a block (`DATA_CARRY_STATE` is a state).
     pub block_state: u16,
     /// `PrimedTnt.DATA_FUSE_ID`: ticks until it blows.
     pub fuse: i32,
-    /// `VehicleEntity`'s `DATA_ID_HURT`, `HURTDIR` and `DAMAGE`: how long it
+    /// `VehicleEntity`'s `DATA_ID_HURT`, `HURTDIR` and `DAMAGE`.
     pub vehicle_hurt: i32,
     pub vehicle_hurt_dir: i32,
     pub vehicle_damage: f32,
@@ -152,7 +152,7 @@ pub struct Appearance {
     pub laying_egg: bool,
     /// `Guardian.isMoving`.
     pub guardian_moving: bool,
-    /// What the custom name makes renderers do (`Magic::of`); the name
+    /// What the custom name makes renderers do (`Magic::of`).
     pub magic: Magic,
     /// `Rabbit.Variant`'s id (brown is 0, not the registry's temperate).
     pub rabbit_variant: i32,
@@ -206,7 +206,7 @@ pub struct Appearance {
     pub warden_anger: i32,
     /// `WitherBoss.DATA_ID_INV`.
     pub wither_invul: i32,
-    /// `ArmorStand.DATA_CLIENT_FLAGS`: small 1, arms 4, no base plate 8,
+    /// `ArmorStand.DATA_CLIENT_FLAGS`.
     pub stand_flags: u8,
     /// `Entity.DATA_CUSTOM_NAME_VISIBLE`: the name hangs over it.
     pub name_visible: bool,
@@ -832,7 +832,7 @@ impl Appearance {
         self.pose == POSE_CROUCHING || self.shared_flags & SHARED_CROUCHING != 0
     }
 
-    /// `Entity.isVisuallySwimming`: the swimming pose (a crawler has it
+    /// `Entity.isVisuallySwimming`.
     pub fn visually_swimming(&self) -> bool {
         self.pose == POSE_SWIMMING || self.shared_flags & SHARED_SWIMMING != 0
     }
@@ -852,7 +852,7 @@ impl Appearance {
         dimension_zombifies && !self.immune_to_zombification && self.mob_flags & MOB_NO_AI == 0
     }
 
-    /// `LivingEntityRenderer.isShaking`: fully frozen (`isFullyFrozen`,
+    /// `LivingEntityRenderer.isShaking`.
     pub fn shaking(&self) -> bool {
         self.converting || self.zombifying || self.frozen_ticks >= FROZEN_TICKS_TO_FREEZE
     }
@@ -947,7 +947,7 @@ mod tests {
         assert_eq!((creeper.swell_dir, creeper.variant), (1, 1));
     }
 
-    /// Each kind's baby flag and variant sit at the index of its own class in
+    /// Each kind's baby flag and variant sit at the index of its own class in the data.
     #[test]
     fn every_baby_capable_kind_reads_its_own_classes_baby_flag() {
         use EntityKind as K;

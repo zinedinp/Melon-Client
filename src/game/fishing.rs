@@ -1,4 +1,4 @@
-//! Fishing bobbers and their lines (`FishingHookRenderer`): a flat sprite
+//! Fishing bobbers and their lines (`FishingHookRenderer`).
 
 use std::collections::HashMap;
 
@@ -147,7 +147,7 @@ impl InWorld {
         }
     }
 
-    /// How the own `stack` in `hand` is used, as its model sees it: in
+    /// How the own `stack` in `hand` is used, as its model sees it.
     pub(super) fn held_use(&self, hand: Hand, stack: &ItemStack, using: bool) -> HeldUse {
         if using {
             return HeldUse::Using;

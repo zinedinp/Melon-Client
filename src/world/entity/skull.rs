@@ -1,4 +1,4 @@
-//! Heads as models (`SkullModelBase` and its kinds), shared by everything
+//! Heads as models (`SkullModelBase` and its kinds), shared by everything that draws one.
 
 use glam::Mat4;
 
@@ -10,7 +10,7 @@ use crate::world::model_part::{Part, Pose};
 /// Names for a head's child parts, in [`models::skull`]'s order.
 const CHILDREN: [&str; 4] = ["child0", "child1", "child2", "child3"];
 
-/// One moving piece of a head: which child of its part, about which axis
+/// One moving piece of a head.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Joint {
     pub child: usize,
@@ -18,7 +18,7 @@ pub struct Joint {
     pub angle: f32,
 }
 
-/// `SkullModelBase.setupAnim` at `animation`: `DragonHeadModel`'s jaw
+/// `SkullModelBase.setupAnim` at `animation`.
 pub fn joints(skull: SkullType, animation: f32) -> [Option<Joint>; 2] {
     let joint = |child, axis, angle| Some(Joint { child, axis, angle });
     match skull {
@@ -34,7 +34,7 @@ pub fn joints(skull: SkullType, animation: f32) -> [Option<Joint>; 2] {
     }
 }
 
-/// Moves a head's [`models::skull`] part to `animation` (the block entity
+/// Moves a head's [`models::skull`] part to `animation`.
 pub fn animate_part(skull: SkullType, part: &mut Part, animation: f32) {
     for joint in joints(skull, animation).into_iter().flatten() {
         if let Some(child) = part.children.get_mut(joint.child) {
@@ -43,7 +43,7 @@ pub fn animate_part(skull: SkullType, part: &mut Part, animation: f32) {
     }
 }
 
-/// `SkullModelBase.State.animationPos` of a placed head: its powered
+/// `SkullModelBase.State.animationPos` of a placed head.
 pub fn placed_animation(ticks: u32, animating: bool, partial: f32) -> f32 {
     ticks as f32 + if animating { partial } else { 0.0 }
 }

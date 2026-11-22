@@ -1,11 +1,11 @@
-//! The `resourcepacks` folder (vanilla `FolderRepositorySource`): every
+//! The `resourcepacks` folder (vanilla `FolderRepositorySource`).
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::{Pack, ResourceStack};
 
-/// The id `options.txt` lists for the default resources; always at the
+/// The id `options.txt` lists for the default resources; always at the bottom.
 pub const VANILLA_ID: &str = "vanilla";
 
 /// `<game dir>/resourcepacks`.
@@ -13,7 +13,7 @@ pub fn folder(game_dir: &Path) -> PathBuf {
     game_dir.join("resourcepacks")
 }
 
-/// Every pack in the folder, by id. One that can't be read (no
+/// Every pack in the folder, by id.
 pub fn discover(game_dir: &Path) -> Vec<Arc<Pack>> {
     let dir = folder(game_dir);
     let Ok(entries) = std::fs::read_dir(&dir) else {
@@ -56,7 +56,8 @@ pub fn discover_mods(game_dir: &Path) -> Vec<Arc<Pack>> {
         .collect()
 }
 
-/// The packs of `selected` (ids, lowest first, as `options.txt` keeps
+/// The packs of `selected` (ids, lowest first, as `options.txt` keeps them), with the server's
+/// on top.
 pub fn stack(available: &[Arc<Pack>], selected: &[String], server: &[Arc<Pack>]) -> ResourceStack {
     let mut packs: Vec<Arc<Pack>> = selected
         .iter()

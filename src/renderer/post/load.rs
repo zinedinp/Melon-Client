@@ -1,4 +1,4 @@
-//! Reading the chains a game uses from the resource packs: the JSON, its
+//! Reading the chains a game uses from the resource packs.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -7,7 +7,7 @@ use super::config::{Config, ENTITY_OUTLINE, Input, MAIN, Pass};
 use super::gpu::ChainSource;
 use super::shader::{self, Compiled};
 
-/// The chains vanilla asks for by name: the entity outline, the effects of
+/// The chains vanilla asks for by name.
 pub const IDS: [&str; 5] = [
     "minecraft:entity_outline",
     "minecraft:creeper",
@@ -19,7 +19,7 @@ pub const IDS: [&str; 5] = [
 /// The chain run every frame, if a pack has it.
 pub const END_OF_FRAME: &str = "minecraft:end_of_frame";
 
-/// Every chain of [`IDS`] the packs have that can be used, and the shaders
+/// Every chain of [`IDS`] the packs have that can be used, and the outline blit's shaders.
 pub fn load(assets_root: &Path) -> (Vec<ChainSource>, Option<Compiled>) {
     let mut chains = Vec::new();
     for id in IDS {

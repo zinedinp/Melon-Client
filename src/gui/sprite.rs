@@ -15,9 +15,9 @@ use crate::world::texture_animation;
 pub enum Scaling {
     /// The whole sprite stretched over the rectangle (the default).
     Stretch,
-    /// Repeated from the top left, a `width`x`height` copy at a time; the
+    /// Repeated from the top left, a `width`x`height` copy at a time.
     Tile { width: u32, height: u32 },
-    /// Corners as they are, edges and centre tiled (or stretched with
+    /// Corners as they are, edges and centre tiled or stretched.
     NineSlice {
         width: u32,
         height: u32,
@@ -27,7 +27,7 @@ pub enum Scaling {
 }
 
 impl Scaling {
-    /// The `gui.scaling` section of a sprite's `.mcmeta`; stretched when it
+    /// The `gui.scaling` section of a sprite's `.mcmeta`; stretched when it has none.
     pub fn parse(meta: &Value) -> Self {
         let scaling = &meta["gui"]["scaling"];
         let positive = |v: &Value| v.as_u64().filter(|&n| n > 0).map(|n| n as u32);
@@ -93,7 +93,7 @@ impl From<TextureId> for GuiSprite {
 }
 
 impl GuiSprite {
-    /// `textures/<path>` from the top resource pack that has it, with the
+    /// `textures/<path>` from the top resource pack that has it, with its `.mcmeta`.
     pub fn load(renderer: &mut Renderer, assets: &Assets, id: &str) -> anyhow::Result<Self> {
         let (namespace, path) = split_id(id);
         let path = format!("textures/{path}");
@@ -253,7 +253,7 @@ fn ticks() -> u64 {
     (START.get_or_init(Instant::now).elapsed().as_millis() / 50) as u64
 }
 
-/// Keeps one copy of each schedule for the life of the program, so sprites
+/// Keeps one copy of each schedule for the life of the program.
 fn intern(schedule: Vec<(u32, u32)>) -> &'static [(u32, u32)] {
     static SEEN: Mutex<Vec<&'static [(u32, u32)]>> = Mutex::new(Vec::new());
     let mut seen = SEEN.lock().unwrap_or_else(|e| e.into_inner());
@@ -289,7 +289,7 @@ impl Blit {
         list.push_rect(self.texture, x, y, w, h, uv, self.color);
     }
 
-    /// `blitTiledSprite`: `rect` covered from its top left by copies of the
+    /// `blitTiledSprite`.
     fn tiled(&self, list: &mut DrawList, rect: [f32; 4], tile: [f32; 4], sprite: [f32; 2]) {
         let [x, y, w, h] = rect;
         let [tx, ty, tw, th] = tile;
@@ -314,7 +314,7 @@ impl Blit {
         }
     }
 
-    /// `blitNineSlicedSprite`: borders shrunk to half the drawn size at
+    /// `blitNineSlicedSprite`.
     fn nine_slice(
         &self,
         list: &mut DrawList,

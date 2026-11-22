@@ -16,20 +16,20 @@ pub struct Display {
     pub scale: Vec3,
 }
 
-/// A block or item model with its parents merged in (`BlockModel`'s
+/// A block or item model with its parents merged in (`BlockModel`'s resolved form).
 pub struct Model {
     pub textures: HashMap<String, String>,
     pub elements: Vec<Value>,
     pub gui: Option<Display>,
-    /// Every `display` transform by context (`gui`, `firstperson_righthand`,
+    /// Every `display` transform by context (`gui`, `firstperson_righthand`, ...).
     pub displays: HashMap<String, Display>,
-    /// `gui_light: front`: lit like a flat item in a GUI slot, from the
+    /// `gui_light: front`.
     pub front_light: bool,
     /// Inherits from `builtin/generated`: a flat item made of `layerN`s.
     pub generated: bool,
     /// `ambientocclusion`, the nearest one set.
     pub ambient_occlusion: bool,
-    /// Texture IDs bound with `force_translucent` (`Material`): drawn in the
+    /// Texture IDs bound with `force_translucent` (`Material`).
     pub forced_translucent: std::collections::HashSet<String>,
 }
 
@@ -150,7 +150,7 @@ pub fn read_json(path: &Path) -> Option<Value> {
 pub struct TextureCache<'a> {
     assets_root: &'a Path,
     images: HashMap<String, Option<RgbaImage>>,
-    /// The animated textures loaded so far, whose entry in `images` is the
+    /// The animated textures loaded so far, by ID.
     animations: HashMap<String, crate::world::texture_animation::Frames>,
     tick: u64,
     /// The IDs given an image by [`Self::insert`] (a skin, a composed
@@ -185,7 +185,7 @@ impl<'a> TextureCache<'a> {
         self.inserted.contains(id)
     }
 
-    /// A texture; an animated one (a strip of frames, `animation` in its
+    /// A texture by ID, loaded on first use; an animated one shows its current frame.
     pub fn get(&mut self, id: &str) -> Option<&RgbaImage> {
         if !self.images.contains_key(id) {
             let image = self.load(id);
@@ -249,7 +249,7 @@ impl<'a> TextureCache<'a> {
 
 /// One `BlockElementFace` ready to draw.
 pub struct Quad {
-    /// Texture top-left, bottom-left, bottom-right, top-right as seen from
+    /// Texture top-left, bottom-left, bottom-right, top-right as seen from outside.
     pub corners: [Vec3; 4],
     /// `0..1` within the face's texture.
     pub uvs: [Vec2; 4],
@@ -259,13 +259,13 @@ pub struct Quad {
     pub tint: Option<usize>,
     /// `cullface`: hidden when the neighbour on that side is solid.
     pub cullface: Option<String>,
-    /// The element's `shade_direction_override`: the face is shaded as if
+    /// The element's `shade_direction_override`.
     pub shade_override: Option<crate::world::block::direction::Direction>,
-    /// The element's `light_emission` (`0..=15`): the face is lit at least
+    /// The element's `light_emission` (`0..=15`).
     pub light_emission: u8,
 }
 
-/// The faces of one model element (`BlockElement`), in model space (0-16),
+/// The faces of one model element (`BlockElement`), in model space (0-16).
 pub fn element_quads(element: &Value) -> Vec<Quad> {
     let (Some(from), Some(to)) = (vec3(&element["from"]), vec3(&element["to"])) else {
         return Vec::new();
@@ -314,7 +314,7 @@ pub fn element_quads(element: &Value) -> Vec<Quad> {
     quads
 }
 
-/// `BlockElementRotation`: one axis, around `origin`, optionally rescaled
+/// `BlockElementRotation`.
 pub fn element_rotation(rotation: &Value) -> impl Fn(Vec3) -> Vec3 {
     let origin = vec3(&rotation["origin"]).unwrap_or(Vec3::splat(8.0));
     let angle = rotation["angle"].as_f64().unwrap_or(0.0) as f32;
@@ -339,7 +339,8 @@ pub fn element_rotation(rotation: &Value) -> impl Fn(Vec3) -> Vec3 {
     move |p| origin + (matrix * (p - origin)) * stretch
 }
 
-/// Corners (texture top-left, bottom-left, bottom-right, top-right as seen
+/// A face's corners (texture top-left, bottom-left, bottom-right, top-right as seen from
+/// outside), its normal and its default UV.
 pub fn face_geometry(name: &str, f: Vec3, t: Vec3) -> Option<([Vec3; 4], Vec3, [f32; 4])> {
     let v = Vec3::new;
     Some(match name {

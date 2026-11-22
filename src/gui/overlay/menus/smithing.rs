@@ -1,4 +1,4 @@
-//! `SmithingScreen`: the error cross, the hints over an empty slot, and
+//! `SmithingScreen`.
 
 use std::time::Instant;
 
@@ -127,7 +127,7 @@ fn template(menu: &OpenContainer) -> Option<Template> {
         .flatten()
 }
 
-/// The icon number `icons` shows now: one a second, starting over when
+/// The icon number `icons` shows now.
 fn cycle<T: Copy>(icons: &[T]) -> Option<T> {
     static START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
     if icons.is_empty() {

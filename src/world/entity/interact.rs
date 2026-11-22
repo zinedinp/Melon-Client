@@ -1,4 +1,4 @@
-//! What a right click on an entity comes to, as far as the client can tell
+//! What a right click on an entity comes to, as far as the client can tell.
 
 use pumpkin_data::data_component_impl::{CustomNameImpl, DyeImpl};
 use pumpkin_data::item::Item;
@@ -15,7 +15,7 @@ pub enum EntityUse {
     Pass,
     /// `SUCCESS`: done, and the hand swings now.
     Swing,
-    /// `CONSUME` or `SUCCESS_SERVER`: done, the swing (if any) comes from
+    /// `CONSUME` or `SUCCESS_SERVER`.
     Quiet,
 }
 
@@ -83,7 +83,7 @@ pub fn predict(target: Target, held: &ItemStack, sneaking: bool) -> EntityUse {
     item_on(target, held)
 }
 
-/// `Mob.interact` around `Entity.interact`; other entities only get the
+/// `Mob.interact` around `Entity.interact`; other entities only get the latter.
 fn interact(target: Target, held: &ItemStack, sneaking: bool) -> EntityUse {
     let Target {
         kind,
@@ -195,7 +195,7 @@ fn mob_interact(
     }
 }
 
-/// `Animal.mobInteract`: a baby eats and grows at once; a grown one only
+/// `Animal.mobInteract`.
 fn animal(appearance: &Appearance, food: bool) -> EntityUse {
     match (food, appearance.baby) {
         (false, _) => EntityUse::Pass,

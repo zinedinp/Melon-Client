@@ -1,4 +1,4 @@
-//! Blob shadows under the player and every drawn entity
+//! Blob shadows under the player and every drawn entity.
 
 use std::collections::HashMap;
 

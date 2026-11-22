@@ -1,10 +1,10 @@
-//! An item carried in the mouth: what a dolphin that picked something up
+//! An item carried in the mouth.
 
 use glam::{Mat4, Vec3};
 
 use crate::math::angle::Rotation;
 
-/// Where a dolphin holds it: in front of the head, further down and back
+/// Where a dolphin holds it.
 pub fn dolphin(root: Mat4, x_rot: f32) -> Mat4 {
     let tilt = x_rot.abs() / 60.0;
     let (y, z) = if x_rot < 0.0 {
@@ -29,7 +29,7 @@ pub struct FoxMouth {
     pub x_rot: f32,
 }
 
-/// `FoxHeldItemLayer`: out of the snout, and lying on its side while the
+/// `FoxHeldItemLayer`.
 pub fn fox(root: Mat4, fox: FoxMouth) -> Mat4 {
     let mut at = root * Mat4::from_translation(fox.head);
     if fox.baby {

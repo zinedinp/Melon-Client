@@ -1,12 +1,13 @@
-//! Reading `font/*.json`: the providers that say which glyphs exist, and
+//! Reading `font/*.json`.
 
 use super::unihex::{Lazy, SizeOverride};
 use super::*;
 
-/// How deep `reference` providers may nest, so a pack whose fonts refer
+/// How deep `reference` providers may nest, so a pack whose fonts refer to each other can't
+/// loop.
 const MAX_REFERENCE_DEPTH: u32 = 8;
 
-/// Loads font `id` (`font/<path>.json`). Every resource pack's copy counts,
+/// Loads font `id` (`font/<path>.json`).
 pub(super) fn load_provider_file(
     assets: &Assets,
     id: &str,
@@ -121,7 +122,7 @@ fn filter_allows(provider: &serde_json::Value) -> bool {
         .all(|wanted| wanted.as_bool() == Some(false))
 }
 
-/// A `unihex` provider: its zip of `.hex` files, with `size_overrides`,
+/// A `unihex` provider.
 fn load_unihex(assets: &Assets, provider: &serde_json::Value) -> anyhow::Result<Lazy> {
     let file = provider
         .get("hex_file")

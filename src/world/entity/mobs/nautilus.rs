@@ -1,4 +1,4 @@
-//! `NautilusModel`: a shell over a body with a mouth of three parts. It
+//! `NautilusModel`: a shell over a body with a mouth of three parts.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::network::play::game::EquipmentSlot;
@@ -210,7 +210,7 @@ impl NautilusParts {
     }
 }
 
-/// `NautilusModel.setupAnim`'s turn of the body toward the look, and the
+/// `NautilusModel.setupAnim`'s turn of the body toward the look.
 pub fn setup_anim(
     parts: &NautilusParts,
     swim: &KeyframeAnimation,

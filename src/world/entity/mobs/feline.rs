@@ -1,4 +1,4 @@
-//! `AdultFelineModel` and `BabyFelineModel`: cats and ocelots, which
+//! `AdultFelineModel` and `BabyFelineModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, dye_tint};
 use crate::math::angle::{self, PI};
@@ -6,12 +6,12 @@ use crate::world::entity::living::LivingRenderState;
 use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::model_part::{Cube, Pose};
 
-/// `Mth.rotLerp` on angles in radians: plain interpolation, as a wrap by
+/// `Mth.rotLerp` on angles in radians.
 fn mix(t: f32, from: f32, to: f32) -> f32 {
     from + t * (to - from)
 }
 
-/// `AdultFelineModel.createBodyMesh(g)` at 64x32. The collar layer is built
+/// `AdultFelineModel.createBodyMesh(g)` at 64x32.
 pub fn adult(g: f32) -> LayerDefinition {
     let tail_g = -0.02;
     let mut root = PartDefinition::root();
@@ -308,7 +308,7 @@ fn lie_baby(parts: &FelineParts, pose: &mut ModelPose, cat: &FelinePose) {
     tail.offset.z -= 0.25;
 }
 
-/// `Cat.getLieDownAmount` and friends: one tick of
+/// `Cat.getLieDownAmount` and friends.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Amounts {
     pub lie_down: f32,

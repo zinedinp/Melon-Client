@@ -1,4 +1,4 @@
-//! Vanilla `LevelLoadingScreen`: "Loading terrain..." over what the new
+//! Vanilla `LevelLoadingScreen`.
 
 use crate::game::LoadingReason;
 use crate::gui::background;
@@ -9,7 +9,7 @@ use crate::math::argb;
 
 pub struct LevelLoadingScreen {
     reason: LoadingReason,
-    /// The nether portal's sprite, painted over the whole screen for
+    /// The nether portal's sprite, painted over the whole screen for a portal journey.
     portal: Option<AtlasSprite>,
 }
 
@@ -40,7 +40,7 @@ impl Screen for LevelLoadingScreen {
         true
     }
 
-    /// `extractBackground`: the portal's sprite for a nether portal, the
+    /// `extractBackground`.
     fn draw(&self, ui: &mut Ui, _ctx: &ScreenContext) {
         let (width, height) = (ui.width, ui.height);
         let white = ui.assets.white;

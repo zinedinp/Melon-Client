@@ -1,4 +1,4 @@
-//! What the blocks and fluids around the player do to its motion after
+//! What the blocks and fluids around the player do to its motion after a move.
 
 use super::PlayerState;
 use crate::world::fluid::FluidKind;
@@ -13,12 +13,12 @@ const LAVA_CURRENT: f64 = 0.002_333_333_333_333_333_5;
 /// The least a current moves something that is almost still.
 const MIN_CURRENT: f64 = 0.004_500_000_000_000_000_5;
 
-/// `WebBlock`, `SweetBerryBushBlock` and `PowderSnowBlock`'s
+/// `WebBlock`, `SweetBerryBushBlock` and `PowderSnowBlock`'s slowdowns.
 const COBWEB: DVec3 = DVec3::new(0.25, 0.05_f32 as f64, 0.25);
 const BERRY_BUSH: DVec3 = DVec3::new(0.8_f32 as f64, 0.75, 0.8_f32 as f64);
 const POWDER_SNOW: DVec3 = DVec3::new(0.9_f32 as f64, 1.5, 0.9_f32 as f64);
 
-/// `CurrentAccumulator.applyTo` for the player: the average flow, scaled,
+/// `CurrentAccumulator.applyTo` for the player.
 pub(super) fn current_impulse(
     flow: DVec3,
     count: u32,
@@ -72,7 +72,7 @@ fn block_of(level: &Level, cell: (i32, i32, i32)) -> &'static Block {
     Block::from_state_id(BlockStateId::new_or_air(id))
 }
 
-/// `HoneyBlock.isSlidingDown` and `doSlideMovement` on `velocity`, for a
+/// `HoneyBlock.isSlidingDown` and `doSlideMovement` on `velocity`.
 pub(super) fn honey_slide(
     velocity: DVec3,
     feet: DVec3,
@@ -128,7 +128,7 @@ impl PlayerState {
         heights
     }
 
-    /// The blocks the player stands in after a move: stuck multipliers for
+    /// The blocks the player stands in after a move.
     pub(super) fn apply_block_effects(&mut self, level: &Level) {
         if self.spectator {
             return;

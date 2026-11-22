@@ -1,4 +1,4 @@
-//! Vanilla entity blob shadows (`EntityRenderer.extractShadow` plus
+//! Vanilla entity blob shadows (`EntityRenderer.extractShadow`).
 
 use glam::Vec3;
 use pumpkin_data::BlockStateId;

@@ -1,4 +1,4 @@
-//! Block tints sampled while meshing (vanilla `ClientLevel.calculateBlockTint`,
+//! Block tints sampled while meshing (vanilla `ClientLevel.calculateBlockTint`).
 
 use std::sync::Arc;
 
@@ -87,7 +87,7 @@ pub struct TintSettings {
     fallback: BiomeTint,
     /// `Options.biomeBlendRadius`.
     pub blend: u8,
-    /// `BiomeManager.biomeZoomSeed` (the login's hashed seed): biome
+    /// `BiomeManager.biomeZoomSeed` (the login's hashed seed).
     zoom_seed: Option<i64>,
 }
 
@@ -115,7 +115,7 @@ impl TintSettings {
         )
     }
 
-    /// A sampler reading biomes through `noise_biome`: the registry index
+    /// A sampler reading biomes through `noise_biome`.
     pub fn sampler<'a>(
         &'a self,
         noise_biome: impl Fn(i32, i32, i32) -> u16 + 'a,
@@ -165,7 +165,7 @@ impl TintSettings {
 /// Not a biome index: not looked up yet.
 const NO_BIOME: u16 = u16::MAX;
 
-/// The biomes at one block height, over the layers' columns: every colour
+/// The biomes at one block height, over the layers' columns.
 struct BiomeRow {
     y: i32,
     /// The [`CornerRow`]s of the parent cells' height and the one above.
@@ -174,7 +174,7 @@ struct BiomeRow {
     ids: Box<[u16]>,
 }
 
-/// The quart corners at one height (see [`biome_zoom`]): each is shared by
+/// The quart corners at one height (see [`biome_zoom`]).
 struct CornerRow {
     qy: i32,
     /// `quart_side × quart_side`, z-major.
@@ -183,7 +183,7 @@ struct CornerRow {
     parents: Box<[u16]>,
 }
 
-/// A parent cell whose corners hold more than one biome: its blocks pick
+/// A parent cell whose corners hold more than one biome.
 const MIXED: u16 = u16::MAX - 1;
 
 #[derive(Clone, Copy)]
@@ -201,7 +201,7 @@ impl Corner {
     };
 }
 
-/// The grid geometry the rows share: block columns from the chunk less
+/// The grid geometry the rows share.
 #[derive(Clone, Copy)]
 struct Grid {
     /// Block coordinates of column `(0, 0)`.
@@ -309,10 +309,10 @@ const UNSET: u32 = 0;
 /// Not a [`spread`] colour: a column not worked out yet.
 const NO_COLUMN: u64 = u64::MAX;
 
-/// Bits per channel in a [`spread`] colour: room for the sum of a blend's
+/// Bits per channel in a [`spread`] colour.
 const CHANNEL_BITS: u32 = 21;
 
-/// An RGB colour with each channel in its own [`CHANNEL_BITS`] field, so
+/// An RGB colour with each channel in its own [`CHANNEL_BITS`] field, so sums don't overflow.
 #[inline]
 fn spread(color: u32) -> u64 {
     let [r, g, b] = colormap::unpack(color).map(u64::from);
@@ -323,7 +323,7 @@ fn spread(color: u32) -> u64 {
 struct Layer {
     source: Source,
     y: i32,
-    /// Unblended colours of the chunk's columns and the blend margin
+    /// Unblended colours of the chunk's columns and the blend margin.
     columns: Box<[u64]>,
     /// Blended colours of the chunk's 16×16 columns, z-major.
     blended: Box<[u32; 256]>,
@@ -338,7 +338,7 @@ pub struct TintSampler<'a> {
     last: usize,
     ids: Vec<BiomeRow>,
     corners: Vec<CornerRow>,
-    /// The north-west block of the chunk the layers cover: the first one
+    /// The north-west block of the chunk the layers cover.
     origin: Option<[i32; 2]>,
 }
 
@@ -389,7 +389,7 @@ impl TintSampler<'_> {
         self.last
     }
 
-    /// `calculateBlockTint` for chunk column `(lx, lz)`, its columns read
+    /// `calculateBlockTint` for chunk column `(lx, lz)`.
     fn blend_in_layer(&mut self, layer: usize, origin: [i32; 2], lx: i32, lz: i32) -> u32 {
         let radius = i32::from(self.settings.blend);
         let grid = Grid::new(origin, radius);

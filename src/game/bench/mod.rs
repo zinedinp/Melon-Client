@@ -1,4 +1,4 @@
-//! `--bench`: the game plays itself through fixed phases in a fixed world
+//! `--bench`.
 
 pub mod nvml;
 pub mod report;
@@ -20,7 +20,7 @@ pub const WORLD_SEED: &str = "melon-bench";
 
 /// After this many ticks without new chunks or meshes, loading is done.
 const SETTLE_TICKS: u32 = 40;
-/// The share of the square of chunks around the player that loading waits
+/// The share of the square of chunks around the player that loading waits for.
 const EXPECTED_SHARE: f32 = 0.7;
 /// Loading gives up waiting after this long (2.5 minutes).
 const LOAD_TIMEOUT_TICKS: u32 = 3000;
@@ -166,7 +166,7 @@ impl Phase {
         .find(|phase| phase.name() == name)
     }
 
-    /// How long the phase runs; `None` for loading, which runs until the
+    /// How long the phase runs; `None` for loading, which runs until the chunks are there.
     fn ticks(self) -> Option<u32> {
         match self {
             Phase::Load | Phase::Done => None,
@@ -218,7 +218,7 @@ pub struct BenchDriver {
     phase: Phase,
     /// Ticks into the phase.
     ticks: u32,
-    /// The yaw the player had when loading was done; the turn and the
+    /// The yaw the player had when loading was done.
     yaw: f32,
     /// Ticks the [`LoadState`] stayed the same, while loading.
     settled: u32,
@@ -230,7 +230,7 @@ pub struct BenchDriver {
 }
 
 impl BenchDriver {
-    /// A run at this render distance, which says how many chunks loading
+    /// A run at this render distance, which says how many chunks loading waits for.
     pub fn new(render_distance: u8, scene: Scene, hold: Option<Phase>) -> Self {
         let side = f32::from(render_distance) * 2.0 + 1.0;
         Self {
@@ -250,7 +250,7 @@ impl BenchDriver {
         self.phase
     }
 
-    /// One tick: turns `player` and returns the keys held, and the sound to
+    /// One tick.
     pub fn tick(&mut self, player: &mut PlayerState, load: LoadState) -> BenchStep {
         self.ticks += 1;
         let done = match self.phase.ticks() {
@@ -328,7 +328,7 @@ impl BenchDriver {
         step
     }
 
-    /// Loading is done once the chunks around have come and nothing
+    /// Loading is done once the chunks around have come and nothing changed for a while.
     fn loaded(&mut self, load: LoadState) -> bool {
         let enough = load.chunks >= self.expected_chunks.max(1);
         if load == self.last_load && enough && load.meshing == 0 {

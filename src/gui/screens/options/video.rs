@@ -1,4 +1,4 @@
-//! Vanilla `VideoSettingsScreen`, cut to the options Melon has, in its
+//! Vanilla `VideoSettingsScreen`, cut to the options Melon has.
 
 use crate::cycle::Cycle;
 use crate::gui::screen::{ConfigChange, ScreenContext};
@@ -211,7 +211,7 @@ impl VideoOption {
         }
     }
 
-    /// Clicks a button option: toggles or cycles it. `max_gui_scale` is
+    /// Clicks a button option: toggles or cycles it.
     fn apply_press(self, config: &mut Config, max_gui_scale: u8) {
         if self.in_preset() {
             config.graphics_preset = GraphicsPreset::Custom;
@@ -240,7 +240,7 @@ impl VideoOption {
         }
     }
 
-    /// Whether changing it by hand makes the preset Custom
+    /// Whether changing it by hand makes the preset Custom.
     fn in_preset(self) -> bool {
         matches!(
             self,

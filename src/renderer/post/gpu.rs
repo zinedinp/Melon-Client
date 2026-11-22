@@ -1,4 +1,4 @@
-//! The GPU side of post chains: the render passes, samplers and descriptor
+//! The GPU side of post chains.
 
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -17,7 +17,7 @@ use crate::renderer::{pipeline, post::config::Pass};
 /// Most inputs a pass may have, and uniform blocks.
 const MAX_INPUTS: u32 = 16;
 const MAX_BLOCKS: u32 = 8;
-/// The room each block has in a pass's uniform buffer (a usual
+/// The room each block has in a pass's uniform buffer.
 const BLOCK_STRIDE: u64 = 256;
 /// Sets a pool holds, one pair per pass.
 const POOL_SETS: u32 = 512;
@@ -88,14 +88,14 @@ pub struct ChainSource {
     pub id: String,
     pub config: Config,
     pub shaders: Vec<Compiled>,
-    /// `textures/effect/<location>.png` by the input's location; a missing
+    /// `textures/effect/<location>.png` by the input's location.
     pub textures: HashMap<String, RgbaImage>,
 }
 
 /// What the chains and the entity outline share.
 pub(in crate::renderer) struct Post {
     pub format: vk::Format,
-    /// Colour only, cleared on begin and left readable: the chains' own
+    /// Colour only, cleared on begin and left readable.
     pub color_pass: vk::RenderPass,
     /// The swapchain's colour, written whole and handed back to present.
     pub main_pass: vk::RenderPass,
@@ -116,7 +116,7 @@ pub(in crate::renderer) struct Post {
     depth_view: vk::ImageView,
     /// The swapchain images as colour-only framebuffers of [`Self::main_pass`].
     pub main_framebuffers: Vec<vk::Framebuffer>,
-    /// Draws the entity outline onto `main` after its chain
+    /// Draws the entity outline onto `main` after its chain.
     pub blit: Option<(pipeline::Pass, vk::DescriptorSet)>,
     /// Whether `main` was drawn into since [`Self::snapshot`] was copied.
     pub main_dirty: Cell<bool>,
@@ -201,7 +201,7 @@ impl Post {
         })
     }
 
-    /// Builds (or, with `None`, drops) the outline blit for frames drawn in
+    /// Builds (or, with `None`, drops) the outline blit.
     pub unsafe fn set_blit(
         &mut self,
         device: &ash::Device,
@@ -303,7 +303,7 @@ impl Post {
             .flat_map(|chain| chain.textures.iter_mut().map(|e| &mut e.texture))
     }
 
-    /// Builds the chains of `sources`, with their textures (`uploaded`, in
+    /// Builds the chains of `sources`, with their textures.
     pub unsafe fn set_chains(
         &mut self,
         device: &ash::Device,

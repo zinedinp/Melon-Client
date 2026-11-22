@@ -1,4 +1,4 @@
-//! `EnchantmentScreen`: the three offers with their level cost, the clue in
+//! `EnchantmentScreen`.
 
 use super::{Frame, Galactic, Loader, MenuDraw, MenuScreen, MenuSprites};
 use crate::gui::hud::item_slot;
@@ -117,7 +117,7 @@ impl Sprites {
 #[derive(Default)]
 pub struct EnchantmentScreen;
 
-/// `getRandomName`: three or four words, as many as fit `max_width` of the
+/// `getRandomName`.
 fn random_name(random: &mut JavaRandom, galactic: &Galactic, max_width: f32) -> String {
     let count = random.next_int(2) + 3;
     let name = (0..count)
@@ -140,7 +140,7 @@ fn lapis(menu: &OpenContainer) -> i32 {
     i32::from(menu.slots[1].item_count) * i32::from(!menu.slots[1].is_empty())
 }
 
-/// Whether the player can take offer `i`: enough lapis and levels, or
+/// Whether the player can take offer `i`.
 fn affordable(menu: &OpenContainer, i: usize, level: i32, free: bool) -> bool {
     let cost = i32::from(menu.data(COSTS + i));
     let wanted = i as i32 + 1;

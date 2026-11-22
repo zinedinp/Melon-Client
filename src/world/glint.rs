@@ -15,12 +15,12 @@ pub const ARMOR_SCALE: f32 = 0.16;
 
 /// A 16px sprite on a 1024 atlas, the usual vanilla `items.png` packing.
 const SPRITE_ATLAS_SPAN: f32 = 16.0 / 1024.0;
-/// [`ITEM_SCALE`] on sprite-local UVs: 8 × 16/1024. Same density as vanilla
+/// [`ITEM_SCALE`] on sprite-local UVs: 8 × 16/1024.
 pub const ITEM_SPRITE_SCALE: f32 = ITEM_SCALE * SPRITE_ATLAS_SPAN;
 /// [`ENTITY_SCALE`] on sprite-local UVs.
 pub const ENTITY_SPRITE_SCALE: f32 = ENTITY_SCALE * SPRITE_ATLAS_SPAN;
 
-/// `ItemStack.hasFoil`: the override if the item has one, else a lodestone
+/// `ItemStack.hasFoil`.
 pub fn has_foil(stack: &ItemStack) -> bool {
     if stack.is_empty() {
         return false;

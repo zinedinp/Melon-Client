@@ -1,11 +1,11 @@
-//! The environment attributes at the camera (vanilla
+//! The environment attributes at the camera (vanilla `EnvironmentAttributeSystem`).
 
 use crate::math::argb;
 use crate::world::biome::{Biome, Biomes};
 use crate::world::clock::Environment as Day;
 use crate::world::dimension::{DimensionType, Rgb, Skybox, rgb};
 
-/// `EnvironmentAttributes` defaults, for what neither the dimension nor the
+/// `EnvironmentAttributes` defaults, for what neither the dimension nor the biome sets.
 const FOG_END: f32 = 1024.0;
 const SKY_FOG_END: f32 = 512.0;
 const CLOUD_FOG_END: f32 = 2048.0;
@@ -19,7 +19,7 @@ const BLOCK_LIGHT_TINT: Rgb = rgb(0xffd88c);
 const NIGHT_VISION_COLOR: Rgb = rgb(0x999999);
 const CLOUD_HEIGHT: f32 = 192.33;
 
-/// How the biome cells around a point count (`GaussianSampler`): the 6x6x6
+/// How the biome cells around a point count (`GaussianSampler`).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct BiomeMix {
     /// Each biome that counts, with its summed weight.
@@ -34,7 +34,7 @@ impl BiomeMix {
         }
     }
 
-    /// `GaussianSampler.sample` at `position`, asking `biome_at` for the
+    /// `GaussianSampler.sample` at `position`, asking `biome_at` for the biome of each cell.
     pub fn gaussian(
         position: glam::DVec3,
         mut biome_at: impl FnMut(i32, i32, i32) -> Option<u16>,
@@ -72,7 +72,7 @@ impl BiomeMix {
         }
     }
 
-    /// The weighted mean of what each biome says (`say`), where one that
+    /// The weighted mean of what each biome says (`say`), `base` where one says nothing.
     fn mean<T: Mix>(&self, biomes: &Biomes, base: T, say: impl Fn(&Biome) -> Option<T>) -> T {
         let mut total = 0.0;
         let mut sum = T::zero();
@@ -176,7 +176,7 @@ pub struct Atmosphere {
     /// `SKY_LIGHT_COLOR` and `SKY_LIGHT_FACTOR`, after the day.
     pub sky_light_color: Rgb,
     pub sky_light_factor: f32,
-    /// `SKY_LIGHT_LEVEL` (`0..=15`): how bright the sky counts for what
+    /// `SKY_LIGHT_LEVEL` (`0..=15`).
     pub sky_light_level: f32,
     pub night_vision_color: Rgb,
     /// `SUNRISE_SUNSET_COLOR`, ARGB as `0..1` red first.
@@ -190,7 +190,7 @@ pub struct Atmosphere {
 }
 
 impl Atmosphere {
-    /// The attributes in `dimension`, with the `mix` of biomes around and
+    /// The attributes in `dimension`, with the `mix` of biomes around and the time of `day`.
     pub fn resolve(dimension: &DimensionType, biomes: &Biomes, mix: &BiomeMix, day: &Day) -> Self {
         let a = &dimension.attributes;
         let has_day = dimension.skybox == Skybox::Overworld && !dimension.fixed_time;
@@ -234,7 +234,7 @@ impl Atmosphere {
         }
     }
 
-    /// `WeatherAttributes`: rain and thunder as layers over the values
+    /// `WeatherAttributes`.
     pub fn with_weather(mut self, rain: f32, thunder: f32) -> Self {
         let thunder = thunder.clamp(0.0, 1.0);
         let rain = rain.clamp(0.0, 1.0) - thunder;
@@ -296,7 +296,7 @@ impl Atmosphere {
         self.sunrise_sunset_color = [sunrise[0], sunrise[1], sunrise[2], a];
     }
 
-    /// `SKY_LIGHT_COLOR` times `SKY_LIGHT_FACTOR`: the sky light the
+    /// `SKY_LIGHT_COLOR` times `SKY_LIGHT_FACTOR`.
     pub fn sky_light(&self) -> Rgb {
         self.sky_light_color.map(|c| c * self.sky_light_factor)
     }

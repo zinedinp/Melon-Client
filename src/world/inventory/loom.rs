@@ -1,4 +1,4 @@
-//! What the loom offers and shows. The patterns a banner can take are
+//! What the loom offers and shows.
 
 use pumpkin_data::banner_pattern::BannerPattern;
 use pumpkin_data::data_component_impl::{BannerPatternsImpl, DyeImpl, ProvidesBannerPatternsImpl};
@@ -9,7 +9,7 @@ use pumpkin_data::tag::{self, RegistryKey};
 /// `BannerPatternLayers.MAX_PATTERNS`: a banner has no room past six.
 pub const MAX_LAYERS: usize = 6;
 
-/// The patterns the loom offers with `pattern_item` in the pattern slot,
+/// The patterns the loom offers with `pattern_item` in the pattern slot.
 pub fn selectable_patterns(pattern_item: &ItemStack) -> Vec<BannerPattern> {
     let names: &[&str] = if pattern_item.is_empty() {
         tag::BannerPattern::MINECRAFT_NO_ITEM_REQUIRED.0

@@ -1,4 +1,4 @@
-//! The status effects on the local player (vanilla `MobEffectInstance`s in
+//! The status effects on the local player (vanilla `MobEffectInstance`s).
 
 use pumpkin_data::data_component_impl::IDSetContent;
 use pumpkin_data::effect::{MobEffectCategory, StatusEffect};
@@ -47,7 +47,7 @@ impl ActiveEffect {
         u16::try_from(self.id).ok().and_then(StatusEffect::from_id)
     }
 
-    /// `MobEffect.isBeneficial`: harmful and neutral ones sit in the lower
+    /// `MobEffect.isBeneficial`.
     pub fn beneficial(&self) -> bool {
         self.data()
             .is_some_and(|e| matches!(e.category, MobEffectCategory::Beneficial))
@@ -130,7 +130,7 @@ impl ActiveEffects {
         self.list.len()
     }
 
-    /// One tick down (`MobEffectInstance.tickDownDuration`). The server
+    /// One tick down (`MobEffectInstance.tickDownDuration`).
     pub fn tick(&mut self) {
         for effect in &mut self.list {
             if effect.duration > 0 {
@@ -139,14 +139,14 @@ impl ActiveEffects {
         }
     }
 
-    /// `Ordering.natural().sortedCopy`: the order of the inventory's list
+    /// `Ordering.natural().sortedCopy`.
     pub fn sorted(&self) -> Vec<ActiveEffect> {
         let mut sorted = self.list.clone();
         sorted.sort_by(ActiveEffect::order);
         sorted
     }
 
-    /// The player's `MOVEMENT_SPEED` from the effects: Speed adds 20% per
+    /// The player's `MOVEMENT_SPEED` from the effects.
     pub fn speed_factor(&self) -> f32 {
         let level = |id| self.get(id).map(|e| (e.amplifier + 1) as f32);
         let mut factor = 1.0;
@@ -160,7 +160,7 @@ impl ActiveEffects {
     }
 }
 
-/// `StringUtil.formatTickDuration` at 20 ticks a second: `mm:ss`, or
+/// `StringUtil.formatTickDuration` at 20 ticks a second.
 pub fn format_duration(ticks: i32) -> String {
     let seconds = (ticks.max(0) / 20) as i64;
     let (minutes, seconds) = (seconds / 60, seconds % 60);

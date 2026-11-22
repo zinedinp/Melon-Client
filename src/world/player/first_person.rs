@@ -1,4 +1,4 @@
-//! `FirstPersonHandsAndItemsRenderer`'s transforms, in the camera's own
+//! `FirstPersonHandsAndItemsRenderer`'s transforms, in the camera's own space.
 
 use glam::{Mat4, Vec3};
 
@@ -24,7 +24,7 @@ fn rotate_z(degrees: f32) -> Mat4 {
     Mat4::rot_z_deg(degrees)
 }
 
-/// `renderPlayerArm`: the bare arm, punching forward as it swings. Ends
+/// `renderPlayerArm`: the bare arm, punching forward as it swings.
 pub fn player_arm(arm: Arm, lowered: f32, attack: f32) -> Mat4 {
     let invert = invert(arm);
     let sqrt_attack = attack.sqrt();
@@ -70,7 +70,7 @@ pub fn swing_item(arm: Arm, attack: f32) -> Mat4 {
         * rotate_y(invert * -45.0)
 }
 
-/// `applyEatTransform`: food brought to the mouth, bobbing while it is
+/// `applyEatTransform`.
 pub fn eat(arm: Arm, remaining: i32, partial: f32, duration: i32) -> Mat4 {
     let invert = invert(arm);
     let usage = remaining as f32 - partial + 1.0;
@@ -88,7 +88,7 @@ pub fn eat(arm: Arm, remaining: i32, partial: f32, duration: i32) -> Mat4 {
         * rotate_z(invert * jiggle * 30.0)
 }
 
-/// `ItemUseAnimation.BOW` after `applyItemArmTransform`: the bow turned
+/// `ItemUseAnimation.BOW` after `applyItemArmTransform`.
 pub fn draw_bow(arm: Arm, remaining: i32, partial: f32, duration: i32) -> Mat4 {
     let invert = invert(arm);
     let held = duration as f32 - (remaining as f32 - partial + 1.0);
@@ -104,7 +104,7 @@ pub fn draw_bow(arm: Arm, remaining: i32, partial: f32, duration: i32) -> Mat4 {
         * rotate_y(invert * -45.0)
 }
 
-/// `ItemUseAnimation.TRIDENT` after `applyItemArmTransform`: the trident
+/// `ItemUseAnimation.TRIDENT` after `applyItemArmTransform`.
 pub fn draw_trident(arm: Arm, remaining: i32, partial: f32, duration: i32) -> Mat4 {
     let invert = invert(arm);
     let held = duration as f32 - (remaining as f32 - partial + 1.0);

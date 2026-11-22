@@ -1,4 +1,4 @@
-//! A host-visible staging buffer per frame in flight, mapped for its
+//! A host-visible staging buffer per frame in flight, mapped for its whole life.
 
 use ash::vk;
 

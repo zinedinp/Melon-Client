@@ -7,7 +7,7 @@ use crate::i18n::languages::Language;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-/// `LanguageManager.getLanguages()`: `Language::ALL` entries that have a local
+/// `LanguageManager.getLanguages()`.
 pub fn available_languages(assets: &Assets) -> Vec<Language> {
     let mut languages: Vec<Language> = Language::ALL
         .iter()
@@ -21,7 +21,7 @@ pub fn available_languages(assets: &Assets) -> Vec<Language> {
     languages
 }
 
-/// Key to translation. Boxed strings: the table is never edited once
+/// Key to translation.
 type Strings = HashMap<Box<str>, Box<str>>;
 
 pub struct Lang {
@@ -29,11 +29,12 @@ pub struct Lang {
     pub language: Language,
     /// Translations as the files have them, placeholders and `%%` intact.
     strings: Strings,
-    /// The translations that contain `%%`, with it unescaped once at load
+    /// The translations that contain `%%`, with it unescaped once at load.
     unescaped: Strings,
 }
 
-/// Baked into the launcher (and the game overlay) so a published binary
+/// Baked into the launcher (and the game overlay) so a published binary has English and German
+/// without assets.
 const EMBEDDED_EN: &str = include_str!("../../lang/en_us.json");
 const EMBEDDED_DE: &str = include_str!("../../lang/de_de.json");
 
@@ -85,7 +86,7 @@ fn parse_lang(bytes: &[u8]) -> Option<Strings> {
     )
 }
 
-/// `ClientLanguage.loadFrom` for one language: `lang/<code>.json` in every
+/// `ClientLanguage.loadFrom` for one language.
 fn load_lang_stack(assets: &Assets, code: &str, strings: &mut Strings) {
     for namespace in crate::assets::namespaces(assets.root()) {
         let copies =
@@ -98,7 +99,7 @@ fn load_lang_stack(assets: &Assets, code: &str, strings: &mut Strings) {
     }
 }
 
-/// Zip-mod `assets/<ns>/lang/<code>.json`, even when pack discovery misses a
+/// Zip-mod `assets/<ns>/lang/<code>.json`, even when pack discovery misses a mod.
 fn load_extracted_mod_langs(assets: &Assets, code: &str, strings: &mut Strings) {
     for dir in pumpkin_mod::extracted_mods(&assets.game_dir().join("mods").join(".cache")) {
         merge_extracted_lang_dir(&dir, code, strings);
@@ -193,7 +194,7 @@ impl Lang {
         self.strings.get(key).map_or(key, |s| s)
     }
 
-    /// The untranslated pattern of `key`, placeholders and `%%` as they
+    /// The untranslated pattern of `key`, placeholders and `%%` as they are.
     pub fn raw_dynamic(&self, key: &str) -> Option<&str> {
         self.strings.get(key).map(|s| &**s)
     }
@@ -222,7 +223,7 @@ impl Lang {
     }
 }
 
-/// `String.format` for the two placeholders translations use: `%s` takes
+/// `String.format` for the two placeholders translations use.
 fn fill(pattern: &str, args: &[&str]) -> String {
     let mut out = String::with_capacity(pattern.len());
     let mut next = 0;

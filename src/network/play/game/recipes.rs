@@ -1,4 +1,4 @@
-//! The recipe packets: `ClientboundUpdateRecipesPacket`, the recipe book's
+//! The recipe packets.
 
 use std::collections::HashMap;
 
@@ -18,7 +18,7 @@ use crate::world::recipes::{ItemSet, RecipeDisplay, RecipeSets, SlotDisplay};
 pub enum RecipeEvent {
     /// `ClientboundUpdateRecipesPacket`.
     Update(RecipeSets),
-    /// `ClientboundRecipeBookAddPacket`: the entries with their flags
+    /// `ClientboundRecipeBookAddPacket`.
     BookAdd {
         entries: Vec<(Entry, u8)>,
         replace: bool,
@@ -27,7 +27,7 @@ pub enum RecipeEvent {
     BookRemove(Vec<RecipeId>),
     /// `ClientboundRecipeBookSettingsPacket`.
     BookSettings(BookSettings),
-    /// `ClientboundPlaceGhostRecipePacket`: show where the recipe's items go
+    /// `ClientboundPlaceGhostRecipePacket`.
     Ghost {
         container: i32,
         display: RecipeDisplay,
@@ -92,7 +92,7 @@ impl Reader<'_> {
         }
     }
 
-    /// `ByteBufCodecs.holderSet(ITEM)`: 0 and a tag name, or the count plus
+    /// `ByteBufCodecs.holderSet(ITEM)`.
     pub fn item_set(&mut self) -> Result<ItemSet> {
         let n = self.var_int()?;
         if n == 0 {
@@ -106,7 +106,7 @@ impl Reader<'_> {
         Ok(ItemSet::Items(items))
     }
 
-    /// `ItemStackTemplate.STREAM_CODEC`: item, count, then the components
+    /// `ItemStackTemplate.STREAM_CODEC`.
     pub(crate) fn item_template(&mut self) -> Result<ItemStack> {
         let item = self.var_int()?;
         let count = self.var_int()?;

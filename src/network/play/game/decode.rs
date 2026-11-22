@@ -18,7 +18,7 @@ const GAME_EVENT_NO_RESPAWN_BLOCK: u8 = 0;
 /// Tells the client to skip the death screen's delay; the screen has none.
 const GAME_EVENT_IMMEDIATE_RESPAWN: u8 = 11;
 const GAME_EVENT_LEVEL_CHUNKS_LOAD_START: u8 = 13;
-/// Win game, demo, arrow hit, puffer sting, elder guardian, limited
+/// Win game, demo, arrow hit, puffer sting, elder guardian, limited crafting: not shown.
 const GAME_EVENT_UNSHOWN: [u8; 6] = [4, 5, 6, 9, 10, 12];
 const GAME_EVENT_START_RAINING: u8 = 1;
 const GAME_EVENT_STOP_RAINING: u8 = 2;
@@ -26,7 +26,7 @@ const GAME_EVENT_CHANGE_GAME_MODE: u8 = 3;
 const GAME_EVENT_RAIN_LEVEL_CHANGE: u8 = 7;
 const GAME_EVENT_THUNDER_LEVEL_CHANGE: u8 = 8;
 
-/// The player-state packets, decoded. Chunks and teleports are in
+/// The player-state packets, decoded.
 pub enum GameEvent {
     /// `ClientboundSetHealthPacket`.
     Health {
@@ -54,7 +54,7 @@ pub enum GameEvent {
         slot: i16,
         item: ItemStack,
     },
-    /// `ClientboundContainerSetDataPacket`: one number of a menu's
+    /// `ClientboundContainerSetDataPacket`.
     ContainerData {
         container: i32,
         id: i16,
@@ -67,7 +67,7 @@ pub enum GameEvent {
     },
     /// `ClientboundSetCursorItemPacket`: the stack held by the mouse.
     CursorItem(ItemStack),
-    /// `ClientboundSetPlayerInventoryPacket`, by `Inventory` index (0-8
+    /// `ClientboundSetPlayerInventoryPacket`, by `Inventory` index.
     PlayerInventorySlot {
         slot: i32,
         item: ItemStack,
@@ -81,7 +81,7 @@ pub enum GameEvent {
         yaw: f32,
         pitch: f32,
     },
-    /// `ClientboundGameEventPacket` `NO_RESPAWN_BLOCK_AVAILABLE`: the bed
+    /// `ClientboundGameEventPacket` `NO_RESPAWN_BLOCK_AVAILABLE`.
     NoRespawnBlock,
     /// A packet Melon reads and has no use for yet.
     Ignored,
@@ -94,7 +94,7 @@ pub enum GameEvent {
     /// Difficulty, spawn, distances and tick rate.
     Level(LevelSetting),
     GameMode(GameMode),
-    /// `ClientboundSetEntityMotionPacket`: an entity's new velocity, per
+    /// `ClientboundSetEntityMotionPacket`.
     EntityMotion {
         entity_id: i32,
         velocity: [f64; 3],
@@ -103,37 +103,37 @@ pub enum GameEvent {
     Sound(super::sound::ServerSound),
     /// `ClientboundLevelEventPacket`.
     LevelEvent(super::sound::LevelEvent),
-    /// `ClientboundExplodePacket`: the blast, its sound, and the push this
+    /// `ClientboundExplodePacket`.
     Explosion(super::sound::Explosion),
     /// `ClientboundLevelParticlesPacket`.
     Particles(crate::particle::server::LevelParticles),
-    /// `ClientboundAnimatePacket`: `action` 0 wakes up, 1 and 2 are
+    /// `ClientboundAnimatePacket`.
     Animate {
         entity: i32,
         action: u8,
     },
     /// `ClientboundBlockUpdatePacket` and `ClientboundSectionBlocksUpdatePacket`:
     BlocksChanged(Vec<([i32; 3], u16)>),
-    /// `ClientboundBlockChangedAckPacket`: the server has dealt with every
+    /// `ClientboundBlockChangedAckPacket`.
     BlockChangedAck(i32),
-    /// `ClientboundBlockEventPacket`: a block's animation trigger, such as a
+    /// `ClientboundBlockEventPacket`.
     BlockEvent {
         pos: [i32; 3],
         action: u8,
         param: u8,
     },
-    /// `ClientboundBlockEntityDataPacket`: a block entity's new tag, of
+    /// `ClientboundBlockEntityDataPacket`.
     BlockEntityData {
         pos: [i32; 3],
         head: Option<crate::world::head_profile::HeadProfile>,
     },
-    /// `ClientboundBlockDestructionPacket`: how far `breaker` has broken
+    /// `ClientboundBlockDestructionPacket`.
     BlockDestruction {
         breaker: i32,
         pos: [i32; 3],
         stage: i32,
     },
-    /// `ClientboundRespawnPacket`, after death or a dimension change. The
+    /// `ClientboundRespawnPacket`, after death or a dimension change.
     Respawn {
         /// The dimension type's index in the registry.
         dimension_id: i32,
@@ -149,7 +149,7 @@ pub enum GameEvent {
         /// `CommonPlayerSpawnInfo.seed`: the new level's `BiomeManager` seed.
         hashed_seed: i64,
     },
-    /// A `Login` packet in the middle of play (a server that moves its
+    /// A `Login` packet in the middle of play (a server that moves its players).
     Login {
         entity_id: i32,
         dimension_id: i32,
@@ -164,12 +164,12 @@ pub enum GameEvent {
         flying_speed: f32,
         walking_speed: f32,
     },
-    /// `ClientboundEntityEventPacket` 24-28 for this player: its permission
+    /// `ClientboundEntityEventPacket` 24-28 for this player.
     PermissionLevel {
         entity_id: i32,
         level: u8,
     },
-    /// `ClientboundPlayerInfoUpdatePacket`: players added to or changed in
+    /// `ClientboundPlayerInfoUpdatePacket`.
     PlayerInfo(Vec<PlayerInfoUpdate>),
     /// `ClientboundPlayerInfoRemovePacket`.
     PlayersRemoved(Vec<uuid::Uuid>),
@@ -203,7 +203,7 @@ pub enum GameEvent {
         entity_id: i32,
         effect: i32,
     },
-    /// `ClientboundMountScreenOpenPacket`: the inventory of the mount
+    /// `ClientboundMountScreenOpenPacket`.
     OpenMount {
         container: i32,
         columns: i32,
@@ -215,13 +215,14 @@ pub enum GameEvent {
         window_type: i32,
         title: crate::component::Component,
     },
-    /// `ClientboundContainerClosePacket`. Vanilla closes the current screen
+    /// `ClientboundContainerClosePacket`.
     ContainerClose {
         container: i32,
     },
 }
 
-/// One player's entry of `ClientboundPlayerInfoUpdatePacket`; each field is
+/// One player's entry of `ClientboundPlayerInfoUpdatePacket`; each field is set only by its
+/// action.
 #[derive(Clone, Debug, Default)]
 pub struct PlayerInfoUpdate {
     pub uuid: uuid::Uuid,
@@ -620,7 +621,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
 }
 
 impl Reader<'_> {
-    /// `ItemStack.OPTIONAL_STREAM_CODEC`, through Pumpkin's decoder: its data
+    /// `ItemStack.OPTIONAL_STREAM_CODEC`, through Pumpkin's decoder.
     pub fn merchant_offers(&mut self) -> Result<Offers> {
         let count = self.var_int()?.clamp(0, 256) as usize;
         let mut offers = Vec::with_capacity(count);
@@ -661,7 +662,7 @@ impl Reader<'_> {
         })
     }
 
-    /// `ItemCost.STREAM_CODEC`: the item, how many, and the components it
+    /// `ItemCost.STREAM_CODEC`.
     fn item_cost(&mut self) -> Result<ItemStack> {
         let id = self.var_int()?;
         let count = self.var_int()?.clamp(1, 99);
@@ -686,7 +687,7 @@ mod tests {
     use pumpkin_protocol::codec::lp_vector_3d::LpVector3d;
     use pumpkin_util::math::vector3::Vector3;
 
-    /// Pumpkin's writer, read back: a zero velocity is one byte, a real one
+    /// Pumpkin's writer, read back.
     #[test]
     fn packed_velocities_round_trip() {
         for velocity in [[0.0, 0.0, 0.0], [0.4, 0.36, -0.1], [-7.5, 2.0, 12.25]] {

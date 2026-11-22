@@ -1,4 +1,4 @@
-//! `ClientboundUpdateRecipesPacket`: `ClientRecipeContainer`. The sets say
+//! `ClientboundUpdateRecipesPacket`: `ClientRecipeContainer`.
 
 use std::collections::HashMap;
 
@@ -57,7 +57,7 @@ pub struct StonecutterOption {
 pub struct RecipeSets {
     sets: HashMap<String, PropertySet>,
     stonecutter: Vec<StonecutterOption>,
-    /// Whether an update came at all, so callers can tell "the server
+    /// Whether an update came at all.
     received: bool,
 }
 
@@ -74,7 +74,7 @@ impl RecipeSets {
         self.received
     }
 
-    /// `set`'s test of `stack`; with no update yet, every non-empty stack
+    /// `set`'s test of `stack`; with no update yet, every non-empty stack passes.
     pub fn accepts(&self, set: &str, stack: &ItemStack) -> bool {
         if !self.received {
             return !stack.is_empty();
@@ -86,7 +86,7 @@ impl RecipeSets {
         self.sets.get(name)
     }
 
-    /// `SingleInputSet.selectByInput`: what `input` cuts into, in the
+    /// `SingleInputSet.selectByInput`.
     pub fn stonecutter_options(&self, input: &ItemStack) -> Vec<&SlotDisplay> {
         if input.is_empty() {
             return Vec::new();

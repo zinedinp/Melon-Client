@@ -1,4 +1,4 @@
-//! Vanilla `CreativeModeTabs`: the creative inventory's tabs and the items
+//! Vanilla `CreativeModeTabs`.
 
 use std::borrow::Cow;
 use std::path::Path;
@@ -120,7 +120,7 @@ pub fn tabs() -> &'static [CreativeTab] {
     }
 }
 
-/// Read `data/<ns>/creative_tab.json` from extracted zip-mods and append
+/// Reads `data/<ns>/creative_tab.json` from extracted zip-mods and appends their tabs.
 pub fn apply_extracted_mods(extracted: impl IntoIterator<Item = impl AsRef<Path>>) {
     let extra: Vec<CreativeTab> = extracted
         .into_iter()
@@ -289,7 +289,7 @@ fn stack(name: &str) -> Option<ItemStack> {
     Some(ItemStack::new(1, intern_item(name)?))
 }
 
-/// Vanilla [`Item::from_registry_key`], else a leaked runtime item for a
+/// Vanilla [`Item::from_registry_key`], else a leaked runtime item for a mod's name.
 pub(crate) fn intern_item(name: &str) -> Option<&'static Item> {
     if name.is_empty() {
         return None;

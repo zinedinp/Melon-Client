@@ -1,4 +1,4 @@
-//! The menu background blur: a full-screen triangle sampling the frame, one
+//! The menu background blur.
 
 use ash::vk;
 

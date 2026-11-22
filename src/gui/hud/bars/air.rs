@@ -1,4 +1,4 @@
-//! `Hud.extractAirBubbles`: bubbles from the right, one for every tenth of
+//! `Hud.extractAirBubbles`.
 
 use super::Layout;
 use crate::gui::hud::{ICON, JavaRandom, PlayerStatus};

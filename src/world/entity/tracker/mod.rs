@@ -1,4 +1,4 @@
-//! The entities the server tracks for this client (vanilla
+//! The entities the server tracks for this client (vanilla `ClientLevel`'s entities).
 
 use std::collections::HashMap;
 
@@ -43,7 +43,7 @@ mod tick;
 pub use drive::{DriveInput, DrivenVehicle};
 pub use entities::Entities;
 
-/// `LivingEntity`'s interpolation and head lerp: three ticks to reach
+/// `LivingEntity`'s interpolation and head lerp.
 const LERP_STEPS: u32 = 3;
 /// A move farther than this jumps instead of gliding there.
 const SNAP_DISTANCE: f64 = 64.0;
@@ -137,11 +137,11 @@ pub struct ClientEntity {
     pub uuid: uuid::Uuid,
     pub kind: EntityKind,
     pub ty: &'static EntityType,
-    /// `VecDeltaCodec.base`: the last position the server sent, which
+    /// `VecDeltaCodec.base`.
     base: DVec3,
     pos: DVec3,
     prev_pos: DVec3,
-    /// `Entity.deltaMovement`, per tick: what an entity that simulates its
+    /// `Entity.deltaMovement`, per tick.
     velocity: DVec3,
     yaw: f32,
     prev_yaw: f32,
@@ -201,13 +201,13 @@ pub struct ClientEntity {
     flap_speed: f32,
     prev_flap_speed: f32,
     flapping: f32,
-    /// `swimAmount` now and a tick ago, and whether the swimming box is in
+    /// `swimAmount` now and a tick ago, and whether the swimming box is in water.
     swim_amount: f32,
     prev_swim_amount: f32,
     pub in_water: bool,
     /// Moved sideways this tick (`horizontalDistanceSqr > 1.0E-7`).
     pub moving: bool,
-    /// `AbstractCubeMob.squish`, its last tick's and `targetSquish`, and
+    /// `AbstractCubeMob.squish`, its last tick's and `targetSquish`.
     squish: f32,
     prev_squish: f32,
     target_squish: f32,
@@ -235,18 +235,18 @@ pub struct ClientEntity {
     pub display: Option<Box<display::DisplayState>>,
     /// An `Interaction`'s synced box and response flag.
     pub interaction: Option<interaction_box::InteractionBox>,
-    /// An item frame's facing (`Direction.get3DDataValue`, from the spawn
+    /// An item frame's facing (`Direction.get3DDataValue`, from the spawn data).
     pub hang: i32,
     pub frame_turn: i32,
-    /// `ItemEntity.bobOffs`: where in its bob and spin it starts, in
+    /// `ItemEntity.bobOffs`.
     pub bob_offs: f32,
     /// `Leashable.getLeashHolder`: the entity holding its lead, by id.
     pub leash_holder: Option<i32>,
-    /// A fishing bobber's player (`Projectile.getOwner`, the spawn
+    /// A fishing bobber's player (`Projectile.getOwner`, the spawn data).
     pub owner: Option<i32>,
     /// `isPickable`, from the type once rather than at every pick.
     pickable: bool,
-    /// What it rides (`getVehicle`), and who rides it (`getPassengers`), in
+    /// What it rides (`getVehicle`), and who rides it (`getPassengers`), in order.
     pub vehicle: Option<i32>,
     pub passengers: Vec<i32>,
     /// `Attributes.MAX_HEALTH`: the type's, until the server says more.
@@ -261,7 +261,7 @@ pub struct ClientEntity {
     /// `Attributes.NAME_TAG_DISTANCE` and `BELOW_NAME_DISTANCE`, in blocks.
     pub name_tag_distance: f32,
     pub below_name_distance: f32,
-    /// The body turn of the living vehicle it rides, last tick's and this
+    /// The body turn of the living vehicle it rides, last tick's and this tick's.
     vehicle_body: Option<(f32, f32)>,
     /// `EvokerFangs.lifeTicks` once the bite began (`clientSideAttackStarted`).
     pub fangs_life: Option<i32>,
@@ -620,7 +620,7 @@ fn type_attr(ty: &EntityType, id: i32, fallback: f32) -> f32 {
         .map_or(fallback, |(_, v)| *v as f32)
 }
 
-/// `Entity.isPickable`: living entities (only they have attributes),
+/// `Entity.isPickable`.
 fn pickable(ty: &EntityType) -> bool {
     !ty.attributes.is_empty()
         || ty.boat.is_some()

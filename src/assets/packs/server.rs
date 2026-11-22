@@ -1,4 +1,4 @@
-//! Resource packs a server sends (vanilla `DownloadedPackSource`,
+//! Resource packs a server sends (vanilla `DownloadedPackSource`).
 
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -14,7 +14,7 @@ const MAX_PACK_SIZE: u64 = 262_144_000;
 /// `DownloadedPackSource.MAX_KEPT_PACKS`: older downloads are deleted.
 const MAX_KEPT_PACKS: usize = 20;
 
-/// `ServerData.ServerPackStatus`: what the server list says to do with a
+/// `ServerData.ServerPackStatus`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Policy {
     Enabled,
@@ -87,7 +87,7 @@ pub struct User {
 pub enum Action {
     /// Show `PackConfirmScreen`.
     Prompt(PromptRequest),
-    /// The server's packs changed: rebuild the resources with
+    /// The server's packs changed.
     Reload,
     /// Leave the server with this translation key as the reason.
     Disconnect(&'static str),
@@ -155,7 +155,7 @@ fn manager() -> MutexGuard<'static, Option<Manager>> {
     MANAGER.lock().unwrap_or_else(|e| e.into_inner())
 }
 
-/// Before joining: where packs are cached, which saved server this is
+/// Before joining.
 pub fn begin(game_dir: &Path, server_address: Option<String>, policy: Policy, user: User) {
     let mut guard = manager();
     let old = guard.take();
@@ -176,7 +176,7 @@ pub fn begin(game_dir: &Path, server_address: Option<String>, policy: Policy, us
     });
 }
 
-/// The connection is up: statuses go out through `responder` from now on,
+/// The connection is up.
 pub fn attach(responder: Responder, close: Option<Box<dyn Fn() + Send>>) {
     if let Some(m) = manager().as_mut() {
         m.responder = Some(responder);
@@ -198,7 +198,7 @@ pub fn close_connection() {
     }
 }
 
-/// Left the server (`cleanupAfterDisconnect`): its packs come off. The game
+/// Left the server (`cleanupAfterDisconnect`): its packs come off.
 pub fn end() {
     if let Some(m) = manager().as_mut() {
         m.responder = None;
@@ -261,7 +261,7 @@ pub fn pop(id: Option<Uuid>) {
     }
 }
 
-/// The player answered `PackConfirmScreen`. Returns the server address
+/// The player answered `PackConfirmScreen`.
 pub fn answer_prompt(accept: bool) -> Option<(String, Policy)> {
     let mut guard = manager();
     let m = guard.as_mut()?;
@@ -315,7 +315,7 @@ pub fn poll() -> Option<Action> {
     None
 }
 
-/// The packs to stack on top of the player's, lowest first, opened from
+/// The packs to stack on top of the player's, lowest first, opened from the download cache.
 pub fn active_packs() -> Vec<Arc<Pack>> {
     let mut guard = manager();
     let Some(m) = guard.as_mut() else {
@@ -350,7 +350,7 @@ pub fn active_packs() -> Vec<Arc<Pack>> {
     out
 }
 
-/// The reload with [`active_packs`] is done: tell the server about the
+/// The reload with [`active_packs`] is done.
 pub fn reload_finished(ok: bool) {
     let mut guard = manager();
     let Some(m) = guard.as_mut() else {
@@ -381,7 +381,7 @@ impl Manager {
         }
     }
 
-    /// `ServerPackManager.pushPack`: replaces a pack with the same id, then
+    /// `ServerPackManager.pushPack`.
     fn push_pack(&mut self, id: Uuid, url: String, hash: Option<String>) {
         crate::probe::note("pack.server", &url, || {
             format!("id {id}, hash {}", hash.as_deref().unwrap_or("(none)"))
@@ -470,7 +470,7 @@ struct Download {
 }
 
 impl Download {
-    /// `HttpUtil.downloadFile`: a cached file with the right hash is used
+    /// `HttpUtil.downloadFile`.
     fn run(&self) -> anyhow::Result<PathBuf> {
         if let Some(hash) = &self.hash {
             let cached = self.dir.join(hash);
@@ -547,7 +547,7 @@ impl Download {
     }
 }
 
-/// `DownloadCacheCleaner.vacuumCacheDir`: keeps the `keep` most recently
+/// `DownloadCacheCleaner.vacuumCacheDir`.
 fn vacuum(root: &Path, keep: usize) {
     let mut files: Vec<(std::time::SystemTime, PathBuf)> = std::fs::read_dir(root)
         .into_iter()
