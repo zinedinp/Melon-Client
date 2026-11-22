@@ -151,11 +151,11 @@ fn main() -> anyhow::Result<()> {
         ..Report::default()
     };
     println!(
-        "Pipeline-Bench: {} ({} Threads), {}",
+        "Pipeline bench: {} ({} threads), {}",
         report.machine.cpu, report.machine.threads, report.git
     );
 
-    println!("\nStart");
+    println!("\nStartup");
     let assets = melon::assets::Assets::discover()?;
     let models = report.passes("startup.block_models_bake", 3, || {
         BlockModels::bake(assets.root(), Vec::new(), 16384).0
@@ -164,11 +164,11 @@ fn main() -> anyhow::Result<()> {
     let fluids = fluid_sprites(&models);
     icon_bake(&mut report, assets.root());
 
-    println!("\nWelt");
+    println!("\nWorld");
     let (spawn, chunks) = frozen_chunks(&mut report, args.fresh)?;
     report.count("world.chunks", chunks.len() as u64);
 
-    println!("\nParsing (Verbindungs-Thread)");
+    println!("\nParsing (connection thread)");
     let packets: Vec<Vec<u8>> = chunks.iter().map(encode_chunk).collect();
     report.count(
         "parse.packet_bytes",
@@ -221,7 +221,7 @@ fn main() -> anyhow::Result<()> {
     report.samples("parse.chunk_scan", "chunk", samples);
     report.count("parse.block_entities", block_entities);
 
-    println!("\nAnkunft (Hauptthread)");
+    println!("\nArrival (main thread)");
     let mut level = Level::default();
     let mut samples = Vec::new();
     for chunk in &chunks {
@@ -247,7 +247,7 @@ fn main() -> anyhow::Result<()> {
     mesh_parallel(&mut report, &chunks, &by_key, &context);
     let finished = mesh_pipeline(&mut report, &mut level, &models, fluids, spawn)?;
 
-    println!("\nCulling und Draw-Listen (Hauptthread, pro Frame)");
+    println!("\nCulling and draw lists (main thread, per frame)");
     let mut meshes = LevelMeshes::default();
     let mut next_id = 0;
     for mesh in finished {
@@ -259,7 +259,7 @@ fn main() -> anyhow::Result<()> {
     let surface = surface_y(&level, spawn.x.floor() as i32, spawn.z.floor() as i32);
     cull(&mut report, &level, &mut meshes, spawn, surface);
 
-    println!("\nBlock-Änderungen (Licht, dringendes Remesh)");
+    println!("\nBlock changes (light, urgent remesh)");
     edits(&mut report, &mut level, &models, fluids, spawn, surface)?;
 
     compare_and_save(&report, &args)
@@ -331,7 +331,7 @@ fn frozen_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec<
     if !fresh && let Ok(bytes) = std::fs::read(&path) {
         let (spawn, packets) = read_frozen(&bytes).context("chunks.bin unreadable; try --fresh")?;
         report.chunks = fingerprint(&bytes);
-        println!("  {} Chunks aus {}", packets.len(), path.display());
+        println!("  {} chunks from {}", packets.len(), path.display());
         let chunks = packets
             .iter()
             .map(|p| {
@@ -354,7 +354,7 @@ fn frozen_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec<
     std::fs::create_dir_all(OUT_DIR)?;
     std::fs::write(&path, &bytes)?;
     report.chunks = fingerprint(&bytes);
-    println!("  eingefroren nach {}", path.display());
+    println!("  frozen to {}", path.display());
     let (_, packets) = read_frozen(&bytes).expect("just written");
     let chunks = packets
         .iter()
@@ -447,7 +447,7 @@ fn receive_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec
             }
         }
         if let Some(e) = session.ended() {
-            bail!("Verbindung beendet: {e}");
+            bail!("connection closed: {e}");
         }
         if let Some(spawn) = spawn {
             let (cx, cz) = (spawn.x.floor() as i32 >> 4, spawn.z.floor() as i32 >> 4);
@@ -474,7 +474,7 @@ fn receive_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec
             }
         }
         if t.elapsed() > Duration::from_secs(180) {
-            bail!("nach 180 s erst {} Chunks", chunks.len());
+            bail!("only {} chunks after 180 s", chunks.len());
         }
         std::thread::sleep(Duration::from_millis(5));
     }
@@ -579,7 +579,7 @@ fn mesh_parallel(
         let single = *single.get_or_insert(best);
         let speedup = single / best;
         println!(
-            "  {:<34} {:>3} Threads: {:>8.1} Chunks/s  Speedup {:>4.2}x  Effizienz {:>3.0} %",
+            "  {:<34} {:>3} threads: {:>8.1} chunks/s  speedup {:>4.2}x  efficiency {:>3.0} %",
             "mesh.parallel",
             threads,
             chunks.len() as f64 / best,
@@ -610,7 +610,7 @@ fn mesh_pipeline(
             break;
         }
         if t.elapsed() > Duration::from_secs(60) {
-            bail!("Mesh-Pipeline nach 60 s nicht fertig");
+            bail!("mesh pipeline not done after 60 s");
         }
         std::thread::sleep(Duration::from_micros(250));
     }
@@ -863,25 +863,25 @@ fn compare_and_save(report: &Report, args: &Args) -> anyhow::Result<()> {
         .and_then(|s| serde_json::from_str(&s).ok());
     let mut problems = 0;
     match &baseline {
-        None => println!("\nKeine Baseline unter {BASELINE}."),
+        None => println!("\nNo baseline at {BASELINE}."),
         Some(base) => {
             println!(
-                "\nVergleich mit der Baseline ({}, {})",
+                "\nCompared with the baseline ({}, {})",
                 base.git, base.machine.cpu
             );
             if base.machine != report.machine {
-                println!("  ! Andere Maschine: Zeiten sind nicht vergleichbar, nur die Zählwerte.");
+                println!("  ! Other machine: only the counts compare, not the times.");
             }
             let same_machine = base.machine == report.machine;
             let same_chunks = base.chunks == report.chunks;
             if !same_chunks {
-                println!("  ! Andere eingefrorene Chunks: Zählwerte nicht vergleichbar.");
+                println!("  ! Other frozen chunks: the counts do not compare.");
             }
             let old: HashMap<&str, &Stage> =
                 base.stages.iter().map(|s| (s.name.as_str(), s)).collect();
             for stage in &report.stages {
                 let Some(before) = old.get(stage.name.as_str()) else {
-                    println!("  {:<34} neu", stage.name);
+                    println!("  {:<34} new", stage.name);
                     continue;
                 };
                 let ratio = stage.median_us / before.median_us.max(1e-9);
@@ -889,9 +889,9 @@ fn compare_and_save(report: &Report, args: &Args) -> anyhow::Result<()> {
                 let checked = same_machine && !stage.name.starts_with("world.");
                 let flag = if checked && ratio > 1.0 + args.tolerance && lost > NOISE_FLOOR_US {
                     problems += 1;
-                    "LANGSAMER"
+                    "SLOWER"
                 } else if checked && ratio < 1.0 - args.tolerance && -lost > NOISE_FLOOR_US {
-                    "schneller"
+                    "faster"
                 } else {
                     ""
                 };
@@ -907,22 +907,22 @@ fn compare_and_save(report: &Report, args: &Args) -> anyhow::Result<()> {
                 match base.counts.get(name) {
                     Some(&before) if before != value => {
                         problems += 1;
-                        println!("  {name:<34} {before} -> {value}  ABWEICHUNG");
+                        println!("  {name:<34} {before} -> {value}  CHANGED");
                     }
-                    None => println!("  {name:<34} neu: {value}"),
+                    None => println!("  {name:<34} new: {value}"),
                     _ => {}
                 }
             }
         }
     }
 
-    println!("\nAuffälligkeiten");
+    println!("\nAnomalies");
     let mut unusual = 0;
     for stage in &report.stages {
         if stage.n >= 20 && stage.max_us > 20.0 * stage.median_us && stage.max_us > 1000.0 {
             unusual += 1;
             println!(
-                "  {}: Ausreißer {} bei Median {}",
+                "  {}: outlier {} at median {}",
                 stage.name,
                 fmt_us(stage.max_us),
                 fmt_us(stage.median_us)
@@ -940,24 +940,24 @@ fn compare_and_save(report: &Report, args: &Args) -> anyhow::Result<()> {
         if efficiency < 0.33 {
             unusual += 1;
             println!(
-                "  Meshing skaliert schlecht: {:.0} % Effizienz auf {threads} Threads",
+                "  Meshing scales poorly: {:.0} % efficiency on {threads} threads",
                 efficiency * 100.0
             );
         }
     }
     if unusual == 0 {
-        println!("  keine");
+        println!("  none");
     }
 
     if args.save {
         std::fs::create_dir_all(Path::new(BASELINE).parent().expect("has a dir"))?;
         std::fs::write(BASELINE, json)?;
-        println!("\nAls Baseline gespeichert: {BASELINE}");
+        println!("\nSaved as the baseline: {BASELINE}");
     } else if problems > 0 {
-        println!("\n{problems} Regression(en) gegenüber der Baseline.");
+        println!("\n{problems} regression(s) against the baseline.");
         std::process::exit(1);
     } else if baseline.is_some() {
-        println!("\nKeine Regression gegenüber der Baseline.");
+        println!("\nNo regression against the baseline.");
     }
     Ok(())
 }
