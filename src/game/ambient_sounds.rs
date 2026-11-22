@@ -27,6 +27,22 @@ pub(super) struct Ambient {
     moodiness: f32,
 }
 
+impl Ambient {
+    /// A new `LocalPlayer`, with new ambient sound handlers. The rain's
+    /// timer is the level's and stays.
+    pub(super) fn respawned(&mut self) {
+        *self = Self {
+            rain_time: self.rain_time,
+            ..Self::default()
+        };
+    }
+
+    /// A new `ClientLevel`: its `rainSoundTime` starts over.
+    pub(super) fn new_level(&mut self) {
+        self.rain_time = 0;
+    }
+}
+
 /// `BiomeAmbientSoundsHandler.SKY_MOOD_RECOVERY_RATE`.
 const SKY_MOOD_RECOVERY_RATE: f32 = 0.001;
 
@@ -79,9 +95,14 @@ impl InWorld {
         let feet = self.player.feet().floor().as_ivec3();
         self.level
             .biome(feet.x, feet.y, feet.z)
-            .and_then(|id| self.biomes.biome(id))
+            .and_then(|id| self.level_info.biomes.biome(id))
             .and_then(|biome| biome.ambient_sounds.as_ref())
-            .or(self.dimension_type.attributes.ambient_sounds.as_ref())
+            .or(self
+                .level_info
+                .dimension_type
+                .attributes
+                .ambient_sounds
+                .as_ref())
     }
 
     /// `BiomeAmbientSoundsHandler.tick`, but for the loop: the additions and
@@ -130,7 +151,7 @@ impl InWorld {
             }
         }
         self.ambient.moodiness = moodiness;
-        self.sounds.extend(played);
+        self.audio.extend(played);
     }
 
     fn ambient_sound(
@@ -145,7 +166,7 @@ impl InWorld {
         sound.source = source;
         sound.volume = volume;
         sound.pitch = pitch;
-        self.sounds.push(sound);
+        self.audio.push(sound);
     }
 
     fn tick_underwater_sounds(&mut self) {
@@ -202,7 +223,7 @@ impl InWorld {
             let rains = self
                 .level
                 .biome(x, y, z)
-                .and_then(|id| self.biomes.biome(id))
+                .and_then(|id| self.level_info.biomes.biome(id))
                 .is_some_and(|biome| {
                     biome.precipitation() == crate::world::weather::Precipitation::Rain
                 });

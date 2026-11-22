@@ -118,7 +118,9 @@ impl InWorld {
         }
         let white = renderer.white_texture();
         for (entity, lead) in leads {
-            self.leads.draw(renderer, entity, lead, white, out);
+            self.entity_meshes
+                .leads
+                .draw(renderer, entity, lead, white, out);
         }
     }
 }

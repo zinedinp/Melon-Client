@@ -287,7 +287,7 @@ impl InWorld {
             hands,
             armor: self.own_armor(),
             light: [1.0; 3],
-            overlay: mobs::hurt_overlay(self.own_hurt > 0 || self.own_death > 0),
+            overlay: mobs::hurt_overlay(self.body.hurt > 0 || self.body.death > 0),
         };
         submit_avatar(assets, &avatar, IVec3::ZERO, RenderLayer::Entities, out);
         preview.view(scale, height)

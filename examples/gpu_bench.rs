@@ -275,6 +275,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                 let mesh = renderer.upload_mesh(&verts)?;
                 atmosphere_meshes.push(mesh);
                 atmosphere.push(EntityDraw {
+                    alpha: 1.0,
                     mesh,
                     atlas: white,
                     model: glam::Mat4::from_translation((anchor - anchor.floor()).as_vec3()),

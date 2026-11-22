@@ -10,6 +10,9 @@ mod serverbound;
 pub mod sound;
 
 pub use decode::{GameEvent, PlayerInfoUpdate, decode};
+
+/// `ClientboundRespawnPacket.KEEP_ENTITY_DATA`.
+pub const KEEP_ENTITY_DATA: u8 = 2;
 pub use entity::{
     ATTRIBUTE_ARMOR, ATTRIBUTE_BELOW_NAME_DISTANCE, ATTRIBUTE_JUMP_STRENGTH, ATTRIBUTE_MAX_HEALTH,
     ATTRIBUTE_MOVEMENT_SPEED, ATTRIBUTE_NAME_TAG_DISTANCE, ATTRIBUTE_SCALE, ATTRIBUTE_STEP_HEIGHT,

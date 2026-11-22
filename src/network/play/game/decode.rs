@@ -140,6 +140,9 @@ pub enum GameEvent {
         dimension_name: String,
         game_mode: GameMode,
         previous_game_mode: Option<GameMode>,
+        /// `ClientboundRespawnPacket.KEEP_ENTITY_DATA`: the new player takes
+        /// the old one's synced data (frozen ticks, air...).
+        keep_entity_data: bool,
     },
     /// A `Login` packet in the middle of play (a server that moves its
     Login {

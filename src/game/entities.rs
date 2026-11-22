@@ -43,6 +43,49 @@ pub(super) struct Avatar<'a> {
     pub overlay: f32,
 }
 
+/// The entities' own meshes beside their models, refilled every frame.
+#[derive(Default)]
+pub(super) struct EntityMeshes {
+    /// Blob shadows under the player and the entities.
+    pub(super) shadows: super::shadows::ShadowMeshes,
+    /// The leads drawn, one mesh each.
+    pub(super) leads: super::leads::LeadMeshes,
+    pub(super) fishing: super::fishing::FishingMeshes,
+    /// The orbs' and fireballs' camera-facing quads.
+    pub(super) sprites: entity_sprites::SpriteMeshes,
+    pub(super) beams: super::crystal_beams::BeamMeshes,
+    pub(super) paintings: super::paintings::PaintingMeshes,
+    pub(super) text_displays: super::text_displays::TextDisplayMeshes,
+    /// The mobs' part matrices from the frame before, for those standing
+    /// still.
+    pub(super) poses: PoseCache,
+}
+
+impl EntityMeshes {
+    /// Frees the meshes not drawn this frame.
+    pub(super) fn end_frame(&mut self, renderer: &mut Renderer) {
+        self.shadows.end_frame(renderer);
+        self.leads.end_frame(renderer);
+        self.fishing.end_frame(renderer);
+        self.paintings.end_frame(renderer);
+        self.sprites.end_frame(renderer);
+        self.beams.end_frame(renderer);
+        self.poses.end_frame();
+    }
+
+    /// Frees every mesh: the world is left or changes dimension.
+    pub(super) fn clear(&mut self, renderer: &mut Renderer) {
+        self.shadows.clear(renderer);
+        self.leads.clear(renderer);
+        self.fishing.clear(renderer);
+        self.sprites.clear(renderer);
+        self.beams.clear(renderer);
+        self.paintings.clear(renderer);
+        self.text_displays.clear(renderer);
+        self.poses.clear();
+    }
+}
+
 /// Where one entity's draws go: the block its positions are relative to,
 #[derive(Clone, Copy)]
 pub(super) struct Placed {
@@ -83,7 +126,7 @@ impl InWorld {
         if let EntityPacket::Hurt { id, yaw } = &packet
             && *id == own
         {
-            self.own_hurt_dir = *yaw;
+            self.body.hurt_dir = *yaw;
         }
         if let EntityPacket::Damage { id, damage } = &packet
             && *id == own
@@ -93,7 +136,7 @@ impl InWorld {
         if let EntityPacket::Hurt { id, .. } | EntityPacket::Damage { id, .. } = &packet
             && *id == own
         {
-            self.own_hurt = crate::world::entity::tracker::HURT_DURATION;
+            self.body.hurt = crate::world::entity::tracker::HURT_DURATION;
             return;
         }
         self.entities.apply(packet, own);
@@ -120,7 +163,7 @@ impl InWorld {
         let at = self.player.tick_eye();
         let mut sound = crate::audio::SoundInstance::of(event).at([at.x, at.y, at.z]);
         sound.pitch = (rand::random::<f32>() - rand::random::<f32>()) * 0.2 + 1.0;
-        self.sounds.push(sound);
+        self.audio.push(sound);
     }
 
     /// The items flying into hands move on, and their pickup sounds play
@@ -145,14 +188,14 @@ impl InWorld {
                 .at([sound.at.x, sound.at.y, sound.at.z]);
             instance.volume = 0.2;
             instance.pitch = (sound.jitter - 0.5) * 1.4 + 2.0;
-            self.sounds.push(instance);
+            self.audio.push(instance);
         }
     }
 
     /// `LivingEntityRenderState.deathTime` of the local player: the body
     pub(super) fn own_death_time(&self, partial: f32) -> f32 {
-        if self.own_death > 0 {
-            self.own_death as f32 + partial
+        if self.body.death > 0 {
+            self.body.death as f32 + partial
         } else {
             0.0
         }
@@ -329,7 +372,7 @@ impl InWorld {
     pub(super) fn shadow_light(&self) -> crate::world::shadow::ShadowLight {
         crate::world::shadow::ShadowLight {
             sky_light_level: self.effects.sky_light_level(),
-            ambient: self.dimension_type.ambient_light,
+            ambient: self.level_info.dimension_type.ambient_light,
         }
     }
 
@@ -365,7 +408,7 @@ impl InWorld {
                     && !entity.appearance.invisible()
                 {
                     let tick = entity.age_in_ticks(0.0) as i32;
-                    self.shadows.draw(
+                    self.entity_meshes.shadows.draw(
                         renderer,
                         &self.level,
                         entity.id,
@@ -391,7 +434,8 @@ impl InWorld {
                 continue;
             }
             if entity.kind == EntityKind::Painting {
-                self.paintings
+                self.entity_meshes
+                    .paintings
                     .draw(renderer, assets, &self.level, entity, out);
                 mark_glowing(glowing, first..out.len(), outline);
                 continue;
@@ -464,7 +508,7 @@ impl InWorld {
                 let at = block_at(entity);
                 if entity.kind.is_sprite() {
                     entity_sprites::submit(
-                        &mut self.sprites,
+                        &mut self.entity_meshes.sprites,
                         renderer,
                         assets,
                         entity,
@@ -488,7 +532,7 @@ impl InWorld {
                 } else {
                     submit_mob(
                         assets,
-                        &mut self.poses,
+                        &mut self.entity_meshes.poses,
                         entity,
                         &layers,
                         placed,
@@ -509,7 +553,7 @@ impl InWorld {
                     if entity.kind == EntityKind::SulfurCube {
                         submit_swallowed_block(
                             assets,
-                            &mut self.poses,
+                            &mut self.entity_meshes.poses,
                             entity,
                             placed,
                             partial,
@@ -518,7 +562,8 @@ impl InWorld {
                         );
                     }
                     if let Some((from, delta, time)) = self.crystal_beam(entity, partial) {
-                        self.beams
+                        self.entity_meshes
+                            .beams
                             .draw(renderer, assets, entity.id, from, delta, time, light, out);
                     }
                 }
@@ -527,7 +572,7 @@ impl InWorld {
             // `extractShadow`: none for an invisible entity, even one whose
             // armor still shows.
             if !entity.appearance.invisible() {
-                self.shadows.draw(
+                self.entity_meshes.shadows.draw(
                     renderer,
                     &self.level,
                     entity.id,
@@ -810,13 +855,13 @@ impl InWorld {
             hands,
             armor: self.own_armor(),
             light,
-            overlay: mobs::hurt_overlay(self.own_hurt > 0 || self.own_death > 0),
+            overlay: mobs::hurt_overlay(self.body.hurt > 0 || self.body.death > 0),
         };
         submit_avatar(assets, &avatar, origin, RenderLayer::Entities, out);
         if !spectator {
             // `LivingEntityRenderer.getShadowRadius`: times the `scale`
             // attribute.
-            self.shadows.draw(
+            self.entity_meshes.shadows.draw(
                 renderer,
                 &self.level,
                 OWN,

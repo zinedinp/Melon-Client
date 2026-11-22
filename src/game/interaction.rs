@@ -31,6 +31,23 @@ const DESTROY_DELAY: i32 = 5;
 const RIGHT_CLICK_DELAY: i32 = 4;
 /// `Minecraft.missTime` after punching at nothing.
 const MISS_TIME: i32 = 10;
+/// `Minecraft.missTime` while a screen is open: no attack starts until the
+/// key is let go (`continueAttack(false)` clears it).
+pub(super) const SCREEN_MISS_TIME: i32 = 10_000;
+
+/// The attack and use keys' state between ticks: `Minecraft`'s delays and
+/// `MultiPlayerGameMode`'s block breaking.
+#[derive(Default)]
+pub(super) struct Interaction {
+    /// `MultiPlayerGameMode.isDestroying` with the block and its progress.
+    pub(super) destroying: Option<DestroyTarget>,
+    /// `MultiPlayerGameMode.destroyDelay`.
+    pub(super) destroy_delay: i32,
+    /// `Minecraft.missTime`: after a punch at nothing, the attack key rests.
+    pub(super) miss_time: i32,
+    /// `Minecraft.rightClickDelay`.
+    pub(super) right_click_delay: i32,
+}
 
 /// What a hand's try at a right click came to (`InteractionResult`), as
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -52,27 +69,26 @@ pub(super) struct DestroyTarget {
 
 impl InWorld {
     pub(super) fn next_sequence(&mut self) -> i32 {
-        self.sequence += 1;
-        self.sequence
+        self.predictions.start_predicting()
     }
 
     /// Opens or closes the overlay for [`Self::open_container`] once a tick
     pub(super) fn apply_pending_container_overlay(&mut self, ui: &WorldContext) {
-        if self.pending_container_close {
-            self.pending_container_close = false;
+        if self.menus.pending_container_close {
+            self.menus.pending_container_close = false;
             if matches!(
                 self.overlay_kind(),
                 Some(OverlayKind::Inventory | OverlayKind::Creative | OverlayKind::Container)
             ) {
                 self.finish_overlay(ChatExit::Interrupted, ui, false);
             }
-            self.open_container = None;
+            self.menus.open_container = None;
         }
-        if !self.pending_container_overlay {
+        if !self.menus.pending_container_overlay {
             return;
         }
-        self.pending_container_overlay = false;
-        let Some(kind) = self.open_container.as_ref().map(|menu| menu.kind) else {
+        self.menus.pending_container_overlay = false;
+        let Some(kind) = self.menus.open_container.as_ref().map(|menu| menu.kind) else {
             return;
         };
         if self.overlay_kind() == Some(OverlayKind::Container) {
@@ -116,7 +132,10 @@ impl InWorld {
                 self.pick_block();
             }
         }
-        if self.keys.use_item && self.right_click_delay == 0 && self.hands.using.is_none() {
+        if self.keys.use_item
+            && self.interaction.right_click_delay == 0
+            && self.hands.using.is_none()
+        {
             self.start_use_item();
         }
         self.continue_attack(self.keys.attack && !instant);
@@ -125,7 +144,7 @@ impl InWorld {
     /// `MultiPlayerGameMode.getDestroyStage` into `destroyBlockProgress`:
     pub(super) fn update_own_crack(&mut self) {
         let own = self.joined.session.info.entity_id;
-        match &self.destroying {
+        match &self.interaction.destroying {
             Some(target) => {
                 let stage = if target.progress > 0.0 {
                     (target.progress * 10.0) as i32
@@ -218,7 +237,7 @@ impl InWorld {
     }
 
     pub(super) fn abort_destroy(&mut self) {
-        if let Some(target) = self.destroying.take() {
+        if let Some(target) = self.interaction.destroying.take() {
             self.joined.session.send_player_action_at(
                 PlayerAction::AbortDestroyBlock,
                 target.pos,
@@ -280,7 +299,7 @@ impl InWorld {
 
     /// `Minecraft.startAttack`: hits the entity looked at, starts breaking
     fn start_attack(&mut self) -> bool {
-        if self.miss_time > 0 {
+        if self.interaction.miss_time > 0 {
             return false;
         }
         if self.game_mode.current.is_spectator() {
@@ -313,7 +332,7 @@ impl InWorld {
             }
             None => {
                 if !self.game_mode.current.has_infinite_materials() {
-                    self.miss_time = MISS_TIME;
+                    self.interaction.miss_time = MISS_TIME;
                 }
                 self.hands.reset_attack_strength();
             }
@@ -326,9 +345,9 @@ impl InWorld {
     /// `Minecraft.continueAttack`: holding attack on a block keeps breaking
     fn continue_attack(&mut self, down: bool) {
         if !down {
-            self.miss_time = 0;
+            self.interaction.miss_time = 0;
         }
-        if self.miss_time > 0 || self.hands.using.is_some() {
+        if self.interaction.miss_time > 0 || self.hands.using.is_some() {
             return;
         }
         let hit = self
@@ -349,7 +368,7 @@ impl InWorld {
         self.joined.session.send_attack(entity);
         self.hands.reset_attack_strength();
         if self.game_mode.current.has_infinite_materials() {
-            self.destroy_delay = DESTROY_DELAY;
+            self.interaction.destroy_delay = DESTROY_DELAY;
         }
     }
 
@@ -370,13 +389,13 @@ impl InWorld {
                 face,
                 sequence,
             );
-            self.destroy_delay = DESTROY_DELAY;
+            self.interaction.destroy_delay = DESTROY_DELAY;
             return;
         }
         if self.same_destroy_target(pos) {
             return;
         }
-        if let Some(old) = self.destroying.take() {
+        if let Some(old) = self.interaction.destroying.take() {
             self.joined.session.send_player_action_at(
                 PlayerAction::AbortDestroyBlock,
                 old.pos,
@@ -389,7 +408,7 @@ impl InWorld {
         if progress >= 1.0 {
             self.destroy_block(pos);
         } else if !self.is_air(pos) {
-            self.destroying = Some(DestroyTarget {
+            self.interaction.destroying = Some(DestroyTarget {
                 pos,
                 face,
                 progress: 0.0,
@@ -406,12 +425,12 @@ impl InWorld {
     }
 
     fn continue_destroy(&mut self, pos: [i32; 3], face: u8) {
-        if self.destroy_delay > 0 {
-            self.destroy_delay -= 1;
+        if self.interaction.destroy_delay > 0 {
+            self.interaction.destroy_delay -= 1;
             return;
         }
         if self.game_mode.current.has_infinite_materials() {
-            self.destroy_delay = DESTROY_DELAY;
+            self.interaction.destroy_delay = DESTROY_DELAY;
             let sequence = self.next_sequence();
             self.destroy_block_in_creative(pos);
             self.joined.session.send_player_action_at(
@@ -427,12 +446,12 @@ impl InWorld {
             return;
         }
         if self.is_air(pos) {
-            self.destroying = None;
+            self.interaction.destroying = None;
             return;
         }
         let progress = self.miner().destroy_progress(self.block_at(pos));
         let (face_changed, finished, hit) = {
-            let Some(target) = self.destroying.as_mut() else {
+            let Some(target) = self.interaction.destroying.as_mut() else {
                 return;
             };
             target.progress += progress;
@@ -460,8 +479,8 @@ impl InWorld {
                 face,
                 sequence,
             );
-            self.destroying = None;
-            self.destroy_delay = DESTROY_DELAY;
+            self.interaction.destroying = None;
+            self.interaction.destroy_delay = DESTROY_DELAY;
         } else if face_changed {
             self.joined.session.send_player_action_at(
                 PlayerAction::ChangeDestroyDirection,
@@ -479,11 +498,14 @@ impl InWorld {
     /// registered the channel; elsewhere both run as usual.
     fn try_swap(&mut self) -> bool {
         let attack = self.keys.attack_clicked()
-            || self.keys.attack && self.destroy_delay == 0 && self.miss_time == 0;
-        let use_due = self.keys.use_clicked() || self.keys.use_item && self.right_click_delay == 0;
+            || self.keys.attack
+                && self.interaction.destroy_delay == 0
+                && self.interaction.miss_time == 0;
+        let use_due = self.keys.use_clicked()
+            || self.keys.use_item && self.interaction.right_click_delay == 0;
         if !attack
             || !use_due
-            || self.destroying.is_some()
+            || self.interaction.destroying.is_some()
             || self.game_mode.current.is_spectator()
             || self.hit_entity().is_some()
             || !self.server_channels.iter().any(|c| c == SWAP_CHANNEL)
@@ -526,14 +548,14 @@ impl InWorld {
             self.swing(hand);
             self.hands.item_used(hand);
         }
-        self.destroy_delay = DESTROY_DELAY;
-        self.right_click_delay = RIGHT_CLICK_DELAY;
+        self.interaction.destroy_delay = DESTROY_DELAY;
+        self.interaction.right_click_delay = RIGHT_CLICK_DELAY;
         true
     }
 
     /// `MultiPlayerGameMode.sameDestroyTarget`: still the same block with
     fn same_destroy_target(&self, pos: [i32; 3]) -> bool {
-        self.destroying.as_ref().is_some_and(|target| {
+        self.interaction.destroying.as_ref().is_some_and(|target| {
             target.pos == pos
                 && target
                     .item
@@ -552,10 +574,10 @@ impl InWorld {
 
     /// `Minecraft.startUseItem`: each hand in turn, on the block looked
     fn start_use_item(&mut self) {
-        if self.destroying.is_some() {
+        if self.interaction.destroying.is_some() {
             return;
         }
-        self.right_click_delay = RIGHT_CLICK_DELAY;
+        self.interaction.right_click_delay = RIGHT_CLICK_DELAY;
         let hit = self.hit_block();
         let entity = self.hit_entity();
         if self.game_mode.current.is_spectator() {
@@ -848,7 +870,7 @@ impl InWorld {
         }
         let creative = self.game_mode.current.has_infinite_materials();
         let click = {
-            let Some(menu) = self.open_container.as_mut() else {
+            let Some(menu) = self.menus.open_container.as_mut() else {
                 return;
             };
             if menu.id != container {
@@ -856,10 +878,10 @@ impl InWorld {
             }
             menu.click(slot, button, kind, creative, self.inventory.carried_mut())
         };
-        if let Some(menu) = &self.open_container {
+        if let Some(menu) = &self.menus.open_container {
             menu.copy_player_into(&mut self.inventory);
         }
-        let Some(menu) = &self.open_container else {
+        let Some(menu) = &self.menus.open_container else {
             return;
         };
         let changed: Vec<_> = click

@@ -185,14 +185,31 @@ pub fn max_zoom(
 /// `Camera.fovModifier`'s bounds.
 const FOV_MODIFIER_RANGE: (f32, f32) = (0.1, 1.5);
 
+/// `Camera.fovModifier` and `oldFovModifier`: the smoothed share of the
+/// field of view that sprinting, flying and aiming a bow take.
+pub(super) struct FovState {
+    modifier: f32,
+    old: f32,
+}
+
+impl Default for FovState {
+    fn default() -> Self {
+        Self {
+            modifier: 1.0,
+            old: 1.0,
+        }
+    }
+}
+
 impl InWorld {
     /// `Camera.tickFov`: the share of the field of view that sprinting,
     pub(super) fn tick_fov(&mut self, effect_scale: f32) {
         let target = self.target_fov_modifier(effect_scale);
-        self.fov_modifier_old = self.fov_modifier;
-        self.fov_modifier += (target - self.fov_modifier) * 0.5;
-        self.fov_modifier = self
-            .fov_modifier
+        self.fov.old = self.fov.modifier;
+        self.fov.modifier += (target - self.fov.modifier) * 0.5;
+        self.fov.modifier = self
+            .fov
+            .modifier
             .clamp(FOV_MODIFIER_RANGE.0, FOV_MODIFIER_RANGE.1);
     }
 
@@ -215,21 +232,21 @@ impl InWorld {
 
     /// `Camera.calculateFov`'s `fov * lerp(partialTicks, old, new)`.
     pub(super) fn fov_with_effects(&self, fov: f32, partial: f32) -> f32 {
-        fov * (self.fov_modifier_old + (self.fov_modifier - self.fov_modifier_old) * partial)
+        fov * (self.fov.old + (self.fov.modifier - self.fov.old) * partial)
     }
 
     /// `GameRenderer.bobHurt`: a dying camera rolls over to one side
     pub(super) fn hurt_bob(&self, strength: f32, partial: f32) -> Mat4 {
         let mut bob = Mat4::IDENTITY;
         if self.status.health <= 0.0 {
-            let duration = (self.own_death as f32 + partial).min(20.0);
+            let duration = (self.body.death as f32 + partial).min(20.0);
             bob *= Mat4::rot_z_deg(40.0 - 8000.0 / (duration + 200.0));
         }
-        let hurt = self.own_hurt as f32 - partial;
+        let hurt = self.body.hurt as f32 - partial;
         if hurt >= 0.0 {
             let hurt = hurt / crate::world::entity::tracker::HURT_DURATION as f32;
             let hurt = angle::sin(hurt * hurt * hurt * hurt * crate::math::angle::PI);
-            let direction = self.own_hurt_dir;
+            let direction = self.body.hurt_dir;
             bob *= Mat4::rot_y_deg(-direction)
                 * Mat4::rot_z_deg(-hurt * 14.0 * strength)
                 * Mat4::rot_y_deg(direction);

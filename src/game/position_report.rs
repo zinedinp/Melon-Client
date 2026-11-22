@@ -11,6 +11,32 @@ pub enum Report {
     StatusOnly,
 }
 
+/// What the server last heard of the local player: `LocalPlayer`'s
+/// `lastSentInput`, `wasSprinting` and position fields.
+#[derive(Default)]
+pub struct LastSent {
+    pub position: PositionReport,
+    pub input: crate::network::play::game::PlayerInput,
+    pub sprinting: bool,
+    /// Send input again even if the keys have not changed: after a teleport.
+    pub input_dirty: bool,
+}
+
+impl LastSent {
+    /// `handleRespawn`'s new `LocalPlayer`: `xLast`, `yRotLast`,
+    /// `positionReminder`... start over; the input and sprinting carry over
+    /// only under `KEEP_ENTITY_DATA` (`createPlayer(..., lastSentInput,
+    /// wasSprinting, ...)`).
+    pub fn respawned(&mut self, keep_entity_data: bool) {
+        let kept = std::mem::take(self);
+        if keep_entity_data {
+            self.input = kept.input;
+            self.sprinting = kept.sprinting;
+            self.input_dirty = kept.input_dirty;
+        }
+    }
+}
+
 /// What the server last heard (`xLast`, `yRotLast`, `lastOnGround`, ...).
 #[derive(Default)]
 pub struct PositionReport {

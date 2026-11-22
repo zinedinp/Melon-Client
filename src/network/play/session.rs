@@ -876,12 +876,14 @@ fn handle_play_packet(
         }
         game::id::CB_RESPAWN => {
             let spawn = login::read_spawn_info(&mut r)?;
+            let data_to_keep = r.u8()?;
             listener.enter(spawn.dimension_id);
             let event = game::GameEvent::Respawn {
                 dimension_id: spawn.dimension_id,
                 dimension_name: spawn.dimension_name,
                 game_mode: spawn.game_mode,
                 previous_game_mode: spawn.previous_game_mode,
+                keep_entity_data: data_to_keep & game::KEEP_ENTITY_DATA != 0,
             };
             (None, Play::Event(WorldEvent::Game(event)))
         }

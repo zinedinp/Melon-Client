@@ -123,14 +123,14 @@ impl InWorld {
                 },
                 painter,
                 inventory: &self.inventory,
-                container: self.open_container.as_ref(),
+                container: self.menus.open_container.as_ref(),
                 chat: &self.chat,
                 chat_settings: &config.chat,
                 lang,
                 size,
                 recipes: &self.recipes,
                 recipe_sets: &self.recipe_sets,
-                ghost: self.ghost_recipe.as_ref(),
+                ghost: self.menus.ghost_recipe.as_ref(),
                 experience_level: self.status.experience_level,
                 infinite_materials: self.game_mode.current.has_infinite_materials(),
                 entity_preview: self.preview.current,
@@ -183,7 +183,7 @@ impl InWorld {
             .map(|i| inventory.hotbar(i))
             .chain([&inventory.slots()[crate::world::inventory::OFFHAND_SLOT]])
             .all(&mut go);
-        if fixed && let Some(menu) = &self.open_container {
+        if fixed && let Some(menu) = &self.menus.open_container {
             let more = menu
                 .slots
                 .iter()
@@ -227,7 +227,7 @@ impl InWorld {
             pitch_degrees: self.player.pitch(),
             framebuffer: renderer.framebuffer_size(),
             device: renderer.device_info(),
-            dimension: &self.dimension,
+            dimension: &self.level_info.dimension,
             render: frame.render,
             mesh: self.level.mesh_stats(),
             mesh_memory: renderer.mesh_memory(),

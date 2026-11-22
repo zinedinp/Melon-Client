@@ -220,7 +220,11 @@ impl InWorld {
         if on(Entry::Biome)
             && let Some(biome) = self.level.biome(bx, by, bz)
         {
-            let name = self.biomes.name(biome).unwrap_or("[unregistered]");
+            let name = self
+                .level_info
+                .biomes
+                .name(biome)
+                .unwrap_or("[unregistered]");
             extras.biome = Some(format!("Biome: {name}"));
         }
         if on(Entry::LightLevels) {
@@ -271,7 +275,7 @@ impl InWorld {
             }
         }
         if on(Entry::SoundMood) {
-            let [used, streaming] = self.sound_channels;
+            let [used, streaming] = self.audio.channels;
             extras.sound_mood = Some(format!(
                 "Sounds: {used}/{} + {streaming}/{} (Mood {}%)",
                 crate::audio::stats::STATIC_CHANNELS,
@@ -281,7 +285,7 @@ impl InWorld {
         }
         if on(Entry::SoundCache) {
             // Whole MiB, rounded up.
-            let (buffers, bytes) = self.sound_cache;
+            let (buffers, bytes) = self.audio.cache;
             extras.sound_cache = Some(format!(
                 "Sound cache: {buffers} buffers, {} MiB",
                 bytes.div_ceil(1024 * 1024)

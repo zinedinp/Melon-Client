@@ -220,7 +220,7 @@ impl InWorld {
         lang: &Lang,
     ) {
         let partial = self.tick_time / crate::world::player::TICK;
-        for kept in self.text_displays.kept.values_mut() {
+        for kept in self.entity_meshes.text_displays.kept.values_mut() {
             kept.seen = false;
         }
         for entity in self.entities.iter() {
@@ -234,14 +234,14 @@ impl InWorld {
                 continue;
             }
             let style = state.style(entity.age_in_ticks(0.0) as i32, partial);
-            if let Some(kept) = self.text_displays.kept.get_mut(&entity.id)
+            if let Some(kept) = self.entity_meshes.text_displays.kept.get_mut(&entity.id)
                 && kept.revision == state.revision
                 && kept.style == style
             {
                 kept.seen = true;
                 continue;
             }
-            if let Some(old) = self.text_displays.kept.remove(&entity.id) {
+            if let Some(old) = self.entity_meshes.text_displays.kept.remove(&entity.id) {
                 TextDisplayMeshes::free(renderer, old);
             }
             let mut parts = Vec::new();
@@ -287,7 +287,7 @@ impl InWorld {
                     Err(e) => eprintln!("Text-Display-Mesh fehlgeschlagen: {e:#}"),
                 }
             }
-            self.text_displays.kept.insert(
+            self.entity_meshes.text_displays.kept.insert(
                 entity.id,
                 Kept {
                     revision: state.revision,
@@ -299,6 +299,7 @@ impl InWorld {
             );
         }
         let gone: Vec<i32> = self
+            .entity_meshes
             .text_displays
             .kept
             .iter()
@@ -306,7 +307,7 @@ impl InWorld {
             .map(|(&id, _)| id)
             .collect();
         for id in gone {
-            if let Some(kept) = self.text_displays.kept.remove(&id) {
+            if let Some(kept) = self.entity_meshes.text_displays.kept.remove(&id) {
                 TextDisplayMeshes::free(renderer, kept);
             }
         }
@@ -331,7 +332,12 @@ impl InWorld {
                     "no data"
                 } else if !visible.contains(&entity.id) {
                     "culled"
-                } else if !self.text_displays.kept.contains_key(&entity.id) {
+                } else if !self
+                    .entity_meshes
+                    .text_displays
+                    .kept
+                    .contains_key(&entity.id)
+                {
                     "no mesh"
                 } else {
                     "submitted"
@@ -361,7 +367,7 @@ impl InWorld {
             }
             let (Some(state), Some(kept)) = (
                 entity.display.as_deref(),
-                self.text_displays.kept.get(&entity.id),
+                self.entity_meshes.text_displays.kept.get(&entity.id),
             ) else {
                 continue;
             };

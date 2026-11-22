@@ -28,6 +28,7 @@ pub mod held_items;
 mod interaction;
 pub mod keys;
 mod leads;
+mod level_info;
 pub mod level_meshes;
 mod loading;
 mod nametags;
@@ -63,21 +64,17 @@ use crate::gui::hud::{Hud, PlayerStatus};
 use crate::gui::overlay::chat::Chat;
 use crate::gui::text::font::Font;
 use crate::join::Joined;
-use crate::network::play::game::PlayerInput;
-use crate::renderer::{EntityDraw, MeshId, Renderer};
-use crate::world::biome::Biomes;
+use crate::renderer::{EntityDraw, Renderer};
 use crate::world::block_entity::BlockEntities;
 use crate::world::block_tint::TintSettings;
 use crate::world::clock::ClientClocks;
 use crate::world::culling::occlusion::OcclusionCache;
-use crate::world::dimension::{DimensionType, DimensionTypes};
 use crate::world::game_mode::{GameMode, LocalGameMode};
 use crate::world::hotbars::Hotbars;
-use crate::world::inventory::{Inventory, OpenContainer};
+use crate::world::inventory::Inventory;
 use crate::world::level::Level;
 use crate::world::player::PlayerState;
 use camera::CameraMode;
-use interaction::DestroyTarget;
 use keys::Keys;
 use level_meshes::{BlockEntityMeshes, LevelMeshes};
 use world_resources::WorldResources;
@@ -124,22 +121,14 @@ pub struct InWorld {
     level: Level,
     /// The level's terrain on the GPU.
     meshes: LevelMeshes,
-    /// `Level.dimension().identifier()` from the join, for the F3 overlay.
-    dimension: String,
-    /// The dimension type's registry index, and the types the server
-    dimension_types: DimensionTypes,
-    /// The level's `DimensionType`: its height, light and environment.
-    dimension_type: DimensionType,
-    /// The server's biomes, for the colours of fog and sky.
-    biomes: Biomes,
-    /// The login's hashed seed: `BiomeManager`'s zoom seed.
-    hashed_seed: i64,
-    /// `LocalPlayer.waterVisionTime`: ticks the eyes have been under water.
-    water_vision_time: i32,
+    /// The dimension, its type, the biomes and the seed.
+    level_info: level_info::LevelInfo,
     /// What the ambient sounds remember between ticks.
     ambient: ambient_sounds::Ambient,
-    /// What this frame is cleared to: the fog's colour.
-    clear_color: [f32; 4],
+    /// The rain's fog and the colour the frame is cleared to.
+    fog: environment::FogState,
+    /// The clouds' and the weather's meshes.
+    sky: atmosphere::SkyMeshes,
     /// The new level after a respawn into another dimension, until it is
     loading: Option<loading::LevelLoad>,
     /// The loading finished since the screens were told.
@@ -149,6 +138,8 @@ pub struct InWorld {
     /// This frame's screen effects, drawn with the HUD.
     effects_frame: crate::gui::effects::ScreenEffects,
     player: PlayerState,
+    /// What `LocalPlayer` keeps of its body: hurt, death, frost, eyes.
+    body: vitals::OwnBody,
     inventory: Inventory,
     status: PlayerStatus,
     /// The game mode and the one before it.
@@ -174,28 +165,21 @@ pub struct InWorld {
     registries: crate::network::play::chat::command_suggestions::Registries,
     /// Saved creative hotbars.
     hotbars: Hotbars,
+    menus: overlay::Menus,
     hud: Hud,
     /// A spectator's hotbar menu.
     spectator_menu: crate::gui::overlay::spectator_menu::SpectatorMenu,
     /// The open inventory, chat or switcher, if any. The world keeps running.
     overlay: Option<Box<dyn crate::gui::overlay::Overlay>>,
-    /// The creative inventory's last tab, to reopen on.
-    creative_tab: usize,
     /// Real time not yet spent on whole ticks.
     tick_time: f32,
-    /// What the server last heard about the movement keys and sprinting.
-    sent_input: PlayerInput,
-    sent_sprinting: bool,
-    /// Send input again even if the keys have not changed: after a teleport
-    input_dirty: bool,
-    /// What the server last heard of the position and look.
-    position_report: position_report::PositionReport,
+    /// What the server last heard of the keys, sprinting and position.
+    sent: position_report::LastSent,
     /// What riding makes of the keys: the jump charge and the paddles last
     ride: riding::RideState,
-    /// `Entity.DATA_TICKS_FROZEN` of the local player.
-    frozen_ticks: i32,
     keys: Keys,
     camera_mode: CameraMode,
+    fov: camera::FovState,
     debug: DebugOverlay,
     /// F3+B and F3+G: what is drawn into the world.
     pub(crate) debug_view: debug::view::DebugView,
@@ -208,32 +192,12 @@ pub struct InWorld {
     block_entities: BlockEntities,
     /// Mobs, other players and every other entity the server tracks.
     entities: crate::world::entity::tracker::Entities,
-    /// Ticks the local player's body still flashes red (`hurtTime`).
-    own_hurt: i32,
-    /// Ticks since the local player died (`deathTime`), 0 while alive.
-    own_death: i32,
-    /// `Player.hurtDir`: where the last blow came from, for the camera's
-    own_hurt_dir: f32,
-    /// `Camera.fovModifier` and the tick before: the smoothed
-    fov_modifier: f32,
-    fov_modifier_old: f32,
     block_entity_meshes: BlockEntityMeshes,
+    entity_meshes: entities::EntityMeshes,
     /// Last frame's entity draws, refilled by the next (see [`Self::recycle`]).
     spare_entities: Vec<EntityDraw>,
     /// `ClientClockManager`: day/night from `SET_TIME`.
     clocks: ClientClocks,
-    /// Blob shadows under the player and the entities.
-    shadows: shadows::ShadowMeshes,
-    /// The leads drawn, one mesh each.
-    leads: leads::LeadMeshes,
-    fishing: fishing::FishingMeshes,
-    /// The orbs' and fireballs' camera-facing quads.
-    sprites: entity_sprites::SpriteMeshes,
-    beams: crystal_beams::BeamMeshes,
-    paintings: paintings::PaintingMeshes,
-    text_displays: text_displays::TextDisplayMeshes,
-    /// The mobs' part matrices from the frame before, for those standing
-    poses: crate::world::entity::pose_cache::PoseCache,
     /// Cracks on blocks being broken, the own and others'.
     cracks: block_cracks::BlockCracks,
     /// The particles, and what draws them.
@@ -254,56 +218,19 @@ pub struct InWorld {
     /// The recipes the server unlocked, and what its machines accept.
     recipes: crate::world::recipes::RecipeBook,
     recipe_sets: crate::world::recipes::RecipeSets,
-    /// The recipe the server asked the open menu to show (ghost items).
-    ghost_recipe: Option<(i32, crate::world::recipes::RecipeDisplay)>,
     level_settings: crate::world::level_settings::LevelSettings,
-    /// How far the rain's fog has closed in around the camera, and when it
-    rain_fog: f32,
-    /// The weather columns around the camera, for what they were made for.
-    weather_columns: Option<(
-        crate::world::weather::PrepareKey,
-        Vec<crate::world::weather::Prepared>,
-    )>,
-    rain_fog_at: Option<std::time::Instant>,
-    cloud_mesh: Option<MeshId>,
-    /// What `cloud_mesh` was built for.
-    cloud_key: Option<crate::world::clouds::CloudKey>,
-    rain_mesh: Option<MeshId>,
-    snow_mesh: Option<MeshId>,
-    /// Server-opened menu (`OPEN_SCREEN`).
-    open_container: Option<OpenContainer>,
-    /// Open the container overlay on the next tick, once `WorldContext` exists.
-    pending_container_overlay: bool,
-    /// Close the container/inventory overlay on the next tick without telling
-    pending_container_close: bool,
-    /// `BlockStatePredictionHandler` sequence, starting at 1.
-    sequence: i32,
     /// `BlockStatePredictionHandler`: what the server said of the blocks the
     predictions: prediction::Predictions,
+    /// The attack and use keys' delays and the block being broken.
+    interaction: interaction::Interaction,
     /// Where the camera was this frame, for the name tags the HUD layer draws.
     name_view: Option<nametags::NameView>,
-    destroying: Option<DestroyTarget>,
-    /// `MultiPlayerGameMode.destroyDelay`.
-    destroy_delay: i32,
-    /// Sounds the player made, for the app to play.
-    sounds: Vec<crate::audio::SoundInstance<'static>>,
-    footsteps: sounds::Footsteps,
     /// `Hud.isHidden`: F1 hid the HUD and the hand.
     hud_hidden: bool,
-    /// The sound channels in use, static and streaming, for F3.
-    sound_channels: [u32; 2],
-    /// The decoded sound files and their bytes, for F3.
-    sound_cache: (usize, usize),
-    /// The last rendered camera as the sounds hear it: position, forward, up.
-    ears: Option<sounds::Ears>,
-    /// What the client played itself lately, to not play it again when
-    echoes: sounds::Echoes,
-    /// `Minecraft.rightClickDelay`.
-    right_click_delay: i32,
+    /// The sounds made this frame, the footsteps and the ears.
+    audio: sounds::SoundState,
     /// The plugin channels the server registered (`melon:swap`).
     server_channels: Vec<String>,
-    /// `Minecraft.missTime`: after a punch at nothing, the attack key rests.
-    miss_time: i32,
     /// `Minecraft.hitResult`: the block or entity looked at, picked every
     hit_result: Option<crate::world::pick::Hit>,
     /// Haste, Conduit Power and Mining Fatigue on the player.
@@ -403,18 +330,24 @@ impl InWorld {
             joined,
             level,
             meshes,
-            dimension,
-            dimension_types,
-            dimension_type,
-            biomes,
-            hashed_seed,
-            water_vision_time: 0,
+            level_info: level_info::LevelInfo {
+                dimension,
+                dimension_types,
+                dimension_type,
+                biomes,
+                hashed_seed,
+            },
             ambient: Default::default(),
+            fog: Default::default(),
+            sky: Default::default(),
+            body: Default::default(),
+            fov: Default::default(),
+            interaction: Default::default(),
+            audio: Default::default(),
             loading: Some(loading::LevelLoad::new()),
             level_became_ready: false,
             effects: effects::EffectState::default(),
             effects_frame: Default::default(),
-            clear_color: [0.0, 0.0, 0.0, 1.0],
             player,
             inventory: Inventory::default(),
             status,
@@ -428,17 +361,13 @@ impl InWorld {
             commands: Default::default(),
             registries,
             hotbars: Hotbars::load(game_dir),
+            menus: Default::default(),
             hud: Hud::default(),
             spectator_menu: Default::default(),
             overlay: None,
-            creative_tab: 0,
             tick_time: 0.0,
-            sent_input: PlayerInput::default(),
-            sent_sprinting: false,
-            input_dirty: false,
-            position_report: Default::default(),
+            sent: Default::default(),
             ride: riding::RideState::default(),
-            frozen_ticks: 0,
             keys: Keys::default(),
             camera_mode: CameraMode::default(),
             debug,
@@ -448,22 +377,10 @@ impl InWorld {
             occlusion: OcclusionCache::default(),
             block_entities: BlockEntities::default(),
             entities: Default::default(),
-            own_hurt: 0,
-            own_death: 0,
-            own_hurt_dir: 0.0,
-            fov_modifier: 1.0,
-            fov_modifier_old: 1.0,
             block_entity_meshes: BlockEntityMeshes::default(),
             spare_entities: Vec::new(),
+            entity_meshes: Default::default(),
             clocks: ClientClocks::default(),
-            shadows: Default::default(),
-            leads: Default::default(),
-            fishing: Default::default(),
-            sprites: Default::default(),
-            beams: Default::default(),
-            paintings: Default::default(),
-            text_displays: Default::default(),
-            poses: Default::default(),
             cracks: Default::default(),
             particles: Default::default(),
             outline: Default::default(),
@@ -477,33 +394,11 @@ impl InWorld {
                 crate::world::recipes::layers::current(),
             ),
             recipe_sets: Default::default(),
-            ghost_recipe: None,
             level_settings: Default::default(),
-            rain_fog: 0.0,
-            weather_columns: None,
-            rain_fog_at: None,
-            cloud_mesh: None,
-            cloud_key: None,
-            rain_mesh: None,
-            snow_mesh: None,
-            open_container: None,
-            pending_container_overlay: false,
-            pending_container_close: false,
-            sequence: 0,
             predictions: Default::default(),
             name_view: None,
-            destroying: None,
-            destroy_delay: 0,
-            sounds: Vec::new(),
-            footsteps: sounds::Footsteps::default(),
             hud_hidden: false,
-            sound_channels: [0; 2],
-            sound_cache: (0, 0),
-            ears: None,
-            echoes: sounds::Echoes::default(),
-            right_click_delay: 0,
             server_channels: Vec::new(),
-            miss_time: 0,
             hit_result: None,
             mining_effects: Default::default(),
             status_effects: Default::default(),
@@ -558,7 +453,10 @@ impl InWorld {
 
     /// Pumpkin's world of the dimension the player is in, in singleplayer.
     pub(super) fn server_world(&self) -> Option<std::sync::Arc<pumpkin::world::World>> {
-        self.joined.server.as_ref()?.world(&self.dimension)
+        self.joined
+            .server
+            .as_ref()?
+            .world(&self.level_info.dimension)
     }
 
     /// The integrated server's ms per tick, in a singleplayer world.
@@ -569,7 +467,7 @@ impl InWorld {
     /// Renews F3's subsystem lines while F3 is open.
     /// The sound channels in use (`AudioEngine::channels_used`), for F3.
     pub fn set_sound_channels(&mut self, used: [u32; 2]) {
-        self.sound_channels = used;
+        self.audio.channels = used;
     }
 
     /// Whether any F3 entry shows now.
@@ -586,7 +484,7 @@ impl InWorld {
 
     /// `AudioEngine::cache_stats`, for F3.
     pub fn set_sound_cache(&mut self, cache: (usize, usize)) {
-        self.sound_cache = cache;
+        self.audio.cache = cache;
     }
 
     pub fn sample_subsystems(&mut self, audio: &crate::audio::stats::AudioStats) {
@@ -654,10 +552,10 @@ impl InWorld {
         blend: u8,
     ) {
         self.level.set_tints(TintSettings::new(
-            &self.biomes,
+            &self.level_info.biomes,
             &maps,
             blend,
-            Some(self.hashed_seed),
+            Some(self.level_info.hashed_seed),
         ));
     }
 
@@ -680,26 +578,30 @@ impl InWorld {
         dimension_id: i32,
         dimension_name: String,
     ) -> Option<LoadingReason> {
-        if dimension_name == self.dimension {
+        if dimension_name == self.level_info.dimension {
             return None;
         }
         let end = "minecraft:the_end";
         let reason = if self.effects.in_portal_effect() {
             LoadingReason::NetherPortal
-        } else if dimension_name == end || self.dimension == end {
+        } else if dimension_name == end || self.level_info.dimension == end {
             LoadingReason::EndPortal
         } else {
             LoadingReason::Other
         };
         self.release(renderer);
-        self.dimension_type = self.dimension_types.get(dimension_id);
-        self.dimension = dimension_name;
-        self.level.set_dimension(&self.dimension_type);
-        self.meshes.set_min_y(self.dimension_type.height.min_y);
+        self.level_info.dimension_type = self.level_info.dimension_types.get(dimension_id);
+        self.level_info.dimension = dimension_name;
+        self.level.set_dimension(&self.level_info.dimension_type);
+        self.meshes
+            .set_min_y(self.level_info.dimension_type.height.min_y);
         self.block_entities = BlockEntities::default();
         self.border = Default::default();
         self.entities.clear();
         self.occlusion = OcclusionCache::default();
+        // A new `ClientLevel`, with its own prediction handler and rain timer.
+        self.predictions = Default::default();
+        self.ambient.new_level();
         self.loading = Some(loading::LevelLoad::new());
         self.level_became_ready = false;
         Some(reason)
@@ -739,15 +641,9 @@ impl InWorld {
         self.level.clear();
         self.meshes.clear(renderer);
         self.block_entity_meshes.clear(renderer);
-        self.shadows.clear(renderer);
+        self.entity_meshes.clear(renderer);
         self.border_mesh.clear(renderer);
-        self.leads.clear(renderer);
-        self.fishing.clear(renderer);
-        self.sprites.clear(renderer);
-        self.beams.clear(renderer);
-        self.paintings.clear(renderer);
-        self.text_displays.clear(renderer);
-        self.poses.clear();
+        self.sky.clear(renderer);
         self.entities.clear();
         self.cracks.clear(renderer);
         self.clear_particles(renderer);
@@ -757,7 +653,7 @@ impl InWorld {
 
     /// What this frame is cleared to: the fog's colour, as vanilla clears
     pub fn sky_clear_color(&self) -> [f32; 4] {
-        self.clear_color
+        self.fog.clear_color
     }
 
     /// Why the world ended on its own, if it did: kicked, connection lost,

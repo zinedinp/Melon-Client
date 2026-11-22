@@ -62,9 +62,9 @@ impl InWorld {
             config.cloud_range,
         );
         let [r, g, b, _] = look.fog.color;
-        self.clear_color = [r, g, b, 1.0];
+        self.fog.clear_color = [r, g, b, 1.0];
         self.note_sky_light(&look);
-        let dying = self.own_death > 0;
+        let dying = self.body.death > 0;
         let death_time = self.own_death_time(self.tick_time / player::TICK);
         let in_fluid = matches!(look.fog_type, FogType::Water | FogType::Lava);
         let narrowed = |mut fov: f32| {
@@ -78,7 +78,7 @@ impl InWorld {
             fov
         };
         camera.fov = narrowed(camera.fov);
-        self.ears = Some(super::sounds::Ears {
+        self.audio.ears = Some(super::sounds::Ears {
             position: camera.position.to_array(),
             forward: camera.forward().to_array(),
             up: camera.up().to_array(),
@@ -332,13 +332,7 @@ impl InWorld {
             assets.forcefield,
             &mut entities,
         );
-        self.shadows.end_frame(renderer);
-        self.leads.end_frame(renderer);
-        self.fishing.end_frame(renderer);
-        self.paintings.end_frame(renderer);
-        self.sprites.end_frame(renderer);
-        self.beams.end_frame(renderer);
-        self.poses.end_frame();
+        self.entity_meshes.end_frame(renderer);
         entities.extend(
             block_entity_meshes
                 .into_iter()
@@ -449,7 +443,7 @@ impl InWorld {
                 },
                 lightmap: lightmap_params,
                 fog: look.fog,
-                cardinal: self.dimension_type.cardinal_light.relative(),
+                cardinal: self.level_info.dimension_type.cardinal_light.relative(),
                 distortion,
                 bob: camera.bob,
             }),

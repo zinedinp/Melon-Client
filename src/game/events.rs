@@ -55,7 +55,10 @@ impl InWorld {
                     dimension_name,
                     game_mode,
                     previous_game_mode,
+                    keep_entity_data,
                 }) => {
+                    self.close_container_for_respawn();
+                    self.new_local_player(keep_entity_data);
                     self.set_game_mode(game_mode, Some(previous_game_mode));
                     loading = self
                         .respawn_in(renderer, dimension_id, dimension_name)
@@ -69,7 +72,8 @@ impl InWorld {
                     previous_game_mode,
                 }) => {
                     self.joined.session.info.entity_id = entity_id;
-                    self.dimension.clear();
+                    self.new_local_player(false);
+                    self.level_info.dimension.clear();
                     self.set_game_mode(game_mode, Some(previous_game_mode));
                     loading = self
                         .respawn_in(renderer, dimension_id, dimension_name)
@@ -119,9 +123,30 @@ impl InWorld {
         }
     }
 
+    /// `handleRespawn`'s `oldPlayer.closeContainer()`: a menu the server
+    /// opened is closed, and the server hears of it.
+    fn close_container_for_respawn(&mut self) {
+        let Some(menu) = self.menus.open_container.take() else {
+            return;
+        };
+        self.joined.session.send_container_close(menu.id);
+        self.inventory.set_carried(empty());
+        self.menus.pending_container_overlay = false;
+        self.menus.pending_container_close = true;
+    }
+
+    /// `handleRespawn` and `handleLogin` make a new `LocalPlayer`: what it
+    /// keeps of itself between ticks starts over.
+    fn new_local_player(&mut self, keep_entity_data: bool) {
+        self.body.respawned(keep_entity_data);
+        self.sent.respawned(keep_entity_data);
+        self.audio.respawned();
+        self.ambient.respawned();
+    }
+
     /// `ClientPacketListener.handleMovePlayer`, with its relative flags for
     pub(super) fn teleport(&mut self, t: &Teleport) {
-        self.predictions.on_teleport(self.sequence);
+        self.predictions.on_teleport();
         self.positioned_in_new_level();
         if self.entities.own_vehicle().is_none() {
             let feet = self.player.feet();
@@ -226,7 +251,7 @@ impl InWorld {
                 self.player.pitch(),
             );
         }
-        self.input_dirty = true;
+        self.sent.input_dirty = true;
         self.abort_destroy();
     }
 
@@ -286,11 +311,12 @@ impl InWorld {
                 carried,
             } => {
                 if self
+                    .menus
                     .open_container
                     .as_ref()
                     .is_some_and(|menu| menu.id == container)
                 {
-                    let menu = self.open_container.as_mut().unwrap();
+                    let menu = self.menus.open_container.as_mut().unwrap();
                     menu.set_all(state_id, slots);
                     menu.copy_player_into(&mut self.inventory);
                     self.inventory.set_carried(carried);
@@ -301,31 +327,31 @@ impl InWorld {
                 window_type,
                 title,
             } => {
-                if self.open_container.is_some() {
+                if self.menus.open_container.is_some() {
                     self.inventory.set_carried(empty());
                 }
                 let kind = ContainerKind::from_window_type(window_type);
                 let title = StyledText::from_component(&title, lang);
                 let mut menu = OpenContainer::new(container, kind, title);
                 menu.copy_player_from(&self.inventory);
-                self.open_container = Some(menu);
-                self.pending_container_close = false;
-                self.pending_container_overlay = true;
+                self.menus.open_container = Some(menu);
+                self.menus.pending_container_close = false;
+                self.menus.pending_container_overlay = true;
             }
             GameEvent::ContainerClose { .. } => {
-                if self.open_container.is_some() {
+                if self.menus.open_container.is_some() {
                     self.inventory.set_carried(empty());
                 }
-                self.open_container = None;
-                self.pending_container_overlay = false;
-                self.pending_container_close = true;
+                self.menus.open_container = None;
+                self.menus.pending_container_overlay = false;
+                self.menus.pending_container_close = true;
             }
             GameEvent::OpenMount {
                 container,
                 columns,
                 entity_id,
             } => {
-                if self.open_container.is_some() {
+                if self.menus.open_container.is_some() {
                     self.inventory.set_carried(empty());
                 }
                 let title =
@@ -352,9 +378,9 @@ impl InWorld {
                 };
                 let mut menu = OpenContainer::new(container, kind, title);
                 menu.copy_player_from(&self.inventory);
-                self.open_container = Some(menu);
-                self.pending_container_close = false;
-                self.pending_container_overlay = true;
+                self.menus.open_container = Some(menu);
+                self.menus.pending_container_close = false;
+                self.menus.pending_container_overlay = true;
             }
             GameEvent::ContainerSlot {
                 container,
@@ -366,11 +392,12 @@ impl InWorld {
                 -1 if slot == -1 => self.inventory.set_carried(item),
                 id => {
                     if self
+                        .menus
                         .open_container
                         .as_ref()
                         .is_some_and(|menu| menu.id == id)
                     {
-                        let menu = self.open_container.as_mut().unwrap();
+                        let menu = self.menus.open_container.as_mut().unwrap();
                         menu.set_slot(state_id, slot, item);
                         menu.copy_player_into(&mut self.inventory);
                     }
@@ -382,6 +409,7 @@ impl InWorld {
                 value,
             } => {
                 if let Some(menu) = self
+                    .menus
                     .open_container
                     .as_mut()
                     .filter(|menu| menu.id == container)
@@ -392,6 +420,7 @@ impl InWorld {
             }
             GameEvent::MerchantOffers { container, offers } => {
                 if let Some(menu) = self
+                    .menus
                     .open_container
                     .as_mut()
                     .filter(|menu| menu.id == container)
@@ -648,7 +677,7 @@ impl InWorld {
             }
             RecipeEvent::BookSettings(settings) => self.recipes.set_settings(settings),
             RecipeEvent::Ghost { container, display } => {
-                self.ghost_recipe = Some((container, display));
+                self.menus.ghost_recipe = Some((container, display));
             }
         }
     }

@@ -181,7 +181,7 @@ impl InWorld {
                     let feet = self.player.pos();
                     action = ScreenAction::Clipboard(format!(
                         "/execute in {} run tp @s {:.2} {:.2} {:.2} {:.2} {:.2}",
-                        self.dimension,
+                        self.level_info.dimension,
                         feet.x,
                         feet.y,
                         feet.z,

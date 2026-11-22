@@ -11,6 +11,22 @@ use crate::gui::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, Over
 use crate::gui::screen::ScreenAction;
 use crate::i18n::Lang;
 
+/// The menus the server opens and what the overlays keep of them.
+#[derive(Default)]
+pub(super) struct Menus {
+    /// Server-opened menu (`OPEN_SCREEN`).
+    pub(super) open_container: Option<crate::world::inventory::OpenContainer>,
+    /// Open the container overlay on the next tick, once `WorldContext` exists.
+    pub(super) pending_container_overlay: bool,
+    /// Close the container/inventory overlay on the next tick without telling
+    /// the server.
+    pub(super) pending_container_close: bool,
+    /// The recipe the server asked the open menu to show (ghost items).
+    pub(super) ghost_recipe: Option<(i32, crate::world::recipes::RecipeDisplay)>,
+    /// The creative inventory's last tab, to reopen on.
+    pub(super) creative_tab: usize,
+}
+
 impl InWorld {
     pub fn overlay_open(&self) -> bool {
         self.overlay.is_some()
@@ -32,7 +48,7 @@ impl InWorld {
         let names = || players.values().map(|p| p.name.clone()).collect();
         let mut ctx = OverlayContext {
             inventory: &mut self.inventory,
-            container: self.open_container.as_mut(),
+            container: self.menus.open_container.as_mut(),
             chat: &mut self.chat,
             recipes: &mut self.recipes,
             recipe_sets: &self.recipe_sets,
@@ -41,7 +57,7 @@ impl InWorld {
             registries: &self.registries,
             permission_level: self.permission_level,
             players: &names,
-            creative_tab: &mut self.creative_tab,
+            creative_tab: &mut self.menus.creative_tab,
             game_mode: self.game_mode.current,
             experience_level: self.status.experience_level,
             lang: ui.lang,
@@ -95,12 +111,14 @@ impl InWorld {
         notify_server: bool,
     ) {
         self.with_overlay(ui, |overlay, ctx| overlay.closed(exit, ctx));
-        self.ghost_recipe = None;
+        self.menus.ghost_recipe = None;
         if let Some(overlay) = self.overlay.take() {
             if notify_server {
                 let id = match overlay.kind() {
                     OverlayKind::Inventory | OverlayKind::Creative => Some(0),
-                    OverlayKind::Container => self.open_container.as_ref().map(|menu| menu.id),
+                    OverlayKind::Container => {
+                        self.menus.open_container.as_ref().map(|menu| menu.id)
+                    }
                     OverlayKind::Chat | OverlayKind::Switcher => None,
                 };
                 if let Some(id) = id {
@@ -108,7 +126,7 @@ impl InWorld {
                 }
             }
             if overlay.kind() == OverlayKind::Container {
-                self.open_container = None;
+                self.menus.open_container = None;
             }
         }
     }
@@ -154,7 +172,13 @@ impl InWorld {
 
     pub(super) fn creative_overlay(&self, ui: &WorldContext) -> CreativeOverlay {
         let (width, height) = ui.size;
-        CreativeOverlay::new(width, height, &self.hotbars, ui.lang, self.creative_tab)
+        CreativeOverlay::new(
+            width,
+            height,
+            &self.hotbars,
+            ui.lang,
+            self.menus.creative_tab,
+        )
     }
 
     /// `Gui.openChatScreen`: a restorable draft, or the prefix.
@@ -201,7 +225,7 @@ impl InWorld {
                     recipe,
                     max,
                 } => {
-                    self.ghost_recipe = None;
+                    self.menus.ghost_recipe = None;
                     self.joined
                         .session
                         .send_place_recipe(container, recipe, max);
@@ -216,7 +240,7 @@ impl InWorld {
                     .send_recipe_book_settings(book, open, filtering),
                 RecipeAction::Seen(recipe) => self.joined.session.send_recipe_seen(recipe),
             },
-            OverlayAction::Sound(event) => self.sounds.push(crate::audio::SoundInstance::of(event)),
+            OverlayAction::Sound(event) => self.audio.push(crate::audio::SoundInstance::of(event)),
             OverlayAction::RenameItem(name) => self.joined.session.send_rename_item(&name),
             OverlayAction::SelectTrade(index) => self.joined.session.send_select_trade(index),
             OverlayAction::SetBeacon { primary, secondary } => {

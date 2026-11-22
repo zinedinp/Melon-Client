@@ -10,6 +10,42 @@ use pumpkin_data::tracked_data::{avatar, entity, player};
 /// `Entity.getTicksRequiredToFreeze`: frozen hearts from here.
 const FROZEN_TICKS: i32 = 140;
 
+/// What `LocalPlayer` keeps of its own body beyond [`PlayerState`]'s
+/// movement. Vanilla makes a new `LocalPlayer` on every respawn, so these
+/// start over then (see [`Self::respawned`]).
+///
+/// [`PlayerState`]: crate::world::player::PlayerState
+#[derive(Default)]
+pub(super) struct OwnBody {
+    /// `LivingEntity.hurtTime`: ticks the body still flashes red.
+    pub(super) hurt: i32,
+    /// `LivingEntity.deathTime`: ticks since dying, 0 while alive.
+    pub(super) death: i32,
+    /// `LivingEntity.hurtDir`: where the last blow came from, for the
+    /// camera's tilt.
+    pub(super) hurt_dir: f32,
+    /// `Entity.DATA_TICKS_FROZEN`.
+    pub(super) frozen_ticks: i32,
+    /// `LocalPlayer.waterVisionTime`: ticks the eyes have been under water.
+    pub(super) water_vision_time: i32,
+}
+
+impl OwnBody {
+    /// `ClientPacketListener.handleRespawn`: the new player starts afresh,
+    /// keeping the synced data only under `KEEP_ENTITY_DATA`.
+    pub(super) fn respawned(&mut self, keep_entity_data: bool) {
+        let frozen_ticks = if keep_entity_data {
+            self.frozen_ticks
+        } else {
+            0
+        };
+        *self = Self {
+            frozen_ticks,
+            ..Self::default()
+        };
+    }
+}
+
 impl InWorld {
     /// The attributes the server sets on the local player.
     pub(super) fn own_attributes(
@@ -41,7 +77,7 @@ impl InWorld {
             } else if *index == avatar::DATA_AIR_SUPPLY_ID.id.0 {
                 self.status.air = value.int().unwrap_or(MAX_AIR);
             } else if *index == entity::DATA_TICKS_FROZEN.id.0 {
-                self.frozen_ticks = value.int().unwrap_or(0);
+                self.body.frozen_ticks = value.int().unwrap_or(0);
             }
         }
     }
@@ -54,7 +90,7 @@ impl InWorld {
         self.status.heart_kind = HeartKind::of(
             effects.get(WITHER_ID).is_some(),
             effects.get(POISON_ID).is_some(),
-            self.frozen_ticks >= FROZEN_TICKS,
+            self.body.frozen_ticks >= FROZEN_TICKS,
         );
         self.status.under_water = self.player.eye_in_water();
         self.status.mount = self.entities.own_mount_health();

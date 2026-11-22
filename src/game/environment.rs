@@ -17,6 +17,27 @@ use crate::world::sky;
 /// `LocalPlayer.waterVisionTime`'s end: ticks in the water until the eyes
 const WATER_VISION_TICKS: i32 = 600;
 
+/// What the fog keeps between frames.
+pub(super) struct FogState {
+    /// `AtmosphericFogEnvironment.rainFogMultiplier`: how far the rain's fog
+    /// has closed in around the camera.
+    rain_fog: f32,
+    /// When `rain_fog` last moved, for the ticks since.
+    rain_fog_at: Option<std::time::Instant>,
+    /// What this frame is cleared to: the fog's colour.
+    pub(super) clear_color: [f32; 4],
+}
+
+impl Default for FogState {
+    fn default() -> Self {
+        Self {
+            rain_fog: 0.0,
+            rain_fog_at: None,
+            clear_color: [0.0, 0.0, 0.0, 1.0],
+        }
+    }
+}
+
 /// One frame's environment.
 pub struct FrameEnvironment {
     pub atmosphere: Atmosphere,
@@ -62,11 +83,16 @@ impl InWorld {
     ) -> FrameEnvironment {
         let day = self.clocks.environment(partial);
         let mix = BiomeMix::gaussian(camera.position, |x, y, z| self.level.biome_at(x, y, z));
-        let atmosphere = Atmosphere::resolve(&self.dimension_type, &self.biomes, &mix, &day)
-            .with_weather(self.weather.rain, self.weather.thunder);
+        let atmosphere = Atmosphere::resolve(
+            &self.level_info.dimension_type,
+            &self.level_info.biomes,
+            &mix,
+            &day,
+        )
+        .with_weather(self.weather.rain, self.weather.thunder);
         let fog_type = fog_type(&self.level, camera, aspect);
         let spectator = self.game_mode.current.is_spectator();
-        let min_y = self.dimension_type.height.min_y;
+        let min_y = self.level_info.dimension_type.height.min_y;
         let context = FogContext {
             fog_type,
             spectator,
@@ -81,7 +107,7 @@ impl InWorld {
             cloud_range_chunks: cloud_range,
             rain_level: self.weather.rain,
             thunder_level: self.weather.thunder,
-            rain_fog: self.rain_fog,
+            rain_fog: self.fog.rain_fog,
         };
         let fog = fog::setup(&atmosphere, &context);
         FrameEnvironment {
@@ -94,6 +120,7 @@ impl InWorld {
     /// `AtmosphericFogEnvironment.updateRainFogState`: the rain's fog moves a
     pub(super) fn update_rain_fog(&mut self, camera: glam::DVec3, now: std::time::Instant) {
         let ticks = self
+            .fog
             .rain_fog_at
             .replace(now)
             .map_or(0.0, |last| now.duration_since(last).as_secs_f32() * 20.0);
@@ -103,10 +130,10 @@ impl InWorld {
         let rains = self
             .level
             .biome_at(at.x, at.y, at.z)
-            .and_then(|id| self.biomes.biome(id))
+            .and_then(|id| self.level_info.biomes.biome(id))
             .is_none_or(|biome| biome.has_precipitation);
         let target = self.weather.rain * open_sky * if rains { 1.0 } else { 0.5 };
-        self.rain_fog += (target - self.rain_fog) * (ticks * 0.2).min(1.0);
+        self.fog.rain_fog += (target - self.fog.rain_fog) * (ticks * 0.2).min(1.0);
     }
 
     /// `LocalPlayer.getWaterVision`: `0` out of the water, then more as the
@@ -114,8 +141,8 @@ impl InWorld {
         if !in_water {
             return 0.0;
         }
-        let time = self.water_vision_time as f32;
-        if self.water_vision_time >= WATER_VISION_TICKS {
+        let time = self.body.water_vision_time as f32;
+        if self.body.water_vision_time >= WATER_VISION_TICKS {
             return 1.0;
         }
         let a = (time / 100.0).clamp(0.0, 1.0);
@@ -137,9 +164,11 @@ impl InWorld {
             } else {
                 1
             };
-            self.water_vision_time = (self.water_vision_time + speed).clamp(0, WATER_VISION_TICKS);
-        } else if self.water_vision_time > 0 {
-            self.water_vision_time = (self.water_vision_time - 10).clamp(0, WATER_VISION_TICKS);
+            self.body.water_vision_time =
+                (self.body.water_vision_time + speed).clamp(0, WATER_VISION_TICKS);
+        } else if self.body.water_vision_time > 0 {
+            self.body.water_vision_time =
+                (self.body.water_vision_time - 10).clamp(0, WATER_VISION_TICKS);
         }
     }
 

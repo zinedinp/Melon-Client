@@ -10,6 +10,34 @@ use crate::world::clouds::{self, CloudFrame};
 use crate::world::weather::{self, WeatherQuery};
 use glam::Mat4;
 
+/// What the clouds and the weather keep between frames.
+#[derive(Default)]
+pub(super) struct SkyMeshes {
+    /// The weather columns around the camera, for what they were made for.
+    weather_columns: Option<(weather::PrepareKey, Vec<weather::Prepared>)>,
+    cloud_mesh: Option<MeshId>,
+    /// What `cloud_mesh` was built for.
+    cloud_key: Option<clouds::CloudKey>,
+    rain_mesh: Option<MeshId>,
+    snow_mesh: Option<MeshId>,
+}
+
+impl SkyMeshes {
+    /// Frees the meshes; the next frame builds them again.
+    pub(super) fn clear(&mut self, renderer: &mut Renderer) {
+        for mesh in [
+            &mut self.cloud_mesh,
+            &mut self.rain_mesh,
+            &mut self.snow_mesh,
+        ] {
+            if let Some(mesh) = mesh.take() {
+                renderer.free_mesh(mesh);
+            }
+        }
+        *self = Self::default();
+    }
+}
+
 impl InWorld {
     /// Cloud boxes, then rain, then snow, matching vanilla's atmosphere pass.
     #[allow(clippy::too_many_arguments)]
@@ -39,17 +67,18 @@ impl InWorld {
             partial_tick: partial,
         };
         let cloud_key = clouds::key(&assets.clouds, &cloud_frame);
-        if cloud_key != self.cloud_key || (cloud_key.is_some() && self.cloud_mesh.is_none()) {
+        if cloud_key != self.sky.cloud_key || (cloud_key.is_some() && self.sky.cloud_mesh.is_none())
+        {
             let verts = clouds::build_anchored(&assets.clouds, cloud_frame);
-            replace_mesh(renderer, &mut self.cloud_mesh, &verts);
-            self.cloud_key = cloud_key;
+            replace_mesh(renderer, &mut self.sky.cloud_mesh, &verts);
+            self.sky.cloud_key = cloud_key;
         }
         let cloud_anchor = {
             let at = clouds::anchor(&assets.clouds, &cloud_frame);
             let block = at.floor();
             (block.as_ivec3(), (at - block).as_vec3())
         };
-        let clouds = self.cloud_mesh.map(|mesh| CloudDraw {
+        let clouds = self.sky.cloud_mesh.map(|mesh| CloudDraw {
             color: cloud_frame.color,
             draw: EntityDraw {
                 alpha: 1.0,
@@ -70,14 +99,19 @@ impl InWorld {
         let radius = i32::from(config.weather_radius);
         if intensity > 0.0 && radius > 0 {
             let level = &self.level;
-            let biomes = &self.biomes;
+            let biomes = &self.level_info.biomes;
             let at = camera.position.floor().as_ivec3();
             let key = weather::PrepareKey {
                 block: at.to_array(),
                 revision: level.revision(),
                 radius,
             };
-            if self.weather_columns.as_ref().is_none_or(|(k, _)| *k != key) {
+            if self
+                .sky
+                .weather_columns
+                .as_ref()
+                .is_none_or(|(k, _)| *k != key)
+            {
                 let height = |x, z| level.motion_blocking_height(x, z);
                 let precipitation = |x, y, z| {
                     level
@@ -97,11 +131,12 @@ impl InWorld {
                     precipitation: &precipitation,
                     light: &light,
                 });
-                self.weather_columns = Some((key, prepared));
+                self.sky.weather_columns = Some((key, prepared));
             }
             let frustum = camera.frustum(aspect);
             let game_time = self.clocks.game_time();
             let columns: Vec<_> = self
+                .sky
                 .weather_columns
                 .iter()
                 .flat_map(|(_, prepared)| prepared)
@@ -115,7 +150,7 @@ impl InWorld {
                 lightmap_params,
                 |min, max| frustum.sees_box(min, max),
             );
-            if let Some(pieces) = replace_mesh(renderer, &mut self.rain_mesh, &rain.vertices) {
+            if let Some(pieces) = replace_mesh(renderer, &mut self.sky.rain_mesh, &rain.vertices) {
                 weather.push(WeatherDraw {
                     template: assets.rain_template,
                     pieces,
@@ -125,7 +160,7 @@ impl InWorld {
                     origin: camera_origin,
                 });
             }
-            if let Some(pieces) = replace_mesh(renderer, &mut self.snow_mesh, &snow.vertices) {
+            if let Some(pieces) = replace_mesh(renderer, &mut self.sky.snow_mesh, &snow.vertices) {
                 weather.push(WeatherDraw {
                     template: assets.snow_template,
                     pieces,
@@ -136,8 +171,8 @@ impl InWorld {
                 });
             }
         } else {
-            replace_mesh(renderer, &mut self.rain_mesh, &[]);
-            replace_mesh(renderer, &mut self.snow_mesh, &[]);
+            replace_mesh(renderer, &mut self.sky.rain_mesh, &[]);
+            replace_mesh(renderer, &mut self.sky.snow_mesh, &[]);
         }
         (clouds, weather)
     }

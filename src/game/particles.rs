@@ -224,7 +224,7 @@ impl InWorld {
         self.particles.engine.camera = eye;
         let center = eye.floor().as_ivec3();
         self.tick_own_particles();
-        let biomes = &self.biomes;
+        let biomes = &self.level_info.biomes;
         let level = &self.level;
         let ambient = |pos: IVec3| -> &[(Kind, f32)] {
             level

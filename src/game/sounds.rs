@@ -34,6 +34,41 @@ pub struct Ears {
     pub up: [f32; 3],
 }
 
+/// What the sounds keep between frames.
+#[derive(Default)]
+pub(super) struct SoundState {
+    /// Sounds the player made, for the app to play.
+    sounds: Vec<SoundInstance<'static>>,
+    footsteps: Footsteps,
+    /// The last rendered camera as the sounds hear it.
+    pub(super) ears: Option<Ears>,
+    /// What the client played itself lately, to not play it again when
+    /// the server echoes it.
+    echoes: Echoes,
+    /// The sound channels in use, static and streaming, for F3.
+    pub(super) channels: [u32; 2],
+    /// The decoded sound files and their bytes, for F3.
+    pub(super) cache: (usize, usize),
+}
+
+impl SoundState {
+    /// A new `LocalPlayer`: its `moveDist` and `nextStep` start over.
+    pub(super) fn respawned(&mut self) {
+        self.footsteps = Footsteps::default();
+    }
+
+    /// Queues a sound for the app to play.
+    pub(super) fn push(&mut self, sound: SoundInstance<'static>) {
+        self.sounds.push(sound);
+    }
+}
+
+impl Extend<SoundInstance<'static>> for SoundState {
+    fn extend<I: IntoIterator<Item = SoundInstance<'static>>>(&mut self, sounds: I) {
+        self.sounds.extend(sounds);
+    }
+}
+
 /// `Entity.moveDist`, `nextStep` and the amethyst chime's state.
 pub(super) struct Footsteps {
     last: Option<DVec3>,
@@ -182,13 +217,13 @@ impl InWorld {
 
     /// The sounds queued since the last call.
     pub fn take_sounds(&mut self) -> Vec<SoundInstance<'static>> {
-        std::mem::take(&mut self.sounds)
+        std::mem::take(&mut self.audio.sounds)
     }
 
     /// `SoundEngine.updateSource(camera)`: the last rendered camera, else
     /// the eye looking along the player's yaw and pitch.
     pub fn listener(&self) -> Ears {
-        self.ears.unwrap_or_else(|| {
+        self.audio.ears.unwrap_or_else(|| {
             let eye = self.player.tick_eye();
             let forward =
                 crate::world::player::forward_vector_for(self.player.yaw(), self.player.pitch());
@@ -204,8 +239,8 @@ impl InWorld {
     pub(super) fn queue_block_sound(&mut self, state: u16, kind: BlockSound, at: [f64; 3]) {
         if let Some(sound) = SoundType::of(block_name(state)).sound(kind) {
             let sound = sound.at(at);
-            self.echoes.remember(&sound, at);
-            self.sounds.push(sound);
+            self.audio.echoes.remember(&sound, at);
+            self.audio.sounds.push(sound);
         }
     }
 
@@ -229,7 +264,7 @@ impl InWorld {
         sound.source = SoundSource::Players;
         sound.volume = volume;
         sound.pitch = pitch;
-        self.sounds.push(sound);
+        self.audio.sounds.push(sound);
     }
 
     /// `ClientboundSoundPacket` and `ClientboundSoundEntityPacket`.
@@ -245,10 +280,10 @@ impl InWorld {
                 None => return,
             },
         };
-        if self.echoes.heard(&sound.event, at) {
+        if self.audio.echoes.heard(&sound.event, at) {
             return;
         }
-        self.sounds.push(
+        self.audio.sounds.push(
             SoundInstance::of(sound.event.clone())
                 .on(sound.source)
                 .volume(sound.volume)
@@ -263,7 +298,7 @@ impl InWorld {
             return;
         };
         let jitter = rand::random::<f32>() - rand::random::<f32>();
-        self.sounds.push(
+        self.audio.sounds.push(
             SoundInstance::of(sound.clone())
                 .on(SoundSource::Blocks)
                 .volume(4.0)
@@ -280,7 +315,7 @@ impl InWorld {
             let Some(sound) = SoundType::of(block_name(state)).sound(BlockSound::Break) else {
                 return;
             };
-            if self.echoes.heard(&sound.event, at) {
+            if self.audio.echoes.heard(&sound.event, at) {
                 return;
             }
             if event.global { sound } else { sound.at(at) }
@@ -295,7 +330,7 @@ impl InWorld {
         } else {
             return;
         };
-        self.sounds.push(sound);
+        self.audio.sounds.push(sound);
     }
 
     /// The point `distance` blocks from the eye toward `target`.
@@ -312,7 +347,7 @@ impl InWorld {
     pub(super) fn tick_footsteps(&mut self) {
         let feet = self.player.feet();
         let landing = self.player.take_landing();
-        let Some(last) = self.footsteps.last.replace(feet) else {
+        let Some(last) = self.audio.footsteps.last.replace(feet) else {
             return;
         };
         if self.game_mode.current.is_spectator() || self.player.riding() {
@@ -335,8 +370,8 @@ impl InWorld {
         } else {
             horizontal
         };
-        self.footsteps.move_dist += walked * STEP_FACTOR;
-        if self.footsteps.move_dist <= self.footsteps.next_step || is_air(supporting) {
+        self.audio.footsteps.move_dist += walked * STEP_FACTOR;
+        if self.audio.footsteps.move_dist <= self.audio.footsteps.next_step || is_air(supporting) {
             return;
         }
         let effect_pos = block_motion::on_pos(&self.level, feet, support, ON_POS_LEGACY);
@@ -346,7 +381,7 @@ impl InWorld {
             stepped |= self.step_effects(supporting_pos, supporting, false, moved.y);
         }
         if stepped || self.player.in_water() {
-            self.footsteps.next_step = self.footsteps.move_dist.floor() + 1.0;
+            self.audio.footsteps.next_step = self.audio.footsteps.move_dist.floor() + 1.0;
         }
         if !stepped && self.player.in_water() {
             self.swim_sound();
@@ -396,7 +431,7 @@ impl InWorld {
             }
         }
         let ticks = self.ticks;
-        let steps = &mut self.footsteps;
+        let steps = &mut self.audio.footsteps;
         if block_of(state).has_tag(&tag::Block::MINECRAFT_CRYSTAL_SOUND_BLOCKS)
             && ticks >= steps.last_crystal_tick + 20
         {
@@ -481,8 +516,8 @@ impl InWorld {
             .volume(volume)
             .pitch(pitch)
             .at([feet.x, feet.y, feet.z]);
-        self.echoes.remember(&sound, [feet.x, feet.y, feet.z]);
-        self.sounds.push(sound);
+        self.audio.echoes.remember(&sound, [feet.x, feet.y, feet.z]);
+        self.audio.sounds.push(sound);
     }
 
     fn state_at(&self, (x, y, z): (i32, i32, i32)) -> u16 {

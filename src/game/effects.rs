@@ -121,7 +121,7 @@ impl InWorld {
         let (block, sky) = level.light_at(eye.x, eye.y, eye.z);
         let brightness = level_brightness(
             raw_brightness(block, sky, state.sky_light_level),
-            self.dimension_type.ambient_light,
+            self.level_info.dimension_type.ambient_light,
         );
         let target = (1.0 - brightness).clamp(0.0, 1.0);
         state.vignette += (target - state.vignette) * 0.01;
@@ -191,7 +191,7 @@ impl InWorld {
                 let eye = self.player.tick_eye().floor().as_ivec3();
                 let (block, sky) = self.level.light_at(eye.x, eye.y, eye.z);
                 let raw = raw_brightness(block, sky, look.atmosphere.sky_light_level);
-                let b = level_brightness(raw, self.dimension_type.ambient_light);
+                let b = level_brightness(raw, self.level_info.dimension_type.ambient_light);
                 effects.underwater = Some(Underwater {
                     color: [b, b, b, 0.1],
                     u_offset: -super::minecraft_yaw(self.player.yaw()) / 64.0,

@@ -12,13 +12,21 @@ struct Verified {
 #[derive(Default)]
 pub(super) struct Predictions {
     verified: HashMap<[i32; 3], Verified>,
+    /// `currentSequenceNr`: 0 until the first prediction, which is 1.
+    sequence: i32,
     last_teleport: Option<i32>,
 }
 
 impl Predictions {
+    /// `startPredicting`: the sequence number of the action about to be sent.
+    pub(super) fn start_predicting(&mut self) -> i32 {
+        self.sequence += 1;
+        self.sequence
+    }
+
     /// `onTeleport`: a snap back to before the teleport would undo it.
-    pub(super) fn on_teleport(&mut self, sequence: i32) {
-        self.last_teleport = Some(sequence);
+    pub(super) fn on_teleport(&mut self) {
+        self.last_teleport = Some(self.sequence);
     }
 
     /// `retainKnownServerState`: the first old state and position of a
@@ -49,7 +57,8 @@ impl InWorld {
         if let Some(old) = self.level.set_block(pos, state, true)
             && old != state
         {
-            self.predictions.retain(pos, old, self.sequence, player);
+            let sequence = self.predictions.sequence;
+            self.predictions.retain(pos, old, sequence, player);
         }
     }
 

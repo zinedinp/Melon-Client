@@ -178,7 +178,7 @@ impl InWorld {
         let first_person = self.camera_mode == super::CameraMode::FirstPerson;
         let white = renderer.white_texture();
         let texture = assets.mobs.texture(TEXTURE);
-        let sprite = self.fishing.sprite(renderer);
+        let sprite = self.entity_meshes.fishing.sprite(renderer);
         for bobber in visible
             .iter()
             .filter_map(|&id| self.entities.get(id))
@@ -240,7 +240,7 @@ impl InWorld {
             }
             let at = hook.floor().as_ivec3();
             let (block, sky) = self.level.light_at(at.x, at.y, at.z);
-            self.fishing.line(
+            self.entity_meshes.fishing.line(
                 renderer,
                 bobber.id,
                 (hook, hand, view.position, [block * 16, sky * 16]),

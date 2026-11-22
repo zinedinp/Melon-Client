@@ -33,7 +33,7 @@ impl InWorld {
                 };
                 let step = driver.tick(&mut self.player, load);
                 input = step.input;
-                self.sounds.extend(step.sound);
+                self.audio.extend(step.sound);
                 for command in &step.commands {
                     self.joined.session.send_command(command);
                 }
@@ -97,15 +97,17 @@ impl InWorld {
         if let Some(actions) = self.with_overlay(ui, |overlay, ctx| overlay.tick(ctx)) {
             self.apply_overlay_actions(actions, ui);
         }
-        if self.right_click_delay > 0 {
-            self.right_click_delay -= 1;
-        }
-        if self.miss_time > 0 {
-            self.miss_time -= 1;
+        if self.interaction.right_click_delay > 0 {
+            self.interaction.right_click_delay -= 1;
         }
         if interact && self.overlay.is_none() {
+            // `Minecraft.tick`: the keys first, then the rest of the miss.
             self.handle_keybinds(ui);
+            if self.interaction.miss_time > 0 {
+                self.interaction.miss_time -= 1;
+            }
         } else {
+            self.interaction.miss_time = super::interaction::SCREEN_MISS_TIME;
             self.abort_destroy();
             self.release_using_item();
         }
@@ -137,24 +139,24 @@ impl InWorld {
         let feet = self.player.feet().as_vec3();
         self.block_entities.tick(&self.level, feet);
         self.entities
-            .set_piglins_zombify(self.dimension_type.piglins_zombify());
+            .set_piglins_zombify(self.level_info.dimension_type.piglins_zombify());
         self.entities.tick();
         self.tick_pickups();
         self.push_player();
         self.entities.simulate(&self.level);
         self.tick_ride(input);
         self.tick_vitals();
-        self.own_hurt = (self.own_hurt - 1).max(0);
-        if self.own_death > 0 && self.status.health > 0.0 {
+        self.body.hurt = (self.body.hurt - 1).max(0);
+        if self.body.death > 0 && self.status.health > 0.0 {
             self.status_effects.clear();
             self.mining_effects = Default::default();
             self.effects.set_nausea_ticks(0);
         }
-        if self.own_death == 0 && self.status.health <= 0.0 {
+        if self.body.death == 0 && self.status.health <= 0.0 {
             self.play_own_voice("entity.player.death");
         }
-        self.own_death = if self.status.health <= 0.0 {
-            (self.own_death + 1).min(crate::world::entity::tracker::DEATH_DURATION)
+        self.body.death = if self.status.health <= 0.0 {
+            (self.body.death + 1).min(crate::world::entity::tracker::DEATH_DURATION)
         } else {
             0
         };
@@ -238,14 +240,14 @@ impl InWorld {
     /// `LocalPlayer.sendIsSprintingIfNeeded` and the input packet:
     pub(super) fn send_input(&mut self, input: player::MoveInput) {
         let keys = keys::player_input(input);
-        if keys != self.sent_input || self.input_dirty {
-            self.sent_input = keys;
+        if keys != self.sent.input || self.sent.input_dirty {
+            self.sent.input = keys;
             self.joined.session.send_player_input(keys);
         }
-        self.input_dirty = false;
+        self.sent.input_dirty = false;
         let sprinting = self.player.sprinting();
-        if sprinting != self.sent_sprinting {
-            self.sent_sprinting = sprinting;
+        if sprinting != self.sent.sprinting {
+            self.sent.sprinting = sprinting;
             self.joined.session.send_player_command(if sprinting {
                 PlayerCommand::StartSprinting
             } else {
@@ -338,7 +340,7 @@ impl InWorld {
         let on_ground = self.player.on_ground();
         let wall = self.player.horizontal_collision();
         let session = &self.joined.session;
-        match self.position_report.tick(feet, yaw, pitch, on_ground, wall) {
+        match self.sent.position.tick(feet, yaw, pitch, on_ground, wall) {
             Some(Report::PosRot) => {
                 session.send_position((feet.x, feet.y, feet.z), yaw, pitch, on_ground, wall);
             }
