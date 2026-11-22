@@ -23,8 +23,6 @@ pub(in crate::renderer) struct Recording {
     pub offset: Cell<Option<Vec4>>,
     /// How the fog finds distances (`FogInput` bytes), the same way.
     pub view: Cell<Option<PushBlock<4>>>,
-    /// The next indirect draw command this frame.
-    pub draw_cursor: Cell<u32>,
 }
 
 impl Recording {
@@ -35,7 +33,6 @@ impl Recording {
             push: Cell::new(None),
             offset: Cell::new(None),
             view: Cell::new(None),
-            draw_cursor: Cell::new(0),
         }
     }
 

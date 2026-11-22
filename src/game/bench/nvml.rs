@@ -68,6 +68,15 @@ struct Nvml {
 // SAFETY: NVML is thread-safe, and the handle is only an opaque id.
 unsafe impl Send for Nvml {}
 
+/// NVML as the driver installs it: System32 on Windows, the loader's path on Linux.
+const LIBRARY: Option<&str> = if cfg!(windows) {
+    Some("nvml.dll")
+} else if cfg!(target_os = "linux") {
+    Some("libnvidia-ml.so.1")
+} else {
+    None
+};
+
 impl Nvml {
     /// Loads NVML and picks the GPU whose name contains `device_name` (the
     /// one Vulkan renders on), or the first one.
@@ -75,7 +84,7 @@ impl Nvml {
         // SAFETY: loading the system's NVML, whose functions are declared
         // below with the signatures of `nvml.h`.
         unsafe {
-            let library = libloading::Library::new("libnvidia-ml.so.1").ok()?;
+            let library = libloading::Library::new(LIBRARY?).ok()?;
             let init: libloading::Symbol<unsafe extern "C" fn() -> Status> =
                 library.get(b"nvmlInit_v2").ok()?;
             if init() != 0 {

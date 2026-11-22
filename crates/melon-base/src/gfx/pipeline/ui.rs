@@ -247,7 +247,10 @@ pub unsafe fn record(
         }
         let wanted_pipeline = (call.program, call.blend);
         if wanted_pipeline != applied {
-            let (from, to) = (ui.pass(applied.0, applied.1), ui.pass(call.program, call.blend));
+            let (from, to) = (
+                ui.pass(applied.0, applied.1),
+                ui.pass(call.program, call.blend),
+            );
             if from.pipeline != to.pipeline {
                 bind(to);
             }

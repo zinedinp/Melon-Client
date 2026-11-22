@@ -62,13 +62,7 @@ impl Hotbars {
         for (i, hotbar) in self.hotbars.iter().enumerate() {
             let list = hotbar
                 .iter()
-                .map(|stack| {
-                    let mut compound = NbtCompound::new();
-                    if !stack.is_empty() {
-                        stack.write_item_stack(&mut compound);
-                    }
-                    NbtTag::Compound(compound)
-                })
+                .map(|stack| NbtTag::Compound(stack.to_nbt().unwrap_or_default()))
                 .collect();
             root.put_list(&i.to_string(), list);
         }

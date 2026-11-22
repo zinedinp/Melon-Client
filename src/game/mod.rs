@@ -173,6 +173,9 @@ pub struct InWorld {
     overlay: Option<Box<dyn crate::gui::overlay::Overlay>>,
     /// Real time not yet spent on whole ticks.
     tick_time: f32,
+    /// While the game is paused: the partial tick it was paused at
+    /// (`DeltaTracker.pausedDeltaTickResidual`).
+    paused_at: Option<f32>,
     /// What the server last heard of the keys, sprinting and position.
     sent: position_report::LastSent,
     /// What riding makes of the keys.
@@ -386,6 +389,7 @@ impl InWorld {
             spectator_menu: Default::default(),
             overlay: None,
             tick_time: 0.0,
+            paused_at: None,
             sent: Default::default(),
             ride: riding::RideState::default(),
             keys: Keys::default(),
@@ -439,6 +443,18 @@ impl InWorld {
 
     pub fn is_integrated(&self) -> bool {
         self.joined.is_integrated()
+    }
+
+    /// The integrated server, in a singleplayer world.
+    pub fn integrated_server(&self) -> Option<&crate::singleplayer::server::IntegratedServer> {
+        self.joined.server.as_ref()
+    }
+
+    /// [`Self::integrated_server`], to change it.
+    pub fn integrated_server_mut(
+        &mut self,
+    ) -> Option<&mut crate::singleplayer::server::IntegratedServer> {
+        self.joined.server.as_mut()
     }
 
     /// `--bench`: from now on the benchmark plays, at this render distance.

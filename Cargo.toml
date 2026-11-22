@@ -1,6 +1,6 @@
 [package]
 name = "melon"
-version = "0.10.0-pre+mc26.3"
+version = "0.10.0+mc26.3"
 authors = ["Zinedin Polic"]
 edition = "2024"
 rust-version = "1.100.0"
@@ -17,6 +17,8 @@ members = ["crates/melon-base"]
 melon-base = { path = "crates/melon-base" }
 aes = "0.9.4"
 anyhow = "1.0.104"
+# Pumpkin's game profile holds its properties in one.
+arc-swap = "1.9.3"
 chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
 arboard = { version = "3.7.0", features = ["wayland-data-control"] }
 ash = "0.38.0"
@@ -44,6 +46,8 @@ pumpkin-util = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip"
 pumpkin-wasm-host = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
 pumpkin-world = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
 rand = "0.10.4"
+# The integrated server's global pool, built with its threads ranked.
+rayon = "1.12.0"
 raw-window-handle = "0.6.2"
 rodio = { version = "0.23.0", default-features = false, features = ["playback", "vorbis"] }
 rsa = { version = "0.10", default-features = false, features = ["std", "encoding"] }
@@ -63,6 +67,13 @@ regex = { version = "1.13.2", default-features = false, features = ["std", "perf
 shaderc = "0.10.1"
 zip = { version = "9.8.1", default-features = false, features = ["deflate-flate2"] }
 miraculix = "0.5.8-beta"
+# The GPU's vendor and architecture, for vendor paths (see melon-base).
+numerobis = { version = "0.3.3-alpha", default-features = false }
+
+# numerobis next to this repository, until the version melon-base needs is
+# on crates.io; git dependents of melon-base (the launcher) need it published.
+[patch.crates-io]
+numerobis = { path = "../../numerobis" }
 
 [profile.dev]
 opt-level = 1

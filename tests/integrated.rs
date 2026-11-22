@@ -28,6 +28,13 @@ impl TestWorld {
             settings,
             view_distance,
             simulation_distance: view_distance,
+            host: server::Host {
+                uuid: Identity::Offline {
+                    username: username.to_owned(),
+                }
+                .uuid(),
+                name: username.to_owned(),
+            },
         })
         .expect("the world should open");
         let identity = Identity::Offline {

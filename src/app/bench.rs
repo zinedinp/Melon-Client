@@ -19,6 +19,9 @@ use crate::singleplayer::{
 /// Where the runs' CSV and summaries go without `--out`, from the working
 /// directory.
 const OUT_DIR: &str = "target/melon-bench";
+/// Every how many frames the shading is counted: reading it back costs the
+/// CPU time the run measures.
+const SHADING_EVERY: u32 = 16;
 
 pub(super) struct BenchRun {
     pub options: BenchOptions,
@@ -26,6 +29,8 @@ pub(super) struct BenchRun {
     phase: Option<Phase>,
     /// NVML, while recording on an NVIDIA GPU.
     gpu_monitor: Option<GpuMonitor>,
+    /// The shading frames already recorded.
+    shading_read: u64,
 }
 
 impl BenchRun {
@@ -35,20 +40,27 @@ impl BenchRun {
             recorder: None,
             phase: None,
             gpu_monitor: None,
+            shading_read: 0,
         }
     }
 
     /// The world was entered: recording starts.
-    pub fn start(&mut self, renderer: &Renderer, config: &Config) {
+    pub fn start(&mut self, renderer: &mut Renderer, config: &Config) {
+        renderer.count_shading(SHADING_EVERY);
         let device = renderer.device_info();
-        self.gpu_monitor = GpuMonitor::start(&device.name);
+        // NVML only knows NVIDIA's GPUs.
+        let nvidia = device.gpu.vendor == numerobis::pci::Vendor::Nvidia;
+        self.gpu_monitor = nvidia.then(|| GpuMonitor::start(&device.name)).flatten();
         if self.gpu_monitor.is_none() {
-            println!("Bench: no NVML (no NVIDIA GPU?), no GPU load");
+            println!("Bench: no NVML (no NVIDIA GPU, or no driver library), no GPU load");
         }
         self.recorder = Some(Recorder::new(Setup {
             label: self.options.label.clone(),
             scene: self.options.scene.name().to_owned(),
-            device: format!("{}{}", device.name, device.type_suffix),
+            device: match device.gpu.architecture.name() {
+                Some(arch) => format!("{}{} [{arch}]", device.name, device.type_suffix),
+                None => format!("{}{}", device.name, device.type_suffix),
+            },
             resolution: renderer.framebuffer_size(),
             render_distance: config.render_distance,
             fps_cap: self.options.fps_cap,
@@ -116,6 +128,13 @@ impl BenchRun {
         }
         let (cpu_ms, cpu) = world.profiler.last_frame();
         let (gpu_ms, gpu) = renderer.gpu_last_frame();
+        let (read, shading) = renderer.gpu_last_stats();
+        let shading = if read == self.shading_read {
+            Vec::new()
+        } else {
+            self.shading_read = read;
+            shading.to_vec()
+        };
         recorder.frame(
             FrameSample {
                 frame_ms: dt_ms,
@@ -126,7 +145,7 @@ impl BenchRun {
                 terrain_draws: render.terrain_draws,
                 sections_drawn: render.sections_drawn,
                 entities: world.entity_count(),
-                shading: renderer.gpu_last_stats().to_vec(),
+                shading,
             },
             world.server_mspt(),
             net.totals().backlog,
@@ -166,11 +185,15 @@ impl BenchRun {
 }
 
 /// What the benchmark holds still for the run, in memory only.
-pub(super) fn override_config(config: &mut Config) {
+pub(super) fn override_config(config: &mut Config, render_distance: Option<u8>) {
     // The heaviest preset, whatever the player chose: render distance 32,
     // fancy clouds out to 128, every particle.
     config.graphics_preset = options::GraphicsPreset::Fabulous;
     options::GraphicsPreset::Fabulous.apply(config);
+    if let Some(chunks) = render_distance {
+        config.render_distance = chunks;
+        config.simulation_distance = chunks;
+    }
     config.vsync = false;
     config.fullscreen = true;
     config.max_fps = options::MAX_FPS_RANGE.1;

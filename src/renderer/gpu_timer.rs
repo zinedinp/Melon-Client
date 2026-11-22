@@ -76,6 +76,12 @@ pub(super) struct GpuTimer {
     count_open: Cell<bool>,
     /// The newest frame's statistics per pass, for the benchmark.
     last_stats: Vec<(&'static str, PassStats)>,
+    /// How many times `last_stats` was read back.
+    stats_read: u64,
+    /// Every how many frames the shading is counted; 0: never. Reading the
+    /// statistics back costs some drivers half a millisecond (Intel Arc).
+    count_every: u32,
+    frames_begun: u64,
 }
 
 impl GpuTimer {
@@ -135,6 +141,9 @@ impl GpuTimer {
             counted: RefCell::default(),
             count_open: Cell::new(false),
             last_stats: Vec::new(),
+            stats_read: 0,
+            count_every: 0,
+            frames_begun: 0,
         }
     }
 
@@ -176,7 +185,7 @@ impl GpuTimer {
     }
 
     /// Reads back what slot `slot` counted the last time, then readies its
-    /// pool for this frame.
+    /// pool for this frame if it is one of the counted.
     unsafe fn begin_counting(&mut self, device: &ash::Device, cmd: vk::CommandBuffer, slot: usize) {
         let Some(&pool) = self.count_pools.get(slot) else {
             return;
@@ -189,11 +198,21 @@ impl GpuTimer {
             };
             if read.is_ok() {
                 self.last_stats = sum_by_pass(&written, &results);
+                self.stats_read += 1;
             }
+        }
+        self.counted.borrow_mut().clear();
+        self.frames_begun += 1;
+        let counts = self.count_every > 0
+            && self
+                .frames_begun
+                .is_multiple_of(u64::from(self.count_every));
+        if !counts {
+            self.count_pool.set(vk::QueryPool::null());
+            return;
         }
         unsafe { device.cmd_reset_query_pool(cmd, pool, 0, MAX_COUNTED) };
         self.count_pool.set(pool);
-        self.counted.borrow_mut().clear();
     }
 
     /// Ends the GPU work named `label`, which ran since the last mark.
@@ -331,9 +350,15 @@ impl GpuTimer {
         (self.last_total_ms, &self.last)
     }
 
-    /// The newest frame the GPU finished: each counted pass's shading.
-    pub(super) fn last_stats(&self) -> &[(&'static str, PassStats)] {
-        &self.last_stats
+    /// The newest counted frame's shading per pass, and how many were read
+    /// so far (a new count means a new frame).
+    pub(super) fn last_stats(&self) -> (u64, &[(&'static str, PassStats)]) {
+        (self.stats_read, &self.last_stats)
+    }
+
+    /// Counts the shading of every `every`th frame; 0 stops it.
+    pub(super) fn count_every(&mut self, every: u32) {
+        self.count_every = every;
     }
 
     /// F3's lines: the frame's GPU time, then each pass with its share.
@@ -396,6 +421,9 @@ mod tests {
             counted: RefCell::default(),
             count_open: Cell::new(false),
             last_stats: Vec::new(),
+            stats_read: 0,
+            count_every: 0,
+            frames_begun: 0,
         }
     }
 

@@ -64,12 +64,9 @@ pub struct Recorder {
     phases: Vec<PhaseRecord>,
 }
 
-/// The process's resident memory in bytes, from `/proc/self/statm`.
+/// The process's resident memory in bytes.
 pub fn resident_bytes() -> u64 {
-    std::fs::read_to_string("/proc/self/statm")
-        .ok()
-        .and_then(|statm| statm.split_whitespace().nth(1)?.parse::<u64>().ok())
-        .map_or(0, |pages| pages * 4096)
+    crate::platform::resident_set_bytes().unwrap_or(0)
 }
 
 /// Mean, percentiles and max of `values`, in their unit.
@@ -136,7 +133,12 @@ fn shading(frames: &[FrameSample], resolution: (u32, u32)) -> Value {
             all += stats;
             all
         });
-    let frames = frames.len().max(1) as f64;
+    // Only some frames are counted.
+    let frames = frames
+        .iter()
+        .filter(|f| !f.shading.is_empty())
+        .count()
+        .max(1) as f64;
     let pixels = (f64::from(resolution.0) * f64::from(resolution.1)).max(1.0);
     let entry = |stats: PassStats| {
         let fragments = stats.fragments as f64 / frames;
@@ -264,6 +266,23 @@ impl Recorder {
             let draws: Vec<f32> = frames.iter().map(|f| f.terrain_draws as f32).collect();
             let sections: Vec<f32> = frames.iter().map(|f| f.sections_drawn as f32).collect();
             let entities: Vec<f32> = frames.iter().map(|f| f.entities as f32).collect();
+            let waited: Vec<f32> = frames
+                .iter()
+                .map(|f| {
+                    f.cpu
+                        .iter()
+                        .filter(|(name, _)| crate::game::profiler::WAITS.contains(name))
+                        .map(|&(_, ms)| ms)
+                        .sum()
+                })
+                .collect();
+            // The main thread's time on a core over the share of the frame it had work.
+            let working = 1.0 - mean_of(&waited) / mean_of(&frame_ms).max(1e-9);
+            let main_on_core = rates
+                .threads
+                .iter()
+                .find(|(name, _)| name == "melon")
+                .map(|&(_, cores)| round(cores / working.max(1e-9)));
             let threads: Map<String, Value> = rates
                 .threads
                 .iter()
@@ -311,6 +330,7 @@ impl Recorder {
                     "nvml": nvml(&record.gpu_samples),
                     "server_mspt": mspt,
                     "threads": threads,
+                    "main_on_core": main_on_core,
                     "rss_mib": round(record.rss_max as f64 / (1024.0 * 1024.0)),
                     "mesh_mib": round(record.mesh_memory_max as f64 / (1024.0 * 1024.0)),
                 }),
@@ -401,7 +421,7 @@ impl Recorder {
 /// The summary as a short table, one row per phase.
 pub fn table(summary: &Value) -> String {
     let mut out = String::from(
-        "phase   sec    fps     frame ms (mean/p99)   cpu ms  gpu ms  ch/s   KiB/s  mspt\n",
+        "phase   sec    fps     frame ms (mean/p99)   cpu ms  gpu ms  ch/s   KiB/s  mspt   main on core\n",
     );
     let Some(phases) = summary["phases"].as_object() else {
         return out;
@@ -413,7 +433,7 @@ pub fn table(summary: &Value) -> String {
         };
         let _ = writeln!(
             out,
-            "{:<7} {:>5.1} {:>7.1}  {:>7.2} / {:>7.2}       {:>6.2}  {:>6.2}  {:>5.1}  {:>6.0}  {:>5.2}",
+            "{:<7} {:>5.1} {:>7.1}  {:>7.2} / {:>7.2}       {:>6.2}  {:>6.2}  {:>5.1}  {:>6.0}  {:>5.2}  {:>5.0}%",
             phase.name(),
             number(&p["seconds"]),
             number(&p["fps"]),
@@ -424,7 +444,29 @@ pub fn table(summary: &Value) -> String {
             number(&p["net"]["chunks_s"]),
             number(&p["net"]["kib_s"]),
             number(&p["server_mspt"]),
+            number(&p["main_on_core"]) * 100.0,
         );
+    }
+    out.push_str("cores busy per thread group:\n");
+    for phase in Phase::MEASURED {
+        let Some(threads) = phases
+            .get(phase.name())
+            .and_then(|p| p["threads"].as_object())
+        else {
+            continue;
+        };
+        let mut groups: Vec<(&String, f64)> = threads
+            .iter()
+            .map(|(name, cores)| (name, number(cores)))
+            .filter(|&(_, cores)| cores >= 0.01)
+            .collect();
+        groups.sort_by(|a, b| b.1.total_cmp(&a.1));
+        let total: f64 = groups.iter().map(|&(_, cores)| cores).sum();
+        let _ = write!(out, "{:<7} {total:>5.2}:", phase.name());
+        for (name, cores) in groups {
+            let _ = write!(out, " {name} {cores:.2}");
+        }
+        out.push('\n');
     }
     out
 }

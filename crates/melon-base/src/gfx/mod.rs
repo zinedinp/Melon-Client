@@ -39,6 +39,8 @@ pub struct DeviceInfo {
     pub vendor: String,
     /// `backendName` plus `driverInfo`.
     pub backend: String,
+    /// The driver's version, unpacked as its vendor packs it.
     pub driver: String,
+    /// Vendor and architecture, for what differs between them.
+    pub gpu: numerobis::pci::Gpu,
 }
-

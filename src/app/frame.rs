@@ -153,6 +153,7 @@ impl RunningState {
 
     /// Draws a frame of the world. Whether the benchmark has finished.
     fn draw_world(&mut self, now: Instant, dt: f32) -> bool {
+        self.update_pause();
         let blocked = self.paused() || self.overlay_open();
         let framerate_limit = self.framerate_limit();
         let scale = self.scale();
@@ -172,7 +173,8 @@ impl RunningState {
             return false;
         };
         world.profiler.mark("receive");
-        let ticks = world.advance(dt, blocked, &env.world_context(size));
+        let paused = self.game_paused;
+        let ticks = world.advance(dt, blocked, paused, &env.world_context(size));
         let ears = world.listener();
         env.audio.set_listener(ears.position, ears.forward, ears.up);
         world.sample_subsystems(env.audio.stats());
@@ -361,6 +363,7 @@ impl RunningState {
                 ("gpu wait", waits.gpu),
                 ("acquire wait", waits.acquire),
                 ("present", waits.present),
+                ("record", waits.record),
             ],
         );
         world.profiler.end();

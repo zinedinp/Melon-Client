@@ -294,15 +294,23 @@ pub(crate) fn handle_encryption_request(
 
     if should_authenticate {
         let Identity::Online {
-            uuid, access_token, ..
+            uuid,
+            access_token,
+            session,
+            ..
         } = identity
         else {
             bail!(
-                "server requires Mojang authentication (online_mode = true), but no account is logged in - log in from the title screen first"
+                "the server requires a signed-in account (online_mode = true), but an offline profile is selected - pick a Microsoft account or one of another sign-in service in the launcher"
             );
         };
         let hash = crypto::server_hash(&server_id, &shared_secret, &public_key_der);
-        crate::auth::minecraft::join_server(access_token, &uuid.simple().to_string(), &hash)?;
+        crate::auth::minecraft::join_server(
+            session,
+            access_token,
+            &uuid.simple().to_string(),
+            &hash,
+        )?;
     }
 
     conn.write_packet(id::SB_LOGIN_ENCRYPTION_RESPONSE, |buf| {

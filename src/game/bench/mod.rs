@@ -104,6 +104,9 @@ pub struct BenchOptions {
     pub scene: Scene,
     /// `--out <dir>`: where the CSV and summary go.
     pub out: Option<PathBuf>,
+    /// `--render-distance N`: in place of the preset's 32, for both the
+    /// render and the simulation distance.
+    pub render_distance: Option<u8>,
     /// `--hold <phase>`: repeat that phase until the window is closed
     /// instead of going on, for GPU profilers that need a steady scene
     /// (see `performance/README.md`). Nothing is written then.

@@ -30,7 +30,7 @@ pub fn check(
     what: &str,
     sent: Result<Response<Body>, ureq::Error>,
 ) -> anyhow::Result<Response<Body>> {
-    let mut response = sent.with_context(|| format!("{what} (Netzwerk)"))?;
+    let mut response = sent.with_context(|| format!("{what} (network)"))?;
     if !response.status().is_success() {
         return Err(error(what, &mut response));
     }
@@ -45,7 +45,7 @@ pub fn json<T: DeserializeOwned>(
     check(what, sent)?
         .body_mut()
         .read_json()
-        .with_context(|| format!("{what}: ungueltige Antwort"))
+        .with_context(|| format!("{what}: unreadable answer"))
 }
 
 /// An error status with its body.
@@ -54,7 +54,7 @@ pub fn error(what: &str, response: &mut Response<Body>) -> anyhow::Error {
     let text = response
         .body_mut()
         .read_to_string()
-        .unwrap_or_else(|_| "<kein Antworttext>".to_string());
+        .unwrap_or_else(|_| "<no answer text>".to_string());
     anyhow::anyhow!("{what}: http status {status}: {}", short_body(&text))
 }
 
@@ -67,7 +67,7 @@ fn short_body(text: &str) -> String {
             let len = lower[from..].find("</title>")?;
             Some(text[from..from + len].trim().to_string())
         });
-        return title.unwrap_or_else(|| "(Fehlerseite des Dienstes)".to_string());
+        return title.unwrap_or_else(|| "(the service's error page)".to_string());
     }
     let text = text.trim();
     match text.char_indices().nth(300) {

@@ -9,13 +9,30 @@ use crate::network::play::game::PlayerCommand;
 use crate::world::player::{self};
 
 impl InWorld {
-    /// Runs the ticks that fit into `dt` seconds (`Minecraft.tick` via its timer).
-    pub fn advance(&mut self, dt: f32, blocked: bool, ui: &controls::WorldContext) -> u32 {
+    /// Runs the ticks that fit into `dt` seconds (`Minecraft.tick` via its
+    /// timer). While `paused`, only what vanilla ticks then: the screens and
+    /// the chat, not the level, and the partial tick holds.
+    pub fn advance(
+        &mut self,
+        dt: f32,
+        blocked: bool,
+        paused: bool,
+        ui: &controls::WorldContext,
+    ) -> u32 {
         let mut input = if blocked {
             player::MoveInput::default()
         } else {
             self.keys.movement()
         };
+        // `DeltaTracker.updatePauseState`.
+        match (self.paused_at, paused) {
+            (None, true) => self.paused_at = Some(self.partial_tick()),
+            (Some(at), false) => {
+                self.paused_at = None;
+                self.tick_time = at * self.level_settings.tick_seconds();
+            }
+            _ => {}
+        }
         self.tick_time += dt;
         let mut ticks = 0;
         // `DeltaTracker.advanceGameTime` against `getTickTargetMillis`.
@@ -25,6 +42,10 @@ impl InWorld {
             if ticks > 10 {
                 self.tick_time = 0.0;
                 break;
+            }
+            if paused {
+                self.tick_paused(ui);
+                continue;
             }
             if let Some(driver) = &mut self.bench {
                 let stats = self.level.mesh_stats();
@@ -41,13 +62,27 @@ impl InWorld {
             }
             self.tick(input, ui, !blocked && self.bench.is_none());
         }
-        self.player.update_render(self.partial_tick(), dt);
+        if !paused {
+            self.player.update_render(self.partial_tick(), dt);
+        }
         ticks.min(10)
+    }
+
+    /// `Minecraft.tick` while paused: the open screen and the chat only.
+    fn tick_paused(&mut self, ui: &controls::WorldContext) {
+        if let Some(actions) = self.with_overlay(ui, |overlay, ctx| overlay.tick(ctx)) {
+            self.apply_overlay_actions(actions, ui);
+        }
+        self.interaction.miss_time = super::interaction::SCREEN_MISS_TIME;
+        self.chat.tick(ui.font);
     }
 
     /// `DeltaTracker.getGameTimeDeltaPartialTick(true)`: how far into the
     /// next tick this frame is, at the level's tick length.
     pub(super) fn partial_tick(&self) -> f32 {
+        if let Some(at) = self.paused_at {
+            return at;
+        }
         (self.tick_time / self.level_settings.tick_seconds()).min(1.0)
     }
 

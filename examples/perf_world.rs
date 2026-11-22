@@ -72,6 +72,13 @@ fn main() -> anyhow::Result<()> {
         },
         view_distance: 8,
         simulation_distance: 8,
+        host: melon::singleplayer::server::Host {
+            uuid: Identity::Offline {
+                username: "Perf".into(),
+            }
+            .uuid(),
+            name: "Perf".into(),
+        },
     })?;
     let mut session = network::join_stream(
         pipe,

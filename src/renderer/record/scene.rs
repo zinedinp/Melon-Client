@@ -89,7 +89,7 @@ impl Renderer {
                         };
                         self.gpu_timer.counted_pass(label);
                         if by_multi {
-                            self.draw_terrain_multi(cmd, world, mode, chunks, view_proj, &light);
+                            self.draw_terrain_multi(cmd, world, mode, view_proj, &light);
                         }
                         let mut bound: Option<bool> = None;
                         for chunk in chunks {
@@ -765,18 +765,23 @@ impl Renderer {
             .cmd_draw_indexed(cmd, quads * 6, instances, 0, base as i32, 0);
     }
 
-    /// The quad meshes among `chunks` as multi-draws (see [`super::indirect`]):
+    /// The quad meshes of `mode`'s pass as multi-draws, gathered before the
+    /// frame (see [`super::super::indirect`]).
     unsafe fn draw_terrain_multi(
         &self,
         cmd: vk::CommandBuffer,
         world: &WorldDraw,
         mode: Mode,
-        chunks: &[ChunkDraw],
         view_proj: Mat4,
         light: &DrawLight,
     ) {
         let Some(indirect) = &self.indirect else {
             return;
+        };
+        let pass = match mode {
+            Mode::Solid => Pass::Solid,
+            Mode::Opaque => Pass::Cutout,
+            _ => return,
         };
         if !self.bind_terrain_pass(cmd, world.atlas, mode) {
             return;
@@ -791,49 +796,9 @@ impl Renderer {
             &[indirect.set(frame)],
             &[],
         );
-        let mut run: Option<(vk::Buffer, u32, u32)> = None;
-        let capacity = indirect.capacity(frame);
-        for chunk in chunks {
-            let TerrainMesh::Quads(id) = chunk.mesh else {
-                continue;
-            };
-            // TODO(perf): a random read per draw from the arena's slot table
-            // (~8 MB with every section loaded), a cache miss each. Could the
-            // buffer and base go into `ChunkDraw` when culled, kept right across
-            // arena moves by a generation number?
-            let Some(slot) = self.quad_meshes.slot(id.0) else {
-                continue;
-            };
-            let (buffer, base) = self.quad_meshes.location(slot);
-            if run.is_some_and(|(open, ..)| open != buffer) {
-                self.flush_run(cmd, layout, view_proj, light, run.take());
-            }
-            let offset = world.offset(chunk.origin).to_array();
-            for (first, quads) in quad_draws(&chunk.range, slot.count) {
-                let index = self.recording.draw_cursor.get();
-                if index >= capacity {
-                    break;
-                }
-                indirect.write(
-                    frame,
-                    index,
-                    vk::DrawIndexedIndirectCommand {
-                        index_count: quads * 6,
-                        instance_count: 1,
-                        first_index: 0,
-                        vertex_offset: corner_offset(base + first),
-                        first_instance: 0,
-                    },
-                    offset,
-                );
-                self.recording.draw_cursor.set(index + 1);
-                run = Some(match run {
-                    Some((buffer, first, count)) => (buffer, first, count + 1),
-                    None => (buffer, index, 1),
-                });
-            }
+        for &run in indirect.runs(pass) {
+            self.flush_run(cmd, layout, view_proj, light, run);
         }
-        self.flush_run(cmd, layout, view_proj, light, run);
     }
 
     /// Draws a run of [`Self::draw_terrain_multi`].
@@ -843,9 +808,13 @@ impl Renderer {
         layout: vk::PipelineLayout,
         view_proj: Mat4,
         light: &DrawLight,
-        run: Option<(vk::Buffer, u32, u32)>,
+        Run {
+            buffer,
+            first,
+            count,
+        }: Run,
     ) {
-        let (Some((buffer, first, count)), Some(indirect)) = (run, &self.indirect) else {
+        let Some(indirect) = &self.indirect else {
             return;
         };
         self.bind_quads(cmd, layout, buffer);
@@ -974,15 +943,4 @@ impl Renderer {
     }
 }
 
-/// The draws of quads `range` of a mesh of `count` quads.
-fn quad_draws(range: &std::ops::Range<u32>, count: u32) -> impl Iterator<Item = (u32, u32)> {
-    let end = range.end.min(count);
-    (range.start..end)
-        .step_by(mesh_arena::QUADS_PER_DRAW as usize)
-        .map(move |first| (first, (end - first).min(mesh_arena::QUADS_PER_DRAW)))
-}
-
-/// The `vertexOffset` that makes `gl_VertexIndex` count corners from quad `quad`.
-fn corner_offset(quad: u32) -> i32 {
-    (quad * 4) as i32
-}
+use super::super::indirect::{Pass, Run, corner_offset, quad_draws};

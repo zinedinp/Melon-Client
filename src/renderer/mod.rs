@@ -21,12 +21,10 @@ mod swapchain;
 #[cfg(test)]
 mod vk_check;
 
+pub use gpu_timer::PassStats;
 pub use melon_base::gfx::quad;
 pub use melon_base::gfx::{DeviceInfo, TextureId};
-use melon_base::gfx::{
-    descriptor_pools, gui_uniforms, staging, texture, texture_update, vk_util,
-};
-pub use gpu_timer::PassStats;
+use melon_base::gfx::{descriptor_pools, gui_uniforms, staging, texture, texture_update, vk_util};
 pub use picture::{PictureDraw, pixel_projection};
 pub use swapchain::FIFO_LATEST_READY;
 use vk_util::{
@@ -247,6 +245,8 @@ pub struct FrameWaits {
     pub acquire: std::time::Duration,
     /// In `queue_present`, which some drivers block in.
     pub present: std::time::Duration,
+    /// Recording and submitting the commands, past the waits for the frame's slot and image.
+    pub record: std::time::Duration,
 }
 
 /// One host-visible UI vertex buffer per frame in flight, mapped for good.

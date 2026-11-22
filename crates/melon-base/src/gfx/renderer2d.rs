@@ -80,11 +80,15 @@ impl Renderer2d {
         unsafe { Self::new_inner(window, enable_validation) }
     }
 
-    unsafe fn new_inner(window: &winit::window::Window, enable_validation: bool) -> anyhow::Result<Self> {
+    unsafe fn new_inner(
+        window: &winit::window::Window,
+        enable_validation: bool,
+    ) -> anyhow::Result<Self> {
         let entry = ash::Entry::load()?;
         let display = window.display_handle()?.as_raw();
-        let instance::Instance { instance, debug, .. } =
-            instance::create(&entry, display, enable_validation)?;
+        let instance::Instance {
+            instance, debug, ..
+        } = instance::create(&entry, display, enable_validation)?;
         let (surface_loader, surface) =
             instance::create_surface(&entry, &instance, display, window.window_handle()?.as_raw())?;
         let gpu = device::pick(&instance, &surface_loader, surface)?;
@@ -99,12 +103,19 @@ impl Renderer2d {
 
         let depth_format = find_depth_format(&instance, gpu.physical)?;
         let surface_format = choose_surface_format(&surface_loader, gpu.physical, surface)?.format;
-        let render_pass = create_render_pass(&device, surface_format, depth_format, PassStart::Clear)?;
+        let render_pass =
+            create_render_pass(&device, surface_format, depth_format, PassStart::Clear)?;
         let texture_layout = pipeline::create_descriptor_set_layout(&device)?;
         let gui_layout = gui_uniforms::create_layout(&device)?;
         let gui = GuiUniforms::new(&device, &mem_props, gui_layout, FRAMES_IN_FLIGHT)?;
         let pipelines = UiPipelines {
-            built_in: ui::create_all(&device, render_pass, texture_layout, gui_layout, ui::BUILT_IN)?,
+            built_in: ui::create_all(
+                &device,
+                render_pass,
+                texture_layout,
+                gui_layout,
+                ui::BUILT_IN,
+            )?,
             pack: [None, None, None],
             glint: ui::create(
                 &device,
@@ -162,7 +173,9 @@ impl Renderer2d {
         let white = RgbaImage::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
         renderer.white = renderer.load_texture(&white)?;
         let view = renderer.textures[renderer.white.0].view;
-        renderer.gui.bind_glint(&renderer.device, view, renderer.sampler);
+        renderer
+            .gui
+            .bind_glint(&renderer.device, view, renderer.sampler);
         Ok(renderer)
     }
 
@@ -198,7 +211,12 @@ impl Renderer2d {
     }
 
     /// Draws `ui`, whose coordinates span `ui_size`, over `clear_color`.
-    pub fn render(&mut self, ui: &DrawList, ui_size: (f32, f32), clear_color: [f32; 4]) -> anyhow::Result<()> {
+    pub fn render(
+        &mut self,
+        ui: &DrawList,
+        ui_size: (f32, f32),
+        clear_color: [f32; 4],
+    ) -> anyhow::Result<()> {
         unsafe { self.render_inner(ui, ui_size, clear_color) }
     }
 
@@ -268,8 +286,13 @@ impl Renderer2d {
             let view = self.device.create_image_view(&view_info, None)?;
             self.swapchain.views.push(view);
         }
-        self.swapchain.depth =
-            create_depth_image(&self.device, &self.mem_props, self.depth_format, extent, false)?;
+        self.swapchain.depth = create_depth_image(
+            &self.device,
+            &self.mem_props,
+            self.depth_format,
+            extent,
+            false,
+        )?;
         for &view in &self.swapchain.views {
             let attachments = [view, self.swapchain.depth.2];
             let info = vk::FramebufferCreateInfo::default()
@@ -309,7 +332,12 @@ impl Renderer2d {
         }
     }
 
-    unsafe fn render_inner(&mut self, ui: &DrawList, ui_size: (f32, f32), clear_color: [f32; 4]) -> anyhow::Result<()> {
+    unsafe fn render_inner(
+        &mut self,
+        ui: &DrawList,
+        ui_size: (f32, f32),
+        clear_color: [f32; 4],
+    ) -> anyhow::Result<()> {
         let current = self.frames.current;
         let vertex_count = ui.vertices.len().min(VERTEX_CAPACITY);
         let fitting = ui
@@ -347,7 +375,8 @@ impl Renderer2d {
         };
         let image_fence = self.frames.images_in_flight[image_index as usize];
         if image_fence != vk::Fence::null() {
-            self.device.wait_for_fences(&[image_fence], true, u64::MAX)?;
+            self.device
+                .wait_for_fences(&[image_fence], true, u64::MAX)?;
         }
         self.frames.images_in_flight[image_index as usize] = fence;
 
@@ -526,7 +555,9 @@ unsafe fn create_vertices(
             vk::BufferUsageFlags::VERTEX_BUFFER,
             &vk_util::MAPPED_FOR_GPU,
         )?;
-        let mapped = device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty())?.cast::<u8>();
+        let mapped = device
+            .map_memory(memory, 0, size, vk::MemoryMapFlags::empty())?
+            .cast::<u8>();
         buffers.push((buffer, memory, mapped));
     }
     Ok(Vertices {

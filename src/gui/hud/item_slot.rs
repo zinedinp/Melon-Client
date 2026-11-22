@@ -475,7 +475,7 @@ fn attribute_lines(lang: &Lang, stack: &ItemStack, lines: &mut Vec<StyledText>) 
             .filter(|m| std::mem::discriminant(&m.slot) == std::mem::discriminant(&slot))
         {
             let mut amount = modifier.amount;
-            let base = match modifier.id {
+            let base = match &*modifier.id {
                 "minecraft:base_attack_damage" => Some(1.0),
                 "minecraft:base_attack_speed" => Some(Attributes::ATTACK_SPEED.default_value),
                 _ => None,

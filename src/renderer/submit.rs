@@ -2,7 +2,7 @@
 
 use super::globals::Globals;
 use super::record::scene::ScenePart;
-use super::{Frame, FrameWaits, MAX_FRAMES_IN_FLIGHT, Renderer, VERTEX_CAPACITY, mesh_arena, quad};
+use super::{Frame, FrameWaits, MAX_FRAMES_IN_FLIGHT, Renderer, VERTEX_CAPACITY, quad};
 use ash::vk;
 use std::time::Instant;
 
@@ -38,14 +38,21 @@ impl Renderer {
         self.gpu_timer.last_frame()
     }
 
-    /// The newest frame the GPU finished: how much each counted pass shaded.
-    /// Empty without `pipelineStatisticsQuery`.
-    pub fn gpu_last_stats(&self) -> &[(&'static str, super::gpu_timer::PassStats)] {
+    /// The newest counted frame: how much each counted pass shaded, and how
+    /// many frames were counted so far. Empty without `pipelineStatisticsQuery`
+    /// or [`Self::count_shading`].
+    pub fn gpu_last_stats(&self) -> (u64, &[(&'static str, super::gpu_timer::PassStats)]) {
         self.gpu_timer.last_stats()
     }
 
-    /// The staging and draw buffers this frame grows into.
-    unsafe fn prepare_frame(&mut self, frame: &Frame<'_>) -> anyhow::Result<()> {
+    /// Counts the shading of every `every`th frame (pipeline statistics); 0 stops it.
+    pub fn count_shading(&mut self, every: u32) {
+        self.gpu_timer.count_every(every);
+    }
+
+    /// The staging and draw buffers this frame grows into, and the gathered
+    /// draws copied in; once the frame slot is free.
+    unsafe fn prepare_frame(&mut self) -> anyhow::Result<()> {
         let current = self.frames.current;
         super::texture_update::prepare(
             &mut self.textures.update_staging[current],
@@ -57,23 +64,10 @@ impl Renderer {
         for arena in [&mut self.meshes, &mut self.quad_meshes] {
             arena.prepare(&self.device, &self.mem_props, current)?;
         }
-        if let (Some(indirect), Some(world)) = (
-            &mut self.indirect,
-            frame.scene.and_then(|s| s.world.as_ref()),
-        ) {
-            let draws: u32 = world
-                .chunks
-                .iter()
-                .chain(&world.cutout)
-                .map(|chunk| {
-                    chunk
-                        .range
-                        .len()
-                        .div_ceil(mesh_arena::QUADS_PER_DRAW as usize)
-                        .max(1) as u32
-                })
-                .sum();
+        if let Some(indirect) = &mut self.indirect {
+            let draws = indirect.gathered();
             indirect.prepare(&self.device, &self.mem_props, current, draws)?;
+            indirect.upload(current);
         }
         Ok(())
     }
@@ -91,6 +85,13 @@ impl Renderer {
         }
         let calls = fitting(&frame.ui.calls, ui_vertices);
         let mut waits = FrameWaits::default();
+        // What only reads the CPU's state, before waiting for the frame's slot.
+        if let Some(indirect) = &mut self.indirect {
+            match frame.scene.and_then(|s| s.world.as_ref()) {
+                Some(world) => indirect.gather(world, &self.quad_meshes),
+                None => indirect.clear(),
+            }
+        }
         let started = Instant::now();
         let fence = self.frames.in_flight[self.frames.current];
         self.device.wait_for_fences(&[fence], true, u64::MAX)?;
@@ -103,7 +104,7 @@ impl Renderer {
         // past that point a failure would leave the image acquired and its
         // semaphore signalled with nothing to wait on it. Out of memory
         // (another program holding the VRAM) now just skips the frame.
-        self.prepare_frame(frame)?;
+        self.prepare_frame()?;
 
         let started = Instant::now();
         let acquire = self.swapchain.loader.acquire_next_image(
@@ -132,6 +133,7 @@ impl Renderer {
             self.device.wait_for_fences(&[img_fence], true, u64::MAX)?;
         }
         waits.gpu += started.elapsed();
+        let recording = Instant::now();
         self.frames.images_in_flight[image_index as usize] = fence;
 
         std::ptr::copy_nonoverlapping(
@@ -139,8 +141,6 @@ impl Renderer {
             self.ui_vertices.mapped[self.frames.current],
             ui_vertices * std::mem::size_of::<quad::Vertex>(),
         );
-
-        self.recording.draw_cursor.set(0);
 
         let mut globals = frame
             .scene
@@ -322,6 +322,7 @@ impl Renderer {
             .command_buffers(&command_buffers)
             .signal_semaphores(&signal_semaphores);
         self.device.queue_submit(self.queue, &[submit], fence)?;
+        waits.record = recording.elapsed();
         self.frames.submitted[self.frames.current] = self.frames.number;
         for arena in [&mut self.meshes, &mut self.quad_meshes] {
             arena.submitted();

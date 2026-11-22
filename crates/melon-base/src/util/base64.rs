@@ -1,5 +1,28 @@
-//! Base64 as `java.util.Base64.getDecoder()` reads it: the server icon and
-//! the skin textures property.
+//! Base64 as `java.util.Base64` reads and writes it: the server icon, the skin textures
+//! property, and the sign-in service's metadata handed to authlib-injector.
+
+const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/// The basic alphabet with padding, as `getEncoder()` writes it.
+pub fn encode(data: &[u8]) -> String {
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
+    for chunk in data.chunks(3) {
+        let bytes = [
+            chunk[0],
+            *chunk.get(1).unwrap_or(&0),
+            *chunk.get(2).unwrap_or(&0),
+        ];
+        let bits = u32::from(bytes[0]) << 16 | u32::from(bytes[1]) << 8 | u32::from(bytes[2]);
+        for i in 0..4 {
+            if i <= chunk.len() {
+                out.push(ALPHABET[(bits >> (18 - 6 * i) & 63) as usize] as char);
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
 
 /// The basic alphabet, padding optional. `None` where Java throws: another
 /// character, a wrong ending unit or anything after the padding.
@@ -39,7 +62,17 @@ pub fn decode(text: &str) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use super::decode;
+    use super::{decode, encode};
+
+    #[test]
+    fn encoding_pads_and_round_trips() {
+        assert_eq!(encode(b"Man"), "TWFu");
+        assert_eq!(encode(b"Ma"), "TWE=");
+        assert_eq!(encode(b"M"), "TQ==");
+        assert_eq!(encode(b""), "");
+        let all: Vec<u8> = (0..=255).collect();
+        assert_eq!(decode(&encode(&all)).unwrap(), all);
+    }
 
     #[test]
     fn padding_is_optional_but_must_fit() {

@@ -16,6 +16,17 @@ pub fn group_of(name: &str) -> &str {
 
 impl ThreadTimes {
     /// All threads of this process right now.
+    #[cfg(windows)]
+    pub fn sample() -> Self {
+        let mut groups = BTreeMap::new();
+        for (name, nanos) in crate::platform::thread_cpu_times() {
+            *groups.entry(group_of(&name).to_owned()).or_default() += nanos;
+        }
+        Self(groups)
+    }
+
+    /// All threads of this process right now.
+    #[cfg(not(windows))]
     pub fn sample() -> Self {
         let mut groups = BTreeMap::new();
         let Ok(tasks) = std::fs::read_dir("/proc/self/task") else {
@@ -85,9 +96,32 @@ mod tests {
         assert!((load[1].1 - 0.01).abs() < 1e-9);
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     #[test]
     fn this_process_has_threads() {
         assert!(!ThreadTimes::sample().0.is_empty());
+    }
+
+    #[cfg(any(target_os = "linux", windows))]
+    #[test]
+    fn a_named_thread_is_found_by_its_group() {
+        let (stop, wait) = std::sync::mpsc::channel::<()>();
+        let (started, ready) = std::sync::mpsc::channel();
+        let thread = std::thread::Builder::new()
+            .name("cpu-probe-7".to_owned())
+            .spawn(move || {
+                let _ = started.send(());
+                let _ = wait.recv();
+            })
+            .unwrap();
+        ready.recv().unwrap();
+        let sampled = ThreadTimes::sample();
+        drop(stop);
+        thread.join().unwrap();
+        assert!(
+            sampled.0.contains_key("cpu-probe"),
+            "{:?}",
+            sampled.0.keys()
+        );
     }
 }

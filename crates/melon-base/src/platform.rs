@@ -431,6 +431,181 @@ pub fn drop_cargo_stack() {
     }
 }
 
+/// The name and time on a core (user and kernel, in ns) of every thread of
+/// this process. The calling thread is named `melon`, as Linux names the main
+/// thread after the process.
+#[cfg(windows)]
+pub fn thread_cpu_times() -> Vec<(String, u64)> {
+    win_threads::all()
+}
+
+/// The calling thread's time on a core: user and kernel, in ns.
+#[cfg(windows)]
+pub fn current_thread_cpu() -> Option<(u64, u64)> {
+    win_threads::current()
+}
+
+/// Kernel32's thread snapshot and times, declared once.
+#[cfg(windows)]
+mod win_threads {
+    use std::ffi::c_void;
+
+    #[repr(C)]
+    struct ThreadEntry32 {
+        size: u32,
+        usage: u32,
+        thread_id: u32,
+        owner_process_id: u32,
+        base_priority: i32,
+        delta_priority: i32,
+        flags: u32,
+    }
+
+    #[repr(C)]
+    #[derive(Default, Clone, Copy)]
+    struct FileTime {
+        low: u32,
+        high: u32,
+    }
+
+    impl FileTime {
+        fn nanos(self) -> u64 {
+            ((u64::from(self.high) << 32) | u64::from(self.low)) * 100
+        }
+    }
+
+    const TH32CS_SNAPTHREAD: u32 = 0x4;
+    const THREAD_QUERY_LIMITED_INFORMATION: u32 = 0x0800;
+    const INVALID_HANDLE_VALUE: isize = -1;
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn CreateToolhelp32Snapshot(flags: u32, process: u32) -> isize;
+        fn Thread32First(snapshot: isize, entry: *mut ThreadEntry32) -> i32;
+        fn Thread32Next(snapshot: isize, entry: *mut ThreadEntry32) -> i32;
+        fn OpenThread(access: u32, inherit: i32, id: u32) -> isize;
+        fn GetThreadTimes(
+            thread: isize,
+            creation: *mut FileTime,
+            exit: *mut FileTime,
+            kernel: *mut FileTime,
+            user: *mut FileTime,
+        ) -> i32;
+        fn CloseHandle(handle: isize) -> i32;
+        fn GetCurrentProcessId() -> u32;
+        fn GetCurrentThreadId() -> u32;
+        fn GetCurrentThread() -> isize;
+        fn SetThreadPriority(thread: isize, priority: i32) -> i32;
+        fn GetModuleHandleW(name: *const u16) -> isize;
+        fn GetProcAddress(module: isize, name: *const u8) -> *const c_void;
+        fn LocalFree(memory: *mut c_void) -> *mut c_void;
+    }
+
+    /// `GetThreadDescription` (Windows 10 1607 on), looked up as std does.
+    type GetThreadDescription = unsafe extern "system" fn(isize, *mut *mut u16) -> i32;
+
+    fn get_thread_description() -> Option<GetThreadDescription> {
+        static FOUND: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
+        let address = (*FOUND.get_or_init(|| {
+            let name: Vec<u16> = "kernel32.dll\0".encode_utf16().collect();
+            unsafe {
+                let module = GetModuleHandleW(name.as_ptr());
+                if module == 0 {
+                    return None;
+                }
+                let proc = GetProcAddress(module, c"GetThreadDescription".as_ptr().cast());
+                (!proc.is_null()).then_some(proc as usize)
+            }
+        }))?;
+        // SAFETY: the address is kernel32's `GetThreadDescription`.
+        Some(unsafe { std::mem::transmute::<usize, GetThreadDescription>(address) })
+    }
+
+    /// User and kernel ns of an open thread handle.
+    fn times(thread: isize) -> Option<(u64, u64)> {
+        let mut t = [FileTime::default(); 4];
+        let [creation, exit, kernel, user] = &mut t;
+        let ok = unsafe { GetThreadTimes(thread, creation, exit, kernel, user) };
+        (ok != 0).then(|| (user.nanos(), kernel.nanos()))
+    }
+
+    fn name(thread: isize) -> Option<String> {
+        let describe = get_thread_description()?;
+        let mut text: *mut u16 = std::ptr::null_mut();
+        // SAFETY: on success `text` is a NUL-terminated string to `LocalFree`.
+        unsafe {
+            if describe(thread, &mut text) < 0 || text.is_null() {
+                return None;
+            }
+            let len = (0..).take_while(|&i| *text.add(i) != 0).count();
+            let name = String::from_utf16_lossy(std::slice::from_raw_parts(text, len));
+            LocalFree(text.cast());
+            Some(name)
+        }
+    }
+
+    pub fn current() -> Option<(u64, u64)> {
+        times(unsafe { GetCurrentThread() })
+    }
+
+    /// `THREAD_PRIORITY_BELOW_NORMAL` / `THREAD_PRIORITY_ABOVE_NORMAL`.
+    pub const BELOW_NORMAL: i32 = -1;
+    pub const ABOVE_NORMAL: i32 = 1;
+
+    /// Sets the calling thread's priority; `what` names it in the warning.
+    pub fn set_priority(priority: i32, what: &str) {
+        if unsafe { SetThreadPriority(GetCurrentThread(), priority) } == 0 {
+            crate::warn!(
+                "Thread priority not {what}: {}",
+                std::io::Error::last_os_error()
+            );
+        }
+    }
+
+    pub fn all() -> Vec<(String, u64)> {
+        let mut out = Vec::new();
+        unsafe {
+            let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+            if snapshot == INVALID_HANDLE_VALUE {
+                return out;
+            }
+            let process = GetCurrentProcessId();
+            let me = GetCurrentThreadId();
+            let mut entry = ThreadEntry32 {
+                size: std::mem::size_of::<ThreadEntry32>() as u32,
+                usage: 0,
+                thread_id: 0,
+                owner_process_id: 0,
+                base_priority: 0,
+                delta_priority: 0,
+                flags: 0,
+            };
+            let mut more = Thread32First(snapshot, &mut entry) != 0;
+            while more {
+                if entry.owner_process_id == process {
+                    let thread = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, 0, entry.thread_id);
+                    if thread != 0 {
+                        if let Some((user, kernel)) = times(thread) {
+                            let name = if entry.thread_id == me {
+                                "melon".to_owned()
+                            } else {
+                                name(thread)
+                                    .filter(|n| !n.is_empty())
+                                    .unwrap_or_else(|| "unnamed".to_owned())
+                            };
+                            out.push((name, user + kernel));
+                        }
+                        CloseHandle(thread);
+                    }
+                }
+                more = Thread32Next(snapshot, &mut entry) != 0;
+            }
+            CloseHandle(snapshot);
+        }
+        out
+    }
+}
+
 /// Lets the calling thread give way when the CPU is busy.
 pub fn lower_thread_priority() {
     #[cfg(target_os = "linux")]
@@ -451,6 +626,19 @@ pub fn lower_thread_priority() {
                 );
             }
         }
+    }
+    #[cfg(windows)]
+    win_threads::set_priority(win_threads::BELOW_NORMAL, "lowered");
+}
+
+/// Ranks the calling thread above the throughput threads: one a frame waits
+/// on (the main thread, the urgent meshers). Windows only, and only with
+/// more than 4 cores, so the server tick still gets one; Linux can't raise a
+/// thread without privileges and lowers the others instead.
+pub fn raise_frame_thread_priority() {
+    #[cfg(windows)]
+    if std::thread::available_parallelism().is_ok_and(|n| n.get() > 4) {
+        win_threads::set_priority(win_threads::ABOVE_NORMAL, "raised");
     }
 }
 

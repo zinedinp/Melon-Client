@@ -1,6 +1,8 @@
-//! Microsoft device-code login on a background thread the GUI can poll.
+//! Signing in on a background thread the GUI can poll: Microsoft's device code, or another
+//! service's email and password.
 
 pub mod accounts;
+pub mod alt_sessions;
 mod http;
 mod md5;
 pub mod minecraft;
@@ -9,7 +11,7 @@ mod secrets;
 pub mod skin;
 pub mod xbox;
 
-use accounts::{Account, Accounts};
+use accounts::{Account, Accounts, AltAccount};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -24,6 +26,18 @@ pub enum LoginEvent {
     Error(String),
     /// A saved session could not be refreshed; the button returns to logged out.
     SessionExpired,
+    /// The account has several profiles: the user picks one, then [`start_alt_select`].
+    ChooseProfile(PendingLogin),
+    /// Ely.by wants the account's 2FA code after the password.
+    NeedsCode,
+}
+
+/// A sign-in with another service that still needs a profile picked.
+#[derive(Clone, Debug)]
+pub struct PendingLogin {
+    pub provider: alt_sessions::Provider,
+    pub login: String,
+    pub session: alt_sessions::Session,
 }
 
 pub struct LoginHandle {
@@ -36,7 +50,7 @@ pub fn start_login(client_id: String, game_dir: PathBuf) -> LoginHandle {
     LoginHandle { events: rx }
 }
 
-/// Refreshes the selected Microsoft account's session, or checks that its token still works.
+/// Refreshes the selected account's session, or checks that its token still works.
 pub fn start_restore(client_id: Option<String>, game_dir: PathBuf) -> LoginHandle {
     let (tx, rx) = channel();
     std::thread::spawn(
@@ -50,6 +64,130 @@ pub fn start_restore(client_id: Option<String>, game_dir: PathBuf) -> LoginHandl
         },
     );
     LoginHandle { events: rx }
+}
+
+/// Signs in with another service's email (or name) and password; Ely.by's 2FA code goes after
+/// the password as `password:code`.
+pub fn start_alt_login(
+    provider: alt_sessions::Provider,
+    login: String,
+    password: String,
+    game_dir: PathBuf,
+) -> LoginHandle {
+    let (tx, rx) = channel();
+    std::thread::spawn(move || {
+        let client_token = alt_sessions::new_client_token();
+        let event = match alt_sessions::authenticate(&provider, &login, &password, &client_token) {
+            Ok(session) => {
+                let pending = PendingLogin {
+                    provider,
+                    login,
+                    session,
+                };
+                match (&pending.session.selected_profile, pending.session.available_profiles.as_slice()) {
+                    (Some(profile), _) | (None, [profile]) => {
+                        let profile = profile.clone();
+                        finish_alt_event(pending, profile, &game_dir)
+                    }
+                    (None, []) => LoginEvent::Error(
+                        "This account has no Minecraft profile yet. Create one on the service's website first."
+                            .into(),
+                    ),
+                    (None, _) => LoginEvent::ChooseProfile(pending),
+                }
+            }
+            Err(e) if e.is::<alt_sessions::NeedsCode>() => LoginEvent::NeedsCode,
+            Err(e) => LoginEvent::Error(format!("{e:#}")),
+        };
+        tx.send(event).ok();
+    });
+    LoginHandle { events: rx }
+}
+
+/// Finishes a sign-in that had several profiles with the one the user picked.
+pub fn start_alt_select(
+    pending: PendingLogin,
+    profile: alt_sessions::Profile,
+    game_dir: PathBuf,
+) -> LoginHandle {
+    let (tx, rx) = channel();
+    std::thread::spawn(move || {
+        tx.send(finish_alt_event(pending, profile, &game_dir)).ok();
+    });
+    LoginHandle { events: rx }
+}
+
+fn finish_alt_event(
+    pending: PendingLogin,
+    profile: alt_sessions::Profile,
+    game_dir: &Path,
+) -> LoginEvent {
+    match finish_alt_login(pending, profile, game_dir) {
+        Ok(account) => LoginEvent::Success {
+            username: account.username,
+            uuid: account.uuid,
+        },
+        Err(e) => LoginEvent::Error(format!("{e:#}")),
+    }
+}
+
+/// Binds the session to `profile` where it is not yet, then writes the account.
+fn finish_alt_login(
+    pending: PendingLogin,
+    profile: alt_sessions::Profile,
+    game_dir: &Path,
+) -> anyhow::Result<AltAccount> {
+    let PendingLogin {
+        provider,
+        login,
+        mut session,
+    } = pending;
+    if session.selected_profile.as_ref() != Some(&profile) {
+        session = alt_sessions::refresh(
+            &provider,
+            &session.access_token,
+            &session.client_token,
+            Some(&profile),
+        )?;
+    }
+    let profile = session.selected_profile.unwrap_or(profile);
+    let account = AltAccount {
+        provider,
+        username: profile.name,
+        uuid: profile.id,
+        login,
+        access_token: session.access_token,
+        client_token: session.client_token,
+        in_keyring: false,
+    };
+    let mut accounts = Accounts::load(game_dir);
+    accounts.store(Account::Alternative(account.clone()), true);
+    accounts.save(game_dir)?;
+    Ok(account)
+}
+
+/// The account with a working token: kept when the service accepts it, else refreshed and
+/// saved.
+pub fn refresh_alt(account: &AltAccount, game_dir: &Path) -> anyhow::Result<AltAccount> {
+    let (provider, access, client) = (
+        &account.provider,
+        &account.access_token,
+        &account.client_token,
+    );
+    if !access.is_empty() && alt_sessions::validate(provider, access, client)? {
+        return Ok(account.clone());
+    }
+    let session = alt_sessions::refresh(provider, access, client, None)?;
+    let mut fresh = account.clone();
+    fresh.access_token = session.access_token;
+    fresh.client_token = session.client_token;
+    if let Some(profile) = session.selected_profile {
+        fresh.username = profile.name;
+    }
+    let mut accounts = Accounts::load(game_dir);
+    accounts.store(Account::Alternative(fresh.clone()), false);
+    accounts.save(game_dir)?;
+    Ok(fresh)
 }
 
 fn run_login(client_id: &str, game_dir: &Path, tx: &Sender<LoginEvent>) {
@@ -95,8 +233,13 @@ fn finish_microsoft_login(
 }
 
 fn restore_session(client_id: Option<&str>, game_dir: &Path) -> anyhow::Result<(String, String)> {
-    let Some(Account::Microsoft(account)) = Accounts::load(game_dir).selected().cloned() else {
-        anyhow::bail!("kein gewaehltes Microsoft-Konto");
+    let account = match Accounts::load(game_dir).selected().cloned() {
+        Some(Account::Microsoft(account)) => account,
+        Some(Account::Alternative(account)) => {
+            let fresh = refresh_alt(&account, game_dir)?;
+            return Ok((fresh.username, fresh.uuid));
+        }
+        _ => anyhow::bail!("no signed-in account is selected"),
     };
     if let (Some(client_id), Some(refresh)) = (client_id, account.refresh_token.as_deref()) {
         let ms = oauth::refresh_access_token(client_id, refresh)?;
@@ -159,9 +302,18 @@ pub struct StoredAccount {
     pub in_keyring: bool,
 }
 
-/// The account Play starts as, refreshing a Microsoft one when its session ran out.
+/// The account Play starts as, refreshing its session when it ran out.
 pub fn load_or_refresh(game_dir: &Path) -> Option<Account> {
     let selected = Accounts::load(game_dir).selected()?.clone();
+    if let Account::Alternative(account) = &selected {
+        return match refresh_alt(account, game_dir) {
+            Ok(fresh) => Some(Account::Alternative(fresh)),
+            Err(e) => {
+                crate::warn!("{} session not refreshed: {e:#}", account.provider.name);
+                Some(selected)
+            }
+        };
+    }
     let Account::Microsoft(account) = &selected else {
         return Some(selected);
     };

@@ -32,6 +32,13 @@ impl InWorld {
         self.overlay.is_some()
     }
 
+    /// Whether the open overlay pauses a singleplayer world: every vanilla
+    /// screen does but the chat's.
+    pub fn overlay_pauses(&self) -> bool {
+        self.overlay_kind()
+            .is_some_and(|kind| kind != OverlayKind::Chat)
+    }
+
     /// Which overlay is open, if any.
     pub(super) fn overlay_kind(&self) -> Option<OverlayKind> {
         self.overlay.as_ref().map(|overlay| overlay.kind())

@@ -415,6 +415,13 @@ fn receive_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec
         },
         view_distance: RADIUS as u8 + 2,
         simulation_distance: RADIUS as u8 + 2,
+        host: melon::singleplayer::server::Host {
+            uuid: Identity::Offline {
+                username: "Bench".into(),
+            }
+            .uuid(),
+            name: "Bench".into(),
+        },
     })?;
     let mut session = network::join_stream(
         pipe,

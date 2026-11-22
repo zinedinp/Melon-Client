@@ -139,6 +139,8 @@ pub struct AudioEngine {
     /// Counts [`Self::stop_all`]s: a sound started under an older count
     /// ends at the mixer's next sample, also one still being decoded.
     generation: Arc<std::sync::atomic::AtomicU64>,
+    /// [`Self::set_paused`]: all but the music and the UI hold.
+    paused: Arc<std::sync::atomic::AtomicBool>,
 }
 
 /// The decoded files (`SoundBufferLibrary.cache`), and the sounds waiting
@@ -261,6 +263,7 @@ impl AudioEngine {
             gains,
             stats: Arc::default(),
             generation: Arc::default(),
+            paused: Arc::default(),
         }
         .preloaded()
     }
@@ -443,6 +446,12 @@ impl AudioEngine {
         self.generation.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// `SoundManager.pauseAllExcept(MUSIC, UI)` while the game is paused,
+    /// and their resume after: the other sounds hold where they are.
+    pub fn set_paused(&self, paused: bool) {
+        self.paused.store(paused, Ordering::Relaxed);
+    }
+
     /// Starts a sound.
     pub fn play(&self, instance: &SoundInstance) {
         let started = std::time::Instant::now();
@@ -498,7 +507,15 @@ impl AudioEngine {
             pitch: (instance.pitch * sound.pitch).clamp(PITCH_RANGE.0, PITCH_RANGE.1),
             source: self.forced_source.unwrap_or(instance.source),
             place: instance.position.map(|at| (at, range)),
-            generation: stats::Generation::of(&self.generation),
+            generation: {
+                let generation = stats::Generation::of(&self.generation);
+                let source = self.forced_source.unwrap_or(instance.source);
+                if matches!(source, SoundSource::Music | SoundSource::Ui) {
+                    generation
+                } else {
+                    generation.pausing(&self.paused)
+                }
+            },
         };
         if !sound.stream {
             return self.queue_decode(&sound.name, Some(voice));

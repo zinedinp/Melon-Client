@@ -1,11 +1,14 @@
 //! A frame's phases timed on the CPU, for F3.
 
+use std::fmt::Write as _;
 use std::time::{Duration, Instant};
 
 /// How much each frame moves the average: about the last 30 frames count.
 const SMOOTHING: f32 = 1.0 / 30.0;
 /// The kernel's counts are read this often.
 const KERNEL_PERIOD: Duration = Duration::from_secs(1);
+/// The frame's phases spent waiting off the CPU, on the GPU or the compositor.
+pub const WAITS: [&str; 3] = ["gpu wait", "acquire wait", "present"];
 
 pub struct FrameProfiler {
     /// Each phase's smoothed milliseconds, in the order first seen.
@@ -27,6 +30,8 @@ pub struct FrameProfiler {
     events_per_frame: f32,
     interval_ms: f32,
     kernel: KernelClock,
+    /// Since the kernel's last count: the frames' time not spent in [`WAITS`], and the events'.
+    working: Duration,
 }
 
 impl Default for FrameProfiler {
@@ -47,6 +52,7 @@ impl Default for FrameProfiler {
             events_per_frame: 0.0,
             interval_ms: 0.0,
             kernel: KernelClock::default(),
+            working: Duration::ZERO,
         }
     }
 }
@@ -65,7 +71,7 @@ impl FrameProfiler {
             self.events_per_frame += (count as f32 - self.events_per_frame) * SMOOTHING;
             self.interval_ms += (interval - self.interval_ms) * SMOOTHING;
         }
-        self.kernel.sample(now);
+        self.kernel.sample(now, std::mem::take(&mut self.working));
         self.started = now;
         self.last = now;
         self.frame.clear();
@@ -73,6 +79,7 @@ impl FrameProfiler {
 
     /// One window or device event handled between frames, in `spent`.
     pub fn event(&mut self, spent: Duration) {
+        self.working += spent;
         if self.ended.is_some() {
             self.gap_events += spent;
             self.gap_count += 1;
@@ -107,6 +114,13 @@ impl FrameProfiler {
         let total = (now - self.started).as_secs_f32() * 1000.0;
         self.frame_ms += (total - self.frame_ms) * SMOOTHING;
         self.frame_total_ms = total;
+        let waited: f32 = self
+            .frame
+            .iter()
+            .filter(|(name, _)| WAITS.contains(name))
+            .map(|&(_, ms)| ms)
+            .sum();
+        self.working += Duration::from_secs_f32(((total - waited) / 1000.0).max(0.0));
         self.ended = Some(now);
     }
 
@@ -164,24 +178,32 @@ impl FrameProfiler {
     }
 }
 
-/// What the kernel counts for the main thread (`/proc/thread-self`).
+/// What the kernel counts for the main thread.
 #[derive(Default)]
 struct KernelClock {
     last: Option<(Instant, ThreadCounts)>,
+    /// The working time since `last`.
+    working: Duration,
     /// Over the last period.
     kernel_share: Option<f32>,
-    queued_ms_per_s: f32,
+    /// Its time on a core over its working time: below 100% it was taken
+    /// off the core, or blocked, while it had work.
+    on_core: Option<f32>,
+    /// Linux only (`schedstat`).
+    queued_ms_per_s: Option<f32>,
 }
 
+/// Nanoseconds.
 #[derive(Clone, Copy)]
 struct ThreadCounts {
-    user_ticks: u64,
-    system_ticks: u64,
-    queued_ns: u64,
+    user: u64,
+    system: u64,
+    queued: Option<u64>,
 }
 
 impl KernelClock {
-    fn sample(&mut self, now: Instant) {
+    fn sample(&mut self, now: Instant, working: Duration) {
+        self.working += working;
         if self
             .last
             .is_some_and(|(at, _)| now.saturating_duration_since(at) < KERNEL_PERIOD)
@@ -193,22 +215,31 @@ impl KernelClock {
         };
         if let Some((at, before)) = self.last {
             let seconds = now.saturating_duration_since(at).as_secs_f32().max(1e-6);
-            let user = counts.user_ticks.saturating_sub(before.user_ticks);
-            let system = counts.system_ticks.saturating_sub(before.system_ticks);
+            let user = counts.user.saturating_sub(before.user);
+            let system = counts.system.saturating_sub(before.system);
             self.kernel_share =
                 (user + system > 0).then(|| system as f32 / (user + system) as f32 * 100.0);
-            let queued = counts.queued_ns.saturating_sub(before.queued_ns);
-            self.queued_ms_per_s = queued as f32 / 1e6 / seconds;
+            let working = self.working.as_nanos() as f32;
+            self.on_core = (working > 0.0).then(|| (user + system) as f32 / working * 100.0);
+            self.queued_ms_per_s = counts
+                .queued
+                .zip(before.queued)
+                .map(|(now, then)| now.saturating_sub(then) as f32 / 1e6 / seconds);
         }
+        self.working = Duration::ZERO;
         self.last = Some((now, counts));
     }
 
     fn line(&self) -> Option<String> {
         let kernel = self.kernel_share?;
-        Some(format!(
-            "  main thread: {kernel:.0}% of its CPU in the kernel, waited {:.1} ms/s for a core",
-            self.queued_ms_per_s
-        ))
+        let mut line = format!("  main thread: {kernel:.0}% of its CPU in the kernel");
+        if let Some(on_core) = self.on_core {
+            let _ = write!(line, ", on a core {on_core:.0}% of its working time");
+        }
+        if let Some(queued) = self.queued_ms_per_s {
+            let _ = write!(line, ", waited {queued:.1} ms/s for a core");
+        }
+        Some(line)
     }
 }
 
@@ -220,23 +251,35 @@ impl ThreadCounts {
         Self::parse(&stat, &sched)
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(windows)]
+    fn read() -> Option<Self> {
+        let (user, system) = crate::platform::current_thread_cpu()?;
+        Some(Self {
+            user,
+            system,
+            queued: None,
+        })
+    }
+
+    #[cfg(not(any(target_os = "linux", windows)))]
     fn read() -> Option<Self> {
         None
     }
 
-    /// `stat`'s fields 14 and 15 (`utime`, `stime`) and `schedstat`'s wait time.
+    /// `stat`'s fields 14 and 15 (`utime`, `stime`, in `USER_HZ` = 100
+    /// ticks a second) and `schedstat`'s wait time.
     #[cfg(any(target_os = "linux", test))]
     fn parse(stat: &str, sched: &str) -> Option<Self> {
+        const TICK_NS: u64 = 10_000_000;
         let rest = stat.get(stat.rfind(')')? + 1..)?;
         let mut fields = rest.split_whitespace().skip(11);
-        let user_ticks = fields.next()?.parse().ok()?;
-        let system_ticks = fields.next()?.parse().ok()?;
-        let queued_ns = sched.split_whitespace().nth(1)?.parse().ok()?;
+        let user = fields.next()?.parse::<u64>().ok()? * TICK_NS;
+        let system = fields.next()?.parse::<u64>().ok()? * TICK_NS;
+        let queued = sched.split_whitespace().nth(1)?.parse().ok()?;
         Some(Self {
-            user_ticks,
-            system_ticks,
-            queued_ns,
+            user,
+            system,
+            queued: Some(queued),
         })
     }
 }
@@ -274,12 +317,12 @@ mod tests {
     fn the_kernel_counts_are_read_after_the_name() {
         let stat = "123 (my (odd) name) S 1 2 3 4 5 6 7 8 9 10 250 40 0 0";
         let counts = ThreadCounts::parse(stat, "9000 777 12\n").unwrap();
-        assert_eq!(counts.user_ticks, 250);
-        assert_eq!(counts.system_ticks, 40);
-        assert_eq!(counts.queued_ns, 777);
+        assert_eq!(counts.user, 2_500_000_000);
+        assert_eq!(counts.system, 400_000_000);
+        assert_eq!(counts.queued, Some(777));
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     #[test]
     fn this_thread_can_be_read() {
         assert!(ThreadCounts::read().is_some());

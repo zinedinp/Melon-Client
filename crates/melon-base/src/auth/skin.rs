@@ -1,9 +1,59 @@
-//! A player's skin from Mojang's session server.
+//! A player's skin from Mojang's session server, or from the sign-in service the player uses.
 
+use super::alt_sessions::Provider;
 use super::http;
 use anyhow::Context;
 use image::RgbaImage;
 use serde::Deserialize;
+use std::sync::RwLock;
+
+/// Where skins come from: Mojang, or another sign-in service.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SkinSource {
+    /// The base of `session/minecraft/profile/<uuid>`.
+    session: String,
+    /// Another service's name lookup (`POST` a list of names); `None` for Mojang's.
+    names: Option<String>,
+    /// Texture hosts besides Mojang's, as `skinDomains` rules.
+    domains: Vec<String>,
+}
+
+impl SkinSource {
+    pub fn mojang() -> Self {
+        Self {
+            session: super::minecraft::MOJANG_SESSION.to_owned(),
+            names: None,
+            domains: Vec::new(),
+        }
+    }
+
+    pub fn of(provider: &Provider) -> Self {
+        Self {
+            session: provider.session_base(),
+            names: Some(format!("{}/api/profiles/minecraft", provider.root)),
+            domains: provider.skin_domains.clone(),
+        }
+    }
+}
+
+/// Where this process looks up skins; Mojang until [`set_source`].
+static SOURCE: RwLock<Option<SkinSource>> = RwLock::new(None);
+
+/// Makes `source` where skins without one of their own come from: the client sets the service
+/// its player signed in with.
+pub fn set_source(source: SkinSource) {
+    if let Ok(mut current) = SOURCE.write() {
+        *current = Some(source);
+    }
+}
+
+fn source() -> SkinSource {
+    SOURCE
+        .read()
+        .ok()
+        .and_then(|source| source.clone())
+        .unwrap_or_else(SkinSource::mojang)
+}
 
 #[derive(Deserialize)]
 struct Profile {
@@ -44,17 +94,27 @@ pub struct DownloadedSkin {
     pub slim: bool,
 }
 
-/// The head of the account `uuid` (32 hex digits), as it is on Mojang's skin.
+/// The head of the account `uuid` (32 hex digits), as it is on its skin.
 pub fn fetch_head(uuid: &str) -> anyhow::Result<RgbaImage> {
-    let skin = fetch_skin(uuid)?;
-    head_from_skin(&skin.image).context("Skin hat kein Gesicht")
+    fetch_head_from(&source(), uuid)
+}
+
+/// [`fetch_head`] from a given service.
+pub fn fetch_head_from(source: &SkinSource, uuid: &str) -> anyhow::Result<RgbaImage> {
+    let skin = fetch_skin_from(source, uuid)?;
+    head_from_skin(&skin.image).context("the skin has no face")
 }
 
 /// The skin of the account `uuid` (with or without dashes), made a 64x64 image.
 pub fn fetch_skin(uuid: &str) -> anyhow::Result<DownloadedSkin> {
+    fetch_skin_from(&source(), uuid)
+}
+
+/// [`fetch_skin`] from a given service.
+pub fn fetch_skin_from(source: &SkinSource, uuid: &str) -> anyhow::Result<DownloadedSkin> {
     let uuid = uuid.replace('-', "");
-    let url = format!("https://sessionserver.mojang.com/session/minecraft/profile/{uuid}");
-    let profile: Profile = http::json("Profil", http::get(&url).call())?;
+    let url = format!("{}/session/minecraft/profile/{uuid}", source.session);
+    let profile: Profile = http::json("Profile", http::get(&url).call())?;
     let value = profile
         .properties
         .iter()
@@ -62,7 +122,7 @@ pub fn fetch_skin(uuid: &str) -> anyhow::Result<DownloadedSkin> {
         .context("profile without a textures property")?
         .value
         .as_str();
-    skin_from_textures(value)
+    skin_from_textures_of(source, value)
 }
 
 /// The skin of the account called `name`.
@@ -75,16 +135,35 @@ pub fn fetch_skin_by_name(name: &str) -> anyhow::Result<DownloadedSkin> {
         !name.is_empty()
             && name.len() <= 16
             && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'),
-        "kein gültiger Spielername: {name}"
+        "not a valid player name: {name}"
     );
-    let url = format!("https://api.mojang.com/users/profiles/minecraft/{name}");
-    let found: Found = http::json("Profil", http::get(&url).call())?;
-    fetch_skin(&found.id)
+    let source = source();
+    let found: Found = match &source.names {
+        None => {
+            let url = format!("https://api.mojang.com/users/profiles/minecraft/{name}");
+            http::json("Profile", http::get(&url).call())?
+        }
+        Some(url) => {
+            let found: Vec<Found> = http::json("Profile", http::post(url).send_json([name]))?;
+            found.into_iter().next().context("no such player")?
+        }
+    };
+    fetch_skin_from(&source, &found.id)
 }
 
 /// The skin a profile's `textures` property (Base64 JSON, as Mojang and servers send it) points
 /// at.
 pub fn skin_from_textures(value: &str) -> anyhow::Result<DownloadedSkin> {
+    skin_from_textures_of(&source(), value)
+}
+
+fn download(url: &str) -> anyhow::Result<Vec<u8>> {
+    let mut response = http::check("Skin", http::get(url).call())?;
+    Ok(response.body_mut().read_to_vec()?)
+}
+
+/// [`skin_from_textures`], with the texture hosts `source` allows.
+fn skin_from_textures_of(source: &SkinSource, value: &str) -> anyhow::Result<DownloadedSkin> {
     let decoded = crate::util::base64::decode(value).context("textures property is not base64")?;
     let textures: Textures = serde_json::from_slice(&decoded).with_context(|| {
         let start: String = String::from_utf8_lossy(&decoded).chars().take(60).collect();
@@ -95,27 +174,83 @@ pub fn skin_from_textures(value: &str) -> anyhow::Result<DownloadedSkin> {
         .metadata
         .and_then(|m| m.model)
         .is_some_and(|model| model == "slim");
-    let url = skin.url.replacen("http://", "https://", 1);
-    anyhow::ensure!(allowed_texture_url(&url), "Skin von fremdem Server: {url}");
-    let mut response = http::check("Skin", http::get(&url).call())?;
-    let bytes = response.body_mut().read_to_vec()?;
+    // Mojang's links go over https; a service's are loaded as it hands them out (skins are
+    // public, and a local server may have no https at all).
+    let url = if allowed_texture_url(&skin.url, &source.domains) {
+        skin.url.clone()
+    } else {
+        skin.url.replacen("http://", "https://", 1)
+    };
+    anyhow::ensure!(
+        allowed_texture_url(&url, &source.domains),
+        "skin from a host that is not allowed: {}",
+        skin.url
+    );
+    let bytes = download(&url)?;
     let image = process_legacy_skin(image::load_from_memory(&bytes)?.to_rgba8())
-        .context("Skin hat eine falsche Größe")?;
+        .context("the skin has a wrong size")?;
     Ok(DownloadedSkin { image, slim })
 }
 
-/// authlib's `TextureUrlChecker`.
-fn allowed_texture_url(url: &str) -> bool {
-    let Some(rest) = url.strip_prefix("https://") else {
-        return false;
+/// authlib's `TextureUrlChecker`: Mojang's hosts over https, plus the hosts the sign-in
+/// service names (`skinDomains`), as authlib-injector allows them.
+fn allowed_texture_url(url: &str, domains: &[String]) -> bool {
+    let (secure, rest) = match (url.strip_prefix("https://"), url.strip_prefix("http://")) {
+        (Some(rest), _) => (true, rest),
+        (None, Some(rest)) => (false, rest),
+        (None, None) => return false,
     };
-    let host = rest.split(['/', '?', '#']).next().unwrap_or("");
-    if host.contains(['@', ':']) {
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    if authority.contains('@') {
         return false;
     }
-    ["minecraft.net", "mojang.com"]
+    let mojang = ["minecraft.net", "mojang.com"]
         .iter()
-        .any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
+        .any(|domain| authority == *domain || authority.ends_with(&format!(".{domain}")));
+    if secure && mojang {
+        return true;
+    }
+    let host = match authority.split_once(':') {
+        Some((host, port)) if !port.is_empty() && port.bytes().all(|b| b.is_ascii_digit()) => host,
+        Some(_) => return false,
+        None => authority,
+    };
+    domains.iter().any(|rule| domain_rule_matches(rule, host))
+}
+
+/// One `skinDomains` rule: `.example.com` for its subdomains, `*` anywhere as a wildcard,
+/// anything else for that host alone.
+fn domain_rule_matches(rule: &str, host: &str) -> bool {
+    let rule = rule.trim().to_ascii_lowercase();
+    let host = host.to_ascii_lowercase();
+    if rule.is_empty() || host.is_empty() {
+        return false;
+    }
+    match rule.strip_prefix('.') {
+        Some(parent) => wildcard(&format!("*.{parent}"), &host),
+        None => wildcard(&rule, &host),
+    }
+}
+
+/// `pattern` with `*` standing for any run of characters.
+fn wildcard(pattern: &str, text: &str) -> bool {
+    let Some((first, rest)) = pattern.split_once('*') else {
+        return pattern == text;
+    };
+    let Some(mut remaining) = text.strip_prefix(first) else {
+        return false;
+    };
+    let parts: Vec<&str> = rest.split('*').collect();
+    for (i, part) in parts.iter().enumerate() {
+        if i == parts.len() - 1 {
+            return remaining.ends_with(part);
+        }
+        match remaining.find(part) {
+            Some(at) => remaining = &remaining[at + part.len()..],
+            None => return false,
+        }
+    }
+    true
 }
 
 /// `SkinTextureDownloader.processLegacySkin`.
@@ -210,22 +345,81 @@ mod tests {
 
     #[test]
     fn only_mojang_hosts_serve_skins() {
+        let none: &[String] = &[];
         assert!(allowed_texture_url(
-            "https://textures.minecraft.net/texture/ab"
+            "https://textures.minecraft.net/texture/ab",
+            none
         ));
-        assert!(allowed_texture_url("https://minecraft.net/x"));
-        assert!(allowed_texture_url("https://a.mojang.com/x"));
+        assert!(allowed_texture_url("https://minecraft.net/x", none));
+        assert!(allowed_texture_url("https://a.mojang.com/x", none));
         assert!(!allowed_texture_url(
-            "http://textures.minecraft.net/texture/ab"
+            "http://textures.minecraft.net/texture/ab",
+            none
         ));
-        assert!(!allowed_texture_url("https://evilminecraft.net/x"));
+        assert!(!allowed_texture_url("https://evilminecraft.net/x", none));
         assert!(!allowed_texture_url(
-            "https://textures.minecraft.net.evil.com/x"
+            "https://textures.minecraft.net.evil.com/x",
+            none
         ));
         assert!(!allowed_texture_url(
-            "https://textures.minecraft.net@evil.com/x"
+            "https://textures.minecraft.net@evil.com/x",
+            none
         ));
-        assert!(!allowed_texture_url("https://localhost:8080/x"));
+        assert!(!allowed_texture_url("https://localhost:8080/x", none));
+    }
+
+    #[test]
+    fn a_services_skin_domains_add_hosts() {
+        let ely = ["ely.by".to_owned(), ".ely.by".to_owned()];
+        assert!(allowed_texture_url(
+            "http://ely.by/storage/skins/a.png",
+            &ely
+        ));
+        assert!(allowed_texture_url("https://skins.ely.by/a.png", &ely));
+        assert!(!allowed_texture_url("https://notely.by/a.png", &ely));
+        assert!(!allowed_texture_url("https://ely.by.evil.com/a.png", &ely));
+        assert!(!allowed_texture_url("https://ely.by@evil.com/a.png", &ely));
+        let local = ["localhost".to_owned()];
+        assert!(allowed_texture_url(
+            "http://localhost:25585/web/texture/skin/x.png",
+            &local
+        ));
+        assert!(!allowed_texture_url("http://localhost:evil/x.png", &local));
+        assert!(allowed_texture_url(
+            "https://anything.example/x",
+            &["*".to_owned()]
+        ));
+        assert!(domain_rule_matches("*.littleskin.cn", "a.littleskin.cn"));
+        assert!(!domain_rule_matches("*.littleskin.cn", "littleskin.cn"));
+        assert!(!domain_rule_matches(".ely.by", "ely.by"));
+        assert!(domain_rule_matches(
+            "skin-*.example.com",
+            "skin-eu.example.com"
+        ));
+    }
+
+    #[test]
+    fn a_service_has_its_own_session_and_name_lookup() {
+        let provider = Provider {
+            root: "https://littleskin.cn/api/yggdrasil".into(),
+            name: "LittleSkin".into(),
+            skin_domains: vec!["littleskin.cn".into()],
+            register_url: None,
+            name_login: true,
+        };
+        let source = SkinSource::of(&provider);
+        assert_eq!(
+            source.session,
+            "https://littleskin.cn/api/yggdrasil/sessionserver"
+        );
+        assert_eq!(
+            source.names.as_deref(),
+            Some("https://littleskin.cn/api/yggdrasil/api/profiles/minecraft")
+        );
+        assert_eq!(
+            SkinSource::mojang().session,
+            "https://sessionserver.mojang.com"
+        );
     }
 
     #[test]

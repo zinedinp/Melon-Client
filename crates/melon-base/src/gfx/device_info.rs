@@ -20,15 +20,11 @@ pub unsafe fn read_device_info(
         vk::PhysicalDeviceType::CPU => " (software)",
         _ => "",
     };
-    let vendor = match props.vendor_id {
-        0x1002 => "AMD".to_string(),
-        0x10DE => "NVIDIA".to_string(),
-        0x8086 => "Intel".to_string(),
-        0x13B5 => "ARM".to_string(),
-        0x5143 => "Qualcomm".to_string(),
-        0x1010 => "ImgTec".to_string(),
-        id => format!("0x{id:04X}"),
-    };
+    let gpu = numerobis::pci::Gpu::from_pci(props.vendor_id, props.device_id);
+    let vendor = gpu
+        .vendor
+        .name()
+        .map_or_else(|| format!("0x{:04X}", props.vendor_id), str::to_owned);
     let unpack = |version: u32| {
         format!(
             "{}.{}.{}",
@@ -42,6 +38,11 @@ pub unsafe fn read_device_info(
         type_suffix,
         vendor,
         backend: format!("Vulkan {}", unpack(props.api_version)),
-        driver: unpack(props.driver_version),
+        driver: numerobis::pci::driver_version(
+            gpu.vendor,
+            props.driver_version,
+            numerobis::pci::DriverOs::host(),
+        ),
+        gpu,
     }
 }

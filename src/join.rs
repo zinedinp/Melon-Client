@@ -85,6 +85,10 @@ pub fn join(
                 settings,
                 view_distance: crate::settings::options::RENDER_DISTANCE_RANGE.1,
                 simulation_distance,
+                host: server::Host {
+                    uuid: identity.uuid(),
+                    name: identity.username().to_owned(),
+                },
             })?;
             let session = network::join_stream(pipe, identity, client, Box::new(|| {}))?;
             Ok(Joined {

@@ -66,6 +66,10 @@ impl DeathScreen {
 }
 
 impl Screen for DeathScreen {
+    fn is_pause_screen(&self) -> bool {
+        false
+    }
+
     fn resize(&mut self, ctx: &ScreenContext) {
         let (width, height) = ctx.size();
         let left = wide_column_left(width);

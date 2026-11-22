@@ -8,6 +8,8 @@ use melon::settings::options::Config;
 
 fn main() -> anyhow::Result<()> {
     melon::platform::drop_cargo_stack();
+    // The frame is drawn here: ahead of the meshers and the server's generation.
+    melon::platform::raise_frame_thread_priority();
     // The CPU's vector unit, probed once: every SIMD kernel runs on it.
     melon::math::simd::init();
     let args: Vec<String> = std::env::args().collect();

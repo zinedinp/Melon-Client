@@ -157,13 +157,18 @@ pub(super) struct Counted<S> {
     _slot: Slot,
     watch: Option<Watch>,
     generation: Generation,
+    /// The sample's place in its frame: a pause starts and ends between frames.
+    frame: u16,
+    /// Silent for the frame, the game being paused.
+    silent: bool,
 }
 
 /// The engine's stop count a sound was started under
-/// ([`super::AudioEngine::stop_all`]).
+/// ([`super::AudioEngine::stop_all`]), and its pause, if the sound pauses.
 pub(super) struct Generation {
     now: Arc<AtomicU64>,
     started: u64,
+    paused: Option<Arc<AtomicBool>>,
 }
 
 impl Generation {
@@ -171,12 +176,23 @@ impl Generation {
         Self {
             now: Arc::clone(now),
             started: now.load(Relaxed),
+            paused: None,
         }
+    }
+
+    /// [`Self::of`], silent while `paused` is set (`pauseAllExcept`).
+    pub(super) fn pausing(mut self, paused: &Arc<AtomicBool>) -> Self {
+        self.paused = Some(Arc::clone(paused));
+        self
     }
 
     /// Whether everything was stopped since.
     fn stopped(&self) -> bool {
         self.now.load(Relaxed) != self.started
+    }
+
+    fn paused(&self) -> bool {
+        self.paused.as_ref().is_some_and(|p| p.load(Relaxed))
     }
 }
 
@@ -194,6 +210,8 @@ impl<S> Counted<S> {
             _slot: slot,
             watch,
             generation,
+            frame: 0,
+            silent: false,
         }
     }
 }
@@ -205,13 +223,21 @@ impl<S> Drop for Counted<S> {
 }
 
 impl<S: Source> Iterator for Counted<S> {
-    type Item = S::Item;
+    type Item = rodio::Sample;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.watch.as_ref().is_some_and(|w| w.0.stop.load(Relaxed)) || self.generation.stopped()
         {
             return None;
+        }
+        if self.frame == 0 {
+            self.silent = self.generation.paused();
+        }
+        self.frame = (self.frame + 1) % self.inner.channels();
+        // Paused: silence, the sound holding its place.
+        if self.silent {
+            return Some(0.0);
         }
         self.inner.next()
     }
@@ -312,6 +338,32 @@ mod tests {
         assert!(old.next().is_none());
         let mut new = sound(&stats);
         assert!(new.next().is_some());
+    }
+
+    #[test]
+    fn a_paused_sound_is_silent_and_goes_on_where_it_was_between_frames() {
+        let stats = Arc::new(AudioStats::default());
+        let pools = Arc::new(Pools::default());
+        let paused = Arc::new(AtomicBool::new(false));
+        let two = std::num::NonZeroU16::new(2).unwrap();
+        let rate = std::num::NonZeroU32::new(48_000).unwrap();
+        let mut sound = Counted::new(
+            SamplesBuffer::new(two, rate, vec![1.0, 2.0, 3.0, 4.0]),
+            Arc::clone(&stats),
+            pools.acquire(Pool::Static).unwrap(),
+            None,
+            Generation::of(&Arc::default()).pausing(&paused),
+        );
+        assert_eq!(sound.next(), Some(1.0));
+        // Mid-frame: the frame ends first.
+        paused.store(true, Relaxed);
+        assert_eq!(sound.next(), Some(2.0));
+        assert_eq!(sound.next(), Some(0.0));
+        assert_eq!(sound.next(), Some(0.0));
+        paused.store(false, Relaxed);
+        assert_eq!(sound.next(), Some(3.0));
+        assert_eq!(sound.next(), Some(4.0));
+        assert_eq!(sound.next(), None);
     }
 
     #[test]

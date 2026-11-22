@@ -43,8 +43,8 @@ use screen_stack::ScreenStack;
 
 /// Runs the game until its window closes.
 pub fn run(options: LaunchOptions, assets: Assets, mut config: Config) -> anyhow::Result<()> {
-    if options.bench.is_some() {
-        bench::override_config(&mut config);
+    if let Some(bench) = &options.bench {
+        bench::override_config(&mut config, bench.render_distance);
     }
     let event_loop = EventLoop::new()?;
     let mut app = App {
@@ -123,6 +123,8 @@ struct RunningState {
     world: Option<InWorld>,
     /// What outlives the worlds, as vanilla's `Camera` and `Hud` do.
     lasting: crate::game::Lasting,
+    /// `Minecraft.pause`, see [`RunningState::update_pause`].
+    game_paused: bool,
     input: InputState,
     last_frame: Instant,
     /// When the framerate limit lets the next frame start.
@@ -218,6 +220,7 @@ impl App {
             world_resources: None,
             world: None,
             lasting: Default::default(),
+            game_paused: false,
             input: InputState::new(),
             last_frame: Instant::now(),
             next_frame: None,
@@ -284,6 +287,26 @@ impl RunningState {
 
     fn overlay_open(&self) -> bool {
         self.world.as_ref().is_some_and(InWorld::overlay_open)
+    }
+
+    /// `Minecraft.pause`: a singleplayer world not open to others, behind a
+    /// screen that pauses (`Gui.isPausing`). Sets it, and tells the sounds
+    /// and the integrated server.
+    fn update_pause(&mut self) {
+        let paused = self.world.as_ref().is_some_and(|world| {
+            world
+                .integrated_server()
+                .is_some_and(|server| server.published().is_none())
+                && (self.screens.top().is_some_and(|s| s.is_pause_screen())
+                    || world.overlay_pauses())
+        });
+        if paused != self.game_paused {
+            self.game_paused = paused;
+            self.env.audio.set_paused(paused);
+        }
+        if let Some(server) = self.world.as_ref().and_then(InWorld::integrated_server) {
+            server.set_paused(paused);
+        }
     }
 
     /// Carries out what a screen asked for.
@@ -410,7 +433,7 @@ impl RunningState {
         }
         if let Some(run) = &mut self.bench {
             world.start_bench(self.env.config.render_distance, &run.options);
-            run.start(&self.renderer, &self.env.config);
+            run.start(&mut self.renderer, &self.env.config);
         }
         self.screens.enter_world();
         self.world = Some(world);
@@ -429,6 +452,8 @@ impl RunningState {
         self.lasting = world.lasting();
         // `Minecraft.disconnect` -> `updateLevelInEngines(null)`: silence.
         self.env.audio.stop_all();
+        self.game_paused = false;
+        self.env.audio.set_paused(false);
         world.release(&mut self.renderer);
         let integrated = world.is_integrated();
         drop(world);

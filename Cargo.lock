@@ -177,7 +177,7 @@ dependencies = [
  "objc2-foundation 0.3.2",
  "parking_lot",
  "percent-encoding",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
  "wl-clipboard-rs",
  "x11rb",
 ]
@@ -730,7 +730,7 @@ version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1551,7 +1551,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2611,11 +2611,12 @@ checksum = "7ebb8d8732c6a6df3d8f032a82911cfc747e00efb95cc46e8d0acd5b5b88570c"
 
 [[package]]
 name = "melon"
-version = "0.10.0-pre+mc26.3"
+version = "0.10.0+mc26.3"
 dependencies = [
  "aes 0.9.4",
  "anyhow",
  "arboard",
+ "arc-swap",
  "ash",
  "ash-window",
  "cfb8",
@@ -2628,6 +2629,7 @@ dependencies = [
  "melon-base",
  "miraculix",
  "num-bigint 0.5.1",
+ "numerobis",
  "open",
  "png",
  "pumpkin-config",
@@ -2641,6 +2643,7 @@ dependencies = [
  "pumpkin-world",
  "rand 0.10.4",
  "raw-window-handle",
+ "rayon",
  "regex",
  "rodio",
  "rsa",
@@ -2667,6 +2670,7 @@ dependencies = [
  "ash",
  "ash-window",
  "image",
+ "numerobis",
  "open",
  "raw-window-handle",
  "serde",
@@ -2763,7 +2767,7 @@ checksum = "7bf487fd0ab6cbcb8e23baefdfa2fff4fc3a32aea2cf500f8a572c8920fa8a51"
 dependencies = [
  "libc",
  "raw-cpuid",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2919,7 +2923,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3017,6 +3021,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cabcc654086861f9e1bc5115258de62ef92c79b20f4615a1b0cc57c4e82027d4"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "numerobis"
+version = "0.3.3-alpha"
+dependencies = [
+ "libc",
+ "miraculix",
 ]
 
 [[package]]
@@ -3440,7 +3452,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d8fae84b431384b68627d0f9b3b1245fcf9f46f6c0e3dc902e9dce64edd1967"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3817,7 +3829,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-auth"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "base64 0.23.1",
  "crypto-bigint",
@@ -3838,7 +3850,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-codecs"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "serde_json",
  "tracing",
@@ -3847,7 +3859,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-command"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "pumpkin-codecs",
  "pumpkin-data",
@@ -3863,7 +3875,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-config"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "pumpkin-util",
  "rand 0.10.4",
@@ -3876,7 +3888,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-core"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "aes 0.9.4",
  "arc-swap",
@@ -3938,7 +3950,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-data"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "crc32c",
  "flate2",
@@ -3950,13 +3962,14 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
+ "tracing",
  "zip",
 ]
 
 [[package]]
 name = "pumpkin-gametest"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "async-trait",
  "pumpkin-data",
@@ -3972,7 +3985,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-inventory"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "pumpkin-data",
  "pumpkin-nbt",
@@ -3987,7 +4000,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-macros"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "heck",
  "proc-macro-error2",
@@ -4017,7 +4030,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-nbt"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "bytes",
  "flate2",
@@ -4030,7 +4043,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-plugin-runtime"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "futures",
  "thiserror 2.0.21",
@@ -4042,7 +4055,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-protocol"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "aes 0.9.4",
  "base64 0.23.1",
@@ -4050,7 +4063,6 @@ dependencies = [
  "bytes",
  "cfb8",
  "flate2",
- "hybrid-array",
  "pumpkin-data",
  "pumpkin-macros",
  "pumpkin-nbt",
@@ -4065,7 +4077,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-util"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "bytes",
  "colored",
@@ -4083,7 +4095,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-wasm-host"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "pumpkin-core",
  "pumpkin-plugin-runtime",
@@ -4099,7 +4111,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-wasm-host-common"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "ed25519-dalek",
  "hex",
@@ -4128,7 +4140,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-wasm-host-v0_1"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "bytes",
  "pumpkin-config",
@@ -4154,7 +4166,7 @@ dependencies = [
 [[package]]
 name = "pumpkin-world"
 version = "0.2.2+26.3-26.63"
-source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#f7f79872819d40c008de658f4a8b87be48eafe5a"
+source = "git+https://github.com/zinedinp/Pumpkin?branch=mod-zip#69837a28540ca22e47b3149c0930223a79f50314"
 dependencies = [
  "arc-swap",
  "bitflags 2.13.2",
@@ -4216,7 +4228,7 @@ dependencies = [
  "libc",
  "log",
  "socket2",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4901,7 +4913,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4968,7 +4980,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -6747,7 +6759,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

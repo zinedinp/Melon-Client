@@ -78,7 +78,18 @@ fn bench_options(args: &[String]) -> Result<Option<crate::game::bench::BenchOpti
                 .ok_or_else(|| format!("--fps-cap needs a number above 0, not {value}"))?,
         ),
     };
+    let render_distance = match value_of("--render-distance")? {
+        None => None,
+        Some(value) => Some(
+            value
+                .parse::<u8>()
+                .ok()
+                .filter(|chunks| (2..=32).contains(chunks))
+                .ok_or_else(|| format!("--render-distance needs 2 to 32, not {value}"))?,
+        ),
+    };
     Ok(Some(crate::game::bench::BenchOptions {
+        render_distance,
         label: value_of("--label")?
             .cloned()
             .unwrap_or_else(|| "bench".to_owned()),
@@ -139,6 +150,14 @@ mod tests {
         assert!(bench.compare.is_none());
         assert!(parse(&args(&["melon", "--bench", "--fps-cap", "x"])).is_err());
         assert!(bench.hold.is_none());
+        assert!(bench.render_distance.is_none());
+        let Ok(Command::Play(near)) =
+            parse(&args(&["melon", "--bench", "--render-distance", "10"]))
+        else {
+            panic!("expected Play");
+        };
+        assert_eq!(near.bench.and_then(|b| b.render_distance), Some(10));
+        assert!(parse(&args(&["melon", "--bench", "--render-distance", "40"])).is_err());
         let Ok(Command::Play(held)) = parse(&args(&["melon", "--bench", "--hold", "turn"])) else {
             panic!("expected Play");
         };

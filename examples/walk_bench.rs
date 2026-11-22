@@ -121,6 +121,13 @@ fn gather(dir: &str) -> anyhow::Result<Sets> {
         },
         view_distance: VIEW_DISTANCE as u8,
         simulation_distance: 8,
+        host: melon::singleplayer::server::Host {
+            uuid: Identity::Offline {
+                username: "Walk".into(),
+            }
+            .uuid(),
+            name: "Walk".into(),
+        },
     })?;
     let client = ClientInfo {
         view_distance: VIEW_DISTANCE as u8,

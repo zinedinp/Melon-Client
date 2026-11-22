@@ -3,8 +3,8 @@
 
 mod pipelines;
 
-pub(super) use pipelines::RenderPasses;
 use melon_base::gfx::{device, instance};
+pub(super) use pipelines::RenderPasses;
 mod resources;
 
 use super::{

@@ -110,9 +110,7 @@ struct Frame {
 pub const GLINT_BINDING: u32 = BLOCKS.len() as u32;
 
 /// The set layout.
-pub unsafe fn create_layout(
-    device: &ash::Device,
-) -> anyhow::Result<vk::DescriptorSetLayout> {
+pub unsafe fn create_layout(device: &ash::Device) -> anyhow::Result<vk::DescriptorSetLayout> {
     let mut bindings: Vec<_> = (0..BLOCKS.len() as u32)
         .map(|binding| {
             vk::DescriptorSetLayoutBinding::default()

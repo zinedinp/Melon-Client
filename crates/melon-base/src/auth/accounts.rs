@@ -1,5 +1,6 @@
 //! The accounts the launcher offers.
 
+use super::alt_sessions::Provider;
 use super::{StoredAccount, secrets};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -13,7 +14,36 @@ pub const MAX_NAME_LEN: usize = 16;
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum Account {
     Microsoft(StoredAccount),
-    Offline { username: String },
+    Offline {
+        username: String,
+    },
+    /// Signed in with another service (Ely.by, LittleSkin, Drasl, ...).
+    Alternative(AltAccount),
+}
+
+/// A profile of a sign-in service other than Microsoft.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AltAccount {
+    pub provider: Provider,
+    /// The profile's name.
+    pub username: String,
+    /// The profile's id, 32 hex digits.
+    pub uuid: String,
+    /// What signed in: an email or a name.
+    pub login: String,
+    #[serde(default)]
+    pub access_token: String,
+    #[serde(default)]
+    pub client_token: String,
+    /// The tokens are in the system keyring, not in the file.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub in_keyring: bool,
+}
+
+impl AltAccount {
+    pub fn key(&self) -> String {
+        format!("alt:{}:{}", self.provider.host(), self.uuid)
+    }
 }
 
 impl Account {
@@ -21,6 +51,7 @@ impl Account {
         match self {
             Account::Microsoft(account) => &account.username,
             Account::Offline { username } => username,
+            Account::Alternative(account) => &account.username,
         }
     }
 
@@ -28,11 +59,34 @@ impl Account {
         matches!(self, Account::Microsoft(_))
     }
 
+    /// Signed in with a service, so it can join online-mode servers.
+    pub fn is_online(&self) -> bool {
+        !matches!(self, Account::Offline { .. })
+    }
+
+    /// The service a [`Account::Alternative`] signs in with.
+    pub fn provider(&self) -> Option<&Provider> {
+        match self {
+            Account::Alternative(account) => Some(&account.provider),
+            _ => None,
+        }
+    }
+
+    /// The profile id: the service's, or the one an offline name gets.
+    pub fn uuid(&self) -> String {
+        match self {
+            Account::Microsoft(account) => account.uuid.clone(),
+            Account::Alternative(account) => account.uuid.clone(),
+            Account::Offline { username } => offline_uuid(username).simple().to_string(),
+        }
+    }
+
     /// What tells accounts apart.
     pub fn key(&self) -> String {
         match self {
             Account::Microsoft(account) => account.uuid.clone(),
             Account::Offline { username } => format!("offline:{}", username.to_lowercase()),
+            Account::Alternative(account) => account.key(),
         }
     }
 }
@@ -92,60 +146,110 @@ pub struct Accounts {
     meta: HashMap<String, Meta>,
 }
 
-/// The tokens that go to the keyring together.
+/// The tokens that go to the keyring together. An alternative account keeps its client token in
+/// `refresh_token`'s place.
 #[derive(Serialize, Deserialize)]
 struct Tokens {
     access_token: String,
     refresh_token: Option<String>,
 }
 
+/// `accounts_alternative.json`: accounts of other sign-in services. They live apart from
+/// `accounts.json` so a client from before them still reads, and keeps, that file.
+#[derive(Serialize, Deserialize, Default)]
+struct OtherServices {
+    #[serde(default)]
+    accounts: Vec<AltAccount>,
+    /// Every account's key in the list's order, across both files.
+    #[serde(default)]
+    order: Vec<String>,
+}
+
 impl Accounts {
-    /// `accounts.json`, or the single account an earlier version kept in `account.json`.
+    /// `accounts.json` and `accounts_alternative.json`, or the single account an earlier version
+    /// kept in `account.json`.
     pub fn load(game_dir: &Path) -> Self {
-        if let Some(mut accounts) = crate::json_file::load::<Accounts>(&path(game_dir)) {
-            accounts.take_from_keyring();
-            return accounts;
-        }
-        match super::legacy_account(game_dir) {
-            Some(account) => {
-                let account = Account::Microsoft(account);
-                Self {
-                    selected: Some(account.key()),
-                    accounts: vec![account],
-                    meta: HashMap::new(),
+        let mut accounts = match crate::json_file::load::<Accounts>(&path(game_dir)) {
+            Some(accounts) => accounts,
+            None => match super::legacy_account(game_dir) {
+                Some(account) => {
+                    let account = Account::Microsoft(account);
+                    Self {
+                        selected: Some(account.key()),
+                        accounts: vec![account],
+                        meta: HashMap::new(),
+                    }
+                }
+                None => Self::default(),
+            },
+        };
+        if let Some(others) = crate::json_file::load::<OtherServices>(&others_path(game_dir)) {
+            for account in others.accounts {
+                if !accounts.accounts.iter().any(|a| a.key() == account.key()) {
+                    accounts.accounts.push(Account::Alternative(account));
                 }
             }
-            None => Self::default(),
+            let place = |account: &Account| {
+                let key = account.key();
+                others
+                    .order
+                    .iter()
+                    .position(|k| *k == key)
+                    .unwrap_or(usize::MAX)
+            };
+            accounts.accounts.sort_by_key(place);
         }
+        accounts.take_from_keyring();
+        accounts
     }
 
-    /// Writes `accounts.json`, readable by its owner only.
+    /// Writes `accounts.json` and `accounts_alternative.json`, readable by their owner only.
     pub fn save(&self, game_dir: &Path) -> std::io::Result<()> {
         let mut on_disk = self.clone();
         on_disk.put_in_keyring();
-        let file = path(game_dir);
-        crate::json_file::save_private(&file, &on_disk)
+        let order = on_disk.accounts.iter().map(Account::key).collect();
+        let mut others = OtherServices {
+            accounts: Vec::new(),
+            order,
+        };
+        on_disk.accounts.retain(|account| match account {
+            Account::Alternative(account) => {
+                others.accounts.push(account.clone());
+                false
+            }
+            _ => true,
+        });
+        crate::json_file::save_private(&path(game_dir), &on_disk)?;
+        let others_file = others_path(game_dir);
+        if others.accounts.is_empty() && !others_file.exists() {
+            return Ok(());
+        }
+        crate::json_file::save_private(&others_file, &others)
     }
 
     /// Moves the tokens of every account that has them to the keyring.
     fn put_in_keyring(&mut self) {
         for account in &mut self.accounts {
-            let Account::Microsoft(account) = account else {
-                continue;
-            };
-            if account.access_token.is_empty() {
-                continue;
-            }
-            let tokens = Tokens {
-                access_token: account.access_token.clone(),
-                refresh_token: account.refresh_token.clone(),
-            };
-            let kept = serde_json::to_string(&tokens)
-                .is_ok_and(|secret| secrets::store(&account.uuid, &secret));
-            account.in_keyring = kept;
-            if kept {
-                account.access_token.clear();
-                account.refresh_token = None;
+            let key = account.key();
+            match account {
+                Account::Microsoft(account) => {
+                    let kept = store_tokens(&key, &account.access_token, &account.refresh_token);
+                    account.in_keyring = kept;
+                    if kept {
+                        account.access_token.clear();
+                        account.refresh_token = None;
+                    }
+                }
+                Account::Alternative(account) => {
+                    let client = Some(account.client_token.clone());
+                    let kept = store_tokens(&key, &account.access_token, &client);
+                    account.in_keyring = kept;
+                    if kept {
+                        account.access_token.clear();
+                        account.client_token.clear();
+                    }
+                }
+                Account::Offline { .. } => {}
             }
         }
     }
@@ -153,17 +257,25 @@ impl Accounts {
     /// Fills in the tokens of accounts that were saved to the keyring.
     fn take_from_keyring(&mut self) {
         for account in &mut self.accounts {
-            let Account::Microsoft(account) = account else {
-                continue;
-            };
-            if !account.in_keyring || !account.access_token.is_empty() {
-                continue;
-            }
-            let tokens = secrets::load(&account.uuid)
-                .and_then(|secret| serde_json::from_str::<Tokens>(&secret).ok());
-            if let Some(tokens) = tokens {
-                account.access_token = tokens.access_token;
-                account.refresh_token = tokens.refresh_token;
+            let key = account.key();
+            match account {
+                Account::Microsoft(account)
+                    if account.in_keyring && account.access_token.is_empty() =>
+                {
+                    if let Some(tokens) = load_tokens(&key) {
+                        account.access_token = tokens.access_token;
+                        account.refresh_token = tokens.refresh_token;
+                    }
+                }
+                Account::Alternative(account)
+                    if account.in_keyring && account.access_token.is_empty() =>
+                {
+                    if let Some(tokens) = load_tokens(&key) {
+                        account.access_token = tokens.access_token;
+                        account.client_token = tokens.refresh_token.unwrap_or_default();
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -236,8 +348,8 @@ impl Accounts {
         }
         let removed = self.accounts.remove(index);
         self.meta.remove(&removed.key());
-        if let Account::Microsoft(account) = &removed {
-            secrets::delete(&account.uuid);
+        if removed.is_online() {
+            secrets::delete(&removed.key());
         }
         if self.selected.as_deref() == Some(removed.key().as_str()) {
             self.selected = self.accounts.first().map(Account::key);
@@ -294,8 +406,29 @@ impl Accounts {
     }
 }
 
+/// Keeps an account's tokens in the keyring under its key. `false` if there is nothing to keep
+/// or the keyring refused.
+fn store_tokens(key: &str, access_token: &str, second: &Option<String>) -> bool {
+    if access_token.is_empty() {
+        return false;
+    }
+    let tokens = Tokens {
+        access_token: access_token.to_owned(),
+        refresh_token: second.clone(),
+    };
+    serde_json::to_string(&tokens).is_ok_and(|secret| secrets::store(key, &secret))
+}
+
+fn load_tokens(key: &str) -> Option<Tokens> {
+    secrets::load(key).and_then(|secret| serde_json::from_str::<Tokens>(&secret).ok())
+}
+
 fn path(game_dir: &Path) -> PathBuf {
     game_dir.join("accounts.json")
+}
+
+fn others_path(game_dir: &Path) -> PathBuf {
+    game_dir.join("accounts_alternative.json")
 }
 
 #[cfg(test)]
@@ -409,6 +542,91 @@ mod tests {
             offline_uuid("Notch").to_string(),
             "b50ad385-829d-3141-a216-7e7d7539ba7f"
         );
+    }
+
+    fn alternative(name: &str, uuid: &str) -> Account {
+        Account::Alternative(AltAccount {
+            provider: Provider {
+                root: "https://littleskin.cn/api/yggdrasil".into(),
+                name: "LittleSkin".into(),
+                skin_domains: vec!["littleskin.cn".into()],
+                register_url: None,
+                name_login: true,
+            },
+            username: name.to_owned(),
+            uuid: uuid.to_owned(),
+            login: "me@example.com".into(),
+            access_token: "access".into(),
+            client_token: "client".into(),
+            in_keyring: false,
+        })
+    }
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("melon-accounts-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn other_services_keep_their_own_file_and_their_place() {
+        let dir = scratch("ygg");
+        let mut accounts = Accounts::default();
+        accounts.add_offline("Steve");
+        accounts.store(alternative("Alex", "0a"), true);
+        accounts.store(microsoft("Main", "abc"), true);
+        accounts.select(1);
+        accounts.save(&dir).unwrap();
+
+        let main = std::fs::read_to_string(dir.join("accounts.json")).unwrap();
+        assert!(
+            !main.contains("alternative") && !main.contains("Alex"),
+            "{main}"
+        );
+        let back = Accounts::load(&dir);
+        let names: Vec<_> = back.list().iter().map(Account::username).collect();
+        assert_eq!(names, ["Steve", "Alex", "Main"]);
+        assert_eq!(back.selected().unwrap().key(), "alt:littleskin.cn:0a");
+        let Account::Alternative(alex) = &back.list()[1] else {
+            panic!("not an alternative account")
+        };
+        assert_eq!(
+            (alex.access_token.as_str(), alex.client_token.as_str()),
+            ("access", "client")
+        );
+
+        // A client from before other services reads accounts.json alone.
+        #[derive(Deserialize)]
+        struct OldAccounts {
+            accounts: Vec<OldAccount>,
+        }
+        #[derive(Deserialize)]
+        #[serde(tag = "kind", rename_all = "lowercase")]
+        enum OldAccount {
+            Microsoft(#[allow(dead_code)] StoredAccount),
+            Offline {
+                #[allow(dead_code)]
+                username: String,
+            },
+        }
+        let old: OldAccounts = serde_json::from_str(&main).unwrap();
+        assert_eq!(old.accounts.len(), 2);
+        assert!(matches!(old.accounts[1], OldAccount::Microsoft(_)));
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn an_alternative_account_is_keyed_by_service_and_profile() {
+        let account = alternative("Alex", "0a");
+        assert_eq!(account.key(), "alt:littleskin.cn:0a");
+        assert!(account.is_online() && !account.is_microsoft());
+        assert_eq!(account.provider().unwrap().name, "LittleSkin");
+        let notch = Account::Offline {
+            username: "Notch".into(),
+        };
+        assert_eq!(notch.uuid(), "b50ad385829d3141a2167e7d7539ba7f");
     }
 
     #[test]
