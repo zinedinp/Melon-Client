@@ -105,14 +105,10 @@ impl InWorld {
             self.own_vitals_data(values);
             return;
         }
-        if let EntityPacket::Attributes {
-            id,
-            values,
-            snapshots,
-        } = &packet
+        if let EntityPacket::Attributes { id, snapshots, .. } = &packet
             && *id == own
         {
-            self.own_attributes(values, snapshots);
+            self.own_attributes(snapshots);
             return;
         }
         if let EntityPacket::Swing { id, hand, swing } = packet
@@ -399,6 +395,12 @@ impl InWorld {
     ) {
         let mut layers = Vec::new();
         for entity in visible.iter().filter_map(|&id| self.entities.get(id)) {
+            // `LevelRenderer`: a frozen entity's partial tick is 1.
+            let partial = if self.entities.is_frozen(entity.id) {
+                1.0
+            } else {
+                partial
+            };
             let first = out.len();
             let outline = self.outline_color(entity);
             if entity.kind.is_display() {

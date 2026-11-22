@@ -3,9 +3,12 @@
 use super::InWorld;
 use crate::gui::hud::bars::air::MAX_AIR;
 use crate::gui::hud::bars::hearts::HeartKind;
-use crate::network::play::game::{ATTRIBUTE_ARMOR, ATTRIBUTE_MAX_HEALTH, DataValue};
+use crate::network::play::game::DataValue;
 use crate::world::player::status_effects::{HUNGER_ID, POISON_ID, REGENERATION_ID, WITHER_ID};
 use pumpkin_data::tracked_data::{avatar, entity, player};
+
+/// `Attributes.MAX_HEALTH`'s default: a new player's health.
+const DEFAULT_MAX_HEALTH: f32 = 20.0;
 
 /// `Entity.getTicksRequiredToFreeze`: frozen hearts from here.
 const FROZEN_TICKS: i32 = 140;
@@ -50,7 +53,6 @@ impl InWorld {
     /// The attributes the server sets on the local player.
     pub(super) fn own_attributes(
         &mut self,
-        values: &[(i32, f64)],
         snapshots: &[crate::network::play::game::AttributeSnapshot],
     ) {
         for snapshot in snapshots {
@@ -60,13 +62,41 @@ impl InWorld {
                 snapshot.modifiers.clone(),
             );
         }
-        for &(attribute, value) in values {
-            match attribute {
-                ATTRIBUTE_MAX_HEALTH => self.status.max_health = value as f32,
-                ATTRIBUTE_ARMOR => self.status.armor = value.round() as i32,
-                _ => {}
-            }
+        self.refresh_attribute_bars();
+    }
+
+    /// The bars that read attributes, from what the player holds of them
+    /// now: `getMaxHealth` for the hearts, `getArmorValue` for the armour
+    /// row. Called whenever the attributes change, by the server or by a
+    /// respawn dropping their modifiers.
+    pub(super) fn refresh_attribute_bars(&mut self) {
+        let attributes = self.player.attributes();
+        self.status.max_health = attributes.max_health();
+        self.status.armor = attributes.armor();
+    }
+
+    /// A new `LocalPlayer` (`handleRespawn`, `handleLogin`): what the bars
+    /// show starts as a new player's. Without `KEEP_ENTITY_DATA` its synced
+    /// data is the defaults: full health (`LivingEntity` starts at
+    /// `getMaxHealth()`, 20 before any attribute is sent), no absorption, a
+    /// full breath. Always new: `FoodData` (20, 5), the experience (0) and
+    /// no effects; the server sends its own right after.
+    pub(super) fn respawn_status(&mut self, keep_entity_data: bool) {
+        if !keep_entity_data {
+            self.status.health = DEFAULT_MAX_HEALTH;
+            self.status.absorption = 0.0;
+            self.status.air = MAX_AIR;
         }
+        let fresh = crate::gui::hud::PlayerStatus::default();
+        self.status.food = fresh.food;
+        self.status.saturation = fresh.saturation;
+        self.status.experience_progress = fresh.experience_progress;
+        self.status.experience_level = fresh.experience_level;
+        self.status_effects.clear();
+        self.mining_effects = Default::default();
+        self.effects.set_nausea_ticks(0);
+        self.refresh_attribute_bars();
+        self.tick_vitals();
     }
 
     /// The bars' numbers out of the local player's synced data: absorption,

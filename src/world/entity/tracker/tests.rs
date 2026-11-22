@@ -28,11 +28,11 @@ fn a_relative_move_glides_there_in_three_ticks() {
         }),
         1,
     );
-    entities.tick();
+    entities.tick(true);
     let pig = entities.get(5).unwrap();
     assert!((pig.pos(1.0).x - (0.5 + 1.0 / 3.0)).abs() < 1e-9);
-    entities.tick();
-    entities.tick();
+    entities.tick(true);
+    entities.tick(true);
     let pig = entities.get(5).unwrap();
     assert!((pig.pos(1.0).x - 1.5).abs() < 1e-9);
     assert!(pig.walk.speed(1.0) > 0.0);
@@ -56,7 +56,7 @@ fn steps_chain_from_the_base_not_the_drawn_position() {
         );
     }
     for _ in 0..3 {
-        entities.tick();
+        entities.tick(true);
     }
     assert!((entities.get(2).unwrap().pos(1.0).x - 2.0).abs() < 1e-9);
 }
@@ -75,15 +75,15 @@ fn a_slime_is_as_big_as_its_size_and_squashes_when_it_lands() {
     let slime = entities.get(6).unwrap();
     assert!((slime.size().0 - 4.0 * 0.52).abs() < 1e-5);
     entities.by_id.get_mut(&6).unwrap().on_ground = false;
-    entities.tick();
+    entities.tick(true);
     entities.by_id.get_mut(&6).unwrap().on_ground = true;
     for _ in 0..2 {
-        entities.tick();
+        entities.tick(true);
     }
     let squished = entities.get(6).unwrap().squish(1.0);
     assert!(squished < 0.0, "{squished}");
     for _ in 0..40 {
-        entities.tick();
+        entities.tick(true);
     }
     assert!(entities.get(6).unwrap().squish(1.0).abs() < 1e-3);
 }
@@ -102,7 +102,7 @@ fn an_iron_golem_swings_its_arms_for_ten_ticks_after_an_attack() {
     );
     assert_eq!(entities.get(8).unwrap().golem_pose(0.5).attack, 9.5);
     for _ in 0..golem::ATTACK_TICKS {
-        entities.tick();
+        entities.tick(true);
     }
     assert_eq!(entities.get(8).unwrap().golem_pose(0.5).attack, 0.0);
     entities.apply(
@@ -258,10 +258,10 @@ fn piglins_shake_where_the_dimension_zombifies_them_unless_immune() {
     let mut entities = Entities::default();
     entities.apply(add(9, &EntityType::PIGLIN, [0.0; 3]), 1);
     entities.set_piglins_zombify(false);
-    entities.tick();
+    entities.tick(true);
     assert!(!entities.get(9).unwrap().appearance.shaking());
     entities.set_piglins_zombify(true);
-    entities.tick();
+    entities.tick(true);
     assert!(entities.get(9).unwrap().appearance.shaking());
     entities.apply(
         EntityPacket::Data {
@@ -273,7 +273,7 @@ fn piglins_shake_where_the_dimension_zombifies_them_unless_immune() {
         },
         1,
     );
-    entities.tick();
+    entities.tick(true);
     assert!(!entities.get(9).unwrap().appearance.shaking());
 }
 
@@ -300,7 +300,7 @@ fn a_skeleton_turning_into_a_stray_shakes() {
 fn a_rabbit_hops_when_the_server_says_so_and_its_coat_comes_from_the_data() {
     let mut entities = Entities::default();
     entities.apply(add(4, &EntityType::RABBIT, [0.0; 3]), 1);
-    entities.tick();
+    entities.tick(true);
     assert!(!entities.get(4).unwrap().anim[mobs::rabbit::HOP].is_started());
     entities.apply(
         EntityPacket::Event {
@@ -309,8 +309,8 @@ fn a_rabbit_hops_when_the_server_says_so_and_its_coat_comes_from_the_data() {
         },
         1,
     );
-    entities.tick();
-    entities.tick();
+    entities.tick(true);
+    entities.tick(true);
     assert!(entities.get(4).unwrap().anim[mobs::rabbit::HOP].is_started());
     entities.apply(
         EntityPacket::Data {
@@ -326,8 +326,8 @@ fn a_rabbit_hops_when_the_server_says_so_and_its_coat_comes_from_the_data() {
 fn a_bats_animation_follows_whether_it_hangs() {
     let mut entities = Entities::default();
     entities.apply(add(9, &EntityType::BAT, [0.0; 3]), 1);
-    entities.tick();
-    entities.tick();
+    entities.tick(true);
+    entities.tick(true);
     let bat = entities.get(9).unwrap();
     assert!(bat.anim[mobs::bat::FLY].is_started());
     assert!(!bat.anim[mobs::bat::REST].is_started());
@@ -338,7 +338,7 @@ fn a_bats_animation_follows_whether_it_hangs() {
         },
         1,
     );
-    entities.tick();
+    entities.tick(true);
     let bat = entities.get(9).unwrap();
     assert!(!bat.anim[mobs::bat::FLY].is_started());
     assert!(bat.anim[mobs::bat::REST].is_started());
@@ -363,7 +363,7 @@ fn a_rider_follows_its_mount_and_stops_walking() {
         },
         99,
     );
-    entities.tick();
+    entities.tick(true);
     let zombie = entities.get(2).unwrap();
     assert_eq!(zombie.vehicle, Some(1));
     let at = zombie.tick_pos();
@@ -387,7 +387,7 @@ fn a_rider_follows_its_mount_and_stops_walking() {
         99,
     );
     for _ in 0..4 {
-        entities.tick();
+        entities.tick(true);
     }
     assert!((entities.get(2).unwrap().tick_pos().x - 12.0).abs() < 1e-6);
     entities.apply(
@@ -462,7 +462,7 @@ fn hurt_and_death_show_and_time_out() {
     entities.apply(EntityPacket::Hurt { id: 3, yaw: 0.0 }, 1);
     assert!(entities.get(3).unwrap().living_state(0.0).hurt);
     for _ in 0..HURT_DURATION {
-        entities.tick();
+        entities.tick(true);
     }
     assert!(!entities.get(3).unwrap().living_state(0.0).hurt);
     entities.apply(
@@ -473,7 +473,7 @@ fn hurt_and_death_show_and_time_out() {
         1,
     );
     for _ in 0..30 {
-        entities.tick();
+        entities.tick(true);
     }
     let state = entities.get(3).unwrap().living_state(0.0);
     assert_eq!(state.death_time, DEATH_DURATION as f32);
@@ -486,7 +486,7 @@ fn a_mob_body_follows_its_head_when_it_stands() {
     entities.apply(add(4, &EntityType::SHEEP, [0.0; 3]), 1);
     entities.apply(EntityPacket::HeadRotation { id: 4, yaw: 100.0 }, 1);
     for _ in 0..3 {
-        entities.tick();
+        entities.tick(true);
     }
     let state = entities.get(4).unwrap().living_state(1.0);
     assert!(
@@ -524,7 +524,7 @@ fn a_falling_block_falls_by_vanilla_gravity_and_drag() {
     let mut y = 100.0;
     let mut v = 0.0;
     for _ in 0..10 {
-        entities.tick();
+        entities.tick(true);
         entities.simulate(&level);
         v -= 0.04;
         y += v;
@@ -540,7 +540,7 @@ fn a_falling_block_stops_on_the_floor_and_does_not_sink_in() {
     let mut entities = Entities::default();
     entities.apply(add(8, &EntityType::FALLING_BLOCK, [8.0, 64.0, 8.0]), 1);
     for _ in 0..60 {
-        entities.tick();
+        entities.tick(true);
         entities.simulate(&level);
     }
     let block = entities.get(8).unwrap();
@@ -569,7 +569,7 @@ fn a_block_bounces_on_slime_but_not_on_stone() {
         let mut went_up = false;
         let mut landed = false;
         for _ in 0..80 {
-            entities.tick();
+            entities.tick(true);
             entities.simulate(&level);
             let b = entities.get(8).unwrap();
             landed |= b.on_ground;
@@ -585,7 +585,7 @@ fn the_server_corrects_a_falling_block_and_its_velocity() {
     let mut entities = Entities::default();
     entities.apply(add(8, &EntityType::FALLING_BLOCK, [8.0, 100.0, 8.0]), 1);
     for _ in 0..5 {
-        entities.tick();
+        entities.tick(true);
         entities.simulate(&level);
     }
     entities.apply(
@@ -601,7 +601,7 @@ fn the_server_corrects_a_falling_block_and_its_velocity() {
         1,
     );
     assert_eq!(entities.get(8).unwrap().tick_pos().y, 90.0);
-    entities.tick();
+    entities.tick(true);
     entities.simulate(&level);
     let expected = 90.0 + (-0.5 - 0.04);
     assert!((entities.get(8).unwrap().tick_pos().y - expected).abs() < 1e-9);
@@ -613,7 +613,7 @@ fn the_server_corrects_a_falling_block_and_its_velocity() {
         1,
     );
     let before = entities.get(8).unwrap().tick_pos().y;
-    entities.tick();
+    entities.tick(true);
     entities.simulate(&level);
     assert!((entities.get(8).unwrap().tick_pos().y - (before - 0.04)).abs() < 1e-9);
 }
@@ -623,7 +623,7 @@ fn a_block_in_an_unloaded_chunk_is_not_simulated() {
     let level = Level::default();
     let mut entities = Entities::default();
     entities.apply(add(8, &EntityType::FALLING_BLOCK, [8.0, 100.0, 8.0]), 1);
-    entities.tick();
+    entities.tick(true);
     entities.simulate(&level);
     assert_eq!(entities.get(8).unwrap().tick_pos().y, 100.0);
 }
@@ -648,7 +648,7 @@ fn primed_tnt_counts_its_fuse_down_and_goes_out() {
     );
     assert_eq!(entities.get(9).unwrap().appearance.fuse, 3);
     for tick in 1..=3 {
-        entities.tick();
+        entities.tick(true);
         entities.simulate(&level);
         assert_eq!(entities.get(9).is_some(), tick < 3, "tick {tick}");
     }
@@ -666,7 +666,7 @@ fn a_landing_tnt_stops_on_the_floor() {
         },
         1,
     );
-    entities.tick();
+    entities.tick(true);
     entities.simulate(&level);
     let tnt = entities.get(9).unwrap();
     assert!((tnt.tick_pos().y - 61.0).abs() < 1e-9);
@@ -720,7 +720,7 @@ fn a_steered_boat_is_moved_by_the_client_and_not_by_the_server() {
         ..Default::default()
     });
     for _ in 0..30 {
-        entities.tick();
+        entities.tick(true);
         entities.drive(&level, Some(ahead));
     }
     let driven = entities.driven_vehicle().expect("steered");
@@ -747,7 +747,7 @@ fn a_steered_boat_is_moved_by_the_client_and_not_by_the_server() {
         "the server's correction holds"
     );
     for _ in 0..30 {
-        entities.tick();
+        entities.tick(true);
         entities.drive(&level, Some(ahead));
     }
     entities.drive(&level, None);
@@ -775,7 +775,7 @@ fn a_steered_boat_is_moved_by_the_client_and_not_by_the_server() {
         99,
     );
     for _ in 0..3 {
-        entities.tick();
+        entities.tick(true);
     }
     let after = entities.get(1).unwrap().tick_pos();
     assert!(
@@ -827,7 +827,7 @@ fn a_steered_horse_walks_on_the_client() {
         "a horse takes no paddles"
     );
     for _ in 0..20 {
-        entities.tick();
+        entities.tick(true);
         entities.drive(&level, Some(ahead));
     }
     let driven = entities.driven_vehicle().expect("steered");
@@ -863,7 +863,7 @@ fn passengers_wait_for_the_vehicle_and_a_late_rider_sits() {
     );
     entities.apply(add(1, &EntityType::PIG, [10.0, 64.0, 10.0]), 99);
     entities.apply(add(2, &EntityType::ZOMBIE, [0.0, 64.0, 0.0]), 99);
-    entities.tick();
+    entities.tick(true);
     let zombie = entities.get(2).unwrap();
     assert_eq!(zombie.vehicle, Some(1));
     let at = zombie.tick_pos();
@@ -937,7 +937,7 @@ fn a_block_that_lands_is_held_up_by_the_block_under_it() {
     let mut entities = Entities::default();
     entities.apply(add(8, &EntityType::FALLING_BLOCK, [8.5, 64.0, 8.5]), 1);
     for _ in 0..60 {
-        entities.tick();
+        entities.tick(true);
         entities.simulate(&level);
     }
     assert_eq!(entities.get(8).unwrap().support.block, Some((8, 60, 8)));
@@ -1012,7 +1012,7 @@ fn a_dropped_item_lands_on_the_floor_and_rests() {
     let level = level_with_floor(Some(60));
     let mut entities = dropped(5, [8.0, 64.0, 8.0], 1);
     for _ in 0..80 {
-        entities.tick();
+        entities.tick(true);
         entities.simulate(&level);
     }
     let item = entities.get(5).unwrap();
@@ -1040,7 +1040,7 @@ fn an_item_the_server_holds_without_gravity_stays_in_the_air() {
         1,
     );
     for _ in 0..40 {
-        entities.tick();
+        entities.tick(true);
         entities.simulate(&level);
     }
     let item = entities.get(5).unwrap();
@@ -1061,7 +1061,7 @@ fn an_item_in_water_floats_up_slowly() {
     }
     let mut entities = dropped(5, [8.5, 62.0, 8.5], 1);
     for _ in 0..40 {
-        entities.tick();
+        entities.tick(true);
         entities.simulate(&level);
     }
     assert!(entities.get(5).unwrap().tick_pos().y > 61.5);
@@ -1140,7 +1140,7 @@ fn a_wither_skull_flies_on_between_the_servers_updates() {
     let mut z = 1.0;
     let mut v = 0.1;
     for _ in 0..3 {
-        entities.tick();
+        entities.tick(true);
         entities.simulate(&level);
         v = (v + 0.1) * f64::from(0.95_f32);
         z += v;
@@ -1159,7 +1159,7 @@ fn a_snowball_falls_and_stops_at_the_floor() {
         1,
     );
     for _ in 0..5 {
-        entities.tick();
+        entities.tick(true);
         entities.simulate(&level);
     }
     let at = entities.get(9).unwrap().tick_pos();
@@ -1171,4 +1171,42 @@ fn an_eye_of_ender_still_glides_to_the_servers_positions() {
     let mut entities = Entities::default();
     entities.apply(add(9, &EntityType::EYE_OF_ENDER, [8.0, 100.0, 8.0]), 1);
     assert!(!entities.get(9).unwrap().simulates());
+}
+
+#[test]
+fn a_frozen_level_holds_still_what_carries_no_player() {
+    let mut entities = Entities::default();
+    let own = 1;
+    entities.apply(add(5, &EntityType::PIG, [0.5, 64.0, 0.5]), own);
+    entities.apply(add(6, &EntityType::MINECART, [4.5, 64.0, 0.5]), own);
+    entities.apply(add(7, &EntityType::PLAYER, [8.5, 64.0, 0.5]), own);
+    entities.apply(
+        EntityPacket::Passengers {
+            id: 6,
+            passengers: vec![own],
+        },
+        own,
+    );
+    let step = |id| {
+        EntityPacket::Move(MoveEntity {
+            id,
+            steps: vec![[4096, 0, 0]],
+            rotation: None,
+            on_ground: true,
+        })
+    };
+    for id in [5, 7] {
+        entities.apply(step(id), own);
+    }
+    // `TickRateManager.isEntityFrozen`: the pig stands, the other player
+    // and the boat the local player sits in go on.
+    entities.tick(false);
+    assert!(entities.is_frozen(5));
+    assert!(!entities.is_frozen(6));
+    assert!(!entities.is_frozen(7));
+    assert_eq!(entities.get(5).unwrap().pos(1.0).x, 0.5);
+    assert!(entities.get(7).unwrap().pos(1.0).x > 8.5);
+    entities.tick(true);
+    assert!(!entities.is_frozen(5));
+    assert!(entities.get(5).unwrap().pos(1.0).x > 0.5);
 }

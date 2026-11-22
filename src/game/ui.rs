@@ -9,7 +9,6 @@ use crate::i18n::Lang;
 use crate::renderer::Renderer;
 use crate::renderer::quad::DrawList;
 use crate::settings::options::Config;
-use crate::world::player::{self};
 use std::time::Instant;
 
 impl InWorld {
@@ -35,7 +34,7 @@ impl InWorld {
             .as_ref()
             .and_then(|overlay| overlay.effects_panel())
             .filter(|panel| panel.fits(size.0));
-        let partial = self.tick_time / player::TICK;
+        let partial = self.partial_tick();
         let (font, pages, white) = (painter.font, painter.font_textures, painter.white);
         if shown {
             if panel.is_none() {

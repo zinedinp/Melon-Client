@@ -45,6 +45,8 @@ fn range(id: u8) -> (f64, f64) {
         x if x == A::WATER_MOVEMENT_EFFICIENCY.id || x == A::MOVEMENT_EFFICIENCY.id => (0.0, 1.0),
         x if x == A::AIR_DRAG_MODIFIER.id || x == A::FRICTION_MODIFIER.id => (0.0, 2048.0),
         x if x == A::FLYING_SPEED.id => (0.0, 1024.0),
+        x if x == A::MAX_HEALTH.id => (1.0, 1024.0),
+        x if x == A::ARMOR.id => (0.0, 30.0),
         _ => (0.0, 1024.0),
     }
 }
@@ -164,6 +166,16 @@ impl PlayerAttributes {
     pub fn friction_modifier(&self) -> f32 {
         self.value(A::FRICTION_MODIFIER.id, 1.0) as f32
     }
+    /// `LivingEntity.getMaxHealth`.
+    pub fn max_health(&self) -> f32 {
+        self.value(A::MAX_HEALTH.id, A::MAX_HEALTH.default_value) as f32
+    }
+
+    /// `LivingEntity.getArmorValue`: the attribute, floored.
+    pub fn armor(&self) -> i32 {
+        self.value(A::ARMOR.id, A::ARMOR.default_value).floor() as i32
+    }
+
     /// `Attributes.SAFE_FALL_DISTANCE`.
     pub fn safe_fall_distance(&self) -> f64 {
         self.value(A::SAFE_FALL_DISTANCE.id, 3.0)
@@ -182,6 +194,24 @@ pub fn modified_friction(friction: f32, modifier: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_bars_read_max_health_and_floored_armor() {
+        let mut a = PlayerAttributes::default();
+        assert_eq!((a.max_health(), a.armor()), (20.0, 0));
+        a.set(
+            A::ARMOR.id,
+            0.0,
+            vec![("minecraft:armor.chest".into(), 7.9, 0)],
+        );
+        a.set(A::MAX_HEALTH.id, 20.0, vec![("plugin:more".into(), 4.0, 0)]);
+        assert_eq!((a.max_health(), a.armor()), (24.0, 7));
+        // A respawn without `KEEP_ATTRIBUTE_MODIFIERS`: back to the bases.
+        let fresh = a.base_only();
+        assert_eq!((fresh.max_health(), fresh.armor()), (20.0, 0));
+        a.set(A::ARMOR.id, 0.0, vec![("x".into(), 99.0, 0)]);
+        assert_eq!(a.armor(), 30);
+    }
 
     #[test]
     fn base_only_drops_the_modifiers_as_assign_base_values_does() {

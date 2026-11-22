@@ -427,6 +427,8 @@ impl RunningState {
         crate::assets::packs::server::end();
         crate::dialog::connection::end();
         self.fov = world.fov_state();
+        // `Minecraft.disconnect` -> `updateLevelInEngines(null)`: silence.
+        self.env.audio.stop_all();
         world.release(&mut self.renderer);
         let integrated = world.is_integrated();
         drop(world);

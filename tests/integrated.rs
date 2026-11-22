@@ -890,7 +890,7 @@ fn summoned_mobs_are_tracked() {
         while !done(entities) {
             assert!(std::time::Instant::now() < until, "{what} didn't happen");
             feed(session.poll(), entities);
-            entities.tick();
+            entities.tick(true);
             assert!(session.ended().is_none(), "{:?}", session.ended());
             std::thread::sleep(std::time::Duration::from_millis(50));
         }
@@ -999,7 +999,7 @@ impl MobWorld {
         loop {
             let events = self.world.session.poll();
             self.feed(events);
-            self.entities.tick();
+            self.entities.tick(true);
             assert!(
                 self.world.session.ended().is_none(),
                 "{:?}",

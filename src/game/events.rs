@@ -14,9 +14,6 @@ use crate::world::game_mode::GameMode;
 use crate::world::inventory::{ContainerKind, MountLook, OpenContainer, empty};
 use glam::DVec3;
 
-/// `Attributes.MAX_HEALTH`'s default: a new player's health.
-const DEFAULT_MAX_HEALTH: f32 = 20.0;
-
 /// `ClientPacketListener.determineLevelLoadingReason`: the portal's
 /// background unless the player died; the Nether wins over the End.
 fn loading_reason(died: bool, new: &str, old: &str) -> LoadingReason {
@@ -165,6 +162,11 @@ impl InWorld {
     /// its synced data is the defaults: full health (`LivingEntity` starts
     /// at `getMaxHealth()`, 20 before any attribute is sent), no absorption,
     /// a full breath.
+    ///
+    /// The new player has a new `Inventory`: empty until the server sends
+    /// the menu again, hotbar slot 0. `MultiPlayerGameMode.carriedIndex`
+    /// outlives the player, so the next `ensureHasSentCarriedItem` tells
+    /// the server of slot 0 when it held another.
     fn new_local_player(&mut self, keep_entity_data: bool, keep_attributes: bool) {
         self.player.respawned(keep_entity_data, keep_attributes);
         self.hands.using = None;
@@ -172,11 +174,12 @@ impl InWorld {
         self.sent.respawned(keep_entity_data);
         self.audio.respawned();
         self.ambient.respawned();
-        if !keep_entity_data {
-            self.status.health = DEFAULT_MAX_HEALTH;
-            self.status.absorption = 0.0;
-            self.status.air = crate::gui::hud::bars::air::MAX_AIR;
+        let held = self.inventory.selected();
+        self.inventory = crate::world::inventory::Inventory::default();
+        if held != 0 {
+            self.joined.session.send_carried_item(0);
         }
+        self.respawn_status(keep_entity_data);
     }
 
     /// `ClientPacketListener.handleMovePlayer`, with its relative flags for

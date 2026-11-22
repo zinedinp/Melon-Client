@@ -1,6 +1,7 @@
 //! [`Entities`]: every tracked entity by id, the packets that change them,
 
 use super::*;
+use std::collections::HashSet;
 
 /// Every entity the server tracks for this client but the player itself.
 #[derive(Default)]
@@ -21,6 +22,9 @@ pub struct Entities {
     /// Items flying into hands, and the sounds of them being taken.
     pub(super) pickups: Vec<super::pickup::Pickup>,
     pub(super) pickup_sounds: Vec<super::pickup::PickupSound>,
+    /// `TickRateManager.isEntityFrozen` as of the last tick: the entities a
+    /// frozen level holds still.
+    frozen: HashSet<i32>,
 }
 
 /// A rider's id, its new seat and the body turn it follows.
@@ -96,16 +100,87 @@ impl Entities {
         }
     }
 
-    pub fn tick(&mut self) {
+    /// `ClientLevel.tickEntities`. While the level does not run normally
+    /// only players and what carries a player tick.
+    pub fn tick(&mut self, runs_normally: bool) {
+        self.frozen = if runs_normally {
+            HashSet::new()
+        } else {
+            self.frozen_ids()
+        };
         let zombify = self.piglins_zombify;
+        let frozen = &self.frozen;
         for entity in self.by_id.values_mut() {
+            if frozen.contains(&entity.id) {
+                continue;
+            }
             if matches!(entity.kind, EntityKind::Piglin | EntityKind::PiglinBrute) {
                 entity.appearance.zombifying = entity.appearance.piglin_converting(zombify);
             }
             entity.tick();
         }
         self.position_riders();
-        self.check_crystals();
+        if runs_normally {
+            self.check_crystals();
+        }
+    }
+
+    /// Whether the level holds `id` still: it is drawn where it is, as
+    /// vanilla draws it with a partial tick of 1.
+    pub fn is_frozen(&self, id: i32) -> bool {
+        self.frozen.contains(&id)
+    }
+
+    /// `TickRateManager.isEntityFrozen` for each entity: by the root of
+    /// what it rides (passengers tick with their vehicle), frozen unless
+    /// that is a player or carries one, the local player among them.
+    fn frozen_ids(&self) -> HashSet<i32> {
+        let carries_player = |root: i32| {
+            let mut stack = vec![root];
+            let mut seen = 0;
+            while let Some(id) = stack.pop() {
+                seen += 1;
+                if seen > 64 {
+                    break;
+                }
+                let Some(entity) = self.by_id.get(&id) else {
+                    continue;
+                };
+                for &rider in &entity.passengers {
+                    let is_player = rider == self.own_id
+                        || self
+                            .by_id
+                            .get(&rider)
+                            .is_some_and(|e| e.kind == EntityKind::Player);
+                    if is_player {
+                        return true;
+                    }
+                    stack.push(rider);
+                }
+            }
+            false
+        };
+        let root_of = |mut id: i32| {
+            for _ in 0..16 {
+                match self.by_id.get(&id).and_then(|e| e.vehicle) {
+                    Some(vehicle) if self.by_id.contains_key(&vehicle) => id = vehicle,
+                    _ => break,
+                }
+            }
+            id
+        };
+        self.by_id
+            .keys()
+            .copied()
+            .filter(|&id| {
+                let root = root_of(id);
+                let is_player = self
+                    .by_id
+                    .get(&root)
+                    .is_some_and(|e| e.kind == EntityKind::Player);
+                !is_player && !carries_player(root)
+            })
+            .collect()
     }
 
     /// `EnderDragon.checkCrystals` as the client runs it: the crystal it
@@ -160,8 +235,10 @@ impl Entities {
 
     /// The physics of the entities that run their own
     pub fn simulate(&mut self, level: &Level) {
-        self.by_id
-            .retain(|_, entity| !(entity.simulates() && entity.simulate(level)));
+        let frozen = &self.frozen;
+        self.by_id.retain(|id, entity| {
+            frozen.contains(id) || !(entity.simulates() && entity.simulate(level))
+        });
     }
 
     /// Which swimmers are in water: each kind that swims tests its box
@@ -201,6 +278,7 @@ impl Entities {
     /// Forgets everything: a new level, or leaving.
     pub fn clear(&mut self) {
         self.by_id.clear();
+        self.frozen.clear();
         self.own_vehicle = None;
         self.driven = None;
         self.pending_passengers.clear();

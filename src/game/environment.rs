@@ -134,11 +134,9 @@ impl InWorld {
         partial: f32,
         now: std::time::Instant,
     ) {
-        let ticks = self
-            .fog
-            .rain_fog_at
-            .replace(now)
-            .map_or(0.0, |last| now.duration_since(last).as_secs_f32() * 20.0);
+        let ticks = self.fog.rain_fog_at.replace(now).map_or(0.0, |last| {
+            now.duration_since(last).as_secs_f32() / self.level_settings.tick_seconds()
+        });
         let effects = self.fog_effects(partial);
         let atmospheric = fog_type(&self.level, camera, aspect) == FogType::Atmospheric
             && effects.blindness.is_none()

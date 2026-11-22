@@ -136,6 +136,9 @@ pub struct AudioEngine {
     pools: Arc<Pools>,
     gains: Arc<Gains>,
     stats: Arc<AudioStats>,
+    /// Counts [`Self::stop_all`]s: a sound started under an older count
+    /// ends at the mixer's next sample, also one still being decoded.
+    generation: Arc<std::sync::atomic::AtomicU64>,
 }
 
 /// The decoded files (`SoundBufferLibrary.cache`), and the sounds waiting
@@ -257,6 +260,7 @@ impl AudioEngine {
             pools: Arc::default(),
             gains,
             stats: Arc::default(),
+            generation: Arc::default(),
         }
         .preloaded()
     }
@@ -432,6 +436,13 @@ impl AudioEngine {
         Some(playing)
     }
 
+    /// `SoundManager.stop()` (`SoundEngine.stopAll`): every sound playing,
+    /// waiting for its file or streaming goes quiet at once. Vanilla calls
+    /// it from `Minecraft.updateLevelInEngines` when the level changes.
+    pub fn stop_all(&self) {
+        self.generation.fetch_add(1, Ordering::Relaxed);
+    }
+
     /// Starts a sound. The mixer gets a pre-decoded `SamplesBuffer`; a live
     pub fn play(&self, instance: &SoundInstance) {
         let started = std::time::Instant::now();
@@ -487,6 +498,7 @@ impl AudioEngine {
             pitch: (instance.pitch * sound.pitch).clamp(PITCH_RANGE.0, PITCH_RANGE.1),
             source: self.forced_source.unwrap_or(instance.source),
             place: instance.position.map(|at| (at, range)),
+            generation: stats::Generation::of(&self.generation),
         };
         if !sound.stream {
             return self.queue_decode(&sound.name, Some(voice));
@@ -527,6 +539,8 @@ struct Voice {
     source: SoundSource,
     /// Where it is heard from, and how far it carries.
     place: Option<([f64; 3], f32)>,
+    /// The [`AudioEngine::stop_all`] count it was started under.
+    generation: stats::Generation,
 }
 
 impl Voice {
@@ -552,8 +566,13 @@ impl Voice {
                 .periodic_access(VOLUME_POLL, move |s| {
                     s.set_factor(volume * gains.get(source));
                 });
-        self.mixer
-            .add(Counted::new(input, self.stats, self.slot, self.playing));
+        self.mixer.add(Counted::new(
+            input,
+            self.stats,
+            self.slot,
+            self.playing,
+            self.generation,
+        ));
     }
 }
 

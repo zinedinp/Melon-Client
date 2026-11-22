@@ -49,9 +49,19 @@ pub(super) struct SoundState {
     pub(super) channels: [u32; 2],
     /// The decoded sound files and their bytes, for F3.
     pub(super) cache: (usize, usize),
+    /// The level changed: everything playing stops before what the new
+    /// level queues plays ([`InWorld::take_stop_all`]).
+    stop_all: bool,
 }
 
 impl SoundState {
+    /// `Minecraft.updateLevelInEngines`' `soundManager.stop()`: what the old
+    /// level still queued is dropped, and the app stops what plays.
+    pub(super) fn stop_all(&mut self) {
+        self.sounds.clear();
+        self.stop_all = true;
+    }
+
     /// A new `LocalPlayer`: its `moveDist` and `nextStep` start over.
     pub(super) fn respawned(&mut self) {
         self.footsteps = Footsteps::default();
@@ -218,6 +228,13 @@ impl InWorld {
     /// The sounds queued since the last call.
     pub fn take_sounds(&mut self) -> Vec<SoundInstance<'static>> {
         std::mem::take(&mut self.audio.sounds)
+    }
+
+    /// Whether the level changed since the last call, so that every sound
+    /// playing stops ([`crate::audio::AudioEngine::stop_all`]) before
+    /// [`Self::take_sounds`]' are played.
+    pub fn take_stop_all(&mut self) -> bool {
+        std::mem::take(&mut self.audio.stop_all)
     }
 
     /// `SoundEngine.updateSource(camera)`: the last rendered camera, else

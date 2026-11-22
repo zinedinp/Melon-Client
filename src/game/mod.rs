@@ -600,6 +600,10 @@ impl InWorld {
         self.border = Default::default();
         self.entities.clear();
         self.occlusion = OcclusionCache::default();
+        // `Minecraft.setLevel`: the sounds of the old level stop.
+        self.audio.stop_all();
+        // The new `ClientLevel`'s own `TickRateManager`.
+        self.level_settings.new_level();
         // A new `ClientLevel`, with its own prediction handler and rain timer.
         self.predictions = Default::default();
         self.ambient.new_level();

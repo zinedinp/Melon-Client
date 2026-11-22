@@ -219,7 +219,7 @@ impl InWorld {
         painter: ItemPainter,
         lang: &Lang,
     ) {
-        let partial = self.tick_time / crate::world::player::TICK;
+        let partial = self.partial_tick();
         for kept in self.entity_meshes.text_displays.kept.values_mut() {
             kept.seen = false;
         }

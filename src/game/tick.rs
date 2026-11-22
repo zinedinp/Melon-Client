@@ -18,8 +18,9 @@ impl InWorld {
         };
         self.tick_time += dt;
         let mut ticks = 0;
-        while self.tick_time >= player::TICK {
-            self.tick_time -= player::TICK;
+        // `DeltaTracker.advanceGameTime` against `getTickTargetMillis`.
+        while self.tick_time >= self.level_settings.tick_seconds() {
+            self.tick_time -= self.level_settings.tick_seconds();
             ticks += 1;
             if ticks > 10 {
                 self.tick_time = 0.0;
@@ -40,8 +41,24 @@ impl InWorld {
             }
             self.tick(input, ui, !blocked && self.bench.is_none());
         }
-        self.player.update_render(self.tick_time / player::TICK, dt);
+        self.player.update_render(self.partial_tick(), dt);
         ticks.min(10)
+    }
+
+    /// `DeltaTracker.getGameTimeDeltaPartialTick(true)`: how far into the
+    /// next tick this frame is, at the level's tick length.
+    pub(super) fn partial_tick(&self) -> f32 {
+        (self.tick_time / self.level_settings.tick_seconds()).min(1.0)
+    }
+
+    /// `getGameTimeDeltaPartialTick(false)`: 1 while the level is frozen,
+    /// for what freezes with it (block entities).
+    pub(super) fn level_partial_tick(&self) -> f32 {
+        if self.level_settings.runs_normally() {
+            self.partial_tick()
+        } else {
+            1.0
+        }
     }
 
     pub(super) fn tick(
@@ -51,10 +68,16 @@ impl InWorld {
         interact: bool,
     ) {
         let lang = ui.lang;
+        // `Minecraft.tick`: the level's tick rate first.
+        self.level_settings.tick_rate_tick();
+        let runs = self.level_settings.runs_normally();
         self.player
             .set_item_use(self.hands.using.map(|using| using.item_use));
         self.status_effects.tick();
-        self.border.tick();
+        // `ClientLevel.tick`: border, time and cracks stand while frozen.
+        if runs {
+            self.border.tick();
+        }
         self.player
             .set_speed_effects(self.status_effects.speed_factor());
         {
@@ -124,9 +147,12 @@ impl InWorld {
         self.tick_ambient_sounds(ui);
         self.ticks += 1;
         self.update_own_crack();
-        self.cracks.tick(self.ticks);
-        self.tick_particles(ui);
-        self.clocks.tick();
+        if runs {
+            self.cracks.tick(self.ticks);
+            // `Minecraft.tick`: `animateTick` and the particle engine.
+            self.tick_particles(ui);
+            self.clocks.tick();
+        }
         self.tick_water_vision();
         self.tick_effects();
         self.tick_fov(ui.config.fov_effect_scale as f32);
@@ -137,10 +163,13 @@ impl InWorld {
                 .send_player_abilities(self.player.abilities().packet_flags());
         }
         let feet = self.player.feet().as_vec3();
-        self.block_entities.tick(&self.level, feet);
+        if runs {
+            // `Level.tickBlockEntities` runs its tickers only then.
+            self.block_entities.tick(&self.level, feet);
+        }
         self.entities
             .set_piglins_zombify(self.level_info.dimension_type.piglins_zombify());
-        self.entities.tick();
+        self.entities.tick(runs);
         self.tick_pickups();
         self.push_player();
         self.entities.simulate(&self.level);

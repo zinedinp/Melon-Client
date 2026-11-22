@@ -181,6 +181,9 @@ impl RunningState {
             world.set_sound_cache(env.audio.cache_stats());
         }
         env.audio.set_subtitles(env.config.show_subtitles);
+        if world.take_stop_all() {
+            env.audio.stop_all();
+        }
         for sound in world.take_sounds() {
             env.audio.play(&sound);
         }

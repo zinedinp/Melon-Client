@@ -156,15 +156,44 @@ pub(super) struct Counted<S> {
     stats: Arc<AudioStats>,
     _slot: Slot,
     watch: Option<Watch>,
+    generation: Generation,
+}
+
+/// The engine's stop count a sound was started under
+/// ([`super::AudioEngine::stop_all`]).
+pub(super) struct Generation {
+    now: Arc<AtomicU64>,
+    started: u64,
+}
+
+impl Generation {
+    pub(super) fn of(now: &Arc<AtomicU64>) -> Self {
+        Self {
+            now: Arc::clone(now),
+            started: now.load(Relaxed),
+        }
+    }
+
+    /// Whether everything was stopped since.
+    fn stopped(&self) -> bool {
+        self.now.load(Relaxed) != self.started
+    }
 }
 
 impl<S> Counted<S> {
-    pub(super) fn new(inner: S, stats: Arc<AudioStats>, slot: Slot, watch: Option<Watch>) -> Self {
+    pub(super) fn new(
+        inner: S,
+        stats: Arc<AudioStats>,
+        slot: Slot,
+        watch: Option<Watch>,
+        generation: Generation,
+    ) -> Self {
         Self {
             inner,
             stats,
             _slot: slot,
             watch,
+            generation,
         }
     }
 }
@@ -180,7 +209,8 @@ impl<S: Source> Iterator for Counted<S> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.watch.as_ref().is_some_and(|w| w.0.stop.load(Relaxed)) {
+        if self.watch.as_ref().is_some_and(|w| w.0.stop.load(Relaxed)) || self.generation.stopped()
+        {
             return None;
         }
         self.inner.next()
@@ -227,6 +257,7 @@ mod tests {
             Arc::clone(&stats),
             slot,
             None,
+            Generation::of(&Arc::default()),
         );
         assert_eq!(stats.totals().playing, 1);
         assert_eq!(pools.used(Pool::Static), 1);
@@ -248,6 +279,7 @@ mod tests {
             stats,
             pools.acquire(Pool::Static).unwrap(),
             Some(Watch(Arc::clone(&playing))),
+            Generation::of(&Arc::default()),
         );
         assert!(sound.next().is_some());
         playing.stop();
@@ -255,6 +287,31 @@ mod tests {
         assert!(playing.is_active());
         drop(sound);
         assert!(!playing.is_active());
+    }
+
+    #[test]
+    fn stop_all_ends_what_was_started_before_it_only() {
+        let stats = Arc::new(AudioStats::default());
+        let pools = Arc::new(Pools::default());
+        let generation = Arc::new(AtomicU64::new(0));
+        let one = std::num::NonZeroU16::new(1).unwrap();
+        let rate = std::num::NonZeroU32::new(48_000).unwrap();
+        let sound = |stats: &Arc<AudioStats>| {
+            Counted::new(
+                SamplesBuffer::new(one, rate, vec![0.0; 4]),
+                Arc::clone(stats),
+                pools.acquire(Pool::Static).unwrap(),
+                None,
+                Generation::of(&generation),
+            )
+        };
+        let mut old = sound(&stats);
+        assert!(old.next().is_some());
+        // `SoundEngine.stopAll`: the level changed.
+        generation.fetch_add(1, Relaxed);
+        assert!(old.next().is_none());
+        let mut new = sound(&stats);
+        assert!(new.next().is_some());
     }
 
     #[test]

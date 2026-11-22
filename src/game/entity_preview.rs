@@ -241,7 +241,7 @@ impl InWorld {
         config: &Config,
         preview: &EntityPreview,
     ) -> (AvatarRenderState, f32) {
-        let partial = self.tick_time / crate::world::player::TICK;
+        let partial = self.partial_tick();
         let arms = self.arm_poses(config.main_hand);
         let swing = self.swing_pose(config.main_hand, partial);
         let mut state = self

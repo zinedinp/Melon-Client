@@ -12,7 +12,7 @@ use crate::world::culling::{Culler, occlusion};
 use crate::world::dimension::Skybox;
 use crate::world::fog::FogType;
 use crate::world::item_model::HandPose;
-use crate::world::player::{self, ArmPoses};
+use crate::world::player::ArmPoses;
 use crate::world::{lightmap, sky};
 use glam::Mat4;
 use std::time::Instant;
@@ -39,7 +39,8 @@ impl InWorld {
     ) -> (SceneFrame, RenderStats) {
         self.fps.tick(now);
         let far = camera::far_plane(config.render_distance);
-        let partial = self.tick_time / player::TICK;
+        let partial = self.partial_tick();
+        let level_partial = self.level_partial_tick();
         let mut camera = Camera::follow(
             &self.player,
             &self.level,
@@ -52,7 +53,7 @@ impl InWorld {
             camera.bob *= self.player.view_bob();
         }
         let view_distance = i32::from(config.render_distance);
-        let partial_tick = self.tick_time / player::TICK;
+        let partial_tick = self.partial_tick();
         self.update_rain_fog(&camera, aspect, partial_tick, now);
         let look = self.environment(
             &camera,
@@ -65,7 +66,7 @@ impl InWorld {
         self.fog.clear_color = [r, g, b, 1.0];
         self.note_sky_light(&look);
         let dying = self.body.death > 0;
-        let death_time = self.own_death_time(self.tick_time / player::TICK);
+        let death_time = self.own_death_time(self.partial_tick());
         let in_fluid = matches!(look.fog_type, FogType::Water | FogType::Lava);
         let narrowed = |mut fov: f32| {
             if dying {
@@ -141,14 +142,13 @@ impl InWorld {
         let visible = self.meshes.visible_sections(&culler);
         let sections = visible.count;
 
-        let partial = self.tick_time / player::TICK;
         let block_entity_meshes = self.block_entity_meshes.update(
             renderer,
             &self.block_entities,
             &self.level,
             &assets.models,
             &culler,
-            partial,
+            level_partial,
         );
         let visible_entities =
             super::entities::visible_entities(&self.entities, &culler, partial, |pos| {
@@ -363,7 +363,8 @@ impl InWorld {
             assets,
             &camera,
             &particle_frustum,
-            partial,
+            // `ParticleEngine` stands with the level: drawn where it is.
+            level_partial,
             &mut entities,
         );
 

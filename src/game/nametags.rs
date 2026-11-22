@@ -94,7 +94,7 @@ impl InWorld {
         let Some(view) = self.name_view else {
             return;
         };
-        let partial = self.tick_time / crate::world::player::TICK;
+        let partial = self.partial_tick();
         let viewer_spectator = self.game_mode.current.is_spectator();
         let looked_at = self.hit_entity().map(|hit| hit.id);
         for entity in self.entities.iter() {
@@ -204,7 +204,7 @@ impl InWorld {
         let Some(view) = self.name_view else {
             return;
         };
-        let partial = self.tick_time / crate::world::player::TICK;
+        let partial = self.partial_tick();
         for entity in self.entities.iter() {
             if entity.kind != EntityKind::TextDisplay {
                 continue;
