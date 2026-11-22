@@ -131,6 +131,11 @@ impl TintSettings {
         }
     }
 
+    /// A new level's `BiomeManager` seed (`ClientboundRespawnPacket`).
+    pub fn set_zoom_seed(&mut self, seed: i64) {
+        self.zoom_seed = Some(seed);
+    }
+
     /// `BiomeManager`'s zoom seed, if blocks jitter between biome cells.
     pub fn zoom_seed(&self) -> Option<i64> {
         self.zoom_seed

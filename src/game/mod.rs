@@ -290,7 +290,8 @@ pub enum LoadingReason {
 
 impl InWorld {
     /// `game_dir` holds `hotbar.nbt` and `command_history.txt`.
-    pub fn enter(mut joined: Joined, game_dir: &Path) -> Self {
+    /// `fov` is what the last world's camera left (`Camera` outlives worlds).
+    pub fn enter(mut joined: Joined, game_dir: &Path, fov: camera::FovState) -> Self {
         let (debug_view, debug_visible) = debug::view::DebugView::load(game_dir);
         let mut debug =
             DebugOverlay::new(crate::gui::hud::debug_entries::DebugEntries::load(game_dir));
@@ -341,7 +342,7 @@ impl InWorld {
             fog: Default::default(),
             sky: Default::default(),
             body: Default::default(),
-            fov: Default::default(),
+            fov,
             interaction: Default::default(),
             audio: Default::default(),
             loading: Some(loading::LevelLoad::new()),
@@ -572,23 +573,23 @@ impl InWorld {
     }
 
     /// `ClientPacketListener.handleRespawn`: after death or a portal the
+    ///
+    /// Every respawn waits for the level again (`setClientLoaded(false)`,
+    /// `startWaitingForNewLevel`), so `ServerboundPlayerLoadedPacket` follows
+    /// each one, also into the same dimension. Only another dimension makes
+    /// a new `ClientLevel`, with the packet's `BiomeManager` seed.
     pub(super) fn respawn_in(
         &mut self,
         renderer: &mut Renderer,
         dimension_id: i32,
         dimension_name: String,
-    ) -> Option<LoadingReason> {
+        hashed_seed: i64,
+    ) {
+        self.loading = Some(loading::LevelLoad::new());
+        self.level_became_ready = false;
         if dimension_name == self.level_info.dimension {
-            return None;
+            return;
         }
-        let end = "minecraft:the_end";
-        let reason = if self.effects.in_portal_effect() {
-            LoadingReason::NetherPortal
-        } else if dimension_name == end || self.level_info.dimension == end {
-            LoadingReason::EndPortal
-        } else {
-            LoadingReason::Other
-        };
         self.release(renderer);
         self.level_info.dimension_type = self.level_info.dimension_types.get(dimension_id);
         self.level_info.dimension = dimension_name;
@@ -602,9 +603,8 @@ impl InWorld {
         // A new `ClientLevel`, with its own prediction handler and rain timer.
         self.predictions = Default::default();
         self.ambient.new_level();
-        self.loading = Some(loading::LevelLoad::new());
-        self.level_became_ready = false;
-        Some(reason)
+        self.level_info.hashed_seed = hashed_seed;
+        self.level.set_zoom_seed(hashed_seed);
     }
 
     /// Frees what the world uploaded. Call when leaving it.

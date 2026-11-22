@@ -143,6 +143,11 @@ pub enum GameEvent {
         /// `ClientboundRespawnPacket.KEEP_ENTITY_DATA`: the new player takes
         /// the old one's synced data (frozen ticks, air...).
         keep_entity_data: bool,
+        /// `KEEP_ATTRIBUTE_MODIFIERS`: the attributes keep their modifiers,
+        /// not only their base values.
+        keep_attributes: bool,
+        /// `CommonPlayerSpawnInfo.seed`: the new level's `BiomeManager` seed.
+        hashed_seed: i64,
     },
     /// A `Login` packet in the middle of play (a server that moves its
     Login {
@@ -151,6 +156,7 @@ pub enum GameEvent {
         dimension_name: String,
         game_mode: GameMode,
         previous_game_mode: Option<GameMode>,
+        hashed_seed: i64,
     },
     /// `ClientboundPlayerAbilitiesPacket`.
     Abilities {

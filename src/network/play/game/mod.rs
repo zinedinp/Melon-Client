@@ -11,6 +11,8 @@ pub mod sound;
 
 pub use decode::{GameEvent, PlayerInfoUpdate, decode};
 
+/// `ClientboundRespawnPacket.KEEP_ATTRIBUTE_MODIFIERS`.
+pub const KEEP_ATTRIBUTE_MODIFIERS: u8 = 1;
 /// `ClientboundRespawnPacket.KEEP_ENTITY_DATA`.
 pub const KEEP_ENTITY_DATA: u8 = 2;
 pub use entity::{

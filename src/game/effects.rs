@@ -40,11 +40,6 @@ impl EffectState {
         self.sky_light_level
     }
 
-    /// Whether the nether portal's glow is up: the player stood in one.
-    pub fn in_portal_effect(&self) -> bool {
-        self.portal > 0.0
-    }
-
     pub fn set_on_fire(&mut self, on: bool) {
         self.on_fire = on;
     }

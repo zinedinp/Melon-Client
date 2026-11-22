@@ -14,6 +14,24 @@ use crate::world::game_mode::GameMode;
 use crate::world::inventory::{ContainerKind, MountLook, OpenContainer, empty};
 use glam::DVec3;
 
+/// `Attributes.MAX_HEALTH`'s default: a new player's health.
+const DEFAULT_MAX_HEALTH: f32 = 20.0;
+
+/// `ClientPacketListener.determineLevelLoadingReason`: the portal's
+/// background unless the player died; the Nether wins over the End.
+fn loading_reason(died: bool, new: &str, old: &str) -> LoadingReason {
+    let either = |dimension: &str| new == dimension || old == dimension;
+    if died {
+        LoadingReason::Other
+    } else if either("minecraft:the_nether") {
+        LoadingReason::NetherPortal
+    } else if either("minecraft:the_end") {
+        LoadingReason::EndPortal
+    } else {
+        LoadingReason::Other
+    }
+}
+
 impl InWorld {
     /// Applies what the server sent since last frame: chunks, teleports and
     pub fn receive(&mut self, renderer: &mut Renderer, lang: &Lang, font: &Font) -> Received {
@@ -56,13 +74,19 @@ impl InWorld {
                     game_mode,
                     previous_game_mode,
                     keep_entity_data,
+                    keep_attributes,
+                    hashed_seed,
                 }) => {
+                    // `handleRespawn`, in its order.
+                    let died = self.status.health <= 0.0;
+                    let reason = loading_reason(died, &dimension_name, &self.level_info.dimension);
+                    self.respawn_in(renderer, dimension_id, dimension_name, hashed_seed);
                     self.close_container_for_respawn();
-                    self.new_local_player(keep_entity_data);
+                    self.new_local_player(keep_entity_data, keep_attributes);
                     self.set_game_mode(game_mode, Some(previous_game_mode));
-                    loading = self
-                        .respawn_in(renderer, dimension_id, dimension_name)
-                        .or(loading);
+                    loading = Some(reason);
+                    // The death screen closes with the new player.
+                    received.revived |= died;
                 }
                 WorldEvent::Game(GameEvent::Login {
                     entity_id,
@@ -70,14 +94,15 @@ impl InWorld {
                     dimension_name,
                     game_mode,
                     previous_game_mode,
+                    hashed_seed,
                 }) => {
+                    // `handleLogin`: always a new level and a new player.
                     self.joined.session.info.entity_id = entity_id;
-                    self.new_local_player(false);
                     self.level_info.dimension.clear();
+                    self.respawn_in(renderer, dimension_id, dimension_name, hashed_seed);
+                    self.new_local_player(false, false);
                     self.set_game_mode(game_mode, Some(previous_game_mode));
-                    loading = self
-                        .respawn_in(renderer, dimension_id, dimension_name)
-                        .or(loading);
+                    loading = Some(LoadingReason::Other);
                 }
                 WorldEvent::Game(event) => {
                     self.apply_game_event(event, &mut received, lang, font);
@@ -136,12 +161,22 @@ impl InWorld {
     }
 
     /// `handleRespawn` and `handleLogin` make a new `LocalPlayer`: what it
-    /// keeps of itself between ticks starts over.
-    fn new_local_player(&mut self, keep_entity_data: bool) {
+    /// keeps of itself between ticks starts over. Without `KEEP_ENTITY_DATA`
+    /// its synced data is the defaults: full health (`LivingEntity` starts
+    /// at `getMaxHealth()`, 20 before any attribute is sent), no absorption,
+    /// a full breath.
+    fn new_local_player(&mut self, keep_entity_data: bool, keep_attributes: bool) {
+        self.player.respawned(keep_entity_data, keep_attributes);
+        self.hands.using = None;
         self.body.respawned(keep_entity_data);
         self.sent.respawned(keep_entity_data);
         self.audio.respawned();
         self.ambient.respawned();
+        if !keep_entity_data {
+            self.status.health = DEFAULT_MAX_HEALTH;
+            self.status.absorption = 0.0;
+            self.status.air = crate::gui::hud::bars::air::MAX_AIR;
+        }
     }
 
     /// `ClientPacketListener.handleMovePlayer`, with its relative flags for
@@ -689,6 +724,42 @@ fn rotate_motion(v: DVec3, yaw: f32, pitch: f32) -> DVec3 {
     let v = DVec3::new(v.x, v.y * cos + v.z * sin, v.z * cos - v.y * sin);
     let (sin, cos) = f64::from(yaw).to_radians().sin_cos();
     DVec3::new(v.x * cos + v.z * sin, v.y, v.z * cos - v.x * sin)
+}
+
+#[cfg(test)]
+mod respawn_tests {
+    use super::*;
+
+    #[test]
+    fn the_loading_background_follows_determine_level_loading_reason() {
+        let (over, nether, end) = (
+            "minecraft:overworld",
+            "minecraft:the_nether",
+            "minecraft:the_end",
+        );
+        assert_eq!(
+            loading_reason(false, nether, over),
+            LoadingReason::NetherPortal
+        );
+        assert_eq!(
+            loading_reason(false, over, nether),
+            LoadingReason::NetherPortal
+        );
+        assert_eq!(loading_reason(false, end, over), LoadingReason::EndPortal);
+        assert_eq!(loading_reason(false, over, end), LoadingReason::EndPortal);
+        // The Nether is asked first.
+        assert_eq!(
+            loading_reason(false, end, nether),
+            LoadingReason::NetherPortal
+        );
+        // Dying, or a dimension without a portal, shows the plain one.
+        assert_eq!(loading_reason(true, nether, over), LoadingReason::Other);
+        assert_eq!(loading_reason(false, over, over), LoadingReason::Other);
+        assert_eq!(
+            loading_reason(false, "plugin:arena", over),
+            LoadingReason::Other
+        );
+    }
 }
 
 #[cfg(test)]

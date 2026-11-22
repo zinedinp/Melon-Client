@@ -118,13 +118,35 @@ impl InWorld {
     }
 
     /// `AtmosphericFogEnvironment.updateRainFogState`: the rain's fog moves a
-    pub(super) fn update_rain_fog(&mut self, camera: glam::DVec3, now: std::time::Instant) {
+    ///
+    /// `FogRenderer.setupFog` runs only the first environment that applies:
+    /// lava, powder snow, blindness, darkness and water come before this
+    /// one, and the multiplier stands still under them. The frame's time
+    /// still moves on, as `DeltaTracker.getGameTimeDeltaTicks` does.
+    ///
+    /// The step is held at 1: vanilla's `deltaTicks * 0.2` overshoots the
+    /// target on frames over 250 ms (a hitch while loading), Melon's stops
+    /// at it. Below that both are the same.
+    pub(super) fn update_rain_fog(
+        &mut self,
+        camera: &Camera,
+        aspect: f32,
+        partial: f32,
+        now: std::time::Instant,
+    ) {
         let ticks = self
             .fog
             .rain_fog_at
             .replace(now)
             .map_or(0.0, |last| now.duration_since(last).as_secs_f32() * 20.0);
-        let at = camera.floor().as_ivec3();
+        let effects = self.fog_effects(partial);
+        let atmospheric = fog_type(&self.level, camera, aspect) == FogType::Atmospheric
+            && effects.blindness.is_none()
+            && effects.darkness.is_none();
+        if !atmospheric {
+            return;
+        }
+        let at = camera.position.floor().as_ivec3();
         let sky = f32::from(self.level.light_at(at.x, at.y, at.z).1);
         let open_sky = ((sky - 8.0) / 7.0).clamp(0.0, 1.0);
         let rains = self

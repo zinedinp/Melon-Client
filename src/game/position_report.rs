@@ -93,6 +93,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_new_player_keeps_its_input_only_with_its_entity_data() {
+        let moving = || {
+            let mut sent = LastSent::default();
+            sent.input.forward = true;
+            sent.sprinting = true;
+            sent.position.reminder = 7;
+            sent
+        };
+        let mut kept = moving();
+        kept.respawned(true);
+        assert!(kept.input.forward && kept.sprinting);
+        assert_eq!(kept.position.reminder, 0);
+
+        let mut fresh = moving();
+        fresh.respawned(false);
+        assert!(!fresh.input.forward && !fresh.sprinting);
+    }
+
+    #[test]
     fn standing_still_is_quiet_with_a_reminder_every_twenty_ticks() {
         let mut report = PositionReport::default();
         let at = DVec3::new(1.0, 64.0, 1.0);

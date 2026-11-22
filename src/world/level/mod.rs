@@ -253,6 +253,11 @@ impl Level {
             .color(kind, pos)
     }
 
+    /// The `BiomeManager` seed of a new level, before its chunks arrive.
+    pub fn set_zoom_seed(&mut self, seed: i64) {
+        self.tints.set_zoom_seed(seed);
+    }
+
     /// `Options.biomeBlendRadius` only: remeshes when it changes.
     pub fn set_biome_blend(&mut self, radius: u8) {
         self.tints.blend = radius;

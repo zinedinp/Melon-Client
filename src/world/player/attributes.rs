@@ -50,6 +50,25 @@ fn range(id: u8) -> (f64, f64) {
 }
 
 impl PlayerAttributes {
+    /// `AttributeMap.assignBaseValues`: the same base values, no modifiers.
+    pub fn base_only(&self) -> Self {
+        Self {
+            instances: self
+                .instances
+                .iter()
+                .map(|(id, instance)| {
+                    (
+                        *id,
+                        Instance {
+                            base: instance.base,
+                            modifiers: Vec::new(),
+                        },
+                    )
+                })
+                .collect(),
+        }
+    }
+
     /// A snapshot from the server replaces the attribute whole.
     pub fn set(&mut self, attribute: u8, base: f64, modifiers: Vec<Modifier>) {
         let instance = Instance { base, modifiers };
@@ -163,6 +182,16 @@ pub fn modified_friction(friction: f32, modifier: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn base_only_drops_the_modifiers_as_assign_base_values_does() {
+        let mut a = PlayerAttributes::default();
+        a.set(A::GRAVITY.id, 0.08, vec![("plugin:low".into(), -0.04, 0)]);
+        assert!((a.gravity() - 0.04).abs() < 1e-12);
+        let base = a.base_only();
+        assert_eq!(base.gravity(), 0.08);
+        assert!(base.has(A::GRAVITY.id));
+    }
 
     #[test]
     fn unset_attributes_read_as_vanilla_defaults() {

@@ -121,6 +121,8 @@ struct RunningState {
     /// Uploaded on the first join and kept, since the renderer can't free
     world_resources: Option<WorldResources>,
     world: Option<InWorld>,
+    /// `Camera.fovModifier`: outlives the worlds, as vanilla's camera does.
+    fov: crate::game::camera::FovState,
     input: InputState,
     last_frame: Instant,
     /// When the framerate limit lets the next frame start.
@@ -215,6 +217,7 @@ impl App {
             background,
             world_resources: None,
             world: None,
+            fov: Default::default(),
             input: InputState::new(),
             last_frame: Instant::now(),
             next_frame: None,
@@ -355,6 +358,7 @@ impl RunningState {
         if let Some((info, events)) = received.rejoined.take()
             && let Some(world) = self.world.take()
         {
+            self.fov = world.fov_state();
             let joined = world.rejoin(&mut self.renderer, *info, events);
             self.enter_world(joined);
         }
@@ -394,7 +398,7 @@ impl RunningState {
                 }
             }
         }
-        let mut world = InWorld::enter(joined, self.env.assets.game_dir());
+        let mut world = InWorld::enter(joined, self.env.assets.game_dir(), self.fov);
         world.set_chat_settings(&self.env.config.chat, &self.env.gui_assets.font);
         world.set_smooth_lighting(self.env.config.smooth_lighting);
         world.set_chunk_builder(self.env.config.chunk_builder);
@@ -422,6 +426,7 @@ impl RunningState {
         };
         crate::assets::packs::server::end();
         crate::dialog::connection::end();
+        self.fov = world.fov_state();
         world.release(&mut self.renderer);
         let integrated = world.is_integrated();
         drop(world);

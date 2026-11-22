@@ -53,7 +53,7 @@ impl InWorld {
         }
         let view_distance = i32::from(config.render_distance);
         let partial_tick = self.tick_time / player::TICK;
-        self.update_rain_fog(camera.position, now);
+        self.update_rain_fog(&camera, aspect, partial_tick, now);
         let look = self.environment(
             &camera,
             aspect,

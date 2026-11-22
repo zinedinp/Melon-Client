@@ -277,6 +277,35 @@ impl PlayerState {
         }
     }
 
+    /// `ClientPacketListener.handleRespawn`: a new `LocalPlayer` takes the
+    /// old one's place. It starts with default abilities (the game mode is
+    /// set on it next), no item in use, not riding, and the attributes'
+    /// base values: their modifiers too under `KEEP_ATTRIBUTE_MODIFIERS`.
+    /// Under `KEEP_ENTITY_DATA` it keeps the motion, the look and the
+    /// sprinting flag; otherwise it faces north (`setYRot(-180)`).
+    ///
+    /// The position stays where it was until the server's teleport, which
+    /// the loading screen waits for; vanilla's new player is at the origin
+    /// until then, behind the same screen. Melon's movement channel (the
+    /// server's allowed moves) belongs to the connection and stays.
+    pub fn respawned(&mut self, keep_entity_data: bool, keep_attributes: bool) {
+        let mut new = Self::new(self.feet);
+        new.attributes = if keep_attributes {
+            self.attributes.clone()
+        } else {
+            self.attributes.base_only()
+        };
+        if keep_entity_data {
+            new.velocity = self.velocity;
+            new.yaw_degrees = self.yaw_degrees;
+            new.pitch_degrees = self.pitch_degrees;
+            new.sprinting = self.sprinting;
+        }
+        new.move_states = std::mem::replace(&mut self.move_states, movement::MoveStates::vanilla());
+        new.allowed_moves = std::mem::take(&mut self.allowed_moves);
+        *self = new;
+    }
+
     pub fn flying(&self) -> bool {
         self.abilities.flying
     }

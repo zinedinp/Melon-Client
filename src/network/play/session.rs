@@ -884,6 +884,8 @@ fn handle_play_packet(
                 game_mode: spawn.game_mode,
                 previous_game_mode: spawn.previous_game_mode,
                 keep_entity_data: data_to_keep & game::KEEP_ENTITY_DATA != 0,
+                keep_attributes: data_to_keep & game::KEEP_ATTRIBUTE_MODIFIERS != 0,
+                hashed_seed: spawn.hashed_seed,
             };
             (None, Play::Event(WorldEvent::Game(event)))
         }
@@ -896,6 +898,7 @@ fn handle_play_packet(
                 dimension_name: join.dimension_name,
                 game_mode: join.game_mode,
                 previous_game_mode: join.previous_game_mode,
+                hashed_seed: join.hashed_seed,
             };
             (None, Play::Event(WorldEvent::Game(event)))
         }
