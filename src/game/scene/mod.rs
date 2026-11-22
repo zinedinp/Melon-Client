@@ -125,8 +125,8 @@ impl InWorld {
             clouds: sky.clouds,
             weather: sky.weather,
             lines,
-            glint_item: Some(assets.glint_item),
-            glint_armor: Some(assets.glint_armor),
+            glint_item: Some(assets.glint.item),
+            glint_armor: Some(assets.glint.armor),
             glowing: layer.glowing,
             post_effects: Vec::new(),
         };

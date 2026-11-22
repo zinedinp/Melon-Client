@@ -159,8 +159,8 @@ impl InWorld {
             target,
             view_proj: pixel_projection(width, height, depth) * view,
             entities,
-            glint_armor: Some(assets.glint_armor),
-            glint_item: Some(assets.glint_item),
+            glint_armor: Some(assets.glint.armor),
+            glint_item: Some(assets.glint.item),
         });
         self.preview.current = Some(target);
         true
@@ -446,7 +446,7 @@ impl InWorld {
                 skip: &[],
                 only: None,
                 share_depth: true,
-                glint: layer.foil.then_some(&assets.glint_armor_image),
+                glint: layer.foil.then_some(&assets.glint.armor_image),
             });
         }
         if let (Some((model, pose, at)), Some(texture)) = (&head_skull, head_texture) {
@@ -523,7 +523,7 @@ impl InWorld {
                     skip: &[],
                     only: None,
                     share_depth: i > 0,
-                    glint: layer.foil.then_some(&assets.glint_armor_image),
+                    glint: layer.foil.then_some(&assets.glint.armor_image),
                 })
             })
             .collect();

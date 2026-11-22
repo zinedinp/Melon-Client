@@ -57,26 +57,73 @@ pub struct WorldResources {
     pub held: HeldItems,
     /// Blocks mobs carry (an enderman's).
     pub blocks: super::block_meshes::BlockMeshes,
-    pub sun: TextureId,
-    pub moon: [TextureId; 8],
+    pub sky: SkyResources,
+    pub weather: WeatherResources,
+    pub glint: GlintTextures,
     pub shadow: TextureId,
     /// `textures/misc/forcefield.png`, the world border's wall, repeating.
     pub forcefield: TextureId,
-    /// `textures/misc/enchanted_glint_{item,armor}.png`.
-    pub glint_item: TextureId,
-    pub glint_armor: TextureId,
-    pub glint_armor_image: RgbaImage,
     /// `destroy_stage_0` to `_9`: the cracks of a block being broken.
     pub destroy_stages: [TextureId; 10],
+    /// What [`Self::load`] uploaded, freed or reused by a reload.
+    textures: Vec<TextureId>,
+    meshes: Vec<MeshId>,
+}
+
+/// `environment/celestial/moon/*`, by moon phase.
+const MOON_PHASES: [&str; 8] = [
+    "full_moon",
+    "waning_gibbous",
+    "third_quarter",
+    "waning_crescent",
+    "new_moon",
+    "waxing_crescent",
+    "first_quarter",
+    "waxing_gibbous",
+];
+
+/// The sky's textures and meshes, for `InWorld::sky_draws`.
+pub struct SkyResources {
+    pub sun: TextureId,
+    /// By moon phase, the full moon first.
+    pub moon: [TextureId; 8],
+    pub end_sky: TextureId,
     pub sun_mesh: MeshId,
     pub moon_mesh: MeshId,
     pub star_mesh: MeshId,
-    /// The sky's disc, the dark one below the horizon, the dusk glow, and
-    pub sky_disc_mesh: MeshId,
+    /// The sky's disc, and the dark one below the horizon.
+    pub disc_mesh: MeshId,
     pub dark_disc_mesh: MeshId,
+    /// The dusk glow's fan.
     pub sunrise_mesh: MeshId,
     pub end_sky_mesh: MeshId,
-    pub end_sky: TextureId,
+}
+
+impl SkyResources {
+    fn load(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
+        use crate::world::sky;
+        let mut moon = [TextureId(0); 8];
+        for (texture, phase) in moon.iter_mut().zip(MOON_PHASES) {
+            let id = format!("minecraft:environment/celestial/moon/{phase}.png");
+            *texture = assets.texture(renderer, &id)?;
+        }
+        Ok(Self {
+            sun: assets.texture(renderer, "minecraft:environment/celestial/sun.png")?,
+            moon,
+            end_sky: assets.texture(renderer, "minecraft:environment/end_sky.png")?,
+            sun_mesh: renderer.upload_mesh(&sky::sun_quad())?,
+            moon_mesh: renderer.upload_mesh(&sky::moon_quad())?,
+            star_mesh: renderer.upload_mesh(&sky::star_quads())?,
+            disc_mesh: renderer.upload_mesh(&sky::sky_disc(16.0))?,
+            dark_disc_mesh: renderer.upload_mesh(&sky::sky_disc(-16.0))?,
+            sunrise_mesh: renderer.upload_mesh(&sky::sunrise_fan())?,
+            end_sky_mesh: renderer.upload_mesh(&sky::end_sky_box())?,
+        })
+    }
+}
+
+/// Clouds, rain and snow, for `InWorld::atmosphere_draws`.
+pub struct WeatherResources {
     /// Packed `clouds.png` cells, CPU-side.
     pub clouds: CloudTexture,
     /// `textures/environment/rain.png`, repeating.
@@ -86,9 +133,40 @@ pub struct WorldResources {
     /// Their drop streaks, for `weather.vert` (`world::weather::template`).
     pub rain_template: MeshId,
     pub snow_template: MeshId,
-    /// What [`Self::load`] uploaded, freed or reused by a reload.
-    textures: Vec<TextureId>,
-    meshes: Vec<MeshId>,
+}
+
+impl WeatherResources {
+    fn load(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
+        let rain = assets.image("minecraft:environment/rain.png")?;
+        let snow = assets.image("minecraft:environment/snow.png")?;
+        Ok(Self {
+            clouds: CloudTexture::load(assets.root()),
+            rain: renderer.load_texture_tiled(&rain)?,
+            snow: renderer.load_texture_tiled(&snow)?,
+            rain_template: upload_template(renderer, &rain)?,
+            snow_template: upload_template(renderer, &snow)?,
+        })
+    }
+}
+
+/// `textures/misc/enchanted_glint_{item,armor}.png`.
+pub struct GlintTextures {
+    pub item: TextureId,
+    pub armor: TextureId,
+    /// The armor glint's pixels, for the entity previews drawn on the CPU.
+    pub armor_image: RgbaImage,
+}
+
+impl GlintTextures {
+    fn load(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
+        let item = assets.image("minecraft:misc/enchanted_glint_item.png")?;
+        let armor_image = assets.image("minecraft:misc/enchanted_glint_armor.png")?;
+        Ok(Self {
+            item: renderer.load_texture_linear_tiled(&item)?,
+            armor: renderer.load_texture_linear_tiled(&armor_image)?,
+            armor_image,
+        })
+    }
 }
 
 impl WorldResources {
@@ -100,7 +178,7 @@ impl WorldResources {
             Ok(mut loaded) => {
                 loaded.textures = textures;
                 loaded.meshes = meshes;
-                renderer.bind_gui_glint(loaded.glint_item);
+                renderer.bind_gui_glint(loaded.glint.item);
                 renderer.compact_textures();
                 Ok(loaded)
             }
@@ -130,7 +208,7 @@ impl WorldResources {
                 loaded.players.adopt_fetched(&mut self.players);
                 self.textures.clear();
                 self.release(renderer);
-                renderer.bind_gui_glint(loaded.glint_item);
+                renderer.bind_gui_glint(loaded.glint.item);
                 Ok(loaded)
             }
             Err(e) => {
@@ -162,8 +240,6 @@ impl WorldResources {
 
     fn build(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
         let players = PlayerModels::load(renderer, assets)?;
-        let rain = assets.image("minecraft:environment/rain.png")?;
-        let snow = assets.image("minecraft:environment/snow.png")?;
         let mobs = MobModels::load(renderer, assets)?;
         let mut extras: Vec<ExtraTexture> = FluidSprites::TEXTURES
             .iter()
@@ -237,52 +313,12 @@ impl WorldResources {
             icons: ItemIcons::new(assets.root(), item_sheet, renderer.max_texture_side()),
             held: HeldItems::new(assets.root(), sheets),
             blocks: Default::default(),
-            sun: assets.texture(renderer, "minecraft:environment/celestial/sun.png")?,
-            moon: [
-                assets.texture(
-                    renderer,
-                    "minecraft:environment/celestial/moon/full_moon.png",
-                )?,
-                assets.texture(
-                    renderer,
-                    "minecraft:environment/celestial/moon/waning_gibbous.png",
-                )?,
-                assets.texture(
-                    renderer,
-                    "minecraft:environment/celestial/moon/third_quarter.png",
-                )?,
-                assets.texture(
-                    renderer,
-                    "minecraft:environment/celestial/moon/waning_crescent.png",
-                )?,
-                assets.texture(
-                    renderer,
-                    "minecraft:environment/celestial/moon/new_moon.png",
-                )?,
-                assets.texture(
-                    renderer,
-                    "minecraft:environment/celestial/moon/waxing_crescent.png",
-                )?,
-                assets.texture(
-                    renderer,
-                    "minecraft:environment/celestial/moon/first_quarter.png",
-                )?,
-                assets.texture(
-                    renderer,
-                    "minecraft:environment/celestial/moon/waxing_gibbous.png",
-                )?,
-            ],
+            sky: SkyResources::load(renderer, assets)?,
+            weather: WeatherResources::load(renderer, assets)?,
+            glint: GlintTextures::load(renderer, assets)?,
             shadow: assets.texture(renderer, "minecraft:misc/shadow.png")?,
             forcefield: renderer
                 .load_texture_tiled(&assets.image("minecraft:misc/forcefield.png")?)?,
-            glint_item: renderer.load_texture_linear_tiled(
-                &assets.image("minecraft:misc/enchanted_glint_item.png")?,
-            )?,
-            glint_armor: {
-                let image = assets.image("minecraft:misc/enchanted_glint_armor.png")?;
-                renderer.load_texture_linear_tiled(&image)?
-            },
-            glint_armor_image: assets.image("minecraft:misc/enchanted_glint_armor.png")?,
             destroy_stages: {
                 let mut stages = [TextureId(0); 10];
                 for (i, stage) in stages.iter_mut().enumerate() {
@@ -291,19 +327,6 @@ impl WorldResources {
                 }
                 stages
             },
-            sun_mesh: renderer.upload_mesh(&crate::world::sky::sun_quad())?,
-            moon_mesh: renderer.upload_mesh(&crate::world::sky::moon_quad())?,
-            star_mesh: renderer.upload_mesh(&crate::world::sky::star_quads())?,
-            sky_disc_mesh: renderer.upload_mesh(&crate::world::sky::sky_disc(16.0))?,
-            dark_disc_mesh: renderer.upload_mesh(&crate::world::sky::sky_disc(-16.0))?,
-            sunrise_mesh: renderer.upload_mesh(&crate::world::sky::sunrise_fan())?,
-            end_sky_mesh: renderer.upload_mesh(&crate::world::sky::end_sky_box())?,
-            end_sky: assets.texture(renderer, "minecraft:environment/end_sky.png")?,
-            clouds: CloudTexture::load(assets.root()),
-            rain: renderer.load_texture_tiled(&rain)?,
-            snow: renderer.load_texture_tiled(&snow)?,
-            rain_template: upload_template(renderer, &rain)?,
-            snow_template: upload_template(renderer, &snow)?,
             textures: Vec::new(),
             meshes: Vec::new(),
         })

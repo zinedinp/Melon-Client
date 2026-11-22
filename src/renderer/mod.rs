@@ -104,13 +104,7 @@ pub struct Renderer {
     mem_props: vk::PhysicalDeviceMemoryProperties,
     device: ash::Device,
     queue: vk::Queue,
-    render_pass: vk::RenderPass,
-    /// [`PassStart::Overwrite`]: the pass that follows the menu blur.
-    overwrite_pass: vk::RenderPass,
-    /// [`PassStart::SceneSplit`]: the scene's pass when a post chain follows.
-    split_pass: vk::RenderPass,
-    /// [`PassStart::Resume`]: what comes after the chain.
-    resume_pass: vk::RenderPass,
+    passes: context::RenderPasses,
     /// Post effect chains.
     post: post::gpu::Post,
     /// The menu background blur.
@@ -129,13 +123,8 @@ pub struct Renderer {
     quad_meshes: mesh_arena::MeshArena,
     /// Every baked block quad's corners, which terrain quads index.
     quad_table: Option<quad_table::QuadTable>,
-    /// The vertex buffer bound while recording the scene, so draws from the
-    bound_vertex_buffer: std::cell::Cell<vk::Buffer>,
-    /// The world push constants last sent since the pass was bound, so a
-    pushed: std::cell::Cell<Option<pipeline::world::PushBlock>>,
-    pushed_offset: std::cell::Cell<Option<glam::Vec4>>,
-    /// And how the fog finds distances (`FogInput` bytes), the same way.
-    pushed_view: std::cell::Cell<Option<pipeline::world::PushBlock<4>>>,
+    /// What the command buffer being recorded has bound and pushed.
+    recording: record::Recording,
     textures: Textures,
     /// `maxImageDimension2D`.
     max_texture_side: u32,
@@ -145,12 +134,8 @@ pub struct Renderer {
     gpu_timer: gpu_timer::GpuTimer,
     /// The buffers of the terrain's multi-draws; `None` when the device
     indirect: Option<indirect::DrawBuffers>,
-    /// The next free entry of this frame's multi-draw buffers.
-    draw_cursor: std::cell::Cell<u32>,
     /// A set per terrain mesh buffer, binding it for the shader (set 4).
     quad_sets: quad_table::QuadSets,
-    /// The mesh buffer bound at set 4 while recording.
-    bound_quads: std::cell::Cell<vk::Buffer>,
     /// The fog and the dimension's light, per frame in flight.
     globals: globals::GlobalBuffers,
     /// Vanilla's GUI uniform blocks, for pack shaders, per frame in flight.
@@ -480,10 +465,7 @@ impl Drop for Renderer {
                 .destroy(&self.device, &|t| free_effect_texture(&device, pools, t));
             self.textures.descriptor_pools.destroy(&self.device);
             self.pictures.destroy(&self.device);
-            self.device.destroy_render_pass(self.render_pass, None);
-            self.device.destroy_render_pass(self.overwrite_pass, None);
-            self.device.destroy_render_pass(self.split_pass, None);
-            self.device.destroy_render_pass(self.resume_pass, None);
+            self.passes.destroy(&self.device);
             self.device.destroy_device(None);
 
             self.surface_loader.destroy_surface(self.surface, None);

@@ -6,11 +6,23 @@ use crate::renderer::pipeline::world::{Geometry, Layouts, Mode};
 use crate::renderer::{PassStart, Pipelines, create_render_pass, pipeline};
 
 /// The main pass in each way a frame starts it.
-pub(super) struct RenderPasses {
+pub(in crate::renderer) struct RenderPasses {
+    /// [`PassStart::Clear`]: the usual one, and what pipelines are built in.
     pub clear: vk::RenderPass,
+    /// [`PassStart::Overwrite`]: the pass that follows the menu blur.
     pub overwrite: vk::RenderPass,
+    /// [`PassStart::SceneSplit`]: the scene's pass when a post chain follows.
     pub split: vk::RenderPass,
+    /// [`PassStart::Resume`]: what comes after the chain.
     pub resume: vk::RenderPass,
+}
+
+impl RenderPasses {
+    pub unsafe fn destroy(&self, device: &ash::Device) {
+        for pass in [self.clear, self.overwrite, self.split, self.resume] {
+            device.destroy_render_pass(pass, None);
+        }
+    }
 }
 
 pub(super) unsafe fn create_render_passes(

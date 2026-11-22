@@ -374,7 +374,7 @@ impl Renderer {
                 let (vert, frag) = (bytes(&shader.vert), bytes(&shader.frag));
                 let built = super::pipeline::ui::create_all(
                     &self.device,
-                    self.render_pass,
+                    self.passes.clear,
                     self.pipelines.layout,
                     self.gui_uniforms.layout,
                     super::pipeline::ui::Shaders {

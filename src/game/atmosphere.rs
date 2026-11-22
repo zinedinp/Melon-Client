@@ -66,15 +66,15 @@ impl InWorld {
             game_time: self.clocks.game_time(),
             partial_tick: partial,
         };
-        let cloud_key = clouds::key(&assets.clouds, &cloud_frame);
+        let cloud_key = clouds::key(&assets.weather.clouds, &cloud_frame);
         if cloud_key != self.sky.cloud_key || (cloud_key.is_some() && self.sky.cloud_mesh.is_none())
         {
-            let verts = clouds::build_anchored(&assets.clouds, cloud_frame);
+            let verts = clouds::build_anchored(&assets.weather.clouds, cloud_frame);
             replace_mesh(renderer, &mut self.sky.cloud_mesh, &verts);
             self.sky.cloud_key = cloud_key;
         }
         let cloud_anchor = {
-            let at = clouds::anchor(&assets.clouds, &cloud_frame);
+            let at = clouds::anchor(&assets.weather.clouds, &cloud_frame);
             let block = at.floor();
             (block.as_ivec3(), (at - block).as_vec3())
         };
@@ -153,20 +153,20 @@ impl InWorld {
             );
             if let Some(pieces) = replace_mesh(renderer, &mut self.sky.rain_mesh, &rain.vertices) {
                 weather.push(WeatherDraw {
-                    template: assets.rain_template,
+                    template: assets.weather.rain_template,
                     pieces,
                     wraps: rain.wraps,
-                    atlas: assets.rain,
+                    atlas: assets.weather.rain,
                     model,
                     origin: camera_origin,
                 });
             }
             if let Some(pieces) = replace_mesh(renderer, &mut self.sky.snow_mesh, &snow.vertices) {
                 weather.push(WeatherDraw {
-                    template: assets.snow_template,
+                    template: assets.weather.snow_template,
                     pieces,
                     wraps: snow.wraps,
-                    atlas: assets.snow,
+                    atlas: assets.weather.snow,
                     model,
                     origin: camera_origin,
                 });

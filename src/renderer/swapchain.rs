@@ -151,7 +151,7 @@ impl Renderer {
         for &view in &views {
             let attachments = [view, depth_view];
             let fb_info = vk::FramebufferCreateInfo::default()
-                .render_pass(self.render_pass)
+                .render_pass(self.passes.clear)
                 .attachments(&attachments)
                 .width(extent.width)
                 .height(extent.height)

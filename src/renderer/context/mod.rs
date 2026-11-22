@@ -4,13 +4,14 @@
 mod device;
 mod instance;
 mod pipelines;
+
+pub(super) use pipelines::RenderPasses;
 mod resources;
 
 use super::{
     MAX_FRAMES_IN_FLIGHT, MAX_TEXTURES, Renderer, blur, choose_surface_format, find_depth_format,
     mesh_arena,
 };
-use ash::vk;
 use image::RgbaImage;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
@@ -128,10 +129,7 @@ impl Renderer {
             mem_props,
             device,
             queue,
-            render_pass: passes.clear,
-            overwrite_pass: passes.overwrite,
-            split_pass: passes.split,
-            resume_pass: passes.resume,
+            passes,
             post,
             blur,
             device_info: gpu.info,
@@ -147,16 +145,11 @@ impl Renderer {
             meshes,
             quad_meshes,
             quad_table: None,
-            bound_vertex_buffer: std::cell::Cell::new(vk::Buffer::null()),
-            pushed: std::cell::Cell::new(None),
-            pushed_offset: std::cell::Cell::new(None),
             gpu_timer,
             indirect,
-            draw_cursor: std::cell::Cell::new(0),
             quad_sets,
-            bound_quads: std::cell::Cell::new(vk::Buffer::null()),
             globals,
-            pushed_view: std::cell::Cell::new(None),
+            recording: crate::renderer::record::Recording::new(),
             max_texture_side: gpu.limits.max_image_dimension2_d,
             tracked_meshes: None,
             textures: resources::textures(descriptor_pools, samplers),

@@ -52,10 +52,7 @@ impl Renderer {
         scene: &SceneFrame,
         part: ScenePart,
     ) {
-        self.bound_vertex_buffer.set(vk::Buffer::null());
-        self.bound_quads.set(vk::Buffer::null());
-        self.pushed.set(None);
-        self.pushed_offset.set(None);
+        self.recording.forget_all();
         for layer in RenderLayer::ORDER {
             if !part.has(layer) {
                 continue;
@@ -433,7 +430,7 @@ impl Renderer {
             );
             self.device
                 .cmd_bind_vertex_buffers(cmd, 0, &[self.sky_cube.buffer], &[0]);
-            self.bound_vertex_buffer.set(self.sky_cube.buffer);
+            self.recording.vertex_buffer.set(self.sky_cube.buffer);
             self.device.cmd_bind_descriptor_sets(
                 cmd,
                 vk::PipelineBindPoint::GRAPHICS,
@@ -544,9 +541,7 @@ impl Renderer {
         };
         self.device
             .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
-        self.pushed.set(None);
-        self.pushed_offset.set(None);
-        self.pushed_view.set(None);
+        self.recording.forget_pushes();
         self.device.cmd_bind_descriptor_sets(
             cmd,
             vk::PipelineBindPoint::GRAPHICS,
@@ -581,9 +576,7 @@ impl Renderer {
         let pass = &self.pipelines.glint;
         self.device
             .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
-        self.pushed.set(None);
-        self.pushed_offset.set(None);
-        self.pushed_view.set(None);
+        self.recording.forget_pushes();
         self.device.cmd_bind_descriptor_sets(
             cmd,
             vk::PipelineBindPoint::GRAPHICS,
@@ -650,9 +643,7 @@ impl Renderer {
         };
         self.device
             .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
-        self.pushed.set(None);
-        self.pushed_offset.set(None);
-        self.pushed_view.set(None);
+        self.recording.forget_pushes();
         self.device.cmd_bind_descriptor_sets(
             cmd,
             vk::PipelineBindPoint::GRAPHICS,
@@ -662,7 +653,7 @@ impl Renderer {
             &[],
         );
         self.bind_globals(cmd, pass.layout);
-        self.bound_quads.set(vk::Buffer::null());
+        self.recording.quads.set(vk::Buffer::null());
         self.device.cmd_bind_index_buffer(
             cmd,
             self.meshes.index_buffer(),
@@ -689,9 +680,7 @@ impl Renderer {
         };
         self.device
             .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
-        self.pushed.set(None);
-        self.pushed_offset.set(None);
-        self.pushed_view.set(None);
+        self.recording.forget_pushes();
         self.device.cmd_bind_descriptor_sets(
             cmd,
             vk::PipelineBindPoint::GRAPHICS,
@@ -818,7 +807,7 @@ impl Renderer {
             }
             let offset = world.offset(chunk.origin).to_array();
             for (first, quads) in quad_draws(&chunk.range, slot.count) {
-                let index = self.draw_cursor.get();
+                let index = self.recording.draw_cursor.get();
                 if index >= capacity {
                     break;
                 }
@@ -834,7 +823,7 @@ impl Renderer {
                     },
                     offset,
                 );
-                self.draw_cursor.set(index + 1);
+                self.recording.draw_cursor.set(index + 1);
                 run = Some(match run {
                     Some((buffer, first, count)) => (buffer, first, count + 1),
                     None => (buffer, index, 1),
@@ -866,7 +855,7 @@ impl Renderer {
             pipeline::world::OFFSET_AT,
             pipeline::push_constant_bytes(&at, pipeline::world::OFFSET_SIZE),
         );
-        self.pushed_offset.set(None);
+        self.recording.offset.set(None);
         self.device.cmd_draw_indexed_indirect(
             cmd,
             indirect.commands(self.frames.current),
@@ -905,7 +894,7 @@ impl Renderer {
         layout: vk::PipelineLayout,
         buffer: vk::Buffer,
     ) {
-        if self.bound_quads.replace(buffer) == buffer {
+        if self.recording.quads.replace(buffer) == buffer {
             return;
         }
         let Some(set) = self.quad_sets.get(buffer) else {
@@ -927,7 +916,7 @@ impl Renderer {
         cmd: vk::CommandBuffer,
         buffer: vk::Buffer,
     ) {
-        if self.bound_vertex_buffer.replace(buffer) != buffer {
+        if self.recording.vertex_buffer.replace(buffer) != buffer {
             self.device.cmd_bind_vertex_buffers(cmd, 0, &[buffer], &[0]);
         }
     }
@@ -942,8 +931,8 @@ impl Renderer {
         light: &DrawLight,
     ) {
         let push = pipeline::world::PushBlock(pipeline::world::push_bytes(&mvp, light));
-        if self.pushed.get() != Some(push) {
-            self.pushed.set(Some(push));
+        if self.recording.push.get() != Some(push) {
+            self.recording.push.set(Some(push));
             let push = push.0;
             self.device.cmd_push_constants(
                 cmd,
@@ -954,8 +943,8 @@ impl Renderer {
             );
         }
         let offset = offset.extend(light.overlay);
-        if self.pushed_offset.get() != Some(offset) {
-            self.pushed_offset.set(Some(offset));
+        if self.recording.offset.get() != Some(offset) {
+            self.recording.offset.set(Some(offset));
             let offset = offset.to_array();
             self.device.cmd_push_constants(
                 cmd,
@@ -968,8 +957,8 @@ impl Renderer {
         let mut view = light.fog.bytes();
         view[3] = light.glint_scale;
         let view = pipeline::world::PushBlock(view);
-        if self.pushed_view.get() != Some(view) {
-            self.pushed_view.set(Some(view));
+        if self.recording.view.get() != Some(view) {
+            self.recording.view.set(Some(view));
             let view = view.0;
             self.device.cmd_push_constants(
                 cmd,

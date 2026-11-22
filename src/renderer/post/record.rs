@@ -49,7 +49,7 @@ impl Renderer {
             ));
             if let Err(e) = self
                 .post
-                .set_blit(&self.device, self.render_pass, blit.as_ref())
+                .set_blit(&self.device, self.passes.clear, blit.as_ref())
             {
                 eprintln!("Outline-Blit: {e:#}");
             }
@@ -523,9 +523,7 @@ impl Renderer {
             }],
         );
         device.cmd_set_scissor(cmd, 0, &[area]);
-        self.bound_vertex_buffer.set(vk::Buffer::null());
-        self.pushed.set(None);
-        self.pushed_offset.set(None);
+        self.recording.forget_all();
         if self.pack_outline.is_some() {
             self.record_pack_outline(cmd, scene, world);
         } else {

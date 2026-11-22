@@ -206,8 +206,8 @@ impl InWorld {
             Skybox::None => {}
             Skybox::End => out.push(CelestialDraw {
                 kind: SkyKind::Glow,
-                mesh: assets.end_sky_mesh,
-                atlas: assets.end_sky,
+                mesh: assets.sky.end_sky_mesh,
+                atlas: assets.sky.end_sky,
                 model: Mat4::IDENTITY,
                 tint: [1.0; 4],
             }),
@@ -215,7 +215,7 @@ impl InWorld {
                 let [r, g, b] = atmosphere.sky_color;
                 out.push(CelestialDraw {
                     kind: SkyKind::Disc,
-                    mesh: assets.sky_disc_mesh,
+                    mesh: assets.sky.disc_mesh,
                     atlas: white,
                     model: Mat4::from_translation(Vec3::ZERO),
                     tint: [r, g, b, 1.0],
@@ -225,17 +225,17 @@ impl InWorld {
                 if glow[3] > 0.001 {
                     out.push(CelestialDraw {
                         kind: SkyKind::Glow,
-                        mesh: assets.sunrise_mesh,
+                        mesh: assets.sky.sunrise_mesh,
                         atlas: white,
                         model: sky::sunrise_model(day.sun_angle, glow[3]),
                         tint: glow,
                     });
                 }
                 for (mesh, atlas, model) in [
-                    (assets.sun_mesh, assets.sun, sky::sun_model(day)),
+                    (assets.sky.sun_mesh, assets.sky.sun, sky::sun_model(day)),
                     (
-                        assets.moon_mesh,
-                        assets.moon[day.moon_phase as usize],
+                        assets.sky.moon_mesh,
+                        assets.sky.moon[day.moon_phase as usize],
                         sky::moon_model(day),
                     ),
                 ] {
@@ -251,7 +251,7 @@ impl InWorld {
                     let b = day.star_brightness;
                     out.push(CelestialDraw {
                         kind: SkyKind::Celestial,
-                        mesh: assets.star_mesh,
+                        mesh: assets.sky.star_mesh,
                         atlas: white,
                         model: sky::star_model(day),
                         tint: [b, b, b, b],
@@ -261,7 +261,7 @@ impl InWorld {
                 {
                     out.push(CelestialDraw {
                         kind: SkyKind::Disc,
-                        mesh: assets.dark_disc_mesh,
+                        mesh: assets.sky.dark_disc_mesh,
                         atlas: white,
                         model: Mat4::from_translation(Vec3::new(0.0, 12.0, 0.0)),
                         tint: [0.0, 0.0, 0.0, 1.0],

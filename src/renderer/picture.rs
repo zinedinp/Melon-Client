@@ -269,7 +269,7 @@ impl Renderer {
             }],
         );
         self.device.cmd_set_scissor(cmd, 0, &[area]);
-        self.bound_vertex_buffer.set(vk::Buffer::null());
+        self.recording.forget_all();
         // Opaque first, then the blended ones, as the world's entities.
         let mut entities: Vec<&EntityDraw> = picture.entities.iter().collect();
         entities.sort_by_key(|e| e.blend);

@@ -140,7 +140,7 @@ impl Renderer {
             ui_vertices * std::mem::size_of::<quad::Vertex>(),
         );
 
-        self.draw_cursor.set(0);
+        self.recording.draw_cursor.set(0);
 
         let mut globals = frame
             .scene
@@ -232,9 +232,9 @@ impl Renderer {
         let split = !chains.is_empty() && self.swapchain.depth_sampled;
         let render_pass_info = vk::RenderPassBeginInfo::default()
             .render_pass(if split {
-                self.split_pass
+                self.passes.split
             } else {
-                self.render_pass
+                self.passes.clear
             })
             .framebuffer(self.swapchain.framebuffers[image_index as usize])
             .render_area(vk::Rect2D {
@@ -282,7 +282,7 @@ impl Renderer {
                 self.device.cmd_begin_render_pass(
                     cmd,
                     &vk::RenderPassBeginInfo::default()
-                        .render_pass(self.resume_pass)
+                        .render_pass(self.passes.resume)
                         .framebuffer(self.swapchain.framebuffers[image_index as usize])
                         .render_area(full_scissor),
                     vk::SubpassContents::INLINE,

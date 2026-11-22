@@ -471,7 +471,7 @@ impl Renderer {
         );
         device.cmd_end_render_pass(cmd);
         begin(
-            self.overwrite_pass,
+            self.passes.overwrite,
             self.swapchain.framebuffers[image_index],
             extent,
         );
