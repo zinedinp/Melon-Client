@@ -12,6 +12,8 @@ pub use container::{
 };
 
 use pumpkin_data::item_stack::ItemStack;
+
+use crate::world::item_model::KeyedStack;
 use rules::{shrink, split_slot};
 
 pub use rules::{
@@ -53,9 +55,9 @@ pub const SWAP_OFFHAND_BUTTON: i8 = 40;
 
 pub struct Inventory {
     /// The menu's [`SLOT_COUNT`] slots.
-    slots: Vec<ItemStack>,
+    slots: Vec<KeyedStack>,
     /// The stack on the mouse cursor.
-    carried: ItemStack,
+    carried: KeyedStack,
     /// `AbstractContainerMenu.stateId`.
     state_id: i32,
     /// Hotbar slot 0-8 in the main hand (`Inventory.selected`).
@@ -75,8 +77,8 @@ struct Drag {
 impl Default for Inventory {
     fn default() -> Self {
         Self {
-            slots: vec![empty(); SLOT_COUNT],
-            carried: empty(),
+            slots: vec![KeyedStack::default(); SLOT_COUNT],
+            carried: KeyedStack::default(),
             state_id: 0,
             selected: 0,
             drag: None,
@@ -94,35 +96,35 @@ pub struct Click {
 
 impl Inventory {
     /// The menu's slots, by menu slot index.
-    pub fn slots(&self) -> &[ItemStack] {
+    pub fn slots(&self) -> &[KeyedStack] {
         &self.slots
     }
 
     /// The slots to change in place; their number stays [`SLOT_COUNT`].
-    pub fn slots_mut(&mut self) -> &mut [ItemStack] {
+    pub fn slots_mut(&mut self) -> &mut [KeyedStack] {
         &mut self.slots
     }
 
     /// The stack on the mouse cursor.
-    pub fn carried(&self) -> &ItemStack {
+    pub fn carried(&self) -> &KeyedStack {
         &self.carried
     }
 
-    pub fn carried_mut(&mut self) -> &mut ItemStack {
+    pub fn carried_mut(&mut self) -> &mut KeyedStack {
         &mut self.carried
     }
 
     pub fn set_carried(&mut self, stack: ItemStack) {
-        self.carried = stack;
+        self.carried.set(stack);
     }
 
     /// The cursor stack, leaving the cursor empty.
     pub fn take_carried(&mut self) -> ItemStack {
-        std::mem::replace(&mut self.carried, empty())
+        self.carried.take()
     }
 
     /// The slots and the cursor stack, both to change at once.
-    pub fn slots_and_carried_mut(&mut self) -> (&mut [ItemStack], &mut ItemStack) {
+    pub fn slots_and_carried_mut(&mut self) -> (&mut [KeyedStack], &mut KeyedStack) {
         (&mut self.slots, &mut self.carried)
     }
 
@@ -143,7 +145,7 @@ impl Inventory {
         }
     }
 
-    pub fn hotbar(&self, index: usize) -> &ItemStack {
+    pub fn hotbar(&self, index: usize) -> &KeyedStack {
         &self.slots[HOTBAR_SLOTS.start + index]
     }
 
@@ -152,7 +154,7 @@ impl Inventory {
         HOTBAR_SLOTS.start + usize::from(self.selected)
     }
 
-    pub fn selected_stack(&self) -> &ItemStack {
+    pub fn selected_stack(&self) -> &KeyedStack {
         &self.slots[self.selected_slot()]
     }
 
@@ -178,9 +180,9 @@ impl Inventory {
     pub fn set_all(&mut self, state_id: i32, slots: Vec<ItemStack>, carried: ItemStack) {
         self.state_id = state_id;
         for (slot, item) in self.slots.iter_mut().zip(slots) {
-            *slot = item;
+            slot.set(item);
         }
-        self.carried = carried;
+        self.carried.set(carried);
     }
 
     /// `ClientboundContainerSetSlotPacket` for container 0.
@@ -190,14 +192,14 @@ impl Inventory {
             .ok()
             .and_then(|s| self.slots.get_mut(s))
         {
-            *target = item;
+            target.set(item);
         }
     }
 
     /// `ClientboundSetPlayerInventoryPacket`: `index` is an `Inventory`
     pub fn set_inventory_slot(&mut self, index: i32, item: ItemStack) {
         if let Some(slot) = menu_slot_of_inventory_index(index) {
-            self.slots[slot] = item;
+            self.slots[slot].set(item);
         }
     }
 
@@ -234,7 +236,7 @@ mod tests {
     #[test]
     fn left_click_picks_up_and_places_a_stack() {
         let mut inv = Inventory::default();
-        inv.slots[10] = stack(32, &Item::DIRT);
+        inv.slots[10] = stack(32, &Item::DIRT).into();
         let result = click(&mut inv, 10, 0, ClickType::Pickup);
         assert_eq!(result.changed, vec![10]);
         assert_eq!(inv.carried.item_count, 32);
@@ -247,7 +249,7 @@ mod tests {
     #[test]
     fn right_click_takes_half_and_places_one() {
         let mut inv = Inventory::default();
-        inv.slots[10] = stack(5, &Item::DIRT);
+        inv.slots[10] = stack(5, &Item::DIRT).into();
         click(&mut inv, 10, 1, ClickType::Pickup);
         assert_eq!(inv.carried.item_count, 3);
         assert_eq!(inv.slots[10].item_count, 2);
@@ -259,8 +261,8 @@ mod tests {
     #[test]
     fn stacks_merge_up_to_the_limit() {
         let mut inv = Inventory::default();
-        inv.slots[10] = stack(60, &Item::DIRT);
-        inv.carried = stack(10, &Item::DIRT);
+        inv.slots[10] = stack(60, &Item::DIRT).into();
+        inv.carried = stack(10, &Item::DIRT).into();
         click(&mut inv, 10, 0, ClickType::Pickup);
         assert_eq!(inv.slots[10].item_count, 64);
         assert_eq!(inv.carried.item_count, 6);
@@ -269,8 +271,8 @@ mod tests {
     #[test]
     fn shift_click_moves_the_hotbar_into_the_inventory() {
         let mut inv = Inventory::default();
-        inv.slots[36] = stack(3, &Item::STONE);
-        inv.slots[9] = stack(62, &Item::STONE);
+        inv.slots[36] = stack(3, &Item::STONE).into();
+        inv.slots[9] = stack(62, &Item::STONE).into();
         let result = click(&mut inv, 36, 0, ClickType::QuickMove);
         assert_eq!(inv.slots[9].item_count, 64);
         assert_eq!(inv.slots[10].item_count, 1);
@@ -281,7 +283,7 @@ mod tests {
     #[test]
     fn shift_click_puts_armor_on_and_takes_it_off() {
         let mut inv = Inventory::default();
-        inv.slots[20] = stack(1, &Item::DIAMOND_HELMET);
+        inv.slots[20] = stack(1, &Item::DIAMOND_HELMET).into();
         click(&mut inv, 20, 0, ClickType::QuickMove);
         assert!(!inv.slots[5].is_empty());
         click(&mut inv, 5, 0, ClickType::QuickMove);
@@ -293,7 +295,7 @@ mod tests {
     #[test]
     fn taking_armor_off_leaves_air_not_a_zero_count_piece() {
         let mut inv = Inventory::default();
-        inv.slots[5] = stack(1, &Item::DIAMOND_HELMET);
+        inv.slots[5] = stack(1, &Item::DIAMOND_HELMET).into();
         click(&mut inv, 5, 0, ClickType::Pickup);
         assert!(inv.slots[5].is_empty());
         assert_eq!(inv.slots[5].item.id, Item::AIR.id);
@@ -304,12 +306,12 @@ mod tests {
     #[test]
     fn armor_slots_refuse_other_items() {
         let mut inv = Inventory {
-            carried: stack(5, &Item::DIRT),
+            carried: stack(5, &Item::DIRT).into(),
             ..Inventory::default()
         };
         click(&mut inv, 5, 0, ClickType::Pickup);
         assert!(inv.slots[5].is_empty());
-        inv.carried = stack(1, &Item::IRON_BOOTS);
+        inv.carried = stack(1, &Item::IRON_BOOTS).into();
         click(&mut inv, 5, 0, ClickType::Pickup);
         assert!(inv.slots[5].is_empty());
         click(&mut inv, 8, 0, ClickType::Pickup);
@@ -319,7 +321,7 @@ mod tests {
     #[test]
     fn dragging_splits_the_cursor_stack() {
         let mut inv = Inventory {
-            carried: stack(10, &Item::DIRT),
+            carried: stack(10, &Item::DIRT).into(),
             ..Inventory::default()
         };
         for (slot, stage) in [(OUTSIDE, 0), (10, 1), (11, 1), (12, 1), (OUTSIDE, 2)] {
@@ -335,7 +337,7 @@ mod tests {
         assert_eq!(inv.carried.item_count, 1);
 
         let mut inv = Inventory {
-            carried: stack(10, &Item::DIRT),
+            carried: stack(10, &Item::DIRT).into(),
             ..Inventory::default()
         };
         for (slot, stage) in [(OUTSIDE, 0), (10, 1), (11, 1), (OUTSIDE, 2)] {
@@ -353,11 +355,11 @@ mod tests {
     #[test]
     fn double_click_gathers_partial_stacks_first() {
         let mut inv = Inventory {
-            carried: stack(10, &Item::DIRT),
+            carried: stack(10, &Item::DIRT).into(),
             ..Inventory::default()
         };
-        inv.slots[12] = stack(64, &Item::DIRT);
-        inv.slots[30] = stack(20, &Item::DIRT);
+        inv.slots[12] = stack(64, &Item::DIRT).into();
+        inv.slots[30] = stack(20, &Item::DIRT).into();
         click(&mut inv, 11, 0, ClickType::PickupAll);
         assert_eq!(inv.carried.item_count, 64);
         assert!(inv.slots[30].is_empty());
@@ -367,11 +369,11 @@ mod tests {
     #[test]
     fn swap_with_the_offhand_and_clone_in_creative() {
         let mut inv = Inventory::default();
-        inv.slots[15] = stack(1, &Item::SHIELD);
+        inv.slots[15] = stack(1, &Item::SHIELD).into();
         click(&mut inv, 15, SWAP_OFFHAND_BUTTON, ClickType::Swap);
         assert!(!inv.slots[OFFHAND_SLOT].is_empty());
 
-        inv.slots[16] = stack(3, &Item::STONE);
+        inv.slots[16] = stack(3, &Item::STONE).into();
         click(&mut inv, 16, 2, ClickType::Clone);
         assert!(inv.carried.is_empty(), "survival can't clone");
         inv.click(16, 2, ClickType::Clone, true);

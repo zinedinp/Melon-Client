@@ -413,7 +413,7 @@ impl InWorld {
                 face,
                 progress: 0.0,
                 ticks: 0,
-                item: self.inventory.selected_stack().clone(),
+                item: ItemStack::clone(self.inventory.selected_stack()),
             });
         }
         self.joined.session.send_player_action_at(
@@ -803,7 +803,7 @@ impl InWorld {
             };
             let stack = &mut self.inventory.slots_mut()[slot];
             if stack.item_count <= 1 {
-                *stack = empty();
+                *stack = empty().into();
             } else {
                 stack.item_count -= 1;
             }
@@ -891,7 +891,7 @@ impl InWorld {
                 usize::try_from(i)
                     .ok()
                     .and_then(|index| menu.slots.get(index))
-                    .map(|stack| (i, stack))
+                    .map(|stack| (i, &**stack))
             })
             .collect();
         self.joined.session.send_container_click(

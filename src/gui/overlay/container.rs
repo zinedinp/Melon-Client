@@ -1,5 +1,6 @@
 //! Vanilla `AbstractContainerScreen` for server-opened menus.
 
+use crate::world::item_model::StackKey;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::assets::Assets;
@@ -522,15 +523,13 @@ impl Overlay for ContainerOverlay {
     fn visit_stacks(
         &self,
         inventory: &crate::world::inventory::Inventory,
-        visit: &mut dyn FnMut(&ItemStack) -> bool,
+        visit: &mut dyn FnMut(&dyn StackKey) -> bool,
     ) -> bool {
         let shown = self.screen.as_ref().map_or(&[][..], |s| s.shown_stacks());
         let book = self.book.as_ref().map_or(&[][..], |b| b.shown_stacks());
         (inventory.carried().is_empty() || visit(inventory.carried()))
-            && shown
-                .iter()
-                .chain(book)
-                .all(|stack| stack.is_empty() || visit(stack))
+            && shown.iter().all(|stack| stack.is_empty() || visit(stack))
+            && book.iter().all(|stack| stack.is_empty() || visit(stack))
     }
 }
 
@@ -690,8 +689,7 @@ fn draw_hand_and_tooltip(overlay: &ContainerOverlay, ui: &mut OverlayDraw, menu:
             (
                 menu.slots
                     .get(slot)
-                    .cloned()
-                    .unwrap_or_else(inventory::empty),
+                    .map_or_else(inventory::empty, |s| ItemStack::clone(s)),
                 ui.inventory.carried().get_max_stack_size(),
             )
         },

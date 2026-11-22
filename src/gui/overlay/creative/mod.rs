@@ -1,5 +1,7 @@
 //! Vanilla `CreativeModeInventoryScreen`.
 
+use crate::world::item_model::KeyedStack;
+use crate::world::item_model::StackKey;
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
@@ -109,7 +111,7 @@ pub struct CreativeOverlay {
     /// Index into `tabs`.
     selected: usize,
     /// `menu.items`: what the picker slots scroll over.
-    items: Vec<ItemStack>,
+    items: Vec<KeyedStack>,
     /// Picker items that can't be taken (the saved hotbars' placeholders).
     locked: Vec<bool>,
     scroll: f32,
@@ -123,7 +125,7 @@ pub struct CreativeOverlay {
     has_clicked_outside: bool,
     /// The chat key switched to the search tab; its character is not typed.
     ignore_text_input: bool,
-    empty: ItemStack,
+    empty: KeyedStack,
 }
 
 impl CreativeOverlay {
@@ -157,7 +159,7 @@ impl CreativeOverlay {
             cursor: (0.0, 0.0),
             has_clicked_outside: false,
             ignore_text_input: false,
-            empty: empty(),
+            empty: KeyedStack::default(),
         };
         screen.resize(width, height);
         screen.select_tab(selected, hotbars, lang);
@@ -216,20 +218,23 @@ impl CreativeOverlay {
                     if hotbars.is_empty(i) {
                         for column in 0..COLUMNS {
                             if column == i {
-                                self.items.push(ItemStack::new(1, &Item::PAPER));
+                                self.items.push(ItemStack::new(1, &Item::PAPER).into());
                                 self.locked.push(true);
                             } else {
-                                self.items.push(empty());
+                                self.items.push(KeyedStack::default());
                                 self.locked.push(false);
                             }
                         }
                     } else {
-                        self.items.extend(hotbars.hotbars[i].iter().cloned());
+                        self.items
+                            .extend(hotbars.hotbars[i].iter().cloned().map(KeyedStack::from));
                         self.locked.extend([false; COLUMNS]);
                     }
                 }
             }
-            TabType::Category => self.items.extend(tab.items.iter().cloned()),
+            TabType::Category => self
+                .items
+                .extend(tab.items.iter().cloned().map(KeyedStack::from)),
             TabType::Search => {
                 if old != TabType::Search {
                     self.search.clear();
@@ -261,7 +266,8 @@ impl CreativeOverlay {
                             .to_lowercase()
                             .contains(term)
                 })
-                .cloned(),
+                .cloned()
+                .map(KeyedStack::from),
         );
         self.locked = vec![false; self.items.len()];
         self.scroll = 0.0;
@@ -290,7 +296,7 @@ impl CreativeOverlay {
     }
 
     /// The item a picker slot shows, and whether it can be taken.
-    fn picker(&self, index: usize) -> (&ItemStack, bool) {
+    fn picker(&self, index: usize) -> (&KeyedStack, bool) {
         let at = index + self.first_row() * COLUMNS;
         match self.items.get(at) {
             Some(stack) => (stack, self.locked.get(at).copied().unwrap_or(false)),
@@ -376,10 +382,10 @@ impl CreativeOverlay {
     }
 
     /// Every stack on show, for baking their icons.
-    fn visible_stacks(&self) -> impl Iterator<Item = &ItemStack> {
+    fn visible_stacks(&self) -> impl Iterator<Item = &dyn StackKey> {
         (0..ROWS * COLUMNS)
-            .map(|i| self.picker(i).0)
-            .chain(self.tabs.iter().map(|&t| &tabs()[t].icon))
+            .map(|i| self.picker(i).0 as &dyn StackKey)
+            .chain(self.tabs.iter().map(|&t| &tabs()[t].icon as &dyn StackKey))
     }
 }
 
@@ -538,11 +544,11 @@ impl Overlay for CreativeOverlay {
     fn visit_stacks(
         &self,
         inventory: &Inventory,
-        visit: &mut dyn FnMut(&ItemStack) -> bool,
+        visit: &mut dyn FnMut(&dyn StackKey) -> bool,
     ) -> bool {
+        let own = inventory.slots().iter().chain([inventory.carried()]);
         self.visible_stacks()
-            .chain(inventory.slots())
-            .chain([inventory.carried()])
-            .all(|stack| stack.is_empty() || visit(stack))
+            .chain(own.map(|s| s as &dyn StackKey))
+            .all(|stack| stack.stack().is_empty() || visit(stack))
     }
 }

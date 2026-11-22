@@ -1,5 +1,6 @@
 //! Item icons for the hotbar and inventory, baked on the CPU from the item models.
 
+use crate::world::item_model::StackKey;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -108,16 +109,16 @@ impl ItemIcons {
         true
     }
 
-    fn missing(&self, stack: &ItemStack) -> Option<(ItemKey, &'static str)> {
+    fn missing(&self, stack: &dyn StackKey) -> Option<(ItemKey, &'static str)> {
         // Air (most slots) needs no key: it takes a lock and a hash.
-        if stack.item.id == 0 {
+        if stack.stack().item.id == 0 {
             return None;
         }
-        let key = ItemKey::of(&self.assets_root, stack);
+        let key = stack.item_key(&self.assets_root);
         if self.icons.contains_key(&key) {
             None
         } else {
-            Some((key, stack.item.registry_key))
+            Some((key, stack.stack().item.registry_key))
         }
     }
 
@@ -126,7 +127,7 @@ impl ItemIcons {
     pub fn prepare_batch(
         &mut self,
         renderer: &mut Renderer,
-        stacks: impl FnOnce(&mut dyn FnMut(&ItemStack)),
+        stacks: impl FnOnce(&mut dyn FnMut(&dyn StackKey)),
     ) {
         let mut jobs = Vec::new();
         let mut seen = HashSet::new();
@@ -209,14 +210,15 @@ impl ItemIcons {
 
     /// The icon, if [`Self::prepare`] managed to make it; a player head's
     /// own when [`Self::prepare_head`] made one.
-    pub fn get(&self, stack: &ItemStack) -> Option<&Icon> {
+    pub fn get(&self, keyed: &(impl StackKey + ?Sized)) -> Option<&Icon> {
+        let stack = keyed.stack();
         if let Some(profile) = HeadProfile::of_stack(stack)
             && let Some((_, Some(icon))) = self.heads.get(&profile.skin_key())
         {
             return Some(icon);
         }
         self.icons
-            .get(&ItemKey::of(&self.assets_root, stack))
+            .get(&keyed.item_key(&self.assets_root))
             .and_then(Option::as_ref)
     }
 

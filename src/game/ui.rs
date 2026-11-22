@@ -174,10 +174,11 @@ impl InWorld {
     /// Hands the stacks drawn this frame to `visit`, for baking their icons.
     pub fn visit_shown_stacks(
         &self,
-        visit: &mut dyn FnMut(&pumpkin_data::item_stack::ItemStack) -> bool,
+        visit: &mut dyn FnMut(&dyn crate::world::item_model::StackKey) -> bool,
     ) {
         let inventory = &self.inventory;
-        let mut go = |stack: &pumpkin_data::item_stack::ItemStack| stack.is_empty() || visit(stack);
+        let mut go =
+            |stack: &crate::world::item_model::KeyedStack| stack.is_empty() || visit(stack);
         let fixed = (0..9)
             .map(|i| inventory.hotbar(i))
             .chain([&inventory.slots()[crate::world::inventory::OFFHAND_SLOT]])

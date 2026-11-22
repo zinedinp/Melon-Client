@@ -219,7 +219,7 @@ pub struct RecipeBookPanel {
     last_placed: Option<RecipeId>,
     /// The cell whose alternatives are listed.
     popup: Option<usize>,
-    shown: Vec<ItemStack>,
+    shown: Vec<crate::world::item_model::KeyedStack>,
 }
 
 impl RecipeBookPanel {
@@ -451,16 +451,19 @@ impl RecipeBookPanel {
     /// The stacks the buttons and tabs show, for baking their icons.
     fn refresh_shown(&mut self) {
         self.shown.clear();
-        self.shown
-            .extend(self.tabs.iter().flat_map(|t| t.icons.iter().cloned()));
+        self.shown.extend(
+            self.tabs
+                .iter()
+                .flat_map(|t| t.icons.iter().cloned().map(Into::into)),
+        );
         for cell in self.cells.iter().skip(self.page * PER_PAGE).take(PER_PAGE) {
             for (_, stacks) in &cell.recipes {
-                self.shown.extend(stacks.iter().cloned());
+                self.shown.extend(stacks.iter().cloned().map(Into::into));
             }
         }
     }
 
-    pub fn shown_stacks(&self) -> &[ItemStack] {
+    pub fn shown_stacks(&self) -> &[crate::world::item_model::KeyedStack] {
         &self.shown
     }
 
@@ -940,12 +943,12 @@ pub fn stock_of(
     mode: Mode,
 ) -> Stock {
     let player = inventory.slots().get(9..45).unwrap_or(&[]);
-    let grid: &[ItemStack] = match (menu, mode) {
+    let grid: &[crate::world::item_model::KeyedStack] = match (menu, mode) {
         (Some(menu), Mode::Crafting { grid }) => menu.slots.get(1..1 + grid * grid).unwrap_or(&[]),
         (None, Mode::Crafting { .. }) => inventory.slots().get(1..5).unwrap_or(&[]),
         _ => &[],
     };
-    Stock::from_stacks(player.iter().chain(grid))
+    Stock::from_stacks(player.iter().chain(grid).map(|s| &**s))
 }
 
 #[cfg(test)]

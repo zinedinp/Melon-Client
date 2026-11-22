@@ -39,7 +39,7 @@ impl InWorld {
         let changed: Vec<_> = click
             .changed
             .iter()
-            .map(|&i| (i, &self.inventory.slots()[i as usize]))
+            .map(|&i| (i, &*self.inventory.slots()[i as usize]))
             .collect();
         self.joined.session.send_container_click(
             0,

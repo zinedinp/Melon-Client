@@ -300,9 +300,9 @@ mod tests {
         for (i, cost) in costs.into_iter().enumerate() {
             menu.set_data(COSTS + i, cost);
         }
-        menu.slots[0] = ItemStack::new(1, &Item::DIAMOND_SWORD);
+        menu.slots[0] = ItemStack::new(1, &Item::DIAMOND_SWORD).into();
         if lapis > 0 {
-            menu.slots[1] = ItemStack::new(lapis, &Item::LAPIS_LAZULI);
+            menu.slots[1] = ItemStack::new(lapis, &Item::LAPIS_LAZULI).into();
         }
         menu
     }

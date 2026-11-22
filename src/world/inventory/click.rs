@@ -35,7 +35,7 @@ impl Inventory {
                     && !self.slots[index].is_empty()
                 {
                     let stack = &self.slots[index];
-                    self.carried = stack.copy_with_count(stack.get_max_stack_size());
+                    self.carried = stack.copy_with_count(stack.get_max_stack_size()).into();
                 }
             }
             ClickType::Throw => {
@@ -89,7 +89,7 @@ impl Inventory {
             if !carried.is_empty() && may_place(index, carried) {
                 let amount = if button == 0 { carried.item_count } else { 1 };
                 let amount = amount.min(slot_max(index, carried));
-                *stack = split_slot(carried, amount);
+                *stack = split_slot(carried, amount).into();
             }
         } else if carried.is_empty() {
             let amount = if button == 0 {
@@ -97,7 +97,7 @@ impl Inventory {
             } else {
                 stack.item_count.div_ceil(2)
             };
-            *carried = split_slot(stack, amount);
+            *carried = split_slot(stack, amount).into();
         } else if may_place(index, carried) {
             if stack.are_items_and_components_equal(carried) {
                 let room = slot_max(index, carried).saturating_sub(stack.item_count);
@@ -155,9 +155,9 @@ impl Inventory {
         } else {
             MAIN_SLOTS.start..HOTBAR_SLOTS.end
         };
-        let mut moving = std::mem::replace(&mut self.slots[index], empty());
+        let mut moving = self.slots[index].take();
         self.move_into(&mut moving, targets);
-        self.slots[index] = moving;
+        self.slots[index] = moving.into();
     }
 
     /// `AbstractContainerMenu.moveItemStackTo`.
@@ -182,7 +182,7 @@ impl Inventory {
         for i in targets {
             if self.slots[i].is_empty() && may_place(i, moving) {
                 let count = moving.item_count.min(slot_max(i, moving));
-                self.slots[i] = split_slot(moving, count);
+                self.slots[i] = split_slot(moving, count).into();
                 return;
             }
         }
@@ -235,12 +235,12 @@ impl Inventory {
                     let placed =
                         (quick_craft_place_count(count, drag.kind, &source) + carry).min(max);
                     remaining -= placed - carry;
-                    self.slots[index] = source.copy_with_count(placed as u8);
+                    self.slots[index] = source.copy_with_count(placed as u8).into();
                 }
                 self.carried = if remaining <= 0 {
-                    empty()
+                    empty().into()
                 } else {
-                    source.copy_with_count(remaining as u8)
+                    source.copy_with_count(remaining as u8).into()
                 };
             }
         }

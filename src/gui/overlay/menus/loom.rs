@@ -101,7 +101,7 @@ impl LoomScreen {
         if same {
             return;
         }
-        self.inputs = Some(inputs.map(Clone::clone));
+        self.inputs = Some(inputs.map(|s| ItemStack::clone(s)));
         let (banner, dye, pattern) = (inputs[0], inputs[1], inputs[2]);
         self.full = loom::layers(banner).len() >= loom::MAX_LAYERS;
         self.patterns = if banner.is_empty() || dye.is_empty() {
@@ -340,12 +340,12 @@ mod tests {
         let mut menu = menu();
         screen.refresh(&menu);
         assert!(!screen.display);
-        menu.slots[0] = ItemStack::new(1, &Item::WHITE_BANNER);
-        menu.slots[1] = ItemStack::new(1, &Item::RED_DYE);
+        menu.slots[0] = ItemStack::new(1, &Item::WHITE_BANNER).into();
+        menu.slots[1] = ItemStack::new(1, &Item::RED_DYE).into();
         screen.refresh(&menu);
         assert!(screen.display);
         assert!(!screen.patterns.is_empty());
-        menu.slots[1] = empty();
+        menu.slots[1] = empty().into();
         screen.refresh(&menu);
         assert!(!screen.display);
         assert!(screen.patterns.is_empty());

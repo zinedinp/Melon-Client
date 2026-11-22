@@ -3,6 +3,7 @@
 //! to. A new kind of body or input is a new element, made by its handler
 //! ([`super::body`], [`super::input`]); the screen needs no change.
 
+use crate::world::item_model::StackKey;
 use std::sync::Arc;
 
 use pumpkin_data::item_stack::ItemStack;
@@ -71,7 +72,7 @@ pub trait Element {
     fn tooltip(&self, _mouse: (f32, f32), _ui: &Ui) -> Option<Vec<StyledText>> {
         None
     }
-    fn visit_stacks(&self, _visit: &mut dyn FnMut(&ItemStack) -> bool) {}
+    fn visit_stacks(&self, _visit: &mut dyn FnMut(&dyn StackKey) -> bool) {}
     /// An input's value (`Action.ValueGetter`); `None` for the rest.
     fn value(&self) -> Option<InputValue> {
         None
@@ -392,7 +393,7 @@ impl Element for ItemElement {
         self.description.as_ref()?.tooltip(mouse, ui)
     }
 
-    fn visit_stacks(&self, visit: &mut dyn FnMut(&ItemStack) -> bool) {
+    fn visit_stacks(&self, visit: &mut dyn FnMut(&dyn StackKey) -> bool) {
         if let Some(stack) = &self.stack {
             visit(stack);
         }

@@ -47,8 +47,9 @@ impl StackKey for ItemStack {
     }
 }
 
-/// A stack drawn every frame (dropped, framed, displayed) with its
+/// A stack drawn every frame (slots, dropped, framed, displayed) with its
 /// [`ItemKey`], worked out once until the stack or the resources change.
+/// Any mutable access to the stack drops the key.
 pub struct KeyedStack {
     stack: ItemStack,
     key: Mutex<Option<(u32, ItemKey)>>,
@@ -66,12 +67,21 @@ impl KeyedStack {
         *self = Self::new(stack);
     }
 
-    pub fn set_count(&mut self, count: u8) {
-        let stack = ItemStack {
-            item_count: count,
-            ..std::mem::replace(&mut self.stack, ItemStack::EMPTY.clone())
-        };
-        self.set(stack);
+    /// The stack, leaving an empty one.
+    pub fn take(&mut self) -> ItemStack {
+        std::mem::replace(&mut **self, ItemStack::EMPTY.clone())
+    }
+}
+
+impl Default for KeyedStack {
+    fn default() -> Self {
+        Self::new(ItemStack::EMPTY.clone())
+    }
+}
+
+impl From<ItemStack> for KeyedStack {
+    fn from(stack: ItemStack) -> Self {
+        Self::new(stack)
     }
 }
 
@@ -83,9 +93,24 @@ impl std::ops::Deref for KeyedStack {
     }
 }
 
+impl std::ops::DerefMut for KeyedStack {
+    fn deref_mut(&mut self) -> &mut ItemStack {
+        *self.key.get_mut().unwrap_or_else(PoisonError::into_inner) = None;
+        &mut self.stack
+    }
+}
+
 impl Clone for KeyedStack {
     fn clone(&self) -> Self {
-        Self::new(self.stack.clone())
+        let key = self
+            .key
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        Self {
+            stack: self.stack.clone(),
+            key: Mutex::new(key),
+        }
     }
 }
 

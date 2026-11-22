@@ -37,7 +37,7 @@ impl InWorld {
             let cursor = keep_cursor.then(|| self.inventory.carried().clone());
             self.inventory.set_all(state_id, slots, carried);
             if let Some(cursor) = cursor {
-                self.inventory.set_carried(cursor);
+                self.inventory.set_carried(ItemStack::clone(&cursor));
             }
             self.sync_open_menu();
         } else if let Some(menu) = menu_with(&mut self.menus.open_container, container) {

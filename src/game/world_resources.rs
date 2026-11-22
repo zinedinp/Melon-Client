@@ -1,7 +1,7 @@
 //! What a joined world draws with, independent of which world.
 
 use crate::world::item_model::HeldUse;
-use pumpkin_data::item_stack::ItemStack;
+use crate::world::item_model::StackKey;
 
 use super::entity_models::{MobModels, PlayerModels};
 use super::held_items::HeldItems;
@@ -372,7 +372,7 @@ impl WorldResources {
     pub fn prepare_held(
         &mut self,
         renderer: &mut Renderer,
-        stack: &impl crate::world::item_model::StackKey,
+        stack: &impl StackKey,
         using: impl Into<HeldUse>,
     ) {
         let using = using.into();
@@ -396,14 +396,14 @@ impl WorldResources {
     pub fn prepare_icons(
         &mut self,
         renderer: &mut Renderer,
-        stacks: impl FnOnce(&mut dyn FnMut(&ItemStack) -> bool),
+        stacks: impl FnOnce(&mut dyn FnMut(&dyn StackKey) -> bool),
     ) {
         let mut heads = Vec::new();
         self.icons.prepare_batch(renderer, |visit| {
             stacks(&mut |stack| {
                 visit(stack);
-                if HeadProfile::of_stack(stack).is_some() {
-                    heads.push(stack.clone());
+                if HeadProfile::of_stack(stack.stack()).is_some() {
+                    heads.push(stack.stack().clone());
                 }
                 true
             });

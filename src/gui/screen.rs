@@ -241,7 +241,11 @@ pub trait Screen {
     }
     /// The item stacks this screen draws, so their icons are made before the
     /// frame (in a world; see [`crate::gui::widgets::Ui::items`]).
-    fn visit_stacks(&self, _visit: &mut dyn FnMut(&pumpkin_data::item_stack::ItemStack) -> bool) {}
+    fn visit_stacks(
+        &self,
+        _visit: &mut dyn FnMut(&dyn crate::world::item_model::StackKey) -> bool,
+    ) {
+    }
     /// A physical key or mouse button while [`Self::capturing_bind`].
     fn on_bind(
         &mut self,

@@ -61,7 +61,7 @@ impl StonecutterScreen {
             return;
         }
         self.options = stonecutting::options_from(sets, input);
-        self.input = Some(input.clone());
+        self.input = Some(ItemStack::clone(input));
         if self.options.is_empty() {
             self.scroll.reset();
         }

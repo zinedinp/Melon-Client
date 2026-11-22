@@ -62,10 +62,10 @@ fn equipment_item(
 ) -> Option<u16> {
     use crate::world::inventory::{ARMOR_SLOTS, OFFHAND_SLOT};
     let stack = if id == own {
-        let armor = |i: usize| inventory.slots().get(ARMOR_SLOTS.start + i);
+        let armor = |i: usize| inventory.slots().get(ARMOR_SLOTS.start + i).map(|s| &**s);
         match slot {
-            EquipmentSlot::MainHand => Some(inventory.selected_stack()),
-            EquipmentSlot::OffHand => inventory.slots().get(OFFHAND_SLOT),
+            EquipmentSlot::MainHand => Some(&**inventory.selected_stack()),
+            EquipmentSlot::OffHand => inventory.slots().get(OFFHAND_SLOT).map(|s| &**s),
             EquipmentSlot::Head => armor(0),
             EquipmentSlot::Chest => armor(1),
             EquipmentSlot::Legs => armor(2),

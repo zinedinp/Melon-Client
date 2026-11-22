@@ -1,5 +1,6 @@
 //! Vanilla `InventoryScreen` (E).
 
+use crate::world::item_model::{KeyedStack, StackKey};
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::assets::Assets;
@@ -269,7 +270,7 @@ impl InventoryOverlay {
         let drag = self.mouse.quick_craft();
         draw_carried(draw_list, painter, inventory, drag, self.cursor, |slot| {
             (
-                inventory.slots()[slot].clone(),
+                ItemStack::clone(&inventory.slots()[slot]),
                 inventory::slot_max(slot, inventory.carried()),
             )
         });
@@ -428,7 +429,7 @@ impl Overlay for InventoryOverlay {
     fn visit_stacks(
         &self,
         inventory: &Inventory,
-        visit: &mut dyn FnMut(&ItemStack) -> bool,
+        visit: &mut dyn FnMut(&dyn StackKey) -> bool,
     ) -> bool {
         inventory
             .slots()
@@ -465,7 +466,7 @@ pub fn draw_slots<'a>(
     draw_list: &mut DrawList,
     textures: &InventoryTextures,
     painter: ItemPainter,
-    slots: impl Iterator<Item = (usize, f32, f32, &'a ItemStack, Option<GuiSprite>)>,
+    slots: impl Iterator<Item = (usize, f32, f32, &'a KeyedStack, Option<GuiSprite>)>,
     hovered: Option<(f32, f32)>,
     drag: Option<SlotDrag>,
 ) {

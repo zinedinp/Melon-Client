@@ -257,7 +257,7 @@ pub trait Overlay {
     fn visit_stacks(
         &self,
         _inventory: &Inventory,
-        _visit: &mut dyn FnMut(&ItemStack) -> bool,
+        _visit: &mut dyn FnMut(&dyn crate::world::item_model::StackKey) -> bool,
     ) -> bool {
         true
     }

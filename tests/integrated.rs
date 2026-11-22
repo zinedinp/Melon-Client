@@ -1373,7 +1373,7 @@ impl MenuWorld {
         let changed: Vec<_> = click
             .changed
             .iter()
-            .map(|&i| (i, &menu.slots[i as usize]))
+            .map(|&i| (i, &*menu.slots[i as usize]))
             .collect();
         self.world.session.send_container_click(
             menu.id,

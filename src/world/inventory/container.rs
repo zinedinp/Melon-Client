@@ -2,10 +2,10 @@
 
 use super::Inventory;
 use super::{
-    Click, ClickType, Drag, HOTBAR_SLOTS, MAIN_SLOTS, OUTSIDE, empty, shrink, split_slot,
-    stacks_equal,
+    Click, ClickType, Drag, HOTBAR_SLOTS, MAIN_SLOTS, OUTSIDE, shrink, split_slot, stacks_equal,
 };
 use crate::gui::text::StyledText;
+use crate::world::item_model::KeyedStack;
 use pumpkin_data::item_stack::ItemStack;
 
 /// Player inventory portion of every vanilla container: 27 main + 9 hotbar.
@@ -153,7 +153,7 @@ pub struct OpenContainer {
     pub id: i32,
     pub kind: ContainerKind,
     pub title: StyledText,
-    pub slots: Vec<ItemStack>,
+    pub slots: Vec<KeyedStack>,
     pub state_id: i32,
     /// `ContainerData`, as `ClientboundContainerSetDataPacket` sets it:
     data: Vec<i16>,
@@ -169,7 +169,7 @@ impl OpenContainer {
             id,
             kind,
             title: title.into(),
-            slots: vec![empty(); n],
+            slots: vec![KeyedStack::default(); n],
             state_id: 0,
             data: Vec::new(),
             trades: None,
@@ -193,7 +193,7 @@ impl OpenContainer {
     pub fn set_all(&mut self, state_id: i32, slots: Vec<ItemStack>) {
         self.state_id = state_id;
         for (slot, item) in self.slots.iter_mut().zip(slots) {
-            *slot = item;
+            slot.set(item);
         }
     }
 
@@ -203,12 +203,12 @@ impl OpenContainer {
             .ok()
             .and_then(|s| self.slots.get_mut(s))
         {
-            *target = item;
+            target.set(item);
         }
     }
 
     /// Player-inventory slice (last 36), for copying into the HUD inventory.
-    pub fn player_slots(&self) -> Option<&[ItemStack]> {
+    pub fn player_slots(&self) -> Option<&[KeyedStack]> {
         let n = self.slots.len();
         (n >= PLAYER_SLOTS).then(|| &self.slots[n - PLAYER_SLOTS..])
     }
@@ -316,7 +316,7 @@ impl OpenContainer {
         if stack.is_empty() {
             if !carried.is_empty() {
                 let amount = if button == 0 { carried.item_count } else { 1 };
-                *stack = split_slot(carried, amount.min(max));
+                *stack = split_slot(carried, amount.min(max)).into();
             }
         } else if carried.is_empty() {
             let amount = if button == 0 {
@@ -335,7 +335,7 @@ impl OpenContainer {
             stack.item_count += amount;
             shrink(carried, amount);
         } else if carried.item_count <= max {
-            std::mem::swap(stack, carried);
+            std::mem::swap(&mut **stack, carried);
         }
     }
 
@@ -371,7 +371,7 @@ impl OpenContainer {
             return;
         }
         let container = self.kind.container_slots();
-        let mut moving = std::mem::replace(&mut self.slots[index], empty());
+        let mut moving = self.slots[index].take();
         if index < container {
             self.move_into(&mut moving, container..n, true);
         } else if self.kind == ContainerKind::Crafting {
@@ -387,7 +387,7 @@ impl OpenContainer {
         } else {
             self.move_into(&mut moving, 0..container, false);
         }
-        self.slots[index] = moving;
+        self.slots[index] = moving.into();
     }
 
     /// `AbstractContainerMenu.moveItemStackTo`.
@@ -429,7 +429,7 @@ impl OpenContainer {
                 }
                 let max = moving.get_max_stack_size();
                 let count = moving.item_count.min(max);
-                self.slots[i] = split_slot(moving, count);
+                self.slots[i] = split_slot(moving, count).into();
                 break;
             }
         }
@@ -498,7 +498,7 @@ impl OpenContainer {
                     let target = &mut self.slots[index];
                     let max = carried.get_max_stack_size();
                     if target.is_empty() {
-                        *target = split_slot(carried, each.min(max));
+                        *target = split_slot(carried, each.min(max)).into();
                     } else if target.are_items_and_components_equal(carried) {
                         let room = max.saturating_sub(target.item_count);
                         let amount = each.min(room).min(carried.item_count);
@@ -516,7 +516,7 @@ impl OpenContainer {
 mod tests {
     use super::*;
     use crate::gui::text::{StyledText, colors};
-    use crate::world::inventory::Inventory;
+    use crate::world::inventory::{Inventory, empty};
     use pumpkin_data::item::Item;
     use pumpkin_data::item_stack::ItemStack;
 
@@ -605,7 +605,7 @@ mod tests {
         assert!(menu.slots[1].is_empty());
         assert_eq!(carried.item_count, 3);
         let mut furnace = OpenContainer::new(1, ContainerKind::Furnace, String::new());
-        furnace.slots[3] = ItemStack::new(3, &Item::STONE);
+        furnace.slots[3] = ItemStack::new(3, &Item::STONE).into();
         let click = furnace.click(3, 0, ClickType::QuickMove, false, &mut empty());
         assert!(click.changed.is_empty());
         assert_eq!(furnace.slots[3].item_count, 3);
@@ -622,8 +622,8 @@ mod tests {
     #[test]
     fn player_slots_round_trip() {
         let mut inventory = Inventory::default();
-        inventory.slots_mut()[9] = ItemStack::new(1, &Item::STONE);
-        inventory.slots_mut()[36] = ItemStack::new(4, &Item::DIRT);
+        inventory.slots_mut()[9] = ItemStack::new(1, &Item::STONE).into();
+        inventory.slots_mut()[36] = ItemStack::new(4, &Item::DIRT).into();
         let mut menu = OpenContainer::new(1, ContainerKind::Generic { rows: 3 }, "Chest");
         menu.copy_player_from(&inventory);
         let mut other = Inventory::default();
@@ -640,7 +640,7 @@ mod tests {
     #[test]
     fn a_chest_quick_moves_into_the_hotbar_from_the_right() {
         let mut menu = OpenContainer::new(1, ContainerKind::Generic { rows: 3 }, String::new());
-        menu.slots[0] = ItemStack::new(5, &Item::STONE);
+        menu.slots[0] = ItemStack::new(5, &Item::STONE).into();
         quick_move(&mut menu, 0);
         assert!(menu.slots[0].is_empty());
         assert_eq!(menu.slots[62].item_count, 5);
@@ -650,9 +650,9 @@ mod tests {
     #[test]
     fn a_chest_tops_up_the_last_matching_stack_first() {
         let mut menu = OpenContainer::new(1, ContainerKind::Generic { rows: 3 }, String::new());
-        menu.slots[0] = ItemStack::new(10, &Item::STONE);
-        menu.slots[27] = ItemStack::new(60, &Item::STONE);
-        menu.slots[54] = ItemStack::new(60, &Item::STONE);
+        menu.slots[0] = ItemStack::new(10, &Item::STONE).into();
+        menu.slots[27] = ItemStack::new(60, &Item::STONE).into();
+        menu.slots[54] = ItemStack::new(60, &Item::STONE).into();
         quick_move(&mut menu, 0);
         assert_eq!(menu.slots[54].item_count, 64);
         assert_eq!(menu.slots[27].item_count, 64);
@@ -662,7 +662,7 @@ mod tests {
     #[test]
     fn the_player_quick_moves_into_a_chest_from_the_front() {
         let mut menu = OpenContainer::new(1, ContainerKind::Generic { rows: 3 }, String::new());
-        menu.slots[60] = ItemStack::new(3, &Item::DIRT);
+        menu.slots[60] = ItemStack::new(3, &Item::DIRT).into();
         quick_move(&mut menu, 60);
         assert_eq!(menu.slots[0].item_count, 3);
     }
@@ -671,9 +671,9 @@ mod tests {
     fn a_crafting_table_falls_back_to_the_hotbar_when_its_grid_is_full() {
         let mut menu = OpenContainer::new(1, ContainerKind::Crafting, String::new());
         for slot in &mut menu.slots[1..10] {
-            *slot = ItemStack::new(1, &Item::DIRT);
+            *slot = ItemStack::new(1, &Item::DIRT).into();
         }
-        menu.slots[10] = ItemStack::new(1, &Item::STONE);
+        menu.slots[10] = ItemStack::new(1, &Item::STONE).into();
         quick_move(&mut menu, 10);
         assert!(menu.slots[10].is_empty());
         assert_eq!(menu.slots[37].item_count, 1);
@@ -684,7 +684,7 @@ mod tests {
     #[test]
     fn a_crafting_table_fills_its_grid_first() {
         let mut menu = OpenContainer::new(1, ContainerKind::Crafting, String::new());
-        menu.slots[40] = ItemStack::new(2, &Item::DIRT);
+        menu.slots[40] = ItemStack::new(2, &Item::DIRT).into();
         quick_move(&mut menu, 40);
         assert_eq!(menu.slots[1].item_count, 2);
         assert!(menu.slots[0].is_empty());

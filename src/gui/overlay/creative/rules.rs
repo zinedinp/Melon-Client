@@ -38,7 +38,7 @@ impl CreativeOverlay {
         }
         if slot == Some(Slot::Destroy) && quick {
             for stack in inventory.slots_mut() {
-                *stack = empty();
+                *stack = empty().into();
             }
         } else if tab == TabType::Inventory {
             click_inventory_tab(inventory, &click, slot, kind, &mut changes);
@@ -52,7 +52,7 @@ impl CreativeOverlay {
         }
         for (menu, (old, new)) in before.iter().zip(inventory.slots()).enumerate().skip(1) {
             if !inventory::stacks_equal(old, new) {
-                changes.sets.push((menu as i16, new.clone()));
+                changes.sets.push((menu as i16, ItemStack::clone(new)));
             }
         }
         changes
@@ -104,9 +104,10 @@ fn click_inventory_tab(
                 } else {
                     stack.get_max_stack_size()
                 };
-                let dropped = stack.split(count.min(stack.item_count));
+                let count = count.min(stack.item_count);
+                let dropped = stack.split(count);
                 if stack.item_count == 0 {
-                    *stack = empty();
+                    *stack = empty().into();
                 }
                 changes.sets.push((-1, dropped));
             }
@@ -146,13 +147,13 @@ fn click_picker(
                     _ => None,
                 };
                 if let Some(target) = target {
-                    slots[target] = clicked.copy_with_count(clicked.get_max_stack_size());
+                    slots[target] = clicked.copy_with_count(clicked.get_max_stack_size()).into();
                 }
             }
         }
         ClickType::Clone => {
             if carried.is_empty() && !clicked.is_empty() {
-                *carried = clicked.copy_with_count(clicked.get_max_stack_size());
+                *carried = clicked.copy_with_count(clicked.get_max_stack_size()).into();
             }
         }
         ClickType::Throw => {
@@ -180,7 +181,7 @@ fn click_picker(
                 } else {
                     carried.item_count -= 1;
                     if carried.item_count == 0 {
-                        *carried = empty();
+                        *carried = empty().into();
                     }
                 }
             } else if !clicked.is_empty() && carried.is_empty() {
@@ -189,13 +190,13 @@ fn click_picker(
                 } else {
                     clicked.item_count
                 };
-                *carried = clicked.copy_with_count(count);
+                *carried = clicked.copy_with_count(count).into();
             } else if button == 0 {
-                *carried = empty();
+                *carried = empty().into();
             } else if !carried.is_empty() {
                 carried.item_count -= 1;
                 if carried.item_count == 0 {
-                    *carried = empty();
+                    *carried = empty().into();
                 }
             }
         }
@@ -218,7 +219,7 @@ fn click_picker_menu(
     match kind {
         ClickType::QuickMove => {
             if let Some(Slot::Player(menu)) = slot {
-                inventory.slots_mut()[menu] = empty();
+                inventory.slots_mut()[menu] = empty().into();
             }
         }
         ClickType::Throw => {
@@ -230,7 +231,7 @@ fn click_picker_menu(
                     let count = if button == 0 { 1 } else { stack.item_count };
                     let dropped = stack.split(count);
                     if stack.item_count == 0 {
-                        *stack = empty();
+                        *stack = empty().into();
                     }
                     changes.sets.push((-1, dropped));
                 }
@@ -266,7 +267,7 @@ pub(super) fn pickup_all_from_hotbar(inventory: &mut Inventory) {
             carried.item_count += amount;
             target.item_count -= amount;
             if target.item_count == 0 {
-                *target = empty();
+                *target = empty().into();
             }
         }
     }

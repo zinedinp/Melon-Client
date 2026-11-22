@@ -365,7 +365,7 @@ impl InWorld {
     /// The own armor, by [`ArmorSlot::ALL`] (`InventoryMenu`'s slots 5-8).
     pub(super) fn own_armor(&self) -> [&ItemStack; 4] {
         let slots = &self.inventory.slots()[crate::world::inventory::ARMOR_SLOTS];
-        std::array::from_fn(|i| &slots[i])
+        std::array::from_fn(|i| &*slots[i])
     }
 
     /// What a shadow's light reads: the time of day's darkening and the

@@ -644,7 +644,7 @@ impl Screen for DialogScreen {
         Some(DialogLayer::Dialog)
     }
 
-    fn visit_stacks(&self, visit: &mut dyn FnMut(&pumpkin_data::item_stack::ItemStack) -> bool) {
+    fn visit_stacks(&self, visit: &mut dyn FnMut(&dyn crate::world::item_model::StackKey) -> bool) {
         for element in &self.elements {
             element.visit_stacks(visit);
         }

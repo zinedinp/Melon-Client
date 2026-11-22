@@ -322,7 +322,7 @@ mod tests {
         let mut menu = OpenContainer::new(1, ContainerKind::Beacon, String::new());
         menu.set_data(LEVELS, levels);
         if payment {
-            menu.slots[0] = ItemStack::new(1, &Item::EMERALD);
+            menu.slots[0] = ItemStack::new(1, &Item::EMERALD).into();
         }
         menu
     }

@@ -18,6 +18,7 @@ use crate::i18n::Lang;
 use crate::math::argb;
 use crate::renderer::TextureId;
 use crate::renderer::quad::{DrawList, Program};
+use crate::world::item_model::StackKey;
 
 /// Everything drawing an item needs, bundled so the HUD and the screens pass one value.
 #[derive(Clone, Copy)]
@@ -31,16 +32,23 @@ pub struct ItemPainter<'a> {
 
 impl ItemPainter<'_> {
     /// Draws `stack` with its top-left corner at `(x, y)`, 16x16.
-    pub fn stack(&self, draw_list: &mut DrawList, stack: &ItemStack, x: f32, y: f32) {
+    pub fn stack(
+        &self,
+        draw_list: &mut DrawList,
+        stack: &(impl StackKey + ?Sized),
+        x: f32,
+        y: f32,
+    ) {
         self.stack_with_count(draw_list, stack, x, y, None);
     }
 
     /// The item alone, without its count or durability bar.
-    pub fn icon(&self, draw_list: &mut DrawList, stack: &ItemStack, x: f32, y: f32) {
+    pub fn icon(&self, draw_list: &mut DrawList, keyed: &(impl StackKey + ?Sized), x: f32, y: f32) {
+        let stack = keyed.stack();
         if stack.is_empty() {
             return;
         }
-        if let Some(icon) = self.icons.get(stack) {
+        if let Some(icon) = self.icons.get(keyed) {
             let previous =
                 crate::world::glint::has_foil(stack).then(|| draw_list.set_program(Program::Glint));
             icon.draw(draw_list, x, y, 16.0, 16.0);
@@ -54,15 +62,16 @@ impl ItemPainter<'_> {
     pub fn stack_with_count(
         &self,
         draw_list: &mut DrawList,
-        stack: &ItemStack,
+        keyed: &(impl StackKey + ?Sized),
         x: f32,
         y: f32,
         count: Option<StyledText>,
     ) {
+        let stack = keyed.stack();
         if stack.is_empty() {
             return;
         }
-        self.icon(draw_list, stack, x, y);
+        self.icon(draw_list, keyed, x, y);
 
         if let Some(max) = stack.get_max_damage().filter(|&max| max > 0) {
             let damage = stack.get_damage();

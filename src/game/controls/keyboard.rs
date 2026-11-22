@@ -12,6 +12,7 @@ use crate::math::wrap_degrees;
 use crate::settings::input::{Action, InputBind};
 use crate::world::game_mode::GameMode;
 use crate::world::inventory::HOTBAR_SLOTS;
+use pumpkin_data::item_stack::ItemStack;
 use winit::keyboard::{Key, NamedKey};
 
 use crate::gui::hud::debug_entries::Entry;
@@ -295,11 +296,11 @@ impl InWorld {
                 let items = self.hotbars.hotbars[index].clone();
                 for (i, stack) in items.into_iter().enumerate() {
                     let slot = HOTBAR_SLOTS.start + i;
-                    self.inventory.slots_mut()[slot] = stack.clone();
+                    self.inventory.slots_mut()[slot] = stack.clone().into();
                     self.joined.session.send_creative_slot(slot as i16, &stack);
                 }
             } else {
-                let items = std::array::from_fn(|i| self.inventory.hotbar(i).clone());
+                let items = std::array::from_fn(|i| ItemStack::clone(self.inventory.hotbar(i)));
                 self.hotbars.store(index, items);
                 let message = ui
                     .lang

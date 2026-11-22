@@ -66,7 +66,7 @@ impl Entities {
         if left <= 0 {
             self.remove(item);
         } else {
-            entity.item.set_count(left as u8);
+            entity.item.item_count = left as u8;
         }
     }
 

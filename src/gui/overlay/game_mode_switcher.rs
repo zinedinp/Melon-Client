@@ -1,5 +1,6 @@
 //! Vanilla `GameModeSwitcherScreen` (F3 + F4).
 
+use crate::world::item_model::StackKey;
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
@@ -202,7 +203,7 @@ impl Overlay for GameModeSwitcher {
     fn visit_stacks(
         &self,
         _inventory: &Inventory,
-        visit: &mut dyn FnMut(&ItemStack) -> bool,
+        visit: &mut dyn FnMut(&dyn StackKey) -> bool,
     ) -> bool {
         ICONS.iter().all(|&mode| visit(&icon(mode)))
     }
