@@ -103,6 +103,9 @@ pub enum LineStyle {
     /// `LINES_TRANSLUCENT_NO_DEPTH_WRITE`: blended, depth left alone. After
     /// the blob shadows (the see-through gizmos).
     TranslucentNoDepthWrite,
+    /// `LINES` in `render3dHud`: after the hand, on the depth cleared for
+    /// it, so no block covers it (the F3 crosshair).
+    Hud,
 }
 
 /// One non-terrain mesh in world space: `model` places [`EntityDraw::mesh`]

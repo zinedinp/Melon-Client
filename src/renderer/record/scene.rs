@@ -271,6 +271,9 @@ impl Renderer {
                             self.draw_lines(cmd, scene, world, (view_proj, fog), style);
                         }
                     }
+                    if layer == RenderLayer::Hand {
+                        self.draw_lines(cmd, scene, world, (view_proj, fog), LineStyle::Hud);
+                    }
                 }
                 RenderLayer::WaterMask => {
                     let Some(world) = &scene.world else { continue };
@@ -474,7 +477,7 @@ impl Renderer {
         style: LineStyle,
     ) {
         let (mode, pass) = match style {
-            LineStyle::Opaque => (Mode::Lines, &self.pipelines.lines[0]),
+            LineStyle::Opaque | LineStyle::Hud => (Mode::Lines, &self.pipelines.lines[0]),
             LineStyle::OpaqueDepthBias => (Mode::LinesDepthBias, &self.pipelines.lines[1]),
             LineStyle::Translucent | LineStyle::TranslucentAfterTerrain => {
                 (Mode::LinesTranslucent, &self.pipelines.lines[2])

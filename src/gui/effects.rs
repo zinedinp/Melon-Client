@@ -107,7 +107,7 @@ impl ScreenEffects {
         if !hud {
             return;
         }
-        if let Some(vignette) = self.vignette {
+        if let Some(color) = self.vignette.map(vignette_color).filter(|&c| darkens(c)) {
             list.set_blend(BlendMode::Vignette);
             list.push_rect(
                 textures.vignette,
@@ -116,7 +116,7 @@ impl ScreenEffects {
                 width,
                 height,
                 [0.0, 0.0, 1.0, 1.0],
-                vignette_color(vignette),
+                color,
             );
             list.set_blend(BlendMode::Alpha);
         }
@@ -157,6 +157,13 @@ pub fn vignette_color(v: Vignette) -> [f32; 4] {
     } else {
         [brightness, brightness, brightness, 1.0]
     }
+}
+
+/// Whether a vignette of `color` changes any pixel. It scales the screen by
+/// `1 - texel * color`, so under half an 8-bit step it changes nothing, and
+/// in daylight vanilla draws it over the whole screen for nothing.
+fn darkens(color: [f32; 4]) -> bool {
+    color[..3].iter().any(|&c| c * 255.0 >= 0.5)
 }
 
 /// `Hud.extractPortalOverlay`'s alpha: rising steeply at the end.
@@ -297,6 +304,20 @@ mod tests {
             border_warning: 1.0,
         });
         assert_eq!(border, [0.0, 1.0, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn a_vignette_that_changes_no_pixel_is_left_out() {
+        let at = |brightness, border_warning| {
+            darkens(vignette_color(Vignette {
+                brightness,
+                border_warning,
+            }))
+        };
+        assert!(!at(0.0, 0.0));
+        assert!(!at(0.0015, 0.0));
+        assert!(at(0.002, 0.0));
+        assert!(at(0.0, 0.5));
     }
 
     #[test]

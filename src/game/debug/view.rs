@@ -41,6 +41,8 @@ pub struct DebugView {
     /// The GUI scale, which sizes the 3D crosshair (`guiScale`).
     pub gui_scale: f32,
     mesh: GizmoMesh,
+    /// The 3D crosshair, drawn after the hand.
+    crosshair: GizmoMesh,
     path: Option<PathBuf>,
 }
 
@@ -73,6 +75,7 @@ impl DebugView {
 
     pub fn clear(&mut self, renderer: &mut Renderer) {
         self.mesh.release(renderer);
+        self.crosshair.release(renderer);
     }
 }
 
@@ -118,14 +121,21 @@ impl InWorld {
             .iter()
             .any(|&e| e.category() == Category::Renderer && e.works() && entries.is_enabled(e));
         drop(entries);
-        if !hitboxes && !chunk_borders && !crosshair && !others {
-            self.debug_view.clear(renderer);
+        let forward = camera.forward();
+        if crosshair {
+            let mut axes = Gizmos::default();
+            self.crosshair_gizmos(&mut axes, camera);
+            self.debug_view
+                .crosshair
+                .draw_hud(renderer, &axes, (camera.position, forward), lines);
+        } else {
+            self.debug_view.crosshair.release(renderer);
+        }
+        if !hitboxes && !chunk_borders && !others {
+            self.debug_view.mesh.release(renderer);
             return;
         }
         let mut gizmos = Gizmos::default();
-        if crosshair {
-            self.crosshair_gizmos(&mut gizmos, camera);
-        }
         if hitboxes {
             self.hitbox_gizmos(&mut gizmos, visible, partial);
         }
@@ -135,7 +145,6 @@ impl InWorld {
         if others {
             self.visualizer_gizmos(&mut gizmos, camera.position, frustum);
         }
-        let forward = camera.forward();
         let up = camera.up();
         let text = TextView {
             font,

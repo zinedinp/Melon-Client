@@ -548,7 +548,7 @@ fn push_column(
             continue;
         }
         let (left, top, _) = placement(line, i);
-        font.push_text(draw_list, font_textures, line, left.round(), top, TEXT);
+        font.push_text_flat(draw_list, font_textures, line, left.round(), top, TEXT);
     }
 }
 

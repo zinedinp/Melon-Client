@@ -335,6 +335,21 @@ impl GizmoMesh {
         }
     }
 
+    /// Only `gizmos`' opaque lines and points, drawn over everything after
+    /// the hand ([`LineStyle::Hud`]).
+    pub fn draw_hud(
+        &mut self,
+        renderer: &mut Renderer,
+        gizmos: &Gizmos,
+        (camera, forward): (DVec3, Vec3),
+        lines: &mut Vec<LineDraw>,
+    ) {
+        let origin = camera.floor().as_ivec3();
+        let vertices = line_quads(gizmos, true, origin, (camera, forward.as_dvec3()));
+        self.lines[0].update(renderer, vertices, origin);
+        lines.extend(self.lines[0].lines(LineStyle::Hud));
+    }
+
     pub fn release(&mut self, renderer: &mut Renderer) {
         for slot in &mut self.lines {
             slot.release(renderer);
