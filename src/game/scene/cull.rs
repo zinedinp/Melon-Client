@@ -96,12 +96,10 @@ impl InWorld {
             &culler,
             view.level_partial,
         );
-        let entities = crate::game::entities::visible_entities(
-            &self.entities,
-            &culler,
-            view.partial,
-            |pos| self.meshes.section_compiled(pos),
-        );
+        let entities =
+            crate::game::entities::visible_entities(&self.entities, &culler, view.partial, |pos| {
+                self.meshes.section_compiled(pos)
+            });
         let leads = crate::game::leads::visible_leads(
             &self.entities,
             &self.level,

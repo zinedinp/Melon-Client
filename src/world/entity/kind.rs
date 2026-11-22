@@ -630,15 +630,21 @@ impl EntityKind {
         matches!(self, Self::Boat | Self::Minecart)
     }
 
-    /// Which slot backs a mount's inventory screen draws: the saddle's and
-    pub fn mount_slots(self) -> (bool, bool) {
+    /// The saddle and armor slots of the mount menu `handleMountScreenOpen`
+    /// opens (`AbstractHorse`s and `AbstractNautilus`es only), by the
+    /// `can_equip_saddle` and `can_wear_horse_armor` tags; a llama's carpet
+    /// takes the armor slot. Tameness and age are not tracked, so the slots
+    /// show whatever `canUseSlot` says.
+    pub fn mount_slots(self) -> Option<(bool, bool)> {
         match self {
-            Self::Horse | Self::ZombieHorse => (true, true),
-            Self::Donkey | Self::Mule | Self::SkeletonHorse => (true, false),
-            Self::Nautilus => (true, true),
-            Self::Camel | Self::CamelHusk => (true, false),
-            Self::Strider => (true, false),
-            _ => (false, false),
+            Self::Horse | Self::ZombieHorse | Self::Nautilus | Self::ZombieNautilus => {
+                Some((true, true))
+            }
+            Self::Donkey | Self::Mule | Self::SkeletonHorse | Self::Camel | Self::CamelHusk => {
+                Some((true, false))
+            }
+            Self::Llama | Self::TraderLlama => Some((false, true)),
+            _ => None,
         }
     }
 
@@ -820,5 +826,19 @@ mod tests {
         );
         assert!(EntityKind::Sniffer.can_be_baby());
         assert!(EntityKind::Parrot.is_tamable());
+    }
+
+    /// `HorseInventoryMenu`'s slots by the saddle and horse armor tags; no
+    /// menu for anything else (a strider has a saddle but no inventory).
+    #[test]
+    fn mount_menus_follow_the_vanilla_tags() {
+        use EntityKind as K;
+        assert_eq!(K::Horse.mount_slots(), Some((true, true)));
+        assert_eq!(K::ZombieNautilus.mount_slots(), Some((true, true)));
+        assert_eq!(K::SkeletonHorse.mount_slots(), Some((true, false)));
+        assert_eq!(K::CamelHusk.mount_slots(), Some((true, false)));
+        assert_eq!(K::TraderLlama.mount_slots(), Some((false, true)));
+        assert_eq!(K::Strider.mount_slots(), None);
+        assert_eq!(K::Pig.mount_slots(), None);
     }
 }
