@@ -608,6 +608,22 @@ impl Session {
         });
     }
 
+    /// `ServerboundChangeDifficultyPacket`: the difficulty's id (0 peaceful .. 3 hard).
+    pub fn send_change_difficulty(&self, difficulty: u8) {
+        self.send(game::id::SB_CHANGE_DIFFICULTY, |buf| {
+            varint::write_var_int(buf, i32::from(difficulty))?;
+            Ok(())
+        });
+    }
+
+    /// `ServerboundLockDifficultyPacket`.
+    pub fn send_lock_difficulty(&self, locked: bool) {
+        self.send(game::id::SB_LOCK_DIFFICULTY, |buf| {
+            buf.write_all(&[u8::from(locked)])?;
+            Ok(())
+        });
+    }
+
     /// `ServerboundPlayerAbilitiesPacket`: started or stopped flying.
     pub fn send_player_abilities(&self, flags: u8) {
         self.send(game::id::SB_PLAYER_ABILITIES, |buf| {

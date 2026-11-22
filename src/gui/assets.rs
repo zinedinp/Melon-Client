@@ -58,6 +58,8 @@ pub struct GuiAssets {
     pub player_reporting_icon: GuiSprite,
     /// `RealmsNotificationsScreen.TRIAL_AVAILABLE_SPRITE`.
     pub realms_trial_icon: GuiSprite,
+    /// `LockIconButton`'s sprites: locked, unlocked; each plain, highlighted, disabled.
+    pub lock_icons: [[GuiSprite; 3]; 2],
     pub white: TextureId,
     pub text_field: GuiSprite,
     pub text_field_highlighted: GuiSprite,
@@ -142,6 +144,17 @@ impl GuiAssets {
         let edition = standalone(renderer, assets, "minecraft:gui/title/edition.png")?;
         let load = |renderer: &mut Renderer, id: &str| GuiSprite::load(renderer, assets, id);
 
+        let mut lock = |name: &str| -> anyhow::Result<[GuiSprite; 3]> {
+            Ok([
+                load(renderer, &format!("minecraft:gui/sprites/widget/{name}.png"))?,
+                load(
+                    renderer,
+                    &format!("minecraft:gui/sprites/widget/{name}_highlighted.png"),
+                )?,
+                load(renderer, &format!("minecraft:gui/sprites/widget/{name}_disabled.png"))?,
+            ])
+        };
+        let lock_icons = [lock("locked_button")?, lock("unlocked_button")?];
         let language_icon = load(renderer, "minecraft:gui/sprites/icon/language.png")?;
         let accessibility_icon = load(renderer, "minecraft:gui/sprites/icon/accessibility.png")?;
         let friends_icon = load(renderer, "minecraft:gui/sprites/friends/friends.png")?;
@@ -214,6 +227,7 @@ impl GuiAssets {
             },
             logo,
             edition,
+            lock_icons,
             language_icon,
             accessibility_icon,
             friends_icon,

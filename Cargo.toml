@@ -70,10 +70,6 @@ miraculix = "0.5.8-beta"
 # The GPU's vendor and architecture, for vendor paths (see melon-base).
 numerobis = { version = "0.3.3-alpha", default-features = false }
 
-# numerobis next to this repository, until the version melon-base needs is
-# on crates.io; git dependents of melon-base (the launcher) need it published.
-[patch.crates-io]
-numerobis = { path = "../../numerobis" }
 
 [profile.dev]
 opt-level = 1
