@@ -1,7 +1,7 @@
 //! The end crystals' beams on the GPU (`EnderDragonRenderer.submitCrystalBeams`):
 //! rebuilt each frame, since the texture scrolls and either end may move.
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use glam::{DVec3, Mat4};
 
@@ -13,7 +13,7 @@ use crate::world::entity::crystal_beam;
 /// this frame.
 #[derive(Default)]
 pub struct BeamMeshes {
-    by_entity: HashMap<i32, (Option<MeshId>, bool)>,
+    by_entity: FxHashMap<i32, (Option<MeshId>, bool)>,
 }
 
 impl BeamMeshes {

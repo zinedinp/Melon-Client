@@ -1,6 +1,6 @@
 //! Vanilla 26.3 `WorldClock` / `ClientClockManager` and the overworld day.
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 /// Length of one overworld day, in ticks (`Timelines.OVERWORLD_DAY`).
 pub const DAY_TICKS: i32 = 24_000;
@@ -22,7 +22,7 @@ pub struct ClockUpdate {
 /// `ClientClockManager`.
 #[derive(Clone, Debug)]
 pub struct ClientClocks {
-    clocks: HashMap<i32, ClockInstance>,
+    clocks: FxHashMap<i32, ClockInstance>,
     last_game_time: i64,
     /// `ClientLevelData.gameTime`.
     game_time: i64,
@@ -48,7 +48,7 @@ impl Default for ClockInstance {
 
 impl Default for ClientClocks {
     fn default() -> Self {
-        let mut clocks = HashMap::new();
+        let mut clocks = FxHashMap::default();
         clocks.insert(0, ClockInstance::default());
         Self {
             clocks,

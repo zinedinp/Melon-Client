@@ -32,7 +32,7 @@ pub struct SpriteMeshes {
     fireball: Option<MeshId>,
     /// Each lightning bolt's shape, by entity, and whether it was drawn
     /// this frame.
-    bolts: std::collections::HashMap<i32, (Option<MeshId>, bool)>,
+    bolts: rustc_hash::FxHashMap<i32, (Option<MeshId>, bool)>,
 }
 
 /// One camera-facing quad from `x0..x0 + 1` and `y0..y0 + 1` with the

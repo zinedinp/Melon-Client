@@ -1,6 +1,6 @@
 //! Cracks on blocks being broken: vanilla `LevelRenderer.destroyBlockProgress`
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use crate::renderer::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId, WorldVertex};
 use crate::world::block_models::BlockModels;
@@ -27,7 +27,7 @@ struct Overlay {
 #[derive(Default)]
 pub struct BlockCracks {
     /// By breaker's entity id.
-    cracks: HashMap<i32, Crack>,
+    cracks: FxHashMap<i32, Crack>,
     overlays: Vec<Overlay>,
 }
 

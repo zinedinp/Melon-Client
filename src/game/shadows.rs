@@ -1,6 +1,6 @@
 //! Blob shadows under the player and every drawn entity.
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 use glam::{IVec3, Mat4, Vec3};
 
@@ -23,7 +23,7 @@ struct Shadow {
 
 #[derive(Default)]
 pub struct ShadowMeshes {
-    by_caster: HashMap<i32, Shadow>,
+    by_caster: FxHashMap<i32, Shadow>,
 }
 
 impl ShadowMeshes {
