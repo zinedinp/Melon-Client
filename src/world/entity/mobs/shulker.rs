@@ -36,9 +36,9 @@ pub fn texture(color: i32) -> &'static str {
         .unwrap_or(TEXTURE)
 }
 
-/// `DATA_PEEK` as 0..1 (`byte / 30`).
+/// `DATA_PEEK` (0..100) as the peek it eases toward (`getRawPeekAmount * 0.01`).
 pub fn peek_from_data(peek: u8) -> f32 {
-    (peek as f32 / 30.0).clamp(0.0, 1.0)
+    (f32::from(peek) * 0.01).clamp(0.0, 1.0)
 }
 
 fn shell(root: &mut PartDefinition) {
@@ -176,7 +176,8 @@ mod tests {
         assert_ne!(open[parts.lid].pose.rotation.y, 0.0);
         assert_eq!(texture(16), TEXTURE);
         assert!(texture(0).ends_with("shulker_white"));
-        assert!((peek_from_data(30) - 1.0).abs() < 1e-5);
+        assert!((peek_from_data(100) - 1.0).abs() < 1e-5);
+        assert!((peek_from_data(30) - 0.3).abs() < 1e-5);
         let _ = Model::bake(&box_layer());
     }
 }

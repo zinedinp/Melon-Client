@@ -249,6 +249,9 @@ impl ClientEntity {
         if self.kind.is_cube() {
             self.tick_squish();
         }
+        if self.kind == EntityKind::Shulker {
+            self.tick_peek();
+        }
         match self.kind {
             EntityKind::Guardian | EntityKind::ElderGuardian => {
                 self.guardian
@@ -466,6 +469,22 @@ impl ClientEntity {
             self.squid.tentacle_angle(partial),
             self.squid.tilt(partial, self.appearance.baby),
         )
+    }
+
+    /// `Shulker.updatePeekAmount`: 0.05 a tick toward the synced peek.
+    pub(super) fn tick_peek(&mut self) {
+        self.prev_peek = self.peek;
+        let target = mobs::shulker::peek_from_data(self.appearance.shulker_peek);
+        self.peek = if self.peek > target {
+            (self.peek - 0.05).clamp(target, 1.0)
+        } else {
+            (self.peek + 0.05).clamp(0.0, target)
+        };
+    }
+
+    /// `Shulker.getClientPeekAmount`.
+    pub fn peek(&self, partial: f32) -> f32 {
+        self.prev_peek + (self.peek - self.prev_peek) * partial
     }
 
     /// `SlimeRenderState.squish`.

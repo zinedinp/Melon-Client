@@ -289,7 +289,7 @@ pub fn pose_input(entity: &ClientEntity, partial: f32) -> PoseInput {
         },
         ravager: ravager::RavagerPose::default(),
         shulker: shulker::ShulkerPose {
-            peek: shulker::peek_from_data(a.shulker_peek),
+            peek: entity.peek(partial),
             attach: a.attach_face,
         },
         wither: wither::WitherPose {

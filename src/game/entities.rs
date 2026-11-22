@@ -1381,10 +1381,6 @@ fn submit_mob(
                 texture,
                 layer: if layer.water_mask {
                     RenderLayer::WaterMask
-                } else if layer.scroll.is_some() {
-                    placed.layer
-                } else if layer.translucent {
-                    RenderLayer::Shadows
                 } else {
                     placed.layer
                 },
@@ -1404,6 +1400,12 @@ fn submit_mob(
             },
             out,
         );
+        // `entityTranslucent`: lit and sorted with the other entities.
+        if layer.translucent {
+            for draw in &mut out[first..] {
+                draw.blend = crate::renderer::Blending::Translucent;
+            }
+        }
         if layer.alpha < 1.0 {
             for draw in &mut out[first..] {
                 draw.alpha = layer.alpha;

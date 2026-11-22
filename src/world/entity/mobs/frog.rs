@@ -31,9 +31,9 @@ pub static SWIM: &AnimationDefinition = &anim::FROG_SWIM;
 /// `FrogVariant` textures: cold, temperate, warm.
 pub fn texture(variant: i32) -> &'static str {
     const TEXTURES: [&str; 3] = [
-        "minecraft:entity/frog/cold_frog",
-        "minecraft:entity/frog/temperate_frog",
-        "minecraft:entity/frog/warm_frog",
+        "minecraft:entity/frog/frog_cold",
+        "minecraft:entity/frog/frog_temperate",
+        "minecraft:entity/frog/frog_warm",
     ];
     TEXTURES[usize::try_from(variant)
         .ok()

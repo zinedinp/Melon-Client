@@ -4,7 +4,7 @@ use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, PI};
 use crate::world::entity::animation::bob_arms;
 use crate::world::entity::humanoid::{self, HumanoidParts};
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartId};
+use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::world::model_part::{Cube, Pose};
 
 pub fn layer() -> LayerDefinition {
@@ -26,6 +26,63 @@ pub fn layer() -> LayerDefinition {
         );
     }
     LayerDefinition::new(root, 64.0, 32.0)
+}
+
+/// `SkeletonModel.createSingleModelDualBodyLayer` (the parched): every
+/// bone wrapped once more, on a 64x64 sheet.
+pub fn parched() -> LayerDefinition {
+    let mut root = PartDefinition::root();
+    root.add_or_replace_child(
+        "body",
+        vec![
+            Cube::new((16.0, 16.0), (-4.0, 0.0, -2.0), (8.0, 12.0, 4.0)),
+            Cube::new((28.0, 0.0), (-4.0, 10.0, -2.0), (8.0, 1.0, 4.0)),
+            Cube::new((16.0, 48.0), (-4.0, 0.0, -2.0), (8.0, 12.0, 4.0)).grown(0.025),
+        ],
+        Pose::ZERO,
+    );
+    root.add_or_replace_child(
+        "head",
+        vec![
+            Cube::new((0.0, 0.0), (-4.0, -8.0, -4.0), (8.0, 8.0, 8.0)),
+            Cube::new((0.0, 32.0), (-4.0, -8.0, -4.0), (8.0, 8.0, 8.0)).grown(0.2),
+        ],
+        Pose::ZERO,
+    )
+    .add_or_replace_child("hat", Vec::new(), Pose::ZERO);
+    root.add_or_replace_child(
+        "right_arm",
+        vec![
+            Cube::new((40.0, 16.0), (-1.0, -2.0, -1.0), (2.0, 12.0, 2.0)),
+            Cube::new((42.0, 33.0), (-1.55, -2.025, -1.5), (3.0, 12.0, 3.0)),
+        ],
+        Pose::offset(-5.5, 2.0, 0.0),
+    );
+    root.add_or_replace_child(
+        "left_arm",
+        vec![
+            Cube::new((56.0, 16.0), (-1.0, -2.0, -1.0), (2.0, 12.0, 2.0)),
+            Cube::new((40.0, 48.0), (-1.45, -2.025, -1.5), (3.0, 12.0, 3.0)),
+        ],
+        Pose::offset(5.5, 2.0, 0.0),
+    );
+    root.add_or_replace_child(
+        "right_leg",
+        vec![
+            Cube::new((0.0, 16.0), (-1.0, 0.0, -1.0), (2.0, 12.0, 2.0)),
+            Cube::new((0.0, 49.0), (-1.5, 0.0, -1.5), (3.0, 12.0, 3.0)),
+        ],
+        Pose::offset(-2.0, 12.0, 0.0),
+    );
+    root.add_or_replace_child(
+        "left_leg",
+        vec![
+            Cube::new((0.0, 16.0), (-1.0, 0.0, -1.0), (2.0, 12.0, 2.0)),
+            Cube::new((4.0, 49.0), (-1.5, 0.0, -1.5), (3.0, 12.0, 3.0)),
+        ],
+        Pose::offset(2.0, 12.0, 0.0),
+    );
+    LayerDefinition::new(root, 64.0, 64.0)
 }
 
 /// `STRAY_OUTER_LAYER`.
@@ -134,7 +191,7 @@ pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
                 "minecraft:entity/skeleton/stray_overlay",
             ));
         }
-        EntityKind::Parched => out.push(plain(M::Skeleton, "minecraft:entity/skeleton/parched")),
+        EntityKind::Parched => out.push(plain(M::Parched, "minecraft:entity/skeleton/parched")),
         _ => {}
     }
 }

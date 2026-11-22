@@ -26,9 +26,19 @@ pub struct ModelMeshes {
 
 impl ModelMeshes {
     pub fn upload(renderer: &mut Renderer, model: &Model) -> anyhow::Result<Self> {
+        Self::upload_sided(renderer, model, false)
+    }
+
+    /// [`Self::upload`], both sides of every face when `two_sided`.
+    pub fn upload_sided(
+        renderer: &mut Renderer,
+        model: &Model,
+        two_sided: bool,
+    ) -> anyhow::Result<Self> {
         let parts = (0..model.len())
             .map(|i| {
-                let vertices = model.part_vertices(crate::world::entity::model::PartId(i));
+                let part = crate::world::entity::model::PartId(i);
+                let vertices = model.part_vertices_sided(part, two_sided);
                 if vertices.is_empty() {
                     Ok(None)
                 } else {
@@ -450,7 +460,7 @@ impl MobModels {
             .into_iter()
             .map(|id| {
                 let mob = MobModel::new(id);
-                let meshes = ModelMeshes::upload(renderer, &mob.model)?;
+                let meshes = ModelMeshes::upload_sided(renderer, &mob.model, id.two_sided())?;
                 Ok((mob, meshes))
             })
             .collect::<anyhow::Result<_>>()?;

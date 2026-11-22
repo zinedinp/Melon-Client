@@ -375,6 +375,12 @@ pub fn create_centered_window(
     attributes: winit::window::WindowAttributes,
 ) -> Result<winit::window::Window, winit::error::OsError> {
     let attributes = attributes.with_window_icon(window_icon());
+    // winit sets only `ICON_SMALL` from that; the taskbar shows `ICON_BIG`.
+    #[cfg(windows)]
+    let attributes = {
+        use winit::platform::windows::WindowAttributesExtWindows;
+        attributes.with_taskbar_icon(window_icon())
+    };
     #[cfg(target_os = "linux")]
     let attributes = {
         use winit::platform::wayland::WindowAttributesExtWayland;

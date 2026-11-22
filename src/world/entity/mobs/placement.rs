@@ -76,7 +76,13 @@ pub fn placement(entity: &ClientEntity, partial: f32) -> Placement {
             placement.extra_pitch = -entity.pitch_degrees(partial);
         }
         EntityKind::Phantom => {
+            // `PhantomRenderer.scale` and `setupRotations`.
             placement.scale *= phantom::size_scale(entity.appearance.size);
+            placement.offset = Vec3::new(0.0, 1.3125, 0.1875);
+            placement.extra_pitch = entity.pitch_degrees(partial);
+        }
+        EntityKind::Wither => {
+            placement.scale *= wither::scale(entity.appearance.wither_invul, partial);
         }
         _ => {}
     }

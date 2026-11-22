@@ -44,6 +44,9 @@ impl ClientEntity {
             // `AbstractCubeMob.getDefaultDimensions`: by size alone, a baby
             // sulfur cube is simply size 1.
             self.appearance.size as f32
+        } else if self.kind == EntityKind::Phantom {
+            // `Phantom.getDefaultDimensions`.
+            crate::world::entity::mobs::phantom::size_scale(self.appearance.size)
         } else if self.appearance.baby
             || (self.kind == EntityKind::ArmorStand && self.appearance.stand_small())
         {

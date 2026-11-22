@@ -434,6 +434,12 @@ impl Model {
 
     /// `part`'s own boxes as vertices in its space (blocks, Y down).
     pub fn part_vertices(&self, part: PartId) -> Vec<Vertex> {
+        self.part_vertices_sided(part, false)
+    }
+
+    /// [`Self::part_vertices`], each face also wound the other way when
+    /// `two_sided`: what a render type without culling shows.
+    pub fn part_vertices_sided(&self, part: PartId, two_sided: bool) -> Vec<Vertex> {
         let mut out = Vec::new();
         self.part_faces(part, &mut |face| {
             let n = face.normal;
@@ -446,6 +452,9 @@ impl Model {
                 )
             });
             geometry::push_quad(&mut out, corners, [shade; 3], false);
+            if two_sided {
+                geometry::push_quad(&mut out, corners, [shade; 3], true);
+            }
         });
         out
     }

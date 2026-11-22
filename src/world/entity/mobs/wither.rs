@@ -25,6 +25,16 @@ pub fn texture(invulnerable_ticks: f32) -> &'static str {
     }
 }
 
+/// `WitherBossRenderer.scale`: twice the model, shrinking while it charges.
+pub fn scale(invulnerable_ticks: i32, partial: f32) -> f32 {
+    let ticks = if invulnerable_ticks > 0 {
+        invulnerable_ticks as f32 - partial
+    } else {
+        0.0
+    };
+    2.0 - ticks.max(0.0) / 220.0 * 0.5
+}
+
 /// `WitherBoss.isPowered`: at half health or less it wears its armor.
 pub fn powered(health: f32, max_health: f32) -> bool {
     health <= max_health / 2.0

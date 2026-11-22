@@ -212,6 +212,9 @@ pub struct ClientEntity {
     squish: f32,
     prev_squish: f32,
     target_squish: f32,
+    /// `Shulker.currentPeekAmount` now and a tick ago.
+    peek: f32,
+    prev_peek: f32,
     was_on_ground: bool,
     /// A boat's paddle clocks.
     paddles: mobs::vehicle::Paddles,
@@ -378,6 +381,8 @@ impl ClientEntity {
             squish: 0.0,
             prev_squish: 0.0,
             target_squish: 0.0,
+            peek: 0.0,
+            prev_peek: 0.0,
             was_on_ground: false,
             paddles: Default::default(),
             squid: mobs::squid::Swim::new(add.id),

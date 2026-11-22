@@ -138,6 +138,8 @@ pub enum ModelId {
     ZombieVillagerBaby,
     ZombieVillagerBabyNoHat,
     Skeleton,
+    /// `SkeletonModel.createSingleModelDualBodyLayer`.
+    Parched,
     /// `STRAY_OUTER_LAYER`: the clothes, a humanoid grown by a quarter pixel.
     StrayClothes,
     Spider,
@@ -282,7 +284,7 @@ pub enum ArmorStyle {
 }
 
 impl ModelId {
-    pub const ALL: [Self; 190] = {
+    pub const ALL: [Self; 191] = {
         use ArmorSlot::{Chest, Feet, Head, Legs};
         use ArmorStyle::{Humanoid, Piglin, ZombieVillager};
         [
@@ -476,8 +478,25 @@ impl ModelId {
             Self::WardenHeart,
             Self::WardenBioluminescent,
             Self::WardenPulsatingSpots,
+            Self::Parched,
         ]
     };
+
+    /// Both sides of its faces drawn: vanilla's `entityCutout` doesn't cull,
+    /// which only shows where the texture has holes to see the inside
+    /// through (the skeletons' ribs, the skeleton horse).
+    pub const fn two_sided(self) -> bool {
+        matches!(
+            self,
+            Self::Skeleton
+                | Self::Parched
+                | Self::StrayClothes
+                | Self::Bogged
+                | Self::BoggedClothes
+                | Self::Horse
+                | Self::HorseBaby
+        )
+    }
 
     /// Its position in [`Self::ALL`].
     pub const fn index(self) -> usize {
@@ -648,6 +667,7 @@ impl ModelId {
             Self::WardenHeart => 187,
             Self::WardenBioluminescent => 188,
             Self::WardenPulsatingSpots => 189,
+            Self::Parched => 190,
         }
     }
 
@@ -721,6 +741,7 @@ impl ModelId {
             Self::ZombieVillagerBaby => villager::baby_zombie_villager(),
             Self::ZombieVillagerBabyNoHat => villager::baby_zombie_villager_no_hat(),
             Self::Skeleton => skeleton::layer(),
+            Self::Parched => skeleton::parched(),
             Self::StrayClothes => skeleton::clothes(),
             Self::Spider => spider::layer(),
             Self::Bat => bat::layer(),
@@ -1101,6 +1122,7 @@ impl Rig {
             | M::DrownedOuter
             | M::DrownedBabyOuter
             | M::Skeleton
+            | M::Parched
             | M::StrayClothes
             | M::Armor(..)
             | M::BabyArmor(..) => Self::Humanoid(HumanoidParts::find(model)),
