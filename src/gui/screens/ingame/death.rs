@@ -126,7 +126,7 @@ impl Screen for DeathScreen {
         let title_width = ui.text_width(title);
         let scale = Transform2D {
             translate: [0.0, 0.0],
-            rotate: 0.0,
+            sin_cos: (0.0, 1.0),
             scale: 2.0,
         };
         assets.font.push_text_transformed(

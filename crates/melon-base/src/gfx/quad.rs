@@ -1,17 +1,17 @@
 use super::TextureId;
-use crate::math::angle;
 
 /// 2D affine (scale, rotate, translate). Splash text is the only rotated draw.
 #[derive(Clone, Copy)]
 pub struct Transform2D {
     pub translate: [f32; 2],
-    pub rotate: f32,
+    /// Sine and cosine of the rotation.
+    pub sin_cos: (f32, f32),
     pub scale: f32,
 }
 
 impl Transform2D {
     pub fn apply(&self, p: [f32; 2]) -> [f32; 2] {
-        let (s, c) = angle::sin_cos(self.rotate);
+        let (s, c) = self.sin_cos;
         let x = p[0] * self.scale;
         let y = p[1] * self.scale;
         [

@@ -184,7 +184,6 @@ impl DescriptorPools {
     }
 
     /// The pools' sizes, oldest first.
-    #[cfg(test)]
     pub fn capacities(&self) -> Vec<u32> {
         self.inner
             .borrow()

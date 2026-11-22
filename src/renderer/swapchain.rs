@@ -6,24 +6,6 @@ use ash::vk;
 /// `VK_PRESENT_MODE_FIFO_LATEST_READY_KHR` (same value as the `EXT` one);
 pub const FIFO_LATEST_READY: vk::PresentModeKHR = vk::PresentModeKHR::from_raw(1000361000);
 
-/// `VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR`, chained by hand.
-#[repr(C)]
-pub(super) struct FifoLatestReadyFeatures {
-    pub s_type: vk::StructureType,
-    pub p_next: *mut std::ffi::c_void,
-    pub present_mode_fifo_latest_ready: vk::Bool32,
-}
-
-impl FifoLatestReadyFeatures {
-    pub(super) fn new(enabled: bool) -> Self {
-        Self {
-            s_type: vk::StructureType::from_raw(1000361000),
-            p_next: std::ptr::null_mut(),
-            present_mode_fifo_latest_ready: vk::Bool32::from(enabled),
-        }
-    }
-}
-
 impl Renderer {
     pub(super) unsafe fn create_swapchain(
         &mut self,

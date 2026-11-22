@@ -4,7 +4,7 @@ use ash::vk;
 use std::ffi::CStr;
 
 /// `mipmapped`.
-pub(super) unsafe fn create_sampler(
+pub unsafe fn create_sampler(
     device: &ash::Device,
     filter: vk::Filter,
     mipmapped: bool,
@@ -32,7 +32,7 @@ pub(super) unsafe fn create_sampler(
 /// every frame: VRAM the CPU can map (resizable BAR, or the 256 MiB window
 /// most GPUs expose) where there is one, else host memory over PCIe. The
 /// mapping is write-combined either way, so it's only ever written.
-pub(super) const MAPPED_FOR_GPU: [vk::MemoryPropertyFlags; 2] = [
+pub const MAPPED_FOR_GPU: [vk::MemoryPropertyFlags; 2] = [
     vk::MemoryPropertyFlags::from_raw(
         vk::MemoryPropertyFlags::DEVICE_LOCAL.as_raw()
             | vk::MemoryPropertyFlags::HOST_VISIBLE.as_raw()
@@ -47,7 +47,7 @@ pub(super) const MAPPED_FOR_GPU: [vk::MemoryPropertyFlags; 2] = [
 /// Memory for what the GPU reads and only a copy writes (meshes): VRAM,
 /// else, while another program holds the VRAM, host memory over PCIe:
 /// slower to draw from, but drawn.
-pub(super) const DEVICE_OR_HOST: [vk::MemoryPropertyFlags; 2] = [
+pub const DEVICE_OR_HOST: [vk::MemoryPropertyFlags; 2] = [
     vk::MemoryPropertyFlags::DEVICE_LOCAL,
     vk::MemoryPropertyFlags::from_raw(
         vk::MemoryPropertyFlags::HOST_VISIBLE.as_raw()
@@ -57,7 +57,7 @@ pub(super) const DEVICE_OR_HOST: [vk::MemoryPropertyFlags; 2] = [
 
 /// Memory for buffers the GPU writes and the CPU reads back: cached, as
 /// reading uncached (write-combined) memory costs the CPU many times more.
-pub(super) const READBACK: [vk::MemoryPropertyFlags; 2] = [
+pub const READBACK: [vk::MemoryPropertyFlags; 2] = [
     vk::MemoryPropertyFlags::from_raw(
         vk::MemoryPropertyFlags::HOST_VISIBLE.as_raw()
             | vk::MemoryPropertyFlags::HOST_COHERENT.as_raw()
@@ -70,7 +70,7 @@ pub(super) const READBACK: [vk::MemoryPropertyFlags; 2] = [
 ];
 
 /// A buffer with its own memory, bound.
-pub(super) unsafe fn create_buffer(
+pub unsafe fn create_buffer(
     device: &ash::Device,
     mem_props: &vk::PhysicalDeviceMemoryProperties,
     size: u64,
@@ -83,7 +83,7 @@ pub(super) unsafe fn create_buffer(
 /// A buffer with its own memory, bound, from the first of `choices` that a
 /// memory type has and whose heap has room: a small heap such as the BAR
 /// window can run out where host memory still has plenty.
-pub(super) unsafe fn create_buffer_in(
+pub unsafe fn create_buffer_in(
     device: &ash::Device,
     mem_props: &vk::PhysicalDeviceMemoryProperties,
     size: u64,
@@ -136,7 +136,7 @@ pub(super) unsafe fn create_buffer_in(
     Err(last)
 }
 
-pub(super) fn choose_surface_format(
+pub fn choose_surface_format(
     surface_loader: &ash::khr::surface::Instance,
     physical_device: vk::PhysicalDevice,
     surface: vk::SurfaceKHR,
@@ -155,7 +155,7 @@ pub(super) fn choose_surface_format(
 
 /// How a frame's render pass starts.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(super) enum PassStart {
+pub enum PassStart {
     /// Clears colour and depth: the scene.
     Clear,
     /// Paints over every pixel itself (the blur's last draw), so nothing is cleared.
@@ -169,7 +169,7 @@ pub(super) enum PassStart {
     Picture,
 }
 
-pub(super) unsafe fn create_render_pass(
+pub unsafe fn create_render_pass(
     device: &ash::Device,
     format: vk::Format,
     depth_format: vk::Format,
@@ -269,7 +269,7 @@ pub(super) unsafe fn create_render_pass(
 }
 
 /// First supported candidate with `DEPTH_STENCIL_ATTACHMENT` optimal-tiling support.
-pub(super) unsafe fn find_depth_format(
+pub unsafe fn find_depth_format(
     instance: &ash::Instance,
     physical_device: vk::PhysicalDevice,
 ) -> anyhow::Result<vk::Format> {
@@ -289,7 +289,7 @@ pub(super) unsafe fn find_depth_format(
     anyhow::bail!("keine unterstuetzte Tiefenpuffer-Formatvariante gefunden")
 }
 
-pub(super) unsafe fn create_depth_image(
+pub unsafe fn create_depth_image(
     device: &ash::Device,
     mem_props: &vk::PhysicalDeviceMemoryProperties,
     format: vk::Format,
@@ -397,7 +397,7 @@ fn note_memory_fallback(flags: vk::MemoryPropertyFlags) {
     });
 }
 
-pub(crate) fn find_memory_type(
+pub fn find_memory_type(
     props: &vk::PhysicalDeviceMemoryProperties,
     type_bits: u32,
     flags: vk::MemoryPropertyFlags,
@@ -414,7 +414,7 @@ pub(crate) fn find_memory_type(
     anyhow::bail!("kein passender Vulkan-Speichertyp gefunden")
 }
 
-pub(super) unsafe extern "system" fn debug_callback(
+pub unsafe extern "system" fn debug_callback(
     _severity: vk::DebugUtilsMessageSeverityFlagsEXT,
     _types: vk::DebugUtilsMessageTypeFlagsEXT,
     data: *const vk::DebugUtilsMessengerCallbackDataEXT,

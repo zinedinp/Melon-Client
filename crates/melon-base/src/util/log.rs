@@ -50,7 +50,10 @@ impl Site {
     /// Writes `message` unless `MELON_LOG` silences `module` or this site
     /// wrote [`BURST`] lines in the current window already.
     pub fn write(&self, level: Level, module: &str, message: fmt::Arguments<'_>) {
-        let module = module.strip_prefix("melon::").unwrap_or(module);
+        let module = module
+            .strip_prefix("melon::")
+            .or_else(|| module.strip_prefix("melon_base::"))
+            .unwrap_or(module);
         if !enabled(filter(), module) {
             return;
         }

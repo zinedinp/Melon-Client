@@ -1,6 +1,9 @@
 use std::path::Path;
 use std::process::Command;
 
+/// Shader includes the UI shaders in `melon-base` use too (`glint.glsl`).
+const SHARED_SHADERS: &str = "crates/melon-base/shaders";
+
 fn compile_shader(src: &str, out_dir: &str, stage: &str) {
     let file_name = Path::new(src).file_name().unwrap().to_str().unwrap();
     compile_variant(src, out_dir, stage, file_name, &[]);
@@ -12,6 +15,7 @@ fn compile_variant(src: &str, out_dir: &str, stage: &str, out_name: &str, define
     let status = Command::new("glslc")
         .arg("--target-env=vulkan1.1")
         .arg(format!("-fshader-stage={stage}"))
+        .arg(format!("-I{SHARED_SHADERS}"))
         .args(defines.iter().map(|define| format!("-D{define}")))
         .arg(src)
         .arg("-o")
@@ -55,7 +59,7 @@ fn emit_rustc_version() {
 const WINDOWS_ICONS: [&str; 3] = [
     "packaging/melon-48.png",
     "packaging/melon-128.png",
-    "src/icon.png",
+    "crates/melon-base/src/icon.png",
 ];
 
 /// Puts [`WINDOWS_ICONS`] into the executable as its icon group: a `.res`
@@ -128,10 +132,7 @@ fn main() {
     emit_rustc_version();
     embed_windows_icon(&out_dir);
     // UI (2D quads) and sky (3D cubemap) are separate pipelines.
-    compile_shader("shaders/ui.vert", &out_dir, "vertex");
-    compile_shader("shaders/ui.frag", &out_dir, "fragment");
-    println!("cargo:rerun-if-changed=shaders/glint.glsl");
-    compile_shader("shaders/ui_glint.frag", &out_dir, "fragment");
+    println!("cargo:rerun-if-changed={SHARED_SHADERS}/glint.glsl");
     compile_shader("shaders/sky.vert", &out_dir, "vertex");
     compile_shader("shaders/sky.frag", &out_dir, "fragment");
     // The menu background blur: a full-screen triangle, one axis per run.

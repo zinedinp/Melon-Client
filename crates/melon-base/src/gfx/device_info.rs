@@ -5,7 +5,7 @@ use ash::vk;
 use std::ffi::CStr;
 
 /// `vkGetPhysicalDeviceProperties` mapped onto the fields blaze3d's `GpuDevice` reports.
-pub(super) unsafe fn read_device_info(
+pub unsafe fn read_device_info(
     instance: &ash::Instance,
     physical_device: vk::PhysicalDevice,
 ) -> DeviceInfo {

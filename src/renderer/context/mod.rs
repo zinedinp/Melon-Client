@@ -1,11 +1,10 @@
 //! Bringing Vulkan up, one step each: instance, device, render passes and
 //! pipelines, then the long-lived pools and buffers.
 
-mod device;
-mod instance;
 mod pipelines;
 
 pub(super) use pipelines::RenderPasses;
+use melon_base::gfx::{device, instance};
 mod resources;
 
 use super::{

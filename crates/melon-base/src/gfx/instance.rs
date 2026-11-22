@@ -5,10 +5,10 @@ use std::ffi::CStr;
 use ash::vk;
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 
-use crate::renderer::debug_callback;
+use crate::gfx::debug_callback;
 
 /// The instance and what came up with it.
-pub(super) struct Instance {
+pub struct Instance {
     pub instance: ash::Instance,
     /// The validation messenger, when the layer is on.
     pub debug: Option<(ash::ext::debug_utils::Instance, vk::DebugUtilsMessengerEXT)>,
@@ -18,7 +18,7 @@ pub(super) struct Instance {
 
 /// The instance, with `VK_LAYER_KHRONOS_validation` if asked for and
 /// installed.
-pub(super) unsafe fn create(
+pub unsafe fn create(
     entry: &ash::Entry,
     display: RawDisplayHandle,
     enable_validation: bool,
@@ -95,7 +95,7 @@ unsafe fn create_messenger(
 }
 
 /// The window's surface and its loader.
-pub(super) unsafe fn create_surface(
+pub unsafe fn create_surface(
     entry: &ash::Entry,
     instance: &ash::Instance,
     display: RawDisplayHandle,

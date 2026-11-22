@@ -4,39 +4,34 @@
 mod blur;
 mod capture;
 mod context;
-mod descriptor_pools;
-mod device_info;
-mod device_pick;
 mod frame;
 mod globals;
 mod gpu_timer;
-mod gui_uniforms;
 mod indirect;
 mod mesh_arena;
 pub(crate) mod pack_outline;
 mod picture;
 mod pipeline;
 pub mod post;
-pub mod quad;
 mod quad_table;
 mod record;
 mod resources;
-mod staging;
 mod submit;
 mod swapchain;
-mod texture;
-mod texture_update;
 #[cfg(test)]
 mod vk_check;
-mod vk_util;
 
-use device_info::read_device_info;
+pub use melon_base::gfx::quad;
+pub use melon_base::gfx::{DeviceInfo, TextureId};
+use melon_base::gfx::{
+    descriptor_pools, gui_uniforms, staging, texture, texture_update, vk_util,
+};
 pub use gpu_timer::PassStats;
 pub use picture::{PictureDraw, pixel_projection};
 pub use swapchain::FIFO_LATEST_READY;
 use vk_util::{
     PassStart, choose_surface_format, create_buffer, create_depth_image, create_render_pass,
-    create_sampler, debug_callback, find_depth_format, find_memory_type,
+    create_sampler, find_depth_format, find_memory_type,
 };
 
 pub use frame::{
@@ -63,10 +58,6 @@ pub struct GuiShader {
     pub inputs: Vec<u32>,
 }
 
-/// Handle to a 2D texture (UI sprites, font pages).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct TextureId(pub usize);
-
 /// Handle to a cubemap (sky / panorama).
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct CubeMapId(pub usize);
@@ -78,20 +69,6 @@ pub struct MeshId(pub usize);
 /// Handle to an uploaded list of [`TerrainQuad`]s.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct QuadMeshId(pub usize);
-
-/// What the F3 overlay's system-specs group needs about the GPU.
-#[derive(Clone)]
-pub struct DeviceInfo {
-    /// `deviceName`, e.g. "AMD Radeon RX 7900 XTX (RADV NAVI31)".
-    pub name: String,
-    /// `DeviceInfo.type` as vanilla's suffix already applied.
-    pub type_suffix: &'static str,
-    /// `vendorName`.
-    pub vendor: String,
-    /// `backendName` plus `driverInfo`.
-    pub backend: String,
-    pub driver: String,
-}
 
 pub struct Renderer {
     #[allow(dead_code)]

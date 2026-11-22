@@ -1,6 +1,6 @@
 //! Vanilla `Component.translatable` / `LanguageManager`.
 
-pub mod languages;
+pub use melon_base::i18n::languages;
 
 use crate::assets::Assets;
 use crate::i18n::languages::Language;

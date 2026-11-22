@@ -44,7 +44,7 @@ pub fn transform(virtual_width: f32, text_width: f32, time_ms: u128) -> Transfor
     let scale = phase * 100.0 / (text_width + 32.0);
     Transform2D {
         translate: [virtual_width / 2.0 + WIDTH_OFFSET, HEIGHT_OFFSET],
-        rotate: TEXT_ANGLE,
+        sin_cos: angle::sin_cos(TEXT_ANGLE),
         scale,
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "melon"
-version = "0.9.8+mc26.3"
+version = "0.10.0-pre+mc26.3"
 authors = ["Zinedin Polic"]
 edition = "2024"
 rust-version = "1.100.0"
@@ -10,7 +10,11 @@ repository = "https://github.com/zinedinp/Melon-Client"
 license = "GPL-3.0"
 default-run = "melon"
 
+[workspace]
+members = ["crates/melon-base"]
+
 [dependencies]
+melon-base = { path = "crates/melon-base" }
 aes = "0.9.4"
 anyhow = "1.0.104"
 chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }

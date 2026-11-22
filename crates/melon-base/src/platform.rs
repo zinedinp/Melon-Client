@@ -359,7 +359,7 @@ mod memory_tests {
 mod stack_tests {
     #[test]
     fn the_dropped_stack_is_the_one_cargo_sets() {
-        let config = include_str!("../.cargo/config.toml");
+        let config = include_str!("../../../.cargo/config.toml");
         let line = format!("RUST_MIN_STACK = \"{}\"", super::CARGO_STACK);
         assert!(config.contains(&line));
     }

@@ -2611,7 +2611,7 @@ checksum = "7ebb8d8732c6a6df3d8f032a82911cfc747e00efb95cc46e8d0acd5b5b88570c"
 
 [[package]]
 name = "melon"
-version = "0.9.8+mc26.3"
+version = "0.10.0-pre+mc26.3"
 dependencies = [
  "aes 0.9.4",
  "anyhow",
@@ -2625,6 +2625,7 @@ dependencies = [
  "glam",
  "image",
  "libloading 0.9.1",
+ "melon-base",
  "miraculix",
  "num-bigint 0.5.1",
  "open",
@@ -2651,6 +2652,26 @@ dependencies = [
  "shaderc",
  "tokio",
  "tokio-util",
+ "ureq",
+ "uuid",
+ "winit",
+ "zip",
+]
+
+[[package]]
+name = "melon-base"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arboard",
+ "ash",
+ "ash-window",
+ "image",
+ "open",
+ "raw-window-handle",
+ "serde",
+ "serde_json",
+ "sha1 0.11.0",
  "ureq",
  "uuid",
  "winit",

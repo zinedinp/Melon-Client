@@ -1,5 +1,5 @@
 //! Small helpers shared across the crate.
 
-pub mod base64;
+pub use melon_base::util::{base64, log};
+
 pub mod intern;
-pub mod log;

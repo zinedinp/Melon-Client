@@ -4,11 +4,28 @@ use std::ffi::CStr;
 
 use ash::vk;
 
-use crate::renderer::swapchain::FifoLatestReadyFeatures;
-use crate::renderer::{DeviceInfo, read_device_info};
+use crate::gfx::{DeviceInfo, read_device_info};
+
+/// `VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR`, chained by hand.
+#[repr(C)]
+pub struct FifoLatestReadyFeatures {
+    pub s_type: vk::StructureType,
+    pub p_next: *mut std::ffi::c_void,
+    pub present_mode_fifo_latest_ready: vk::Bool32,
+}
+
+impl FifoLatestReadyFeatures {
+    pub fn new(enabled: bool) -> Self {
+        Self {
+            s_type: vk::StructureType::from_raw(1000361000),
+            p_next: std::ptr::null_mut(),
+            present_mode_fifo_latest_ready: vk::Bool32::from(enabled),
+        }
+    }
+}
 
 /// The picked GPU and what Melon reads of it once.
-pub(super) struct Gpu {
+pub struct Gpu {
     pub physical: vk::PhysicalDevice,
     /// The one family Melon draws, computes and presents with.
     pub queue_family: u32,
@@ -18,14 +35,14 @@ pub(super) struct Gpu {
     pub info: DeviceInfo,
 }
 
-/// The GPU [`device_pick`](crate::renderer::device_pick) chooses for `surface`.
-pub(super) unsafe fn pick(
+/// The GPU [`device_pick`](crate::gfx::device_pick) chooses for `surface`.
+pub unsafe fn pick(
     instance: &ash::Instance,
     surface_loader: &ash::khr::surface::Instance,
     surface: vk::SurfaceKHR,
 ) -> anyhow::Result<Gpu> {
     let (physical, queue_family) =
-        crate::renderer::device_pick::pick(instance, surface_loader, surface)?;
+        crate::gfx::device_pick::pick(instance, surface_loader, surface)?;
     let timestamp_bits = instance
         .get_physical_device_queue_family_properties(physical)
         .get(queue_family as usize)
@@ -42,7 +59,7 @@ pub(super) unsafe fn pick(
 
 /// What the GPU offers that Melon turns on when it can.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub(super) struct Features {
+pub struct Features {
     /// `VK_KHR`/`VK_EXT_present_mode_fifo_latest_ready`, by the name offered.
     pub latest_ready: Option<&'static CStr>,
     /// `VK_EXT_pageable_device_local_memory` (with `memory_priority`).
@@ -55,7 +72,7 @@ pub(super) struct Features {
     pub robust: bool,
 }
 
-pub(super) unsafe fn probe(instance: &ash::Instance, physical: vk::PhysicalDevice) -> Features {
+pub unsafe fn probe(instance: &ash::Instance, physical: vk::PhysicalDevice) -> Features {
     let offered = instance
         .enumerate_device_extension_properties(physical)
         .unwrap_or_default();
@@ -111,7 +128,7 @@ pub(super) unsafe fn probe(instance: &ash::Instance, physical: vk::PhysicalDevic
 }
 
 /// The logical device with `features` on, and its one queue.
-pub(super) unsafe fn create(
+pub unsafe fn create(
     instance: &ash::Instance,
     gpu: &Gpu,
     features: &Features,

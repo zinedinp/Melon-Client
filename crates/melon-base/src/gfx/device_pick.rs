@@ -5,7 +5,7 @@ use std::ffi::CStr;
 
 /// What the ranking looks at.
 #[derive(Clone, Debug)]
-pub(super) struct Candidate {
+pub struct Candidate {
     pub device_type: vk::PhysicalDeviceType,
     pub name: String,
     /// Bytes in the largest `DEVICE_LOCAL` heap.
@@ -41,7 +41,7 @@ impl Candidate {
 }
 
 /// Index of the best candidate, the first on a tie; `None` when empty.
-pub(super) fn best(candidates: &[Candidate]) -> Option<usize> {
+pub fn best(candidates: &[Candidate]) -> Option<usize> {
     candidates
         .iter()
         .enumerate()
@@ -62,7 +62,7 @@ fn forced(candidates: &[Candidate], setting: &str) -> Option<usize> {
 }
 
 /// The device to render with and a graphics + present queue family on it.
-pub(super) unsafe fn pick(
+pub unsafe fn pick(
     instance: &ash::Instance,
     surface_loader: &ash::khr::surface::Instance,
     surface: vk::SurfaceKHR,

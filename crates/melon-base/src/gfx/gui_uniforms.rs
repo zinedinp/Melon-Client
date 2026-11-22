@@ -49,6 +49,17 @@ pub struct GuiFrame {
     pub game_time: f32,
 }
 
+/// `Util.getMillis() * glintSpeed * 8` from process start, speed 1: what scrolls the glint.
+pub fn glint_millis() -> f32 {
+    static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+    (START
+        .get_or_init(std::time::Instant::now)
+        .elapsed()
+        .as_secs_f64()
+        * 1000.0
+        * 8.0) as f32
+}
+
 /// `Globals.GameTime` without a world's clock.
 pub fn game_time() -> f32 {
     static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
@@ -82,7 +93,7 @@ fn projection(w: f32, h: f32) -> [f32; 16] {
     ]
 }
 
-pub(super) struct GuiUniforms {
+pub struct GuiUniforms {
     pub layout: vk::DescriptorSetLayout,
     pool: vk::DescriptorPool,
     frames: Vec<Frame>,
@@ -99,7 +110,7 @@ struct Frame {
 pub const GLINT_BINDING: u32 = BLOCKS.len() as u32;
 
 /// The set layout.
-pub(super) unsafe fn create_layout(
+pub unsafe fn create_layout(
     device: &ash::Device,
 ) -> anyhow::Result<vk::DescriptorSetLayout> {
     let mut bindings: Vec<_> = (0..BLOCKS.len() as u32)
@@ -259,7 +270,7 @@ impl Frame {
         let globals = Globals {
             camera_block_pos: [0; 3],
             glint_alpha: 1.0,
-            camera_offset: [crate::world::glint::millis(), 0.0, 0.0],
+            camera_offset: [glint_millis(), 0.0, 0.0],
             game_time: gui.game_time,
             screen_size: [gui.screen_size.0, gui.screen_size.1],
             menu_blur_radius: 5,

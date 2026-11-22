@@ -3,7 +3,7 @@
 use ash::vk;
 
 use super::{Pass, PipelineDesc, depth_disabled};
-use crate::renderer::quad::{BlendMode, Program, Vertex};
+use crate::gfx::quad::{BlendMode, Program, Vertex};
 
 const VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/ui.vert.spv"));
 const FRAG_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/ui.frag.spv"));
@@ -172,4 +172,95 @@ pub unsafe fn create(
         depth_bias: None,
     }
     .build(device, render_pass, descriptor_set_layout)
+}
+
+/// Where UI quads are recorded to, and what they are drawn with.
+pub struct Target<'a> {
+    pub device: &'a ash::Device,
+    pub cmd: vk::CommandBuffer,
+    pub pipelines: &'a UiPipelines,
+    /// The GUI uniform blocks' set of the frame being recorded.
+    pub gui_set: vk::DescriptorSet,
+    pub vertices: vk::Buffer,
+    pub indices: vk::Buffer,
+    /// The size of what is drawn into, in pixels.
+    pub extent: vk::Extent2D,
+}
+
+/// Records `calls`, in GUI coordinates spanning `ui_size`; `set_of` gives a texture's set.
+pub unsafe fn record(
+    target: &Target,
+    ui_size: (f32, f32),
+    calls: &[crate::gfx::quad::DrawCall],
+    full_scissor: vk::Rect2D,
+    set_of: impl Fn(crate::gfx::TextureId) -> vk::DescriptorSet,
+) {
+    if calls.is_empty() {
+        return;
+    }
+    let (device, cmd, ui) = (target.device, target.cmd, target.pipelines);
+    let push = [ui_size.0, ui_size.1];
+    let bind = |pass: &Pass| {
+        device.cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
+        device.cmd_push_constants(
+            cmd,
+            pass.layout,
+            vk::ShaderStageFlags::VERTEX,
+            0,
+            super::push_constant_bytes(&push, PUSH_CONSTANT_SIZE),
+        );
+    };
+    let mut applied = (Program::Sprite, BlendMode::Alpha);
+    bind(ui.pass(applied.0, applied.1));
+    device.cmd_bind_vertex_buffers(cmd, 0, &[target.vertices], &[0]);
+    device.cmd_bind_index_buffer(cmd, target.indices, 0, vk::IndexType::UINT32);
+    device.cmd_bind_descriptor_sets(
+        cmd,
+        vk::PipelineBindPoint::GRAPHICS,
+        ui.layout(),
+        1,
+        &[target.gui_set],
+        &[],
+    );
+
+    let scale_x = target.extent.width as f32 / ui_size.0;
+    let scale_y = target.extent.height as f32 / ui_size.1;
+    let mut applied_scissor = full_scissor;
+    device.cmd_set_scissor(cmd, 0, &[full_scissor]);
+    for call in calls {
+        let wanted = match call.scissor {
+            Some([x, y, w, h]) => vk::Rect2D {
+                offset: vk::Offset2D {
+                    x: (x * scale_x).round() as i32,
+                    y: (y * scale_y).round() as i32,
+                },
+                extent: vk::Extent2D {
+                    width: (w * scale_x).round() as u32,
+                    height: (h * scale_y).round() as u32,
+                },
+            },
+            None => full_scissor,
+        };
+        if wanted != applied_scissor {
+            device.cmd_set_scissor(cmd, 0, &[wanted]);
+            applied_scissor = wanted;
+        }
+        let wanted_pipeline = (call.program, call.blend);
+        if wanted_pipeline != applied {
+            let (from, to) = (ui.pass(applied.0, applied.1), ui.pass(call.program, call.blend));
+            if from.pipeline != to.pipeline {
+                bind(to);
+            }
+            applied = wanted_pipeline;
+        }
+        device.cmd_bind_descriptor_sets(
+            cmd,
+            vk::PipelineBindPoint::GRAPHICS,
+            ui.layout(),
+            0,
+            &[set_of(call.texture)],
+            &[],
+        );
+        device.cmd_draw_indexed(cmd, call.count, 1, call.first, 0, 0);
+    }
 }

@@ -38,13 +38,7 @@ pub fn has_foil(stack: &ItemStack) -> bool {
 
 /// `Util.getMillis() * glintSpeed * 8` from process start, speed 1.
 pub fn millis() -> f32 {
-    static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
-    (START
-        .get_or_init(std::time::Instant::now)
-        .elapsed()
-        .as_secs_f64()
-        * 1000.0
-        * 8.0) as f32
+    melon_base::gfx::gui_uniforms::glint_millis()
 }
 
 /// `TextureTransform.setupGlintTexturing` on a model's UV.
