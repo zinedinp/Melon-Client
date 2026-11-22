@@ -100,7 +100,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                 _ => None,
             });
     renderer.set_present(false, requested)?;
-    println!("Present-Modus: {}", renderer.present_mode_name());
+    println!("Present mode: {}", renderer.present_mode_name());
 
     let assets = melon::assets::Assets::discover()?;
     let extras = FluidSprites::TEXTURES
@@ -136,7 +136,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
         }
         std::thread::sleep(Duration::from_micros(250));
     }
-    println!("{} Sections gemesht", finished.len());
+    println!("{} sections meshed", finished.len());
     let mut meshes = LevelMeshes::default();
     meshes.upload(&mut renderer, finished);
 
@@ -164,10 +164,10 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
     let projection = world_projection(70.0, aspect, far);
     let ui = DrawList::new();
 
-    println!("\n{width}x{heights}, GPU-Zeit in ms, Median über {ROUNDS} Runden à {FRAMES} Bilder");
+    println!("\n{width}x{heights}, GPU time in ms, median of {ROUNDS} rounds of {FRAMES} frames");
     println!(
         "{:<12} {:>9} {:>9} {:>9} {:>11} {:>11} {:>9} {:>9}",
-        "Kamera", "Frame", "solid", "cutout", "translucent", "atmosphere", "cpu", "blur"
+        "Camera", "Frame", "solid", "cutout", "translucent", "atmosphere", "cpu", "blur"
     );
     let blur = std::env::var_os("MELON_BENCH_BLUR").map(|_| melon::renderer::Blur {
         radius: 5.0,

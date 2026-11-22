@@ -248,7 +248,7 @@ impl PlayerModels {
                 None => crate::auth::skin::fetch_skin(&uuid.simple().to_string()),
             };
             let skin = skin
-                .map_err(|e| eprintln!("Skin von {uuid} nicht geladen: {e:#}"))
+                .map_err(|e| eprintln!("Skin of {uuid} not loaded: {e:#}"))
                 .ok();
             let _ = sender.send((uuid, skin));
         });
@@ -276,7 +276,7 @@ impl PlayerModels {
                         }),
                     );
                 }
-                Err(e) => eprintln!("Skin von {uuid} nicht hochgeladen: {e:#}"),
+                Err(e) => eprintln!("Skin of {uuid} not uploaded: {e:#}"),
             }
         }
     }
@@ -296,7 +296,7 @@ impl PlayerModels {
                 let name = name.to_string();
                 std::thread::spawn(move || {
                     let skin = crate::auth::skin::fetch_skin_by_name(&name)
-                        .map_err(|e| eprintln!("Skin von {name} nicht geladen: {e:#}"))
+                        .map_err(|e| eprintln!("Skin of {name} not loaded: {e:#}"))
                         .ok();
                     let _ = sender.send((key, skin));
                 });
@@ -487,7 +487,7 @@ impl MobModels {
         let texture = image.and_then(|image| {
             renderer
                 .load_texture(&image)
-                .map_err(|e| eprintln!("Textur {id} nicht hochgeladen: {e:#}"))
+                .map_err(|e| eprintln!("Texture {id} not uploaded: {e:#}"))
                 .ok()
         });
         self.textures.insert(id.to_owned(), texture);

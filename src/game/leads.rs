@@ -56,7 +56,7 @@ impl LeadMeshes {
             kept.origin = lead.start.floor().as_ivec3();
             match renderer.upload_mesh(&lead.quads(kept.origin.as_vec3())) {
                 Ok(mesh) => kept.mesh = Some(mesh),
-                Err(e) => eprintln!("Leinen-Mesh fehlgeschlagen: {e:#}"),
+                Err(e) => eprintln!("Lead mesh failed: {e:#}"),
             }
         }
         if let Some(mesh) = kept.mesh {

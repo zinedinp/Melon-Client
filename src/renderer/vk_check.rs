@@ -125,7 +125,7 @@ impl Gpu {
                     .iter()
                     .any(|q| q.queue_flags.contains(vk::QueueFlags::GRAPHICS))
             })
-            .ok_or_else(|| anyhow::anyhow!("keine Grafik-GPU gefunden"))?;
+            .ok_or_else(|| anyhow::anyhow!("no graphics GPU found"))?;
         let family = instance
             .get_physical_device_queue_family_properties(physical)
             .iter()
@@ -355,8 +355,8 @@ fn post_chains_pass_validation() {
     use crate::assets::packs::{self, Pack, ResourceStack};
     use std::path::Path;
 
-    let Some(root) = std::env::var_os("MELON_ASSETS").map(PathBuf::from) else {
-        eprintln!("MELON_ASSETS fehlt, Test uebersprungen");
+    let Some(root) = crate::assets::test_root() else {
+        eprintln!("no assets (MELON_ASSETS), test skipped");
         return;
     };
     let _serial = serial();

@@ -60,8 +60,6 @@ pub fn compile(assets_root: &Path, pass: &Pass) -> anyhow::Result<Compiled> {
 mod tests {
     use super::*;
     use crate::renderer::post::config::{Config, ENTITY_OUTLINE, MAIN};
-    use serde_json::Value;
-    use std::path::PathBuf;
 
     #[test]
     fn a_pass_offers_its_samplers_then_its_blocks() {
@@ -84,25 +82,30 @@ mod tests {
 
     /// Every pass of the chain in `MELON_PACK_JSON` compiles, with the
     #[test]
-    #[ignore = "needs MELON_PACK_JSON, MELON_PACK and MELON_ASSETS"]
-    fn a_real_chains_shaders_compile() {
+    fn real_chains_shaders_compile() {
         use crate::assets::packs::{self, Pack, ResourceStack};
-        let root = PathBuf::from(std::env::var("MELON_ASSETS").expect("MELON_ASSETS"));
-        let pack_path = std::env::var("MELON_PACK").expect("MELON_PACK");
-        let pack = Pack::open("test".into(), "test".into(), Path::new(&pack_path)).expect("opens");
-        packs::activate(ResourceStack {
-            packs: vec![std::sync::Arc::new(pack)],
+        let Some(root) = crate::assets::test_root() else {
+            eprintln!("no assets (MELON_ASSETS), test skipped");
+            return;
+        };
+        let pack = std::env::var_os("MELON_PACK").map(|path| {
+            let pack = Pack::open("test".into(), "test".into(), Path::new(&path)).expect("opens");
+            packs::activate(ResourceStack {
+                packs: vec![std::sync::Arc::new(pack)],
+            });
         });
-        let json: Value = serde_json::from_slice(
-            &std::fs::read(std::env::var("MELON_PACK_JSON").expect("MELON_PACK_JSON")).unwrap(),
-        )
-        .unwrap();
-        let config = Config::parse(&json).unwrap();
-        config.validate(&[MAIN, ENTITY_OUTLINE]).unwrap();
-        for pass in &config.passes {
-            compile(&root, pass).unwrap_or_else(|e| panic!("{}: {e:#}", pass.fragment_shader));
-            eprintln!("{} compiled", pass.fragment_shader);
+        let chains = crate::assets::test_post_chains(Some(&root));
+        assert!(!chains.is_empty(), "no post_effect/*.json under the assets");
+        for (name, json) in chains {
+            let config = Config::parse(&json).unwrap_or_else(|e| panic!("{name}: {e:#}"));
+            config.validate(&[MAIN, ENTITY_OUTLINE]).unwrap();
+            for pass in &config.passes {
+                compile(&root, pass)
+                    .unwrap_or_else(|e| panic!("{name}, {}: {e:#}", pass.fragment_shader));
+            }
         }
-        packs::activate(ResourceStack::default());
+        if pack.is_some() {
+            packs::activate(ResourceStack::default());
+        }
     }
 }

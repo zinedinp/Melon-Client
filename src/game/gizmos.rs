@@ -243,7 +243,7 @@ impl Slot {
                 self.built = vertices;
                 self.origin = origin;
             }
-            Err(e) => eprintln!("Gizmo-Mesh fehlgeschlagen: {e:#}"),
+            Err(e) => eprintln!("Gizmo mesh failed: {e:#}"),
         }
     }
 

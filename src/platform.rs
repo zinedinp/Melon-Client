@@ -156,18 +156,18 @@ fn run_or_fallback(mut preferred: Command, mut fallback: Command) -> Option<Outp
 /// `Util.getPlatform().openUri`.
 pub fn open_url(url: &str) {
     if let Err(e) = open::that(url) {
-        eprintln!("Konnte {url} nicht öffnen: {e:#}");
+        eprintln!("Could not open {url}: {e:#}");
     }
 }
 
 /// Makes `path` if it is missing, then opens it in the file manager.
 pub fn open_dir(path: &std::path::Path) {
     if let Err(e) = std::fs::create_dir_all(path) {
-        eprintln!("{} konnte nicht angelegt werden: {e}", path.display());
+        eprintln!("Could not create {}: {e}", path.display());
         return;
     }
     if let Err(e) = open::that(path) {
-        eprintln!("{} konnte nicht geöffnet werden: {e}", path.display());
+        eprintln!("Could not open {}: {e}", path.display());
     }
 }
 
@@ -177,7 +177,7 @@ pub fn copy_to_clipboard(text: &str) {
         Ok(mut clipboard) => {
             let _ = clipboard.set_text(text.to_owned());
         }
-        Err(e) => eprintln!("Zwischenablage nicht verfügbar: {e}"),
+        Err(e) => eprintln!("Clipboard unavailable: {e}"),
     }
 }
 
@@ -412,7 +412,7 @@ pub fn lower_thread_priority() {
             }
             if setpriority(PRIO_PROCESS, 0, BACKGROUND_NICE) != 0 {
                 eprintln!(
-                    "Thread-Priorität nicht gesenkt: {}",
+                    "Thread priority not lowered: {}",
                     std::io::Error::last_os_error()
                 );
             }

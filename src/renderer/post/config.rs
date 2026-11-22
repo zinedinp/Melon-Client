@@ -401,14 +401,20 @@ mod tests {
         assert!(Config::parse(&json!({"targets": {"t": {"width": 0}}})).is_err());
     }
 
-    /// The pack in `MELON_PACK_JSON` (a chain's JSON file) parses.
+    /// Vanilla's chains (or the one in `MELON_PACK_JSON`) parse.
     #[test]
-    #[ignore = "needs a chain in MELON_PACK_JSON"]
-    fn a_real_chain_parses() {
-        let path = std::env::var("MELON_PACK_JSON").expect("MELON_PACK_JSON");
-        let json: Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
-        let config = Config::parse(&json).unwrap();
-        config.validate(&[MAIN, ENTITY_OUTLINE]).unwrap();
-        assert!(!config.passes.is_empty());
+    fn real_chains_parse() {
+        let chains = crate::assets::test_post_chains(crate::assets::test_root().as_deref());
+        if chains.is_empty() {
+            eprintln!("no assets and no MELON_PACK_JSON, test skipped");
+            return;
+        }
+        for (name, json) in chains {
+            let config = Config::parse(&json).unwrap_or_else(|e| panic!("{name}: {e:#}"));
+            config
+                .validate(&[MAIN, ENTITY_OUTLINE])
+                .unwrap_or_else(|e| panic!("{name}: {e:#}"));
+            assert!(!config.passes.is_empty(), "{name}");
+        }
     }
 }

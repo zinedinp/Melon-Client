@@ -71,7 +71,7 @@ impl ShadowMeshes {
             if !relative.is_empty() {
                 match renderer.upload_mesh(&relative) {
                     Ok(mesh) => shadow.mesh = Some(mesh),
-                    Err(e) => eprintln!("Schatten-Mesh fehlgeschlagen: {e:#}"),
+                    Err(e) => eprintln!("Shadow mesh failed: {e:#}"),
                 }
             }
         }

@@ -284,7 +284,7 @@ impl InWorld {
                         texture,
                         solid,
                     }),
-                    Err(e) => eprintln!("Text-Display-Mesh fehlgeschlagen: {e:#}"),
+                    Err(e) => eprintln!("Text display mesh failed: {e:#}"),
                 }
             }
             self.entity_meshes.text_displays.kept.insert(

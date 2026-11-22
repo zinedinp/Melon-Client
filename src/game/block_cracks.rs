@@ -105,7 +105,7 @@ impl BlockCracks {
                         state,
                         mesh,
                     }),
-                    Err(e) => eprintln!("Risse nicht hochgeladen: {e:#}"),
+                    Err(e) => eprintln!("Block cracks not uploaded: {e:#}"),
                 }
             }
         }

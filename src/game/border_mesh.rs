@@ -52,7 +52,7 @@ impl BorderMesh {
                     glint: crate::renderer::Glint::None,
                 });
             }
-            Err(e) => eprintln!("Weltgrenzen-Mesh fehlgeschlagen: {e:#}"),
+            Err(e) => eprintln!("World border mesh failed: {e:#}"),
         }
     }
 

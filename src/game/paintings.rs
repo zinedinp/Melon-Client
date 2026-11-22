@@ -40,7 +40,7 @@ fn upload(renderer: &mut Renderer, vertices: &[crate::renderer::WorldVertex]) ->
     }
     renderer
         .upload_mesh(vertices)
-        .map_err(|e| eprintln!("Gemälde-Mesh fehlgeschlagen: {e:#}"))
+        .map_err(|e| eprintln!("Painting mesh failed: {e:#}"))
         .ok()
 }
 

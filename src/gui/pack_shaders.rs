@@ -70,7 +70,7 @@ pub fn compile(assets_root: &Path) -> Vec<GuiShader> {
             Ok(shader) => shader,
             Err(e) => {
                 eprintln!(
-                    "Shader core/{} aus dem Ressourcenpaket verworfen: {e:#}",
+                    "Shader core/{} from a resource pack dropped: {e:#}",
                     pipeline.shader
                 );
                 None
@@ -163,12 +163,13 @@ mod tests {
 
     /// A real pack's GUI shaders (`MELON_PACK`, a zip or folder) compile.
     #[test]
-    #[ignore = "needs a pack in MELON_PACK (and MELON_ASSETS)"]
     fn a_real_packs_gui_shaders_compile() {
         use crate::assets::packs::{self, Pack, ResourceStack};
-        let root = std::env::var_os("MELON_ASSETS")
-            .map_or_else(crate::assets::default_root, std::path::PathBuf::from);
-        let path = std::env::var("MELON_PACK").expect("MELON_PACK");
+        let (Some(root), Some(path)) = (crate::assets::test_root(), std::env::var_os("MELON_PACK"))
+        else {
+            eprintln!("no pack in MELON_PACK (or no assets), test skipped");
+            return;
+        };
         let pack = Pack::open("test".into(), "test".into(), Path::new(&path)).expect("opens");
         packs::activate(ResourceStack {
             packs: vec![std::sync::Arc::new(pack)],

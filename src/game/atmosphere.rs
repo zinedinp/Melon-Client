@@ -196,7 +196,7 @@ fn replace_mesh(
             Some(mesh)
         }
         Err(e) => {
-            eprintln!("Atmosphären-Mesh fehlgeschlagen: {e:#}");
+            eprintln!("Atmosphere mesh failed: {e:#}");
             None
         }
     }

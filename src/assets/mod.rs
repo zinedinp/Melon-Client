@@ -197,6 +197,43 @@ pub fn default_root() -> PathBuf {
     )
 }
 
+/// Tests' assets: `MELON_ASSETS`, else the prepared ones [`Assets::discover`]
+/// finds; `None` without either.
+#[cfg(test)]
+pub fn test_root() -> Option<PathBuf> {
+    std::env::var_os("MELON_ASSETS")
+        .map(PathBuf::from)
+        .or_else(|| Assets::discover().ok().map(|assets| assets.root))
+        .filter(|root| root.join("minecraft").is_dir())
+}
+
+/// The post chains tests check: the one in `MELON_PACK_JSON`, else every
+/// vanilla `post_effect/*.json` under `root`.
+#[cfg(test)]
+pub fn test_post_chains(root: Option<&Path>) -> Vec<(String, serde_json::Value)> {
+    let read = |path: &Path| {
+        let bytes = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        serde_json::from_slice(&bytes).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
+    };
+    if let Some(path) = std::env::var_os("MELON_PACK_JSON") {
+        let path = PathBuf::from(path);
+        return vec![(path.display().to_string(), read(&path))];
+    }
+    let Some(dir) = root.map(|root| root.join("minecraft/post_effect")) else {
+        return Vec::new();
+    };
+    let mut chains: Vec<_> = std::fs::read_dir(&dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|e| e == "json"))
+        .map(|path| (path.display().to_string(), read(&path)))
+        .collect();
+    chains.sort_by(|a, b| a.0.cmp(&b.0));
+    chains
+}
+
 /// Local `assets/` tree from the vanilla client.jar (`assets/<namespace>/...`).
 pub struct Assets {
     root: PathBuf,
@@ -237,7 +274,7 @@ impl Assets {
                 return Ok(Self::from_root(candidate));
             }
         }
-        anyhow::bail!("assets/minecraft/ nicht gefunden.")
+        anyhow::bail!("assets/minecraft/ not found.")
     }
 
     /// Decodes the PNG behind a texture identifier (`namespace:path` to

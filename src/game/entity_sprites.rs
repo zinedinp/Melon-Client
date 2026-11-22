@@ -78,7 +78,7 @@ impl SpriteMeshes {
         if slot.is_none() {
             match renderer.upload_mesh(&quads) {
                 Ok(mesh) => *slot = Some(mesh),
-                Err(e) => eprintln!("Sprite-Mesh fehlgeschlagen: {e:#}"),
+                Err(e) => eprintln!("Sprite mesh failed: {e:#}"),
             }
         }
     }
@@ -110,7 +110,7 @@ impl SpriteMeshes {
             let quads = crate::world::entity::lightning::quads(seed);
             let mesh = renderer
                 .upload_mesh(&quads)
-                .map_err(|e| eprintln!("Blitz-Mesh fehlgeschlagen: {e:#}"))
+                .map_err(|e| eprintln!("Lightning mesh failed: {e:#}"))
                 .ok();
             (mesh, false)
         });
