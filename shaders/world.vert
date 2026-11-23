@@ -23,6 +23,9 @@ layout(location = 2) out vec2 frag_light;
 // for meshes the fog doesn't touch.
 layout(location = 3) out vec2 frag_fog;
 
+// The same depth in every pipeline: the glint's `EQUAL` test meets its mesh.
+invariant gl_Position;
+
 void main() {
     gl_Position = pc.view_proj * vec4(in_pos + pc.offset.xyz, 1.0);
     frag_uv = in_uv;

@@ -31,6 +31,10 @@ layout(location = 1) out vec4 frag_color;
 layout(location = 2) out vec2 frag_light;
 layout(location = 3) out vec2 frag_fog;
 
+// The same depth in the solid and cutout pipelines: a cutout overlay (the
+// grass block's side) lies exactly on its face, as in vanilla, no bias.
+invariant gl_Position;
+
 // A `QuadCorner`: position, packed UV (unorm16 x2), colour (unorm8 x4;
 // the face's directional shade times its tint), and the direction (0-5, in
 // `Direction` order) that shade was taken for. Light comes per quad.

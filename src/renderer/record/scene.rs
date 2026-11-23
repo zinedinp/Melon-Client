@@ -217,9 +217,10 @@ impl Renderer {
                             _ if entity.scroll.is_some() => {
                                 (Mode::Scrolled, &self.pipelines.scrolled)
                             }
-                            Blending::Translucent if writes_depth => {
-                                (Mode::Text, &self.pipelines.text)
-                            }
+                            Blending::Translucent if writes_depth => (
+                                Mode::EntityTranslucent,
+                                &self.pipelines.entity_translucent,
+                            ),
                             Blending::Translucent => {
                                 (Mode::Translucent, &self.pipelines.translucent)
                             }
@@ -528,6 +529,7 @@ impl Renderer {
             Mode::Scrolled => &self.pipelines.scrolled,
             Mode::TranslucentTerrain => &self.pipelines.translucent_terrain,
             Mode::Text => &self.pipelines.text,
+            Mode::EntityTranslucent => &self.pipelines.entity_translucent,
             Mode::Clouds => &self.pipelines.clouds,
             Mode::Weather => &self.pipelines.weather,
             Mode::Celestial => &self.pipelines.celestial,

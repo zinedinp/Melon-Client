@@ -110,6 +110,7 @@ pub(super) unsafe fn create(
         energy_swirl: world(Mode::EnergySwirl)?,
         scrolled: world(Mode::Scrolled)?,
         text: world(Mode::Text)?,
+        entity_translucent: world(Mode::EntityTranslucent)?,
         clouds: world(Mode::Clouds)?,
         weather: world(Mode::Weather)?,
         celestial: world(Mode::Celestial)?,

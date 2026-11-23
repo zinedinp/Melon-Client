@@ -276,9 +276,11 @@ impl Renderer {
         for entity in entities {
             let (mode, layout) = match entity.blend {
                 Blending::Opaque => (Mode::Opaque, self.pipelines.world.layout),
-                Blending::Text | Blending::Translucent | Blending::Additive => {
-                    (Mode::Text, self.pipelines.text.layout)
-                }
+                Blending::Text => (Mode::Text, self.pipelines.text.layout),
+                Blending::Translucent | Blending::Additive => (
+                    Mode::EntityTranslucent,
+                    self.pipelines.entity_translucent.layout,
+                ),
             };
             let at = (picture.view_proj * entity.model, Vec3::ZERO);
             let [r, g, b] = entity.light.unwrap_or([1.0; 3]);

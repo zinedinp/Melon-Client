@@ -171,6 +171,8 @@ struct Pipelines {
     scrolled: pipeline::Pass,
     /// Text displays: blended, depth written.
     text: pipeline::Pass,
+    /// See-through models: blended, depth written, not offset.
+    entity_translucent: pipeline::Pass,
     /// Fancy clouds: blended, no back-face cull.
     clouds: pipeline::Pass,
     /// Rain and snow: blended, no cull.
@@ -408,6 +410,7 @@ impl Drop for Renderer {
             self.pipelines.energy_swirl.destroy(&self.device);
             self.pipelines.scrolled.destroy(&self.device);
             self.pipelines.text.destroy(&self.device);
+            self.pipelines.entity_translucent.destroy(&self.device);
             self.pipelines.clouds.destroy(&self.device);
             self.pipelines.weather.destroy(&self.device);
             self.pipelines.celestial.destroy(&self.device);

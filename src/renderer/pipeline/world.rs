@@ -153,6 +153,9 @@ pub enum Mode {
     /// Text displays (`RenderPipelines.TEXT_POLYGON_OFFSET`): blended,
     /// depth-tested and depth written, clear texels dropped.
     Text,
+    /// See-through models (`ENTITY_TRANSLUCENT`, `ITEM_TRANSLUCENT`):
+    /// [`Self::Text`] without its depth bias.
+    EntityTranslucent,
     /// Water, glass and ice (vanilla `TRANSLUCENT_TERRAIN`).
     TranslucentTerrain,
     /// Fancy clouds (`RenderPipelines.CLOUDS`).
@@ -295,7 +298,7 @@ pub unsafe fn create(
                 .depth_compare_op(vk::CompareOp::GREATER_OR_EQUAL),
             translucent_blend(),
         ),
-        Mode::Clouds | Mode::TranslucentTerrain | Mode::Text => (
+        Mode::Clouds | Mode::TranslucentTerrain | Mode::Text | Mode::EntityTranslucent => (
             vk::CullModeFlags::BACK,
             vk::PipelineDepthStencilStateCreateInfo::default()
                 .depth_test_enable(true)
@@ -517,9 +520,11 @@ pub unsafe fn create(
             Mode::Crumbling => Some((40.0, 3.0)),
             // Vanilla's `DepthStencilState(GREATER_THAN_OR_EQUAL, true, 1, 1)`.
             Mode::LinesDepthBias => Some((1.0, 1.0)),
-            // The glint redraws those meshes with depth `EQUAL`: the same
-            // offset, or it never meets them.
-            Mode::Opaque | Mode::Translucent | Mode::Text | Mode::Glint => Some((16.0, 2.0)),
+            // Only text is offset; entities, cutout terrain and the glint
+            // over them have none, as vanilla (`DepthStencilState.DEFAULT`).
+            // A slope bias pulled faces seen edge-on (a box's inner sides
+            // under armor or leaves) through the faces they meet.
+            Mode::Text => Some((16.0, 2.0)),
             _ => None,
         },
     }
