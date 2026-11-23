@@ -9,7 +9,7 @@ use super::texture::{Texture, Uploader};
 use super::texture_update::{self, PendingInit};
 use super::{
     PassStart, TextureId, choose_surface_format, create_depth_image, create_render_pass,
-    create_sampler, device, find_depth_format, instance, pipeline, vk_util,
+    create_sampler, device, features, find_depth_format, instance, pipeline, vk_util,
 };
 use ash::vk;
 use image::RgbaImage;
@@ -97,8 +97,8 @@ impl Renderer2d {
         } = instance::create(&entry, display, enable_validation)?;
         let (surface_loader, surface) =
             instance::create_surface(&entry, &instance, display, window.window_handle()?.as_raw())?;
-        let gpu = device::pick(&instance, &surface_loader, surface)?;
-        let features = device::probe(
+        let gpu = device::pick(&instance, api, &surface_loader, surface)?;
+        let features = features::probe(
             &instance,
             gpu.physical,
             api,

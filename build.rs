@@ -13,7 +13,8 @@ fn compile_shader(src: &str, out_dir: &str, stage: &str) {
 fn compile_variant(src: &str, out_dir: &str, stage: &str, out_name: &str, defines: &[&str]) {
     let out_path = format!("{out_dir}/{out_name}.spv");
     let status = Command::new("glslc")
-        .arg("--target-env=vulkan1.1")
+        // SPIR-V 1.0: every Vulkan version from 1.0 on takes it.
+        .arg("--target-env=vulkan1.0")
         .arg(format!("-fshader-stage={stage}"))
         .arg(format!("-I{SHARED_SHADERS}"))
         .args(defines.iter().map(|define| format!("-D{define}")))
@@ -27,7 +28,7 @@ fn compile_variant(src: &str, out_dir: &str, stage: &str, out_name: &str, define
     }
     let status = Command::new("spirv-val")
         .arg("--target-env")
-        .arg("vulkan1.1")
+        .arg("vulkan1.0")
         .arg(&out_path)
         .status()
         .unwrap_or_else(|e| panic!("failed to run spirv-val (is it installed?): {e}"));

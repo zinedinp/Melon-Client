@@ -3,7 +3,7 @@
 
 mod pipelines;
 
-use melon_base::gfx::{device, instance};
+use melon_base::gfx::{device, features, instance};
 pub(super) use pipelines::RenderPasses;
 mod resources;
 
@@ -35,8 +35,8 @@ impl Renderer {
         let (surface_loader, surface) =
             instance::create_surface(&entry, &instance, display, window.window_handle()?.as_raw())?;
 
-        let gpu = device::pick(&instance, &surface_loader, surface)?;
-        let features = device::probe(&instance, gpu.physical, api, device::GAME);
+        let gpu = device::pick(&instance, api, &surface_loader, surface)?;
+        let features = features::probe(&instance, gpu.physical, api, features::GAME);
         let (device, queue) = device::create(&instance, &gpu, &features)?;
         let mem_props = gpu.mem_props;
 

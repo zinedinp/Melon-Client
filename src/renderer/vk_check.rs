@@ -5,8 +5,8 @@ use super::{
     vk_util::{PassStart, create_render_pass, find_depth_format},
 };
 use ash::vk;
-use melon_base::gfx::device;
-use numerobis::vulkan::{ApiVersion, app_version};
+use melon_base::gfx::{api, device, features};
+use numerobis::vulkan::ApiVersion;
 use std::ffi::{CStr, CString};
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -71,7 +71,13 @@ struct Gpu {
 }
 
 impl Gpu {
+    /// At the version the game picks.
     unsafe fn new() -> anyhow::Result<Self> {
+        Self::at(None)
+    }
+
+    /// At `version` instead, if given: `1.0` checks the floor every path has.
+    unsafe fn at(version: Option<ApiVersion>) -> anyhow::Result<Self> {
         ensure_layer_search_path();
         let entry = ash::Entry::load()?;
         let layer = c"VK_LAYER_KHRONOS_validation";
@@ -86,12 +92,7 @@ impl Gpu {
              or set VK_LAYER_PATH. See https://github.com/KhronosGroup/Vulkan-ValidationLayers"
         );
 
-        let loader = entry
-            .try_enumerate_instance_version()
-            .ok()
-            .flatten()
-            .map(ApiVersion::from_raw);
-        let api = app_version(loader, ApiVersion::NEWEST);
+        let api = version.unwrap_or_else(|| api::instance_version(&entry));
         let app_name = c"Melon";
         let app_info = vk::ApplicationInfo::default()
             .application_name(app_name)
@@ -146,18 +147,8 @@ impl Gpu {
             .queue_priorities(&priorities);
         let queues = [queue_info];
         // The game's features, so the layer checks the chain it builds.
-        let features = device::probe(&instance, physical, api, device::GAME);
-        let device_extensions: Vec<_> = features
-            .extensions()
-            .into_iter()
-            .map(CStr::as_ptr)
-            .collect();
-        let mut chain = features.plan.device_chain();
-        let mut device_info = vk::DeviceCreateInfo::default()
-            .queue_create_infos(&queues)
-            .enabled_extension_names(&device_extensions);
-        device_info.p_next = chain.features2().cast_const();
-        let device = instance.create_device(physical, &device_info, None)?;
+        let features = features::probe(&instance, physical, api, features::GAME);
+        let device = device::create_with(&instance, physical, &queues, &features)?;
 
         Ok(Self {
             _entry: entry,
@@ -212,10 +203,21 @@ unsafe fn color_only_pass(
 
 #[test]
 fn validation_layers_accept_every_pipeline() {
+    every_pipeline_passes_validation(None);
+}
+
+/// The same on a Vulkan 1.0 instance: the shaders' SPIR-V and the device's
+/// bare 1.0 features are valid there too.
+#[test]
+fn validation_layers_accept_every_pipeline_on_vulkan_1_0() {
+    every_pipeline_passes_validation(Some(ApiVersion::V1_0));
+}
+
+fn every_pipeline_passes_validation(version: Option<ApiVersion>) {
     let _serial = serial();
     messages().clear();
     unsafe {
-        let gpu = Gpu::new().expect("Vulkan instance with validation");
+        let gpu = Gpu::at(version).expect("Vulkan instance with validation");
         let depth = find_depth_format(&gpu.instance, gpu.physical).expect("depth format");
         let color = vk::Format::B8G8R8A8_UNORM;
         let render_pass = create_render_pass(&gpu.device, color, depth, PassStart::Clear)

@@ -3,7 +3,7 @@
 use std::ffi::CStr;
 
 use ash::vk;
-use numerobis::vulkan::{ApiVersion, app_version};
+use numerobis::vulkan::ApiVersion;
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 
 use crate::gfx::debug_callback;
@@ -15,8 +15,7 @@ pub struct Instance {
     pub debug: Option<(ash::ext::debug_utils::Instance, vk::DebugUtilsMessengerEXT)>,
     /// `VK_EXT_debug_utils` is on: passes get labels for GPU profilers.
     pub labels: bool,
-    /// The `apiVersion` it was made with: the newest the loader and
-    /// numerobis's tables both know.
+    /// The `apiVersion` it was made with ([`crate::gfx::api`]).
     pub api: ApiVersion,
 }
 
@@ -52,12 +51,7 @@ pub unsafe fn create(
         extension_names.push(ash::ext::debug_utils::NAME.as_ptr());
     }
 
-    let loader = entry
-        .try_enumerate_instance_version()
-        .ok()
-        .flatten()
-        .map(ApiVersion::from_raw);
-    let api = app_version(loader, ApiVersion::NEWEST);
+    let api = crate::gfx::api::instance_version(entry);
     let app_name = c"Melon";
     let app_info = vk::ApplicationInfo::default()
         .application_name(app_name)

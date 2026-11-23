@@ -58,9 +58,10 @@ pub fn compile(
 ) -> anyhow::Result<Vec<u32>> {
     let compiler = shaderc::Compiler::new()?;
     let mut options = shaderc::CompileOptions::new()?;
+    // SPIR-V 1.0: every Vulkan version from 1.0 on takes it.
     options.set_target_env(
         shaderc::TargetEnv::Vulkan,
-        shaderc::EnvVersion::Vulkan1_1 as u32,
+        shaderc::EnvVersion::Vulkan1_0 as u32,
     );
     options.set_auto_bind_uniforms(true);
     options.set_generate_debug_info();

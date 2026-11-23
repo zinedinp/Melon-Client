@@ -89,9 +89,9 @@ pub unsafe fn pick(
                         .unwrap_or(false);
                 (graphics && present).then_some(idx)
             });
-        let usable = has_swapchain && props.api_version >= vk::API_VERSION_1_1;
-        let Some(family) = family.filter(|_| usable) else {
-            crate::warn!("vulkan: {name} unusable (no present, swapchain or Vulkan 1.1)");
+        // Any Vulkan version: 1.0 is the floor every path has.
+        let Some(family) = family.filter(|_| has_swapchain) else {
+            crate::warn!("vulkan: {name} unusable (no present or swapchain)");
             continue;
         };
         let memory = unsafe { instance.get_physical_device_memory_properties(pd) };
@@ -126,7 +126,7 @@ pub unsafe fn pick(
             found
         })
         .or_else(|| best(&candidates))
-        .ok_or_else(|| anyhow::anyhow!("keine passende Vulkan-GPU gefunden"))?;
+        .ok_or_else(|| anyhow::anyhow!("no usable Vulkan GPU found"))?;
     crate::info!("vulkan: using GPU {choice}: {}", candidates[choice].name);
     Ok(devices[choice])
 }
