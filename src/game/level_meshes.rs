@@ -133,7 +133,7 @@ impl SectionMeshes {
         }
         let faces = built.translucent;
         if !faces.vertices.is_empty() {
-            let eye = faces.sorted_from.as_dvec3() + corner_of(pos);
+            let eye = faces.sorted_from.as_dvec3() + terrain::section_corner(pos, built.base_y);
             self.translucent = Some(Translucent {
                 mesh: sink.vertices(&faces.vertices)?,
                 view: point_of_view(section_of_eye(eye, built.base_y), pos),
@@ -333,20 +333,6 @@ struct Column {
     filled: u32,
     /// Bit `y` set for each section a mesh came for, empty or not.
     compiled: u32,
-}
-
-/// The chunk-local origin of section `pos`'s vertices.
-fn corner_of((x, _, z): SectionPos) -> DVec3 {
-    DVec3::new(
-        f64::from(x * SECTION_SIZE),
-        0.0,
-        f64::from(z * SECTION_SIZE),
-    )
-}
-
-/// `eye` from a section's corner, in the floats its faces are sorted by.
-fn from_corner(eye: DVec3, pos: SectionPos) -> Vec3 {
-    (eye - corner_of(pos)).as_vec3()
 }
 
 /// The section `eye` is in, `y` counted from the world's bottom `min_y`.
@@ -611,7 +597,7 @@ impl LevelMeshes {
         };
         if translucent
             .faces
-            .camera_crossed_a_face(from_corner(eye, pos))
+            .camera_crossed_a_face(terrain::sort_eye(eye, pos, self.min_y))
         {
             return true;
         }
@@ -648,10 +634,11 @@ impl LevelMeshes {
         eye: DVec3,
         camera: IVec3,
     ) -> usize {
+        let min_y = self.min_y;
         let Some(translucent) = self.translucent_mut(pos) else {
             return 0;
         };
-        translucent.faces.sort(from_corner(eye, pos));
+        translucent.faces.sort(terrain::sort_eye(eye, pos, min_y));
         translucent.view = point_of_view(camera, pos);
         translucent.block = eye.floor().as_ivec3();
         match sink.vertices(&translucent.faces.vertices) {
@@ -728,11 +715,13 @@ impl LevelMeshes {
             let vertical = 1 << Direction::Up.index() | 1 << Direction::Down.index();
             let corner = (cx * SECTION_SIZE, cz * SECTION_SIZE);
             let quads_origin = IVec3::new(corner.0, min_y, corner.1);
-            let vertices_origin = IVec3::new(corner.0, 0, corner.1);
             let mut rest = in_view;
             while rest != 0 {
                 let y = rest.trailing_zeros();
                 rest &= rest - 1;
+                // Lava and translucent vertices count from the section's corner.
+                let vertices_origin =
+                    IVec3::new(corner.0, min_y + y as i32 * SECTION_SIZE, corner.1);
                 let Some(section) = column.draws.get(y as usize) else {
                     continue;
                 };
@@ -1177,7 +1166,7 @@ mod tests {
             vertices: [quad(low), quad(high)].concat(),
             ..TranslucentMesh::default()
         };
-        faces.sort(from_corner(eye, pos));
+        faces.sort(terrain::sort_eye(eye, pos, Height::OVERWORLD.min_y));
         FinishedMesh {
             pos,
             mesh: SectionMesh {
@@ -1230,6 +1219,25 @@ mod tests {
         meshes.seen_translucent = vec![pos];
         meshes.resort_with(&mut sink, above);
         meshes.resort_with(&mut sink, DVec3::new(0.5, -30.0, 0.5));
+        assert_eq!(heights(&meshes, pos), [12.0, 2.0]);
+    }
+
+    /// Faces count from their section's corner (y 32 here), as vanilla's
+    /// do: from y 36 the quad at 12 (44 in the world) is the far one.
+    #[test]
+    fn faces_are_sorted_from_their_sections_corner() {
+        let mut next = 0;
+        let mut sink = Headless(|| {
+            next += 1;
+            next
+        });
+        let pos = (0, 6, 0);
+        let above = DVec3::new(0.5, 60.0, 0.5);
+        let mut meshes = LevelMeshes::default();
+        meshes.upload_to(&mut sink, vec![two_quads(pos, 2.0, 12.0, above)]);
+        assert_eq!(heights(&meshes, pos), [2.0, 12.0]);
+        meshes.seen_translucent = vec![pos];
+        meshes.resort_with(&mut sink, DVec3::new(0.5, 36.0, 0.5));
         assert_eq!(heights(&meshes, pos), [12.0, 2.0]);
     }
 

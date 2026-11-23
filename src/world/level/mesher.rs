@@ -5,9 +5,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::JoinHandle;
 
 use crossbeam_channel::{Receiver, Sender};
-use glam::Vec3;
+use glam::DVec3;
 
-use crate::math::SECTION_SIZE;
 use crate::world::block_models::BlockModels;
 use crate::world::block_tint::TintSettings;
 use crate::world::chunk::Chunk;
@@ -28,7 +27,7 @@ pub(super) struct Job {
     /// The dimension's face shading, relative to the default.
     pub cardinal: [f32; 6],
     /// Where the camera was, to sort the translucent faces from.
-    pub camera: Vec3,
+    pub camera: DVec3,
     /// Biome colours and the blend radius.
     pub tints: TintSettings,
 }
@@ -45,9 +44,9 @@ pub(super) struct Done {
 /// Meshes section `s` of the chunk at the centre of `chunks`.
 pub(super) fn mesh(
     chunks: &[Option<Arc<Chunk>>; 9],
-    (x, s, z): SectionPos,
+    pos: SectionPos,
     context: &MeshContext,
-    camera: Vec3,
+    camera: DVec3,
 ) -> Option<SectionMesh> {
     let center = chunks[4].as_deref()?;
     let context = &MeshContext {
@@ -58,9 +57,9 @@ pub(super) fn mesh(
     for (slot, chunk) in neighborhood.chunks.iter_mut().zip(chunks) {
         *slot = chunk.as_deref();
     }
-    let mut mesh = terrain::mesh_section(&neighborhood, usize::try_from(s).ok()?, context);
-    let corner = Vec3::new((x * SECTION_SIZE) as f32, 0.0, (z * SECTION_SIZE) as f32);
-    mesh.translucent.sort(camera - corner);
+    let mut mesh = terrain::mesh_section(&neighborhood, usize::try_from(pos.1).ok()?, context);
+    mesh.translucent
+        .sort(terrain::sort_eye(camera, pos, center.min_y()));
     Some(mesh)
 }
 

@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use glam::{IVec3, Vec3};
+use glam::{DVec3, IVec3};
 
 use crate::math::{ChunkMap, SECTION_SIZE, SectionMap, section_coord};
 use crate::settings::options::ChunkBuilder;
@@ -211,7 +211,7 @@ impl MeshQueue {
         &mut self,
         chunks: &Chunks,
         (models, fluids): (&Arc<BlockModels>, FluidSprites),
-        camera: Vec3,
+        camera: DVec3,
         height: Height,
         cardinal: [f32; 6],
         tints: &TintSettings,
@@ -511,7 +511,7 @@ mod tests {
         let built = queue.run(
             &chunks,
             (models, fluids),
-            Vec3::new(8.0, -40.0, 8.0),
+            DVec3::new(8.0, -40.0, 8.0),
             Height::OVERWORLD,
             [1.0; 6],
             &tints,
@@ -535,7 +535,7 @@ mod tests {
         let built = queue.run(
             &chunks,
             (models, fluids),
-            Vec3::new(8.0, 100.0, 8.0),
+            DVec3::new(8.0, 100.0, 8.0),
             Height::OVERWORLD,
             [1.0; 6],
             &tints,
@@ -567,7 +567,7 @@ mod tests {
             queue.run(
                 chunks,
                 (models, fluids),
-                Vec3::new(8.0, 0.0, 8.0),
+                DVec3::new(8.0, 0.0, 8.0),
                 Height::OVERWORLD,
                 [1.0; 6],
                 &tints,

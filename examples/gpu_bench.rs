@@ -127,7 +127,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
     let mut finished = Vec::new();
     let t = Instant::now();
     loop {
-        finished.extend(level.mesh_pending(&models, fluids, spawn));
+        finished.extend(level.mesh_pending(&models, fluids, spawn.as_dvec3()));
         let stats = level.mesh_stats();
         if stats.waiting == 0 && stats.in_flight == 0 && !finished.is_empty() {
             break;

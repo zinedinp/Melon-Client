@@ -234,9 +234,8 @@ impl Ears {
     fn convolve(&self, filters: &EarFilters, ear: usize, out: &mut [f32]) {
         // The window that ends at frame 0, as late as the ear hears it.
         let first = HISTORY + 1 - TAPS - filters.delays[ear];
-        for (i, o) in out.iter_mut().enumerate() {
-            *o = slices::dot(&self.samples[first + i..][..TAPS], &filters.taps[ear]);
-        }
+        let windows = &self.samples[first..first + out.len() + TAPS - 1];
+        slices::sliding_dot(windows, &filters.taps[ear], out);
     }
 
     /// The block's first `frames` frames through both ears, into `out`;

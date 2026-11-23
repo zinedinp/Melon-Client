@@ -617,7 +617,7 @@ impl InWorld {
     /// Builds the sections the Chunk Builder wants for this frame and takes the finished
     /// meshes.
     pub fn mesh(&mut self, renderer: &mut Renderer, assets: &WorldResources) {
-        let eye = self.player.tick_eye().as_vec3();
+        let eye = self.player.tick_eye();
         let finished = self.level.mesh_pending(&assets.models, assets.fluids, eye);
         self.meshes.upload(renderer, finished);
     }

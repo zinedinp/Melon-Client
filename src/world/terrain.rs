@@ -3,7 +3,7 @@
 use std::ops::Range;
 
 use crate::math::{radix, section_to_block};
-use glam::Vec3;
+use glam::{DVec3, Vec3};
 
 use crate::renderer::{TerrainQuad, WorldVertex as Vertex};
 use crate::world::block::direction::Direction;
@@ -13,6 +13,7 @@ use crate::world::block::state_flags;
 use crate::world::block_models::{BlockModels, ChunkLayer};
 use crate::world::block_tint::{TintKind, TintSettings};
 use crate::world::chunk::{BLOCKS_PER_SECTION, Chunk, Section};
+use crate::world::culling::occlusion::SectionPos;
 use crate::world::culling::visgraph::{self, VisibilitySet};
 use crate::world::fluid::{self, FluidSprites};
 use crate::world::smooth_light::{LightCache, flat_corners, smooth_corners};
@@ -125,11 +126,12 @@ impl<T> Default for LayerMesh<T> {
     }
 }
 
-/// A section's translucent faces, block faces and water together, as plain vertices.
+/// A section's translucent faces, block faces and water together, as plain
+/// vertices from the section's corner ([`section_corner`]).
 #[derive(Clone, Default)]
 pub struct TranslucentMesh {
     pub vertices: Vec<Vertex>,
-    /// The eye (chunk-local, world Y) they were last sorted from.
+    /// The eye ([`sort_eye`]) they were last sorted from.
     pub sorted_from: Vec3,
     /// The box around every quad's centroid, from the last sort; `None`
     pub centroids: Option<(Vec3, Vec3)>,
@@ -219,6 +221,22 @@ fn distance_squared(eye: Vec3, point: Vec3) -> f32 {
     d.x * d.x + (d.y * d.y + d.z * d.z)
 }
 
+/// Section `(x, s, z)`'s lowest corner (`SectionPos.origin`), `s` counted
+/// up from `min_y`: where its translucent and lava vertices count from.
+pub fn section_corner((x, s, z): SectionPos, min_y: i32) -> DVec3 {
+    DVec3::new(
+        f64::from(section_to_block(x)),
+        f64::from(min_y + section_to_block(s)),
+        f64::from(section_to_block(z)),
+    )
+}
+
+/// `RenderSection.createVertexSorting`'s eye: `camera` from the section's
+/// corner, subtracted in `f64` and only then rounded.
+pub fn sort_eye(camera: DVec3, pos: SectionPos, min_y: i32) -> Vec3 {
+    (camera - section_corner(pos, min_y)).as_vec3()
+}
+
 /// A quad's place in the far-to-near order, as one integer: the squared
 /// distance's bits flipped on top (a non-negative float orders like its
 /// bits, and NaN past infinity as `Floats.compare` puts it), the quad's
@@ -231,7 +249,7 @@ fn far_first_key(distance: f32, index: usize) -> u64 {
 pub struct SectionMesh {
     pub solid: LayerMesh,
     pub cutout: LayerMesh,
-    /// Lava, drawn with the solid layer.
+    /// Lava, drawn with the solid layer; vertices from the section's corner.
     pub lava: LayerMesh<Vertex>,
     /// Water, glass, ice: blended, sorted far to near.
     pub translucent: TranslucentMesh,
@@ -563,9 +581,10 @@ fn fill_section(
                             quad.layer
                         };
                         if chunk_layer == ChunkLayer::Translucent {
+                            // From the section's corner, as `SectionCompiler` places them.
                             translucent.extend(context.models.quad_vertices(
                                 terrain,
-                                [0, context.min_y, 0],
+                                [0, -local_y, 0],
                                 &context.cardinal,
                             ));
                             continue;
@@ -576,7 +595,7 @@ fn fill_section(
                     }
                 });
                 if fluid.is_some() {
-                    let origin = [x as f32, (base_y + y) as f32, z as f32];
+                    let origin = [x as f32, y as f32, z as f32];
                     let water_tint = tints
                         .color(TintKind::Water, pos)
                         .map(|c| f32::from(c) / 255.0);
@@ -870,6 +889,30 @@ mod tests {
         let corner = (10.0 * 8.0 / 9.0 * 2.0) / 22.0;
         assert!((top - (4.0 + corner - 0.001)).abs() < 1e-3, "{top}");
         assert_eq!(water.len() / 4, 2 * 2 + 1 + 2 * 3 * 2);
+    }
+
+    /// Translucent faces and fluids count from their section's corner, as
+    /// `SectionCompiler` places them, not from the world's bottom.
+    #[test]
+    fn translucent_vertices_count_from_the_sections_corner() {
+        let water = pumpkin_data::Block::WATER.default_state.id.as_u16();
+        let glass = pumpkin_data::Block::GLASS.default_state.id.as_u16();
+        let chunk = chunk_with(&[(4, 20, 4, water), (6, 21, 4, glass)]);
+        let Some(mesh) = build(&Neighborhood::alone(&chunk)) else {
+            return;
+        };
+        let upper = &mesh.sections[1].translucent.vertices;
+        assert!(mesh.sections[0].translucent.vertices.is_empty());
+        assert!(!upper.is_empty());
+        assert!(upper.iter().all(|v| (0.0..=16.0).contains(&v.pos[1])));
+        assert!(
+            upper.iter().any(|v| v.pos[1] == 6.0),
+            "glass top at 21 - 16 + 1"
+        );
+        assert_eq!(
+            sort_eye(DVec3::new(0.5, 30.25, 0.5), (0, 1, 0), 0),
+            Vec3::new(0.5, 14.25, 0.5)
+        );
     }
 
     #[test]

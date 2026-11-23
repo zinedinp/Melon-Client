@@ -6,7 +6,7 @@ mod mesher;
 
 use std::sync::Arc;
 
-use glam::Vec3;
+use glam::DVec3;
 
 use crate::math::{ChunkMap, SectionSet, section_coord, section_relative};
 use crate::settings::options::ChunkBuilder;
@@ -290,7 +290,7 @@ impl Level {
         &mut self,
         models: &Arc<BlockModels>,
         fluids: FluidSprites,
-        camera: Vec3,
+        camera: DVec3,
     ) -> Vec<FinishedMesh> {
         let built = self.meshing.run(
             &self.chunks,

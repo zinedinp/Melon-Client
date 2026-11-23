@@ -613,7 +613,7 @@ fn mesh_pipeline(
     let t = Instant::now();
     loop {
         let frame = Instant::now();
-        finished.extend(level.mesh_pending(models, fluids, eye));
+        finished.extend(level.mesh_pending(models, fluids, eye.as_dvec3()));
         frames.push(frame.elapsed());
         let stats = level.mesh_stats();
         if stats.waiting == 0 && stats.in_flight == 0 && !finished.is_empty() {
@@ -714,7 +714,7 @@ fn edits(
             .context("edit outside the loaded chunks")?;
         light.push(t.elapsed());
         let t = Instant::now();
-        std::hint::black_box(level.mesh_pending(models, fluids, spawn));
+        std::hint::black_box(level.mesh_pending(models, fluids, spawn.as_dvec3()));
         remesh.push(t.elapsed());
         Ok(())
     };
