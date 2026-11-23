@@ -30,12 +30,13 @@ impl Renderer {
             instance,
             debug,
             labels,
+            api,
         } = instance::create(&entry, display, enable_validation)?;
         let (surface_loader, surface) =
             instance::create_surface(&entry, &instance, display, window.window_handle()?.as_raw())?;
 
         let gpu = device::pick(&instance, &surface_loader, surface)?;
-        let features = device::probe(&instance, gpu.physical);
+        let features = device::probe(&instance, gpu.physical, api, device::GAME);
         let (device, queue) = device::create(&instance, &gpu, &features)?;
         let mem_props = gpu.mem_props;
 
@@ -52,7 +53,7 @@ impl Renderer {
             layouts.gui,
             MAX_FRAMES_IN_FLIGHT,
         )?;
-        let indirect = if features.multi_draw {
+        let indirect = if features.multi_draw() {
             Some(super::indirect::DrawBuffers::new(
                 &device,
                 MAX_FRAMES_IN_FLIGHT,
@@ -66,8 +67,9 @@ impl Renderer {
             .get_physical_device_format_properties(gpu.physical, depth_format)
             .optimal_tiling_features
             .contains(vk::FormatFeatureFlags::SAMPLED_IMAGE);
-        let occlusion = if indirect.is_some()
-            && features.draw_count
+        let draw_count = features.draw_count();
+        let occlusion = if let Some(draw_count) = draw_count
+            && indirect.is_some()
             && depth_readable
             && super::occlusion::wanted()
         {
@@ -75,9 +77,7 @@ impl Renderer {
                 &device,
                 &mem_props,
                 MAX_FRAMES_IN_FLIGHT,
-                Some(ash::khr::draw_indirect_count::Device::new(
-                    &instance, &device,
-                )),
+                Some(draw_count.load(&instance, &device)),
             )?)
         } else {
             None
@@ -93,7 +93,7 @@ impl Renderer {
             passes.clear,
             post.color_pass,
             &layouts,
-            features.multi_draw,
+            features.multi_draw(),
         )?;
 
         let descriptor_pools =
@@ -130,11 +130,11 @@ impl Renderer {
             gpu.timestamp_bits,
             MAX_FRAMES_IN_FLIGHT,
             labels.then(|| ash::ext::debug_utils::Device::new(&instance, &device)),
-            features.statistics,
+            features.statistics(),
         );
         let swapchain = resources::swapchain(
             ash::khr::swapchain::Device::new(&instance, &device),
-            features.latest_ready.is_some(),
+            features.latest_ready(),
             surface_format,
             depth_format,
         );

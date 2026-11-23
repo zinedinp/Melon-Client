@@ -2627,7 +2627,7 @@ dependencies = [
  "image",
  "libloading 0.9.1",
  "melon-base",
- "miraculix 0.6.1-beta",
+ "miraculix",
  "num-bigint 0.5.1",
  "numerobis",
  "open",
@@ -2664,7 +2664,7 @@ dependencies = [
 
 [[package]]
 name = "melon-base"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "arboard",
@@ -2757,17 +2757,6 @@ dependencies = [
  "libc",
  "log",
  "wasi",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "miraculix"
-version = "0.5.8-beta"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bf487fd0ab6cbcb8e23baefdfa2fff4fc3a32aea2cf500f8a572c8920fa8a51"
-dependencies = [
- "libc",
- "raw-cpuid",
  "windows-sys 0.61.2",
 ]
 
@@ -3037,12 +3026,12 @@ dependencies = [
 
 [[package]]
 name = "numerobis"
-version = "0.3.3-alpha"
+version = "0.4.0-beta"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac4f4ee29a73e6ea328996f29f2e33c6f1b4b510f36bb4bb84d47b092d9eca88"
+checksum = "a048ffc14a0efd8fbf05ba11d27dfd6213e00e1f891bf2d05cff03b9a9ae713b"
 dependencies = [
  "libc",
- "miraculix 0.5.8-beta",
+ "miraculix",
 ]
 
 [[package]]

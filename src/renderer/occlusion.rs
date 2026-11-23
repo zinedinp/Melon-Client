@@ -114,8 +114,9 @@ pub(super) struct Occlusion {
     cull_sets: Vec<vk::DescriptorSet>,
     visible: Visible,
     pyramid: Option<Pyramid>,
-    /// `VK_KHR_draw_indirect_count`, which draws what the culling packed.
-    pub draw_count: Option<ash::khr::draw_indirect_count::Device>,
+    /// `vkCmdDrawIndexedIndirectCount` (core or `KHR`), which draws what
+    /// the culling packed.
+    pub draw_count: Option<vk::PFN_vkCmdDrawIndexedIndirectCount>,
 }
 
 unsafe fn set_layout(
@@ -224,7 +225,7 @@ impl Occlusion {
         device: &ash::Device,
         mem_props: &vk::PhysicalDeviceMemoryProperties,
         frames: usize,
-        draw_count: Option<ash::khr::draw_indirect_count::Device>,
+        draw_count: Option<vk::PFN_vkCmdDrawIndexedIndirectCount>,
     ) -> anyhow::Result<Self> {
         use vk::DescriptorType as Ty;
         let reduce_layout = set_layout(device, &[Ty::COMBINED_IMAGE_SAMPLER, Ty::STORAGE_IMAGE])?;

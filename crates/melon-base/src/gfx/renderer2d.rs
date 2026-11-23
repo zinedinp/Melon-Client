@@ -90,18 +90,23 @@ impl Renderer2d {
         let entry = ash::Entry::load()?;
         let display = window.display_handle()?.as_raw();
         let instance::Instance {
-            instance, debug, ..
+            instance,
+            debug,
+            api,
+            ..
         } = instance::create(&entry, display, enable_validation)?;
         let (surface_loader, surface) =
             instance::create_surface(&entry, &instance, display, window.window_handle()?.as_raw())?;
         let gpu = device::pick(&instance, &surface_loader, surface)?;
-        let features = device::Features {
-            latest_ready: None,
-            multi_draw: false,
-            draw_count: false,
-            statistics: false,
-            ..device::probe(&instance, gpu.physical)
-        };
+        let features = device::probe(
+            &instance,
+            gpu.physical,
+            api,
+            &[
+                numerobis::vulkan::Op::RobustBufferAccess,
+                numerobis::vulkan::Op::PageableDeviceLocalMemory,
+            ],
+        );
         let (device, queue) = device::create(&instance, &gpu, &features)?;
         let mem_props = gpu.mem_props;
 

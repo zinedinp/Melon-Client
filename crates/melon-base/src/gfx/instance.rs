@@ -3,6 +3,7 @@
 use std::ffi::CStr;
 
 use ash::vk;
+use numerobis::vulkan::{ApiVersion, app_version};
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 
 use crate::gfx::debug_callback;
@@ -14,6 +15,9 @@ pub struct Instance {
     pub debug: Option<(ash::ext::debug_utils::Instance, vk::DebugUtilsMessengerEXT)>,
     /// `VK_EXT_debug_utils` is on: passes get labels for GPU profilers.
     pub labels: bool,
+    /// The `apiVersion` it was made with: the newest the loader and
+    /// numerobis's tables both know.
+    pub api: ApiVersion,
 }
 
 /// The instance, with `VK_LAYER_KHRONOS_validation` if asked for and
@@ -48,13 +52,19 @@ pub unsafe fn create(
         extension_names.push(ash::ext::debug_utils::NAME.as_ptr());
     }
 
+    let loader = entry
+        .try_enumerate_instance_version()
+        .ok()
+        .flatten()
+        .map(ApiVersion::from_raw);
+    let api = app_version(loader, ApiVersion::NEWEST);
     let app_name = c"Melon";
     let app_info = vk::ApplicationInfo::default()
         .application_name(app_name)
         .application_version(0)
         .engine_name(app_name)
         .engine_version(0)
-        .api_version(vk::API_VERSION_1_1);
+        .api_version(api.raw());
     let instance_info = vk::InstanceCreateInfo::default()
         .application_info(&app_info)
         .enabled_layer_names(&layer_names)
@@ -70,6 +80,7 @@ pub unsafe fn create(
         instance,
         debug,
         labels,
+        api,
     })
 }
 

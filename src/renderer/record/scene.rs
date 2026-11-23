@@ -907,13 +907,13 @@ impl Renderer {
         self.recording.offset.set(None);
         let commands = indirect.commands(self.frames.current);
         let stride = super::super::indirect::COMMAND_SIZE;
-        let draw_count = self.occlusion.as_ref().and_then(|o| o.draw_count.as_ref());
+        let draw_count = self.occlusion.as_ref().and_then(|o| o.draw_count);
         match (packed, draw_count) {
             (Some((run, phase)), Some(draw_count)) => {
                 let start = indirect.phase_start(phase) + first;
                 let counts = indirect.counts(self.frames.current);
                 let at = (2 * run + phase as u32) * 4;
-                draw_count.cmd_draw_indexed_indirect_count(
+                draw_count(
                     cmd,
                     commands,
                     u64::from(start) * u64::from(stride),

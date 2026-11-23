@@ -5,6 +5,8 @@ use super::{
     vk_util::{PassStart, create_render_pass, find_depth_format},
 };
 use ash::vk;
+use melon_base::gfx::device;
+use numerobis::vulkan::{ApiVersion, app_version};
 use std::ffi::{CStr, CString};
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -84,13 +86,19 @@ impl Gpu {
              or set VK_LAYER_PATH. See https://github.com/KhronosGroup/Vulkan-ValidationLayers"
         );
 
+        let loader = entry
+            .try_enumerate_instance_version()
+            .ok()
+            .flatten()
+            .map(ApiVersion::from_raw);
+        let api = app_version(loader, ApiVersion::NEWEST);
         let app_name = c"Melon";
         let app_info = vk::ApplicationInfo::default()
             .application_name(app_name)
             .application_version(0)
             .engine_name(app_name)
             .engine_version(0)
-            .api_version(vk::API_VERSION_1_1);
+            .api_version(api.raw());
         let layers = [layer.as_ptr()];
         let extensions = [
             ash::ext::debug_utils::NAME.as_ptr(),
@@ -137,24 +145,18 @@ impl Gpu {
             .queue_family_index(family)
             .queue_priorities(&priorities);
         let queues = [queue_info];
-        let supported = instance.get_physical_device_features(physical);
-        let mut supported_11 = vk::PhysicalDeviceVulkan11Features::default();
-        let mut supported_2 = vk::PhysicalDeviceFeatures2::default().push_next(&mut supported_11);
-        instance.get_physical_device_features2(physical, &mut supported_2);
-        let multi_draw = supported.multi_draw_indirect == vk::TRUE
-            && supported.draw_indirect_first_instance == vk::TRUE
-            && supported_11.shader_draw_parameters == vk::TRUE;
-        let features = vk::PhysicalDeviceFeatures::default()
-            .multi_draw_indirect(multi_draw)
-            .draw_indirect_first_instance(multi_draw);
-        let mut features_11 =
-            vk::PhysicalDeviceVulkan11Features::default().shader_draw_parameters(multi_draw);
-        let device_extensions = [ash::khr::swapchain::NAME.as_ptr()];
-        let device_info = vk::DeviceCreateInfo::default()
+        // The game's features, so the layer checks the chain it builds.
+        let features = device::probe(&instance, physical, api, device::GAME);
+        let device_extensions: Vec<_> = features
+            .extensions()
+            .into_iter()
+            .map(CStr::as_ptr)
+            .collect();
+        let mut chain = features.plan.device_chain();
+        let mut device_info = vk::DeviceCreateInfo::default()
             .queue_create_infos(&queues)
-            .enabled_features(&features)
-            .enabled_extension_names(&device_extensions)
-            .push_next(&mut features_11);
+            .enabled_extension_names(&device_extensions);
+        device_info.p_next = chain.features2().cast_const();
         let device = instance.create_device(physical, &device_info, None)?;
 
         Ok(Self {

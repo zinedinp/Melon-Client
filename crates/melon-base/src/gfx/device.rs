@@ -3,26 +3,9 @@
 use std::ffi::CStr;
 
 use ash::vk;
+use numerobis::vulkan::{self, ApiVersion, Op, Plan, Probe, Route};
 
 use crate::gfx::{DeviceInfo, read_device_info};
-
-/// `VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR`, chained by hand.
-#[repr(C)]
-pub struct FifoLatestReadyFeatures {
-    pub s_type: vk::StructureType,
-    pub p_next: *mut std::ffi::c_void,
-    pub present_mode_fifo_latest_ready: vk::Bool32,
-}
-
-impl FifoLatestReadyFeatures {
-    pub fn new(enabled: bool) -> Self {
-        Self {
-            s_type: vk::StructureType::from_raw(1000361000),
-            p_next: std::ptr::null_mut(),
-            present_mode_fifo_latest_ready: vk::Bool32::from(enabled),
-        }
-    }
-}
 
 /// The picked GPU and what Melon reads of it once.
 pub struct Gpu {
@@ -57,79 +40,151 @@ pub unsafe fn pick(
     })
 }
 
-/// What the GPU offers that Melon turns on when it can.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Features {
-    /// `VK_KHR`/`VK_EXT_present_mode_fifo_latest_ready`, by the name offered.
-    pub latest_ready: Option<&'static CStr>,
-    /// `VK_EXT_pageable_device_local_memory` (with `memory_priority`).
-    pub pageable: bool,
-    /// Indirect terrain draws; `MELON_NO_MULTIDRAW` turns them off.
-    pub multi_draw: bool,
-    /// `VK_KHR_draw_indirect_count`, with `multi_draw`: draw counts the GPU
-    /// writes, for the terrain's occlusion culling.
-    pub draw_count: bool,
-    /// Pipeline statistics: how much each pass shades, for the benchmark.
-    pub statistics: bool,
-    /// `robustBufferAccess`; `MELON_NO_ROBUST_BUFFERS` turns it off.
-    pub robust: bool,
+/// Everything the game renderer turns on when it can.
+pub const GAME: &[Op] = &[
+    // Indirect terrain draws; `MELON_NO_MULTIDRAW` turns them off.
+    Op::MultiDrawIndirect,
+    Op::ShaderDrawParameters,
+    // Draw counts the GPU writes, for the terrain's occlusion culling.
+    Op::DrawIndirectCount,
+    // How much each pass shades, for the benchmark.
+    Op::PipelineStatistics,
+    // A read past a buffer's end gives zeros instead of a GPU page fault
+    // that loses the device (Xid 13 on NVIDIA); `MELON_NO_ROBUST_BUFFERS`
+    // turns it off.
+    Op::RobustBufferAccess,
+    // When another program fills the VRAM, the driver moves allocations to
+    // system memory instead of failing them (as DXVK and vkd3d ask too).
+    Op::PageableDeviceLocalMemory,
+    Op::FifoLatestReady,
+];
+
+/// Where `vkCmdDrawIndexedIndirectCount` comes from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DrawCount {
+    /// Core from 1.2.
+    Core,
+    /// `VK_KHR_draw_indirect_count`.
+    Khr,
 }
 
-pub unsafe fn probe(instance: &ash::Instance, physical: vk::PhysicalDevice) -> Features {
+impl DrawCount {
+    /// The entry point, from `device`'s table or the extension's.
+    ///
+    /// # Safety
+    ///
+    /// `device` must have been made from `instance` with the route this came
+    /// from (API 1.2 for `Core`, the extension enabled for `Khr`).
+    pub unsafe fn load(
+        self,
+        instance: &ash::Instance,
+        device: &ash::Device,
+    ) -> vk::PFN_vkCmdDrawIndexedIndirectCount {
+        match self {
+            Self::Core => device.fp_v1_2().cmd_draw_indexed_indirect_count,
+            Self::Khr => {
+                ash::khr::draw_indirect_count::Device::new(instance, device)
+                    .fp()
+                    .cmd_draw_indexed_indirect_count_khr
+            }
+        }
+    }
+}
+
+/// What the GPU gives of what was asked: the waterfall's plan.
+#[derive(Clone, Debug)]
+pub struct Features {
+    pub plan: Plan,
+}
+
+impl Features {
+    pub fn multi_draw(&self) -> bool {
+        self.plan.has(Op::MultiDrawIndirect) && self.plan.has(Op::ShaderDrawParameters)
+    }
+
+    /// With [`multi_draw`](Self::multi_draw) only.
+    pub fn draw_count(&self) -> Option<DrawCount> {
+        match self.plan.route(Op::DrawIndirectCount)? {
+            _ if !self.multi_draw() => None,
+            Route::Core { .. } => Some(DrawCount::Core),
+            _ => Some(DrawCount::Khr),
+        }
+    }
+
+    pub fn statistics(&self) -> bool {
+        self.plan.has(Op::PipelineStatistics)
+    }
+
+    pub fn latest_ready(&self) -> bool {
+        self.plan.has(Op::FifoLatestReady)
+    }
+
+    /// The device extensions to enable: `VK_KHR_swapchain`, then the plan's.
+    pub fn extensions(&self) -> Vec<&'static CStr> {
+        let swapchain = ash::khr::swapchain::NAME;
+        let planned = self.plan.extensions().iter().copied();
+        std::iter::once(swapchain)
+            .chain(planned.filter(|&name| name != swapchain))
+            .collect()
+    }
+}
+
+/// Reads which of `wanted` the device has, by the newest route it allows,
+/// and logs the result. `api` is the instance's `apiVersion`.
+pub unsafe fn probe(
+    instance: &ash::Instance,
+    physical: vk::PhysicalDevice,
+    api: ApiVersion,
+    wanted: &[Op],
+) -> Features {
+    let off = |name: &str| std::env::var_os(name).is_some();
+    let wanted: Vec<Op> = wanted
+        .iter()
+        .copied()
+        .filter(|op| match op {
+            Op::MultiDrawIndirect | Op::ShaderDrawParameters | Op::DrawIndirectCount => {
+                !off("MELON_NO_MULTIDRAW")
+            }
+            Op::RobustBufferAccess => !off("MELON_NO_ROBUST_BUFFERS"),
+            _ => true,
+        })
+        .collect();
     let offered = instance
         .enumerate_device_extension_properties(physical)
         .unwrap_or_default();
-    let offers = |name: &CStr| {
+    let device_api = instance
+        .get_physical_device_properties(physical)
+        .api_version;
+    let offer = vulkan::Offer::new(
+        api,
+        ApiVersion::from_raw(device_api),
         offered
             .iter()
-            .any(|e| CStr::from_ptr(e.extension_name.as_ptr()) == name)
-    };
-    let latest_ready_extension = [
-        c"VK_KHR_present_mode_fifo_latest_ready",
-        c"VK_EXT_present_mode_fifo_latest_ready",
-    ]
-    .into_iter()
-    .find(|name| offers(name));
-    let supported = instance.get_physical_device_features(physical);
-    let mut supported_11 = vk::PhysicalDeviceVulkan11Features::default();
-    let mut supported_latest = FifoLatestReadyFeatures::new(false);
-    if latest_ready_extension.is_some() {
-        supported_11.p_next = std::ptr::from_mut(&mut supported_latest).cast();
+            .map(|e| CStr::from_ptr(e.extension_name.as_ptr())),
+    );
+    let at_1_0 = offer.api() < ApiVersion::V1_1;
+    let mut probe = Probe::new(offer, &wanted);
+    if at_1_0 {
+        *probe.core_features().cast::<vk::PhysicalDeviceFeatures>() =
+            instance.get_physical_device_features(physical);
+    } else {
+        // The chain is a `VkPhysicalDeviceFeatures2` of the plain C layout.
+        let features2 = &mut *probe.features2().cast::<vk::PhysicalDeviceFeatures2>();
+        instance.get_physical_device_features2(physical, features2);
     }
-    let mut supported_2 = vk::PhysicalDeviceFeatures2::default().push_next(&mut supported_11);
-    instance.get_physical_device_features2(physical, &mut supported_2);
-    let latest_ready = latest_ready_extension
-        .filter(|_| supported_latest.present_mode_fifo_latest_ready == vk::TRUE);
-    // `VK_EXT_pageable_device_local_memory`: when another program fills
-    // the VRAM, the driver moves allocations to system memory instead of
-    // failing them (as DXVK and vkd3d ask too), so the game keeps running
-    // slower rather than losing its swapchain and textures.
-    let pageable = offers(ash::ext::pageable_device_local_memory::NAME)
-        && offers(ash::ext::memory_priority::NAME)
-        && {
-            let mut query = vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT::default();
-            let mut features = vk::PhysicalDeviceFeatures2::default().push_next(&mut query);
-            instance.get_physical_device_features2(physical, &mut features);
-            query.pageable_device_local_memory == vk::TRUE
-        };
-    let multi_draw = std::env::var_os("MELON_NO_MULTIDRAW").is_none()
-        && supported.multi_draw_indirect == vk::TRUE
-        && supported.draw_indirect_first_instance == vk::TRUE
-        && supported_11.shader_draw_parameters == vk::TRUE;
-    // `robustBufferAccess`: a read past a buffer's end gives zeros instead
-    // of a GPU page fault that loses the device (Xid 13 on NVIDIA). A
-    // safety net for broken data.
-    let robust = std::env::var_os("MELON_NO_ROBUST_BUFFERS").is_none()
-        && supported.robust_buffer_access == vk::TRUE;
-    let draw_count = multi_draw && offers(ash::khr::draw_indirect_count::NAME);
-    Features {
-        latest_ready,
-        pageable,
-        multi_draw,
-        draw_count,
-        statistics: supported.pipeline_statistics_query == vk::TRUE,
-        robust,
+    if probe.wants_subgroup() {
+        let mut subgroup = vk::PhysicalDeviceSubgroupProperties::default();
+        let mut props = vk::PhysicalDeviceProperties2::default().push_next(&mut subgroup);
+        instance.get_physical_device_properties2(physical, &mut props);
+        probe.set_subgroup(vulkan::subgroup::Subgroup {
+            size: subgroup.subgroup_size,
+            stages: subgroup.supported_stages.as_raw(),
+            operations: subgroup.supported_operations.as_raw(),
+        });
     }
+    let plan = probe.plan();
+    crate::info!("vulkan: {plan}");
+    Features { plan }
 }
 
 /// The logical device with `features` on, and its one queue.
@@ -142,37 +197,19 @@ pub unsafe fn create(
     let queue_infos = [vk::DeviceQueueCreateInfo::default()
         .queue_family_index(gpu.queue_family)
         .queue_priorities(&queue_priorities)];
-    let mut extensions = vec![ash::khr::swapchain::NAME.as_ptr()];
-    if let Some(name) = features.latest_ready {
-        extensions.push(name.as_ptr());
-    }
-    if features.draw_count {
-        extensions.push(ash::khr::draw_indirect_count::NAME.as_ptr());
-    }
-    if features.pageable {
-        extensions.push(ash::ext::memory_priority::NAME.as_ptr());
-        extensions.push(ash::ext::pageable_device_local_memory::NAME.as_ptr());
-    }
-    let core = vk::PhysicalDeviceFeatures::default()
-        .robust_buffer_access(features.robust)
-        .multi_draw_indirect(features.multi_draw)
-        .draw_indirect_first_instance(features.multi_draw)
-        .pipeline_statistics_query(features.statistics);
-    let mut features_11 =
-        vk::PhysicalDeviceVulkan11Features::default().shader_draw_parameters(features.multi_draw);
-    let mut latest_ready = FifoLatestReadyFeatures::new(true);
-    if features.latest_ready.is_some() {
-        features_11.p_next = std::ptr::from_mut(&mut latest_ready).cast();
-    }
-    let mut pageable = vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT::default()
-        .pageable_device_local_memory(true);
+    let extensions: Vec<_> = features
+        .extensions()
+        .into_iter()
+        .map(CStr::as_ptr)
+        .collect();
+    let mut chain = features.plan.device_chain();
     let mut info = vk::DeviceCreateInfo::default()
         .queue_create_infos(&queue_infos)
-        .enabled_features(&core)
-        .push_next(&mut features_11)
         .enabled_extension_names(&extensions);
-    if features.pageable {
-        info = info.push_next(&mut pageable);
+    if features.plan.api < ApiVersion::V1_1 {
+        info.p_enabled_features = chain.core_features().cast();
+    } else {
+        info.p_next = chain.features2().cast_const();
     }
     let device = instance.create_device(gpu.physical, &info, None)?;
     let queue = device.get_device_queue(gpu.queue_family, 0);
