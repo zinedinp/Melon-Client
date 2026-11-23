@@ -313,6 +313,24 @@ impl Columns {
     fn iter(&self) -> impl Iterator<Item = ((i32, i32), &Column)> {
         self.keys.iter().copied().zip(&self.list)
     }
+
+    /// The column at `index` in [`Self::iter`]'s order.
+    fn at(&self, index: u32) -> ((i32, i32), &Column) {
+        (self.keys[index as usize], &self.list[index as usize])
+    }
+
+    /// Starts loading the draws of sections `mask` of the column at `index`.
+    fn prefetch_draws(&self, index: u32, mask: u32) {
+        let draws = &self.list[index as usize].draws;
+        let mut rest = mask;
+        while rest != 0 {
+            let y = rest.trailing_zeros() as usize;
+            rest &= rest - 1;
+            if let Some(section) = draws.get(y) {
+                crate::math::prefetch_all(section);
+            }
+        }
+    }
 }
 
 impl std::ops::Index<&(i32, i32)> for Columns {
@@ -393,6 +411,8 @@ pub struct LevelMeshes {
     seen_translucent: Vec<SectionPos>,
     /// The sections' occlusion culling slots.
     slots: Slots,
+    /// [`Self::visible_sections`]' columns in view: index and section mask.
+    in_view: Vec<(u32, u32)>,
 }
 
 impl Default for LevelMeshes {
@@ -409,6 +429,7 @@ impl Default for LevelMeshes {
             spare_translucent: Vec::new(),
             seen_translucent: Vec::new(),
             slots: Slots::default(),
+            in_view: Vec::new(),
         }
     }
 }
@@ -565,7 +586,20 @@ impl LevelMeshes {
         let camera = section_of_eye(eye, self.min_y);
         let mut due = Vec::new();
         let mut queued = HashSet::new();
-        for &pos in &seen {
+        // Each section is two cache misses, its column and then its faces:
+        // load them a few sections ahead.
+        const AHEAD: usize = 4;
+        for (i, &pos) in seen.iter().enumerate() {
+            if let Some(&(x, _, z)) = seen.get(i + 2 * AHEAD)
+                && let Some(column) = self.columns.get(&(x, z))
+            {
+                crate::math::prefetch(column);
+            }
+            if let Some(&next) = seen.get(i + AHEAD)
+                && let Some(translucent) = self.translucent_slot(next)
+            {
+                crate::math::prefetch_all(translucent);
+            }
             if self.due_to_resort(pos, eye, camera, block, true) {
                 queued.insert(pos);
                 let offset = IVec3::new(pos.0, pos.1, pos.2) - camera;
@@ -626,11 +660,16 @@ impl LevelMeshes {
         view != translucent.view || (moved.any() && nearby) || lined_up
     }
 
-    fn translucent(&self, (x, y, z): SectionPos) -> Option<&Translucent> {
+    fn translucent(&self, pos: SectionPos) -> Option<&Translucent> {
+        self.translucent_slot(pos).and_then(Option::as_ref)
+    }
+
+    /// Where section `pos`'s translucent faces are kept, if it is loaded.
+    fn translucent_slot(&self, (x, y, z): SectionPos) -> Option<&Option<Translucent>> {
         self.columns
             .get(&(x, z))
             .and_then(|column| column.sections.get(y as usize))
-            .and_then(|section| section.translucent.as_ref())
+            .map(|section| &section.translucent)
     }
 
     fn translucent_mut(&mut self, (x, y, z): SectionPos) -> Option<&mut Translucent> {
@@ -708,16 +747,27 @@ impl LevelMeshes {
         let up = vertical(Direction::Up.index());
         let down = vertical(Direction::Down.index());
         let cull = culler.section_cull();
-        for ((cx, cz), column) in self.columns.iter() {
+        // First which sections of each column to draw, then their draws: a
+        // column's draws are a cache miss of their own, so the second pass
+        // loads them a few columns ahead.
+        self.in_view.clear();
+        for (index, ((cx, cz), column)) in self.columns.iter().enumerate() {
             let filled = column.filled;
             if filled == 0 {
                 continue;
             }
             visible.count.total += filled.count_ones() as usize;
             let in_view = culler.reached_of((cx, cz), cull.column((cx, cz)) & filled);
-            if in_view == 0 {
-                continue;
+            if in_view != 0 {
+                self.in_view.push((index as u32, in_view));
             }
+        }
+        const AHEAD: usize = 2;
+        for (i, &(index, in_view)) in self.in_view.iter().enumerate() {
+            if let Some(&(next, mask)) = self.in_view.get(i + AHEAD) {
+                let _ = (next, mask); // AB_TEMP
+            }
+            let ((cx, cz), column) = self.columns.at(index);
             let (x, z) = (f64::from(cx * SECTION_SIZE), f64::from(cz * SECTION_SIZE));
             let bottom = |y: u32| f64::from(min_y + y as i32 * SECTION_SIZE);
             let origin = DVec3::new(x, 0.0, z);
@@ -761,7 +811,7 @@ impl LevelMeshes {
                                 ChunkDraw {
                                     mesh,
                                     origin: quads_origin,
-                                    range,
+                                    range: range.into(),
                                     cull,
                                 },
                             );
@@ -793,7 +843,7 @@ impl LevelMeshes {
                         ChunkDraw {
                             mesh: TerrainMesh::Vertices(MeshId(lava as usize)),
                             origin: vertices_origin,
-                            range: 0..count,
+                            range: (0..count).into(),
                             cull: None,
                         },
                     );
@@ -806,7 +856,7 @@ impl LevelMeshes {
                         ChunkDraw {
                             mesh: TerrainMesh::Vertices(MeshId(translucent as usize)),
                             origin: vertices_origin,
-                            range: 0..count,
+                            range: (0..count).into(),
                             cull: None,
                         },
                     );
@@ -1210,7 +1260,7 @@ mod tests {
         let draw = |id: usize| ChunkDraw {
             mesh: TerrainMesh::Quads(QuadMeshId(id)),
             origin: IVec3::new(id as i32, 0, 0),
-            range: 0..id as u32,
+            range: (0..id as u32).into(),
             cull: None,
         };
         // Runs of one distance in a row too, as a section's draws come.

@@ -380,13 +380,14 @@ impl WorldDraw {
 }
 
 /// A run of one chunk mesh: one or more neighbouring sections the culling let through.
-#[derive(Clone, Debug, PartialEq)]
+/// `Copy`, so draw lists move as plain memory.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ChunkDraw {
     pub mesh: TerrainMesh,
     /// Where the chunk-local mesh starts in the world, in blocks.
     pub origin: glam::IVec3,
     /// Quads of a [`TerrainMesh::Quads`] mesh, vertices of a vertex mesh.
-    pub range: std::ops::Range<u32>,
+    pub range: core::range::Range<u32>,
     /// The section it belongs to, for occlusion culling; `None` is never culled.
     pub cull: Option<SectionCull>,
 }
@@ -404,7 +405,7 @@ pub struct SectionCull {
 impl ChunkDraw {
     /// Vertices this draw shades: four per quad.
     pub fn vertex_count(&self) -> usize {
-        let len = self.range.len();
+        let len = self.range.end.saturating_sub(self.range.start) as usize;
         match self.mesh {
             TerrainMesh::Quads(_) => len * 4,
             TerrainMesh::Vertices(_) => len,

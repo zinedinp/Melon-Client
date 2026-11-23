@@ -5,6 +5,10 @@
 # spawns its threads before a test runs, and std reads it only once.
 [env]
 RUST_MIN_STACK = "268435456"
+# shaderc's C++ runtime: link-cplusplus has `cc` ask for `stdc++` as a dylib, which neither
+# `+crt-static` nor `-static-libstdc++` (below) changes. This makes `cc` ask for
+# `static:-bundle=stdc++` instead, on this target only.
+CXXSTDLIB_STATIC_x86_64_pc_windows_gnu = "1"
 
 # lld links much faster than the default linker
 [target.x86_64-unknown-linux-gnu]

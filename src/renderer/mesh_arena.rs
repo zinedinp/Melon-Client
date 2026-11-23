@@ -190,6 +190,14 @@ impl MeshArena {
             .filter(|slot| slot.count > 0)
     }
 
+    /// Starts loading mesh `id`'s slot, for a [`Self::slot`] a few draws later.
+    #[inline]
+    pub fn prefetch(&self, id: usize) {
+        if let Some(slot) = self.slots.get(id) {
+            crate::math::prefetch(slot);
+        }
+    }
+
     /// Every block's buffer.
     pub fn buffers(&self) -> impl Iterator<Item = vk::Buffer> + '_ {
         self.blocks.iter().flatten().map(|block| block.buffer)

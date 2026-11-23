@@ -340,7 +340,12 @@ impl Renderer {
             self.draw_terrain_multi(cmd, world, mode, view_proj, light, phase);
         }
         let mut bound: Option<bool> = None;
-        for chunk in chunks.iter().filter(|_| rest) {
+        // A few draws ahead, as `indirect::gather_pass` does.
+        const AHEAD: usize = 4;
+        for (i, chunk) in chunks.iter().enumerate().filter(|_| rest) {
+            if let Some(TerrainMesh::Vertices(next)) = chunks.get(i + AHEAD).map(|c| c.mesh) {
+                self.meshes.prefetch(next.0);
+            }
             let quads = matches!(chunk.mesh, TerrainMesh::Quads(_));
             if quads && by_multi {
                 continue;
@@ -360,7 +365,7 @@ impl Renderer {
             let at = (view_proj, world.offset(chunk.origin));
             match chunk.mesh {
                 TerrainMesh::Quads(id) => {
-                    self.draw_terrain_quads(cmd, id, at, light, &chunk.range);
+                    self.draw_terrain_quads(cmd, id, at, light, &chunk.range.into());
                 }
                 TerrainMesh::Vertices(id) => self.draw_world_mesh(
                     cmd,
@@ -368,7 +373,7 @@ impl Renderer {
                     id,
                     at,
                     &light.fogged(FogInput::Chunk),
-                    Some(&chunk.range),
+                    Some(&chunk.range.into()),
                 ),
             }
         }

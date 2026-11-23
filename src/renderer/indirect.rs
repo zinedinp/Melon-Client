@@ -504,14 +504,16 @@ fn gather_pass(
     chunks: &[ChunkDraw],
     meshes: &MeshArena,
 ) {
-    for chunk in chunks {
+    // Draws read the arena's slot table at random, a cache miss each:
+    // loading a few draws ahead overlaps them.
+    const AHEAD: usize = 8;
+    for (i, chunk) in chunks.iter().enumerate() {
+        if let Some(TerrainMesh::Quads(next)) = chunks.get(i + AHEAD).map(|c| c.mesh) {
+            meshes.prefetch(next.0);
+        }
         let TerrainMesh::Quads(id) = chunk.mesh else {
             continue;
         };
-        // TODO(perf): a random read per draw from the arena's slot table
-        // (~8 MB with every section loaded), a cache miss each. Could the
-        // buffer and base go into `ChunkDraw` when culled, kept right across
-        // arena moves by a generation number?
         let Some(slot) = meshes.slot(id.0) else {
             continue;
         };
@@ -524,7 +526,7 @@ fn gather_pass(
             offset[2],
             f32::from_bits(cull_slot),
         ];
-        for (first, quads) in quad_draws(&chunk.range, slot.count) {
+        for (first, quads) in quad_draws(&chunk.range.into(), slot.count) {
             gathered.queue(
                 buffer,
                 vk::DrawIndexedIndirectCommand {
