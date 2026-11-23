@@ -24,16 +24,7 @@ impl InWorld {
     ) -> SkyLayer {
         let camera = &view.camera;
         let celestials = self.sky_draws(assets, &view.look, camera, renderer.white_texture());
-        let (clouds, weather) = self.atmosphere_draws(
-            renderer,
-            assets,
-            camera,
-            config,
-            &view.look,
-            &view.lightmap,
-            view.partial,
-            aspect,
-        );
+        let (clouds, weather) = self.atmosphere_draws(renderer, assets, view, config, aspect);
         SkyLayer {
             celestials,
             clouds,

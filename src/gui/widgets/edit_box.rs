@@ -173,9 +173,7 @@ impl Widget for EditBox {
         } else {
             self.input.draw(
                 ui.draw_list,
-                &assets.font,
-                &assets.font_textures,
-                assets.white,
+                assets.glyphs(),
                 (text_x, text_y),
                 self.w,
                 self.text_color.unwrap_or(TEXT_COLOR),

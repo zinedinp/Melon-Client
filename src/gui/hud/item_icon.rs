@@ -68,7 +68,7 @@ impl Icon {
             Look::Sprite(sprite) => sprite.draw(list, x, y, w, h),
             Look::Layers(texture, layers) => {
                 for &(uv, color) in layers {
-                    list.push_rect(*texture, x, y, w, h, uv, color);
+                    list.push_rect(*texture, [x, y, w, h], uv, color);
                 }
             }
         }
@@ -480,10 +480,12 @@ fn rasterize(
                 &mut depth,
                 [screen[a], screen[b], screen[c]],
                 [quad.uvs[a], quad.uvs[b], quad.uvs[c]],
-                texture,
+                Surface {
+                    texture,
+                    tint: quad.tint,
+                    glint: None,
+                },
                 shade,
-                quad.tint,
-                None,
             );
         }
     }
@@ -502,23 +504,33 @@ fn gui_light(normal: Vec3, front: bool) -> f32 {
     (0.4 + 0.6 * (normal.dot(l0).max(0.0) + normal.dot(l1).max(0.0))).min(1.0)
 }
 
+/// What a triangle is painted with: a texture, tinted, maybe with a glint.
+#[derive(Clone, Copy)]
+pub(crate) struct Surface<'a> {
+    pub texture: &'a RgbaImage,
+    pub tint: [u8; 3],
+    pub glint: Option<&'a RgbaImage>,
+}
+
 /// Fills one triangle with the nearest texel, keeping the nearest surface
 /// (`depth`, larger is nearer) and blending see-through texels over what is
 /// there.
 ///
 /// Each barycentric weight is a linear function of the pixel, worked out
 /// once per triangle; pixels are read and written in the buffers directly.
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn draw_triangle(
     out: &mut RgbaImage,
     depth: &mut [f32],
     p: [Vec3; 3],
     uv: [Vec2; 3],
-    texture: &RgbaImage,
+    surface: Surface,
     shade: f32,
-    tint: [u8; 3],
-    glint: Option<&RgbaImage>,
 ) {
+    let Surface {
+        texture,
+        tint,
+        glint,
+    } = surface;
     let area = (p[1].x - p[0].x) * (p[2].y - p[0].y) - (p[2].x - p[0].x) * (p[1].y - p[0].y);
     if area.abs() < 1.0e-6 || texture.width() == 0 || texture.height() == 0 {
         return;

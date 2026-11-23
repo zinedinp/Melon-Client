@@ -2,7 +2,7 @@
 
 use crate::assets::Assets;
 use crate::gui::sprite::GuiSprite;
-use crate::gui::text::font::{DYNAMIC_PAGE, Font};
+use crate::gui::text::font::{DYNAMIC_PAGE, Font, Glyphs};
 use crate::gui::widgets::button::{ButtonTextures, TabTextures};
 use crate::gui::widgets::row_icon::{Arrow, RowIconSprites};
 use crate::gui::widgets::slider::SliderTextures;
@@ -93,6 +93,14 @@ pub struct GuiAssets {
 }
 
 impl GuiAssets {
+    pub fn glyphs(&self) -> Glyphs<'_> {
+        Glyphs {
+            font: &self.font,
+            pages: &self.font_textures,
+            white: self.white,
+        }
+    }
+
     /// Before a frame is drawn.
     pub fn sync_font(&mut self, renderer: &mut Renderer) {
         self.sync_objects(renderer);

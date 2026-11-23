@@ -179,6 +179,14 @@ pub struct Font {
     pub white: TextureId,
 }
 
+/// A font with its page textures and a white pixel: what plain text and a cursor need.
+#[derive(Clone, Copy)]
+pub struct Glyphs<'a> {
+    pub font: &'a Font,
+    pub pages: &'a [TextureId],
+    pub white: TextureId,
+}
+
 impl Font {
     pub fn load(assets: &Assets, root_id: &str) -> anyhow::Result<Self> {
         let mut pages = Vec::new();
@@ -533,7 +541,7 @@ impl Font {
         y: f32,
         color: [f32; 4],
     ) -> f32 {
-        self.push_text_with(draw_list, page_textures, text, x, y, color, true)
+        self.push_text_with(draw_list, page_textures, text, [x, y], color, true)
     }
 
     /// `GuiGraphics.centeredText`.
@@ -560,17 +568,15 @@ impl Font {
         y: f32,
         color: [f32; 4],
     ) -> f32 {
-        self.push_text_with(draw_list, page_textures, text, x, y, color, false)
+        self.push_text_with(draw_list, page_textures, text, [x, y], color, false)
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn push_text_with(
         &self,
         draw_list: &mut DrawList,
         page_textures: &[TextureId],
         text: &str,
-        x: f32,
-        y: f32,
+        [x, y]: [f32; 2],
         color: [f32; 4],
         with_shadow: bool,
     ) -> f32 {
@@ -596,25 +602,9 @@ impl Font {
                 {
                     let draw_y = y + (BASELINE_ASCENT - ascent as f32);
                     if with_shadow {
-                        draw_list.push_rect(
-                            page_textures[page],
-                            pen + glyph.shadow,
-                            draw_y + glyph.shadow,
-                            width,
-                            height,
-                            [u0, v0, u1, v1],
-                            shadow,
-                        );
+                        draw_list.push_rect(page_textures[page], [pen + glyph.shadow, draw_y + glyph.shadow, width, height], [u0, v0, u1, v1], shadow);
                     }
-                    draw_list.push_rect(
-                        page_textures[page],
-                        pen,
-                        draw_y,
-                        width,
-                        height,
-                        [u0, v0, u1, v1],
-                        color,
-                    );
+                    draw_list.push_rect(page_textures[page], [pen, draw_y, width, height], [u0, v0, u1, v1], color);
                 }
                 pen += glyph.advance;
             } else {
@@ -666,28 +656,8 @@ impl Font {
                     let down = up + height;
                     let shear_top = 1.0 - 0.25 * up;
                     let shear_bottom = 1.0 - 0.25 * down;
-                    draw_list.push_rect_sheared(
-                        page_textures[page],
-                        pen + glyph.shadow,
-                        draw_y + glyph.shadow,
-                        draw_y + height + glyph.shadow,
-                        width,
-                        shear_top,
-                        shear_bottom,
-                        [u0, v0, u1, v1],
-                        shadow,
-                    );
-                    draw_list.push_rect_sheared(
-                        page_textures[page],
-                        pen,
-                        draw_y,
-                        draw_y + height,
-                        width,
-                        shear_top,
-                        shear_bottom,
-                        [u0, v0, u1, v1],
-                        color,
-                    );
+                    draw_list.push_rect_sheared(page_textures[page], [pen + glyph.shadow, draw_y + glyph.shadow, width, height], [shear_top, shear_bottom], [u0, v0, u1, v1], shadow);
+                    draw_list.push_rect_sheared(page_textures[page], [pen, draw_y, width, height], [shear_top, shear_bottom], [u0, v0, u1, v1], color);
                 }
                 pen += glyph.advance;
             } else {
@@ -725,26 +695,8 @@ impl Font {
                 } = glyph.kind
                 {
                     let draw_y = origin[1] + (BASELINE_ASCENT - ascent as f32);
-                    draw_list.push_rect_transformed(
-                        page_textures[page],
-                        transform,
-                        pen + glyph.shadow,
-                        draw_y + glyph.shadow,
-                        width,
-                        height,
-                        [u0, v0, u1, v1],
-                        shadow,
-                    );
-                    draw_list.push_rect_transformed(
-                        page_textures[page],
-                        transform,
-                        pen,
-                        draw_y,
-                        width,
-                        height,
-                        [u0, v0, u1, v1],
-                        color,
-                    );
+                    draw_list.push_rect_transformed(page_textures[page], transform, [pen + glyph.shadow, draw_y + glyph.shadow, width, height], [u0, v0, u1, v1], shadow);
+                    draw_list.push_rect_transformed(page_textures[page], transform, [pen, draw_y, width, height], [u0, v0, u1, v1], color);
                 }
                 pen += glyph.advance;
             } else {

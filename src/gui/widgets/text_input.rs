@@ -4,8 +4,7 @@ use std::cell::{Cell, RefCell};
 use std::time::{Duration, Instant};
 
 use crate::gui::screen::TextEvent;
-use crate::gui::text::font::Font;
-use crate::renderer::TextureId;
+use crate::gui::text::font::{Font, Glyphs};
 use crate::renderer::quad::{BlendMode, DrawList};
 
 /// `TextCursorUtils.isCursorVisible`.
@@ -172,22 +171,20 @@ impl TextInput {
     }
 
     /// `TextCursorUtils`.
-    #[allow(clippy::too_many_arguments)]
     pub fn draw_cursor(
         &self,
         draw_list: &mut DrawList,
-        font: &Font,
-        pages: &[TextureId],
-        white: TextureId,
+        glyphs: Glyphs<'_>,
         start: usize,
         (x, y): (f32, f32),
         color: [f32; 4],
     ) {
+        let Glyphs { font, pages, white } = glyphs;
         let before = self.slice(start, self.cursor.max(start));
         let cursor_x = (x + font.text_width(&before)).round();
         crate::gui::ime::note_cursor(cursor_x, y, 9.0);
         if !self.preedit.is_empty() {
-            self.draw_preedit(draw_list, font, pages, white, (cursor_x, y), color);
+            self.draw_preedit(draw_list, glyphs, (cursor_x, y), color);
             return;
         }
         if !self.cursor_visible() {
@@ -207,12 +204,11 @@ impl TextInput {
     fn draw_preedit(
         &self,
         draw_list: &mut DrawList,
-        font: &Font,
-        pages: &[TextureId],
-        white: TextureId,
+        glyphs: Glyphs<'_>,
         (x, y): (f32, f32),
         color: [f32; 4],
     ) {
+        let Glyphs { font, pages, white } = glyphs;
         let width = font.text_width(&self.preedit);
         draw_list.push_fill(white, x, y - 1.0, width + 1.0, 10.0, [0.0, 0.0, 0.0, 0.85]);
         font.push_text(draw_list, pages, &self.preedit, x, y, color);
@@ -228,35 +224,33 @@ impl TextInput {
     }
 
     /// The text in a box `width` wide at `(x, y)`, scrolled to the cursor.
-    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &self,
         draw_list: &mut DrawList,
-        font: &Font,
-        pages: &[TextureId],
-        white: TextureId,
+        glyphs: Glyphs<'_>,
         (x, y): (f32, f32),
         width: f32,
         color: [f32; 4],
         focused: bool,
     ) {
+        let Glyphs { font, pages, .. } = glyphs;
         let (start, end) = self.window(font, width);
         font.push_text(draw_list, pages, &self.slice(start, end), x, y, color);
         if focused {
-            self.draw_cursor(draw_list, font, pages, white, start, (x, y), color);
+            self.draw_cursor(draw_list, glyphs, start, (x, y), color);
         }
-        self.draw_selection(draw_list, font, white, (start, end), (x, y));
+        self.draw_selection(draw_list, glyphs, (start, end), (x, y));
     }
 
     /// `GuiGraphicsExtractor.textHighlight` over the selected part of the text.
     pub fn draw_selection(
         &self,
         draw_list: &mut DrawList,
-        font: &Font,
-        white: TextureId,
+        glyphs: Glyphs<'_>,
         (start, end): (usize, usize),
         (x, y): (f32, f32),
     ) {
+        let Glyphs { font, white, .. } = glyphs;
         let range = self.selection();
         let (from, to) = (range.start.clamp(start, end), range.end.clamp(start, end));
         if from == to {

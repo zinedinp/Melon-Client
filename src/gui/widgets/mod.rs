@@ -328,15 +328,7 @@ impl<'a> Ui<'a> {
 
     /// A solid colour over a rectangle.
     pub fn fill(&mut self, rect: Rect, color: [f32; 4]) {
-        self.draw_list.push_rect(
-            self.assets.white,
-            rect.x,
-            rect.y,
-            rect.w,
-            rect.h,
-            [0.0, 0.0, 1.0, 1.0],
-            color,
-        );
+        self.draw_list.push_rect(self.assets.white, [rect.x, rect.y, rect.w, rect.h], [0.0, 0.0, 1.0, 1.0], color);
     }
 
     /// Clips what follows to `rect`, until [`Ui::unclip`].

@@ -8,11 +8,10 @@ use crate::gui::hud::item_slot::{self, ItemPainter};
 use crate::gui::overlay::Overlay;
 use crate::gui::overlay::container_input::ContainerView;
 use crate::gui::overlay::inventory::{InventoryTextures, SlotDrag, draw_carried, draw_slots};
-use crate::gui::text::font::Font;
+use crate::gui::text::font::Glyphs;
 use crate::gui::text::{StyledText, colors};
 use crate::i18n::Lang;
 use crate::math::argb;
-use crate::renderer::TextureId;
 use crate::renderer::quad::DrawList;
 use crate::world::creative_tabs::{CreativeTab, Row, TabType, tabs};
 use crate::world::inventory::Inventory;
@@ -50,15 +49,7 @@ impl CreativeOverlay {
             "tab_inventory" => textures.inventory,
             _ => textures.items,
         };
-        draw_list.push_rect(
-            background,
-            left,
-            top,
-            IMAGE_WIDTH,
-            IMAGE_HEIGHT,
-            [0.0, 0.0, IMAGE_WIDTH / 256.0, IMAGE_HEIGHT / 256.0],
-            [1.0; 4],
-        );
+        draw_list.push_rect(background, [left, top, IMAGE_WIDTH, IMAGE_HEIGHT], [0.0, 0.0, IMAGE_WIDTH / 256.0, IMAGE_HEIGHT / 256.0], [1.0; 4]);
         if self.tab().scrollbar {
             let sprite = if self.can_scroll() {
                 textures.scroller
@@ -73,12 +64,7 @@ impl CreativeOverlay {
             crate::gui::overlay::inventory::push_entity_preview(draw_list, texture, &preview);
         }
         if self.tab_type() == TabType::Search {
-            self.draw_search(
-                draw_list,
-                painter.font,
-                painter.font_textures,
-                painter.white,
-            );
+            self.draw_search(draw_list, painter.glyphs());
         }
         if self.tab().show_title {
             painter.font.push_text_flat(
@@ -226,13 +212,10 @@ impl CreativeOverlay {
     pub(super) fn draw_search(
         &self,
         draw_list: &mut DrawList,
-        font: &Font,
-        pages: &[TextureId],
-        white: TextureId,
+        glyphs: Glyphs<'_>,
     ) {
         let (bx, by, width, _) = super::SEARCH_BOX;
         let (x, y) = (self.left + bx, self.top + by);
-        self.search
-            .draw(draw_list, font, pages, white, (x, y), width, [1.0; 4], true);
+        self.search.draw(draw_list, glyphs, (x, y), width, [1.0; 4], true);
     }
 }

@@ -141,7 +141,7 @@ impl Renderer {
         );
 
         let mut renderer = Self {
-            entry,
+            _entry: entry,
             instance,
             debug,
             surface_loader,

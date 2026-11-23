@@ -175,10 +175,12 @@ fn draw_layer(out: &mut RgbaImage, depth: &mut [f32], layer: &PreviewLayer) {
                     depth,
                     [screen[a], screen[b], screen[c]],
                     [face.uvs[a], face.uvs[b], face.uvs[c]],
-                    layer.texture,
+                    crate::gui::hud::item_icon::Surface {
+                        texture: layer.texture,
+                        tint: layer.tint,
+                        glint: layer.glint,
+                    },
                     shade,
-                    layer.tint,
-                    layer.glint,
                 );
             }
         });

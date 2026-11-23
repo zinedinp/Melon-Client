@@ -400,7 +400,6 @@ fn push_cell(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn push_face(
     out: &mut Vec<WorldVertex>,
     min: [f32; 3],

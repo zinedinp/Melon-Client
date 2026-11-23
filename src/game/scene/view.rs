@@ -5,6 +5,7 @@ use std::time::Instant;
 
 use crate::game::InWorld;
 use crate::game::camera::{self, Camera};
+use crate::game::entities::EntityFrame;
 use crate::game::environment::FrameEnvironment;
 use crate::game::world_resources::WorldResources;
 use crate::settings::options::Config;
@@ -15,7 +16,7 @@ use crate::world::lightmap::LightmapParams;
 const HAND_FOV: f32 = 70.0;
 
 /// How this frame is seen.
-pub(super) struct FrameView {
+pub(in crate::game) struct FrameView {
     pub camera: Camera,
     pub look: FrameEnvironment,
     /// `getGameTimeDeltaPartialTick(true)`.
@@ -28,6 +29,20 @@ pub(super) struct FrameView {
     pub distortion: Mat4,
     pub lightmap: LightmapParams,
     pub spectator: bool,
+}
+
+impl FrameView {
+    /// What the entity layer's draws read of the frame.
+    pub fn entity_frame(&self) -> EntityFrame<'_> {
+        let look = self.camera.look();
+        EntityFrame {
+            camera: self.camera.position,
+            // `Camera.yRot` / `xRot`, which vanilla's billboards turn to.
+            angles: (look.y_rot, look.x_rot),
+            partial: self.partial,
+            lightmap: &self.lightmap,
+        }
+    }
 }
 
 impl InWorld {

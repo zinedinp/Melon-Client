@@ -87,6 +87,16 @@ pub struct DrawList {
     sealed: usize,
 }
 
+/// `[x, y, w, h]`'s corners: top left, bottom left, bottom right, top right.
+fn corners([x, y, w, h]: [f32; 4]) -> [[f32; 2]; 4] {
+    [[x, y], [x, y + h], [x + w, y + h], [x + w, y]]
+}
+
+/// `[u0, v0, u1, v1]` in [`corners`]' order.
+fn rect_uvs([u0, v0, u1, v1]: [f32; 4]) -> [[f32; 2]; 4] {
+    [[u0, v0], [u0, v1], [u1, v1], [u1, v0]]
+}
+
 impl DrawList {
     pub fn new() -> Self {
         Self {
@@ -156,14 +166,19 @@ impl DrawList {
 
     /// A whole texture, untinted (vanilla `blitSprite` of a plain sprite).
     pub fn push_sprite(&mut self, texture: TextureId, x: f32, y: f32, w: f32, h: f32) {
-        self.push_rect(texture, x, y, w, h, [0.0, 0.0, 1.0, 1.0], [1.0; 4]);
+        self.push_rect(texture, [x, y, w, h], [0.0, 0.0, 1.0, 1.0], [1.0; 4]);
     }
 
     /// A solid rectangle (vanilla `fill`), drawn with the 1x1 white texture.
     pub fn push_fill(&mut self, white: TextureId, x: f32, y: f32, w: f32, h: f32, color: [f32; 4]) {
         let program = self.fill_program();
-        let corners = [[x, y], [x, y + h], [x + w, y + h], [x + w, y]];
-        self.push_corners(white, corners, [[0.0, 0.0]; 4], [color; 4], program);
+        self.push_corners(
+            white,
+            corners([x, y, w, h]),
+            [[0.0, 0.0]; 4],
+            [color; 4],
+            program,
+        );
     }
 
     /// [`Program::Fill`], unless text is being drawn.
@@ -193,21 +208,15 @@ impl DrawList {
         self.push_call(texture, first, 6, program);
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn push_rect(
-        &mut self,
-        texture: TextureId,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-        uv: [f32; 4],
-        color: [f32; 4],
-    ) {
-        let [u0, v0, u1, v1] = uv;
-        let corners = [[x, y], [x, y + h], [x + w, y + h], [x + w, y]];
-        let uvs = [[u0, v0], [u0, v1], [u1, v1], [u1, v0]];
-        self.push_corners(texture, corners, uvs, [color; 4], self.current_program);
+    /// `rect` is `[x, y, w, h]`, `uv` `[u0, v0, u1, v1]`.
+    pub fn push_rect(&mut self, texture: TextureId, rect: [f32; 4], uv: [f32; 4], color: [f32; 4]) {
+        self.push_corners(
+            texture,
+            corners(rect),
+            rect_uvs(uv),
+            [color; 4],
+            self.current_program,
+        );
     }
 
     /// A quad of any four corners, in the order they go round, each with its UV.
@@ -222,82 +231,79 @@ impl DrawList {
     }
 
     /// `push_rect` after `transform` (splash text).
-    #[allow(clippy::too_many_arguments)]
     pub fn push_rect_transformed(
         &mut self,
         texture: TextureId,
         transform: &Transform2D,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
+        rect: [f32; 4],
         uv: [f32; 4],
         color: [f32; 4],
     ) {
-        let [u0, v0, u1, v1] = uv;
-        let corners = [[x, y], [x, y + h], [x + w, y + h], [x + w, y]].map(|p| transform.apply(p));
-        let uvs = [[u0, v0], [u0, v1], [u1, v1], [u1, v0]];
-        self.push_corners(texture, corners, uvs, [color; 4], self.current_program);
+        let corners = corners(rect).map(|p| transform.apply(p));
+        self.push_corners(
+            texture,
+            corners,
+            rect_uvs(uv),
+            [color; 4],
+            self.current_program,
+        );
     }
 
-    /// `push_rect` as a parallelogram.
-    #[allow(clippy::too_many_arguments)]
+    /// `push_rect` as a parallelogram: `shear` moves the top and bottom edge along x.
     pub fn push_rect_sheared(
         &mut self,
         texture: TextureId,
-        x: f32,
-        y0: f32,
-        y1: f32,
-        w: f32,
-        shear_top: f32,
-        shear_bottom: f32,
+        [x, y, w, h]: [f32; 4],
+        [top, bottom]: [f32; 2],
         uv: [f32; 4],
         color: [f32; 4],
     ) {
-        let [u0, v0, u1, v1] = uv;
         let corners = [
-            [x + shear_top, y0],
-            [x + shear_bottom, y1],
-            [x + w + shear_bottom, y1],
-            [x + w + shear_top, y0],
+            [x + top, y],
+            [x + bottom, y + h],
+            [x + w + bottom, y + h],
+            [x + w + top, y],
         ];
-        let uvs = [[u0, v0], [u0, v1], [u1, v1], [u1, v0]];
-        self.push_corners(texture, corners, uvs, [color; 4], self.current_program);
+        self.push_corners(
+            texture,
+            corners,
+            rect_uvs(uv),
+            [color; 4],
+            self.current_program,
+        );
     }
 
-    /// Repeats `texture` (native width `tile_w`) across `[x, x+w)` instead of stretching it.
-    #[allow(clippy::too_many_arguments)]
+    /// Repeats `texture` (native width `tile_w`) across the rect instead of stretching it.
     pub fn push_rect_tiled_x(
         &mut self,
         texture: TextureId,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
+        rect: [f32; 4],
         tile_w: f32,
         color: [f32; 4],
     ) {
+        let w = rect[2];
         if w > 0.0 {
-            self.push_rect(texture, x, y, w, h, [0.0, 0.0, w / tile_w, 1.0], color);
+            self.push_rect(texture, rect, [0.0, 0.0, w / tile_w, 1.0], color);
         }
     }
 
     /// Solid vertical gradient on the white texture.
-    #[allow(clippy::too_many_arguments)]
     pub fn push_vgradient(
         &mut self,
         texture: TextureId,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
+        rect: [f32; 4],
         top: [f32; 4],
         bottom: [f32; 4],
     ) {
-        let corners = [[x, y], [x, y + h], [x + w, y + h], [x + w, y]];
         let uvs = [[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0]];
         let program = self.fill_program();
-        self.push_corners(texture, corners, uvs, [top, bottom, bottom, top], program);
+        self.push_corners(
+            texture,
+            corners(rect),
+            uvs,
+            [top, bottom, bottom, top],
+            program,
+        );
     }
 
     fn push_call(&mut self, texture: TextureId, first: u32, count: u32, program: Program) {

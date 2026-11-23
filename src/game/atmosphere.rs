@@ -1,8 +1,7 @@
 //! Cloud and weather meshes.
 
 use super::InWorld;
-use super::camera::Camera;
-use super::environment::FrameEnvironment;
+use super::scene::FrameView;
 use super::world_resources::WorldResources;
 use crate::renderer::{CloudDraw, EntityDraw, MeshId, Renderer, WeatherDraw, WorldVertex};
 use crate::settings::options::Config;
@@ -40,18 +39,22 @@ impl SkyMeshes {
 
 impl InWorld {
     /// Cloud boxes, then rain, then snow, matching vanilla's atmosphere pass.
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn atmosphere_draws(
         &mut self,
         renderer: &mut Renderer,
         assets: &WorldResources,
-        camera: &Camera,
+        view: &FrameView,
         config: &Config,
-        look: &FrameEnvironment,
-        lightmap_params: &crate::world::lightmap::LightmapParams,
-        partial: f32,
         aspect: f32,
     ) -> (Option<CloudDraw>, Vec<WeatherDraw>) {
+        let FrameView {
+            camera,
+            look,
+            lightmap: lightmap_params,
+            partial,
+            ..
+        } = view;
+        let partial = *partial;
         // The weather's quads are relative to the camera: placed from its
         // block, so the floats stay small however far out it is.
         let camera_block = camera.position.floor();

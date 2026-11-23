@@ -1,10 +1,9 @@
 //! `ChatComponent.extractRenderState` and its hit tests.
 
 use super::{BOTTOM_MARGIN, Chat, Line, Tag};
-use crate::gui::text::font::Font;
+use crate::gui::text::font::{Font, Glyphs};
 use crate::gui::text::{self, StyledText, TextPaint, TextStyle, colors};
 use crate::i18n::Lang;
-use crate::renderer::TextureId;
 use crate::renderer::quad::DrawList;
 
 impl Chat {
@@ -28,17 +27,15 @@ impl Chat {
     }
 
     /// `ChatComponent.extractRenderState`.
-    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &self,
         draw_list: &mut DrawList,
-        font: &Font,
-        pages: &[TextureId],
-        white: TextureId,
+        glyphs: Glyphs<'_>,
         lang: &Lang,
         screen_height: f32,
         focused: bool,
     ) {
+        let white = glyphs.white;
         let scale = self.scale();
         if scale <= 0.0 {
             return;
@@ -95,27 +92,11 @@ impl Chat {
                     [r, g, b, alpha * text_opacity],
                 );
             }
-            self.draw_line(
-                draw_list,
-                font,
-                pages,
-                white,
-                &line.content,
-                text_top,
-                alpha * text_opacity,
-            );
+            self.draw_line(draw_list, glyphs, &line.content, text_top, alpha * text_opacity);
         }
         if queue > 0 {
             let text = StyledText::plain(&lang.format("chat.queue", &[&queue.to_string()]));
-            self.draw_line(
-                draw_list,
-                font,
-                pages,
-                white,
-                &text,
-                chat_bottom + 1.0,
-                0.5 * text_opacity,
-            );
+            self.draw_line(draw_list, glyphs, &text, chat_bottom + 1.0, 0.5 * text_opacity);
         }
         if focused && !self.lines.is_empty() {
             let total = self.lines.len() as f32;
@@ -153,17 +134,15 @@ impl Chat {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn draw_line(
         &self,
         draw_list: &mut DrawList,
-        font: &Font,
-        pages: &[TextureId],
-        white: TextureId,
+        glyphs: Glyphs<'_>,
         content: &StyledText,
         text_top: f32,
         alpha: f32,
     ) {
+        let Glyphs { font, pages, white } = glyphs;
         let scale = self.scale();
         let paint = TextPaint {
             font,

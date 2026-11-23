@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use glam::{IVec3, Mat4, Vec3};
 
 use super::InWorld;
+use super::entities::EntityFrame;
 use super::world_resources::WorldResources;
 use crate::math::ChunkHash;
 use crate::renderer::{EntityDraw, Glint, MeshId, RenderLayer, Renderer, WorldVertex};
@@ -13,7 +14,6 @@ use crate::world::entity::fishing::{self, NearPlane};
 use crate::world::entity::kind::EntityKind;
 use crate::world::entity::player::Arm;
 use crate::world::item_model::HeldUse;
-use crate::world::lightmap::LightmapParams;
 use crate::world::player::hands::Hand;
 use pumpkin_data::item_stack::ItemStack;
 
@@ -128,10 +128,8 @@ impl FishingMeshes {
 }
 
 /// What the line's far end needs of the camera.
-pub struct View {
-    pub position: Vec3,
-    /// Camera yaw and pitch, for turning the sprite to face it.
-    pub angles: (f32, f32),
+pub(super) struct View<'a> {
+    pub frame: EntityFrame<'a>,
     pub plane: NearPlane,
 }
 
@@ -163,7 +161,6 @@ impl InWorld {
     }
 
     /// The bobbers in `visible` with their lines.
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn fishing_draws(
         &mut self,
         renderer: &mut Renderer,
@@ -171,10 +168,10 @@ impl InWorld {
         visible: &[i32],
         view: &View,
         main_arm: Arm,
-        partial: f32,
-        params: &LightmapParams,
         out: &mut Vec<EntityDraw>,
     ) {
+        let (partial, params) = (view.frame.partial, view.frame.lightmap);
+        let position = view.frame.camera.as_vec3();
         let own = self.joined.session.info.entity_id;
         let first_person = self.camera_mode == super::CameraMode::FirstPerson;
         let white = renderer.white_texture();
@@ -197,7 +194,7 @@ impl InWorld {
                 if first_person {
                     let attack = self.hands.swing.animation(partial);
                     fishing::hand_first_person(
-                        view.position,
+                        position,
                         &view.plane,
                         right,
                         fishing::swing_of(attack),
@@ -223,7 +220,7 @@ impl InWorld {
                 continue;
             };
             if let (Some(mesh), Some(texture)) = (sprite, texture) {
-                let facing = display::orientation(3, (0.0, 0.0), view.angles);
+                let facing = display::orientation(3, (0.0, 0.0), view.frame.angles);
                 out.push(EntityDraw {
                     scroll: None,
                     alpha: 1.0,
@@ -245,7 +242,7 @@ impl InWorld {
             self.entity_meshes.fishing.line(
                 renderer,
                 bobber.id,
-                (hook, hand, view.position, [block * 16, sky * 16]),
+                (hook, hand, position, [block * 16, sky * 16]),
                 white,
                 out,
             );

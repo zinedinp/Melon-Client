@@ -272,16 +272,7 @@ impl PlayerTabOverlay {
             );
             if frame.show_heads {
                 let tint = [1.0; 4];
-                draw_face(
-                    draw_list,
-                    entry.skin,
-                    x as f32,
-                    row_y as f32,
-                    8.0,
-                    entry.hat,
-                    entry.flip,
-                    tint,
-                );
+                draw_face(draw_list, entry.skin, [x as f32, row_y as f32], 8.0, entry.hat, entry.flip, tint);
                 x += 9;
             }
             let mut name_paint = paint;

@@ -605,15 +605,21 @@ mod tests {
         #[derive(Deserialize)]
         #[serde(tag = "kind", rename_all = "lowercase")]
         enum OldAccount {
-            Microsoft(#[allow(dead_code)] StoredAccount),
-            Offline {
-                #[allow(dead_code)]
-                username: String,
-            },
+            Microsoft(StoredAccount),
+            Offline { username: String },
         }
         let old: OldAccounts = serde_json::from_str(&main).unwrap();
-        assert_eq!(old.accounts.len(), 2);
-        assert!(matches!(old.accounts[1], OldAccount::Microsoft(_)));
+        let [
+            OldAccount::Offline { username },
+            OldAccount::Microsoft(microsoft),
+        ] = &old.accounts[..]
+        else {
+            panic!("not an offline and a Microsoft account");
+        };
+        assert_eq!(
+            (username.as_str(), microsoft.username.as_str()),
+            ("Steve", "Main")
+        );
         let _ = std::fs::remove_dir_all(dir);
     }
 

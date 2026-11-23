@@ -22,8 +22,8 @@ const TEXTURES: u32 = 256;
 const VERTEX_CAPACITY: usize = 1 << 16;
 
 pub struct Renderer2d {
-    #[allow(dead_code)]
-    entry: ash::Entry,
+    /// Keeps the Vulkan loader loaded.
+    _entry: ash::Entry,
     instance: ash::Instance,
     debug: Option<(ash::ext::debug_utils::Instance, vk::DebugUtilsMessengerEXT)>,
     surface_loader: ash::khr::surface::Instance,
@@ -146,7 +146,7 @@ impl Renderer2d {
             .unwrap_or(vk::API_VERSION_1_0);
 
         let mut renderer = Self {
-            entry,
+            _entry: entry,
             swapchain: Swapchain {
                 loader: ash::khr::swapchain::Device::new(&instance, &device),
                 handle: vk::SwapchainKHR::null(),

@@ -1,6 +1,8 @@
 # Pumpkin's generated data tables can overflow rustc's default stack when
 # they are optimized. Only rustc needs it: `cargo run` hands it to the game
-# too, and `main` drops it there (`melon::platform::drop_cargo_stack`).
+# too, and the game's and the examples' `main` drop it there
+# (`melon::platform::drop_cargo_stack`). `cargo test` keeps it: the harness
+# spawns its threads before a test runs, and std reads it only once.
 [env]
 RUST_MIN_STACK = "268435456"
 

@@ -11,7 +11,7 @@ use pumpkin_data::effect::MobEffectCategory;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::gui::hud::item_icon::ItemIcons;
-use crate::gui::text::font::Font;
+use crate::gui::text::font::{Font, Glyphs};
 use crate::gui::text::{self, StyledText, TextPaint, TextStyle, colors};
 use crate::gui::widgets::tooltip;
 use crate::i18n::Lang;
@@ -30,7 +30,15 @@ pub struct ItemPainter<'a> {
     pub tooltip: Option<crate::gui::assets::TooltipSprites>,
 }
 
-impl ItemPainter<'_> {
+impl<'a> ItemPainter<'a> {
+    pub fn glyphs(&self) -> Glyphs<'a> {
+        Glyphs {
+            font: self.font,
+            pages: self.font_textures,
+            white: self.white,
+        }
+    }
+
     /// Draws `stack` with its top-left corner at `(x, y)`, 16x16.
     pub fn stack(
         &self,

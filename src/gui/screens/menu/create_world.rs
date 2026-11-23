@@ -639,7 +639,7 @@ impl Screen for CreateWorldScreen {
         let separator_y = LAYOUT.bottom(ui.height) - 2.0;
         let width = ui.width;
         ui.draw_list
-            .push_rect_tiled_x(separator, 0.0, separator_y, width, 2.0, 32.0, [1.0; 4]);
+            .push_rect_tiled_x(separator, [0.0, separator_y, width, 2.0], 32.0, [1.0; 4]);
 
         self.draw_labels(ui);
         let lang = ui.lang;

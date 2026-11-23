@@ -919,20 +919,12 @@ impl RecipeBookPanel {
             return;
         }
         let (xo, yo) = self.origin();
-        ui.draw_list.push_rect(
-            sprites.background,
-            xo,
-            yo,
-            WIDTH,
-            HEIGHT,
-            [
+        ui.draw_list.push_rect(sprites.background, [xo, yo, WIDTH, HEIGHT], [
                 1.0 / 256.0,
                 1.0 / 256.0,
                 (1.0 + WIDTH) / 256.0,
                 (1.0 + HEIGHT) / 256.0,
-            ],
-            [1.0; 4],
-        );
+            ], [1.0; 4]);
         self.draw_search(ui, sprites, xo, yo);
         let filtering = self.filtering(book);
         let kind = usize::from(matches!(self.mode, Mode::Furnace(_)));
@@ -1084,9 +1076,7 @@ impl RecipeBookPanel {
         }
         self.search.draw(
             ui.draw_list,
-            font,
-            ui.painter.font_textures,
-            ui.painter.white,
+            ui.painter.glyphs(),
             at,
             bw,
             argb(0xFFFF_FFFF),

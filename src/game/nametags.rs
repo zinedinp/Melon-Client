@@ -163,8 +163,7 @@ impl InWorld {
                         draw_list,
                         painter,
                         &styled,
-                        [at[0], at[1] + SCORE_GAP * scale],
-                        scale,
+                        ([at[0], at[1] + SCORE_GAP * scale], scale),
                         dim.then(|| dim_alpha(background_opacity)),
                         background_opacity,
                     );
@@ -179,8 +178,7 @@ impl InWorld {
                     draw_list,
                     painter,
                     &styled,
-                    at,
-                    scale,
+                    (at, scale),
                     dim.then(|| dim_alpha(background_opacity)),
                     background_opacity,
                 );
@@ -450,14 +448,13 @@ impl InWorld {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    /// `styled` on its background, `scale` times as big, bottom centre at `at`.
     fn draw_tag(
         &self,
         draw_list: &mut DrawList,
         painter: ItemPainter,
         styled: &StyledText,
-        at: [f32; 2],
-        scale: f32,
+        (at, scale): ([f32; 2], f32),
         dim: Option<f32>,
         background_opacity: f32,
     ) {

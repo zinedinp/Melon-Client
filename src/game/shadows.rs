@@ -26,20 +26,26 @@ pub struct ShadowMeshes {
     by_caster: FxHashMap<i32, Shadow>,
 }
 
+/// What the frame's shadows share: the ground they fall on, its light, the
+/// texture and the camera.
+#[derive(Clone, Copy)]
+pub struct ShadowScene<'a> {
+    pub level: &'a Level,
+    pub light: shadow::ShadowLight,
+    pub texture: TextureId,
+    pub camera: Vec3,
+}
+
 impl ShadowMeshes {
     /// The shadow of `caster` standing at `feet`, `radius` blocks wide,
     /// `strength` as dark as a full one (`getShadowStrength`).
-    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &mut self,
         renderer: &mut Renderer,
-        level: &Level,
+        scene: ShadowScene<'_>,
         caster: i32,
         feet: Vec3,
-        camera: Vec3,
         (radius, strength): (f32, f32),
-        light: shadow::ShadowLight,
-        texture: TextureId,
         out: &mut Vec<EntityDraw>,
     ) {
         if radius <= 0.0 || strength <= 0.0 {
@@ -52,7 +58,7 @@ impl ShadowMeshes {
             seen: false,
         });
         shadow.seen = true;
-        let vertices = shadow::quads(level, feet, camera, radius, strength, light);
+        let vertices = shadow::quads(scene.level, feet, scene.camera, radius, strength, scene.light);
         if vertices != shadow.vertices {
             if let Some(old) = shadow.mesh.take() {
                 renderer.free_mesh(old);
@@ -80,7 +86,7 @@ impl ShadowMeshes {
                 scroll: None,
                 alpha: 1.0,
                 mesh,
-                atlas: texture,
+                atlas: scene.texture,
                 model: Mat4::IDENTITY,
                 origin: shadow.origin,
                 layer: RenderLayer::Shadows,

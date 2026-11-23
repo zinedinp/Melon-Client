@@ -70,8 +70,8 @@ pub struct MeshId(pub usize);
 pub struct QuadMeshId(pub usize);
 
 pub struct Renderer {
-    #[allow(dead_code)]
-    entry: ash::Entry,
+    /// Keeps the Vulkan loader loaded.
+    _entry: ash::Entry,
     instance: ash::Instance,
     debug: Option<(ash::ext::debug_utils::Instance, vk::DebugUtilsMessengerEXT)>,
     surface_loader: ash::khr::surface::Instance,

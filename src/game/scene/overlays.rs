@@ -7,7 +7,7 @@ use crate::game::world_resources::WorldResources;
 use crate::renderer::{EntityDraw, LineDraw, Renderer};
 
 /// What the overlay layer draws from.
-pub(super) struct OverlayInput<'a> {
+pub(in crate::game) struct OverlayInput<'a> {
     pub camera: &'a Camera,
     pub aspect: f32,
     /// The fov option: the debug frustum, like culling, is never narrower.
@@ -44,18 +44,7 @@ impl InWorld {
             (width as f32 / 1920.0 * 2.5).max(2.5),
             &mut lines,
         );
-        let camera = input.camera;
-        let frustum = camera.frustum_with_fov(input.aspect, camera.fov.max(input.fov_setting));
-        self.draw_debug_view(
-            renderer,
-            camera,
-            &frustum,
-            input.visible,
-            input.partial,
-            input.font,
-            out,
-            &mut lines,
-        );
+        self.draw_debug_view(renderer, input, out, &mut lines);
         lines
     }
 }

@@ -90,16 +90,8 @@ impl TabBar {
         let right = self.x + self.tab_w * self.titles.len() as f32;
         let separator = ui.assets.header_separator;
         ui.draw_list
-            .push_rect_tiled_x(separator, 0.0, separator_y, self.x, 2.0, 32.0, [1.0; 4]);
-        ui.draw_list.push_rect_tiled_x(
-            separator,
-            right,
-            separator_y,
-            (ui.width - right).max(0.0),
-            2.0,
-            32.0,
-            [1.0; 4],
-        );
+            .push_rect_tiled_x(separator, [0.0, separator_y, self.x, 2.0], 32.0, [1.0; 4]);
+        ui.draw_list.push_rect_tiled_x(separator, [right, separator_y, (ui.width - right).max(0.0), 2.0], 32.0, [1.0; 4]);
 
         for index in 0..self.titles.len() {
             self.draw_tab(ui, index);

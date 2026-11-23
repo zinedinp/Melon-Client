@@ -110,9 +110,7 @@ impl MenuScreen for AnvilScreen {
             let painter = draw.ui.painter;
             self.name.draw(
                 draw.ui.draw_list,
-                painter.font,
-                painter.font_textures,
-                painter.white,
+                painter.glyphs(),
                 (left + FIELD.0, top + FIELD.1),
                 FIELD.2 + 8.0,
                 argb(0xFFFF_FFFF),

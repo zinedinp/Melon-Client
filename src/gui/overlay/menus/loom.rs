@@ -292,15 +292,7 @@ impl LoomScreen {
             .draw_list
             .push_fill(white, left, top, 5.0, 10.0, tint(DyeColor::Gray));
         if let Some(texture) = draw.sprites.loom.texture(pattern) {
-            draw.ui.draw_list.push_rect(
-                texture,
-                left,
-                top,
-                5.0,
-                10.0,
-                flag_uv(0.0, 1.0, 21.0, 40.0),
-                [1.0; 4],
-            );
+            draw.ui.draw_list.push_rect(texture, [left, top, 5.0, 10.0], flag_uv(0.0, 1.0, 21.0, 40.0), [1.0; 4]);
         }
     }
 
@@ -318,7 +310,7 @@ impl LoomScreen {
             if let Some(texture) = sprites.loom.texture(pattern) {
                 draw.ui
                     .draw_list
-                    .push_rect(texture, left, top, w, h, uv, tint(color));
+                    .push_rect(texture, [left, top, w, h], uv, tint(color));
             }
         }
     }

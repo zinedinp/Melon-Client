@@ -287,16 +287,7 @@ impl SpectatorMenu {
                 }
                 None => {
                     if let Item::Player { id, .. } = &item {
-                        crate::gui::face::draw_face(
-                            draw_list,
-                            skin_of(*id),
-                            x + 2.0,
-                            top + 2.0,
-                            12.0,
-                            true,
-                            false,
-                            tint,
-                        );
+                        crate::gui::face::draw_face(draw_list, skin_of(*id), [x + 2.0, top + 2.0], 12.0, true, false, tint);
                     }
                 }
             }

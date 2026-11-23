@@ -9,6 +9,15 @@ use super::world_resources::WorldResources;
 use crate::renderer::{Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer};
 use crate::world::entity::crystal_beam;
 
+/// A crystal beam: where it starts, toward where (in blocks) and the time it
+/// scrolls by.
+#[derive(Clone, Copy)]
+pub struct Beam {
+    pub from: DVec3,
+    pub delta: glam::Vec3,
+    pub time_in_ticks: f32,
+}
+
 /// Last frame's beam of each entity casting one, and whether it was drawn
 /// this frame.
 #[derive(Default)]
@@ -17,20 +26,21 @@ pub struct BeamMeshes {
 }
 
 impl BeamMeshes {
-    /// The beam `entity` casts from `from` toward `delta` (in blocks), lit
-    /// with the caster's light.
-    #[allow(clippy::too_many_arguments)]
+    /// The beam `entity` casts, lit with the caster's light.
     pub fn draw(
         &mut self,
         renderer: &mut Renderer,
         assets: &WorldResources,
         entity: i32,
-        from: DVec3,
-        delta: glam::Vec3,
-        time_in_ticks: f32,
+        beam: Beam,
         light: [f32; 3],
         out: &mut Vec<EntityDraw>,
     ) {
+        let Beam {
+            from,
+            delta,
+            time_in_ticks,
+        } = beam;
         let Some(texture) = assets.mobs.texture(crystal_beam::TEXTURE) else {
             return;
         };

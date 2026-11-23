@@ -10,7 +10,7 @@ use pumpkin_data::entity::EntityType;
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
-use super::entities::{Placed, submit_item, submit_item_cluster};
+use super::entities::{EntityFrame, Placed, from_block, submit_item, submit_item_cluster};
 use super::world_resources::WorldResources;
 use crate::math::angle::{self, Rotation};
 use crate::renderer::{Blending, EntityDraw, Glint, MeshId, Renderer, WorldVertex};
@@ -185,18 +185,17 @@ fn facing(view: (f32, f32)) -> Mat4 {
 
 /// The draws of a sprite-like entity at `feet` (relative to the draw's
 /// block): `view` is the camera's yaw and pitch.
-#[allow(clippy::too_many_arguments)]
 pub fn submit(
     sprites: &mut SpriteMeshes,
     renderer: &mut Renderer,
     assets: &WorldResources,
     entity: &ClientEntity,
-    feet: Vec3,
     placed: Placed,
-    partial: f32,
-    view: (f32, f32),
+    frame: EntityFrame<'_>,
     out: &mut Vec<EntityDraw>,
 ) {
+    let (partial, view) = (frame.partial, frame.angles);
+    let feet = from_block(entity.pos(partial), placed.origin);
     let at = Mat4::from_translation(feet);
     let age = entity.age_in_ticks(partial);
     match entity.kind {

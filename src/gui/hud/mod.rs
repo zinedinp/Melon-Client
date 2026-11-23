@@ -473,15 +473,7 @@ fn push_hotbar(
         textures
             .attack_hotbar_background
             .draw(draw_list, x, y, 18.0, 18.0);
-        textures.attack_hotbar_progress.draw_region(
-            draw_list,
-            [18.0, 18.0],
-            [0.0, 18.0 - progress],
-            x,
-            y + 18.0 - progress,
-            18.0,
-            progress,
-        );
+        textures.attack_hotbar_progress.draw_region(draw_list, [18.0, 18.0], [0.0, 18.0 - progress], [x, y + 18.0 - progress, 18.0, progress]);
     }
 }
 
@@ -522,15 +514,7 @@ fn push_crosshair_cooldown(
     textures
         .attack_crosshair_background
         .draw(draw_list, x, y, 16.0, 4.0);
-    textures.attack_crosshair_progress.draw_region(
-        draw_list,
-        [16.0, 4.0],
-        [0.0, 0.0],
-        x,
-        y,
-        progress,
-        4.0,
-    );
+    textures.attack_crosshair_progress.draw_region(draw_list, [16.0, 4.0], [0.0, 0.0], [x, y, progress, 4.0]);
     draw_list.set_blend(BlendMode::Alpha);
 }
 
@@ -549,15 +533,7 @@ fn push_jump_bar(
         .draw(draw_list, left, top, 182.0, 5.0);
     let progress = (charge * 181.0).floor() + if charge > 0.0 { 1.0 } else { 0.0 };
     if progress > 0.0 {
-        textures.jump_progress.draw_region(
-            draw_list,
-            [182.0, 5.0],
-            [0.0, 0.0],
-            left,
-            top,
-            progress.min(182.0),
-            5.0,
-        );
+        textures.jump_progress.draw_region(draw_list, [182.0, 5.0], [0.0, 0.0], [left, top, progress.min(182.0), 5.0]);
     }
 }
 
@@ -579,15 +555,7 @@ fn push_experience(
         .floor()
         .min(182.0);
     if progress > 0.0 {
-        textures.experience_progress.draw_region(
-            draw_list,
-            [182.0, 5.0],
-            [0.0, 0.0],
-            left,
-            top,
-            progress,
-            5.0,
-        );
+        textures.experience_progress.draw_region(draw_list, [182.0, 5.0], [0.0, 0.0], [left, top, progress, 5.0]);
     }
     if status.experience_level > 0 {
         let (font, pages) = (painter.font, painter.font_textures);

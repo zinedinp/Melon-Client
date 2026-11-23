@@ -4,6 +4,7 @@ use glam::{DVec3, IVec3, Mat4, Vec3};
 use pumpkin_data::item_stack::ItemStack;
 
 use super::InWorld;
+use super::entities::Placed;
 use super::entity_models::DrawStyle;
 use super::world_resources::WorldResources;
 use crate::math::angle::Rotation;
@@ -126,20 +127,22 @@ pub(super) fn worn_skull_transform(head: Mat4, transforms: HeadTransforms) -> Ma
 }
 
 /// `CustomHeadLayer`: what is worn on the head and isn't armor.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn submit_worn_head(
     assets: &WorldResources,
     stack: &ItemStack,
     wearer: &Wearer,
     root: Mat4,
-    origin: IVec3,
-    layer: RenderLayer,
-    light: [f32; 3],
+    placed: Placed,
     out: &mut Vec<EntityDraw>,
 ) {
     if stack.is_empty() {
         return;
     }
+    let Placed {
+        origin,
+        layer,
+        light,
+    } = placed;
     let head = wearer.head(root);
     let style = |texture| DrawStyle {
         texture,

@@ -533,15 +533,7 @@ fn push_column(
             continue;
         }
         let (left, top, text_width) = placement(line, i);
-        draw_list.push_rect(
-            white,
-            left - 1.0,
-            top - 1.0,
-            text_width + 2.0,
-            LINE_HEIGHT,
-            [0.0, 0.0, 1.0, 1.0],
-            BACKGROUND,
-        );
+        draw_list.push_rect(white, [left - 1.0, top - 1.0, text_width + 2.0, LINE_HEIGHT], [0.0, 0.0, 1.0, 1.0], BACKGROUND);
     }
     for (i, line) in lines.iter().enumerate() {
         if line.is_empty() {

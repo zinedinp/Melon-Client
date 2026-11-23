@@ -47,7 +47,7 @@ impl Screen for LevelLoadingScreen {
         match (self.reason, self.portal) {
             (LoadingReason::NetherPortal, Some(sprite)) => {
                 ui.draw_list
-                    .push_rect(sprite.atlas, 0.0, 0.0, width, height, sprite.uv, [1.0; 4])
+                    .push_rect(sprite.atlas, [0.0, 0.0, width, height], sprite.uv, [1.0; 4])
             }
             (LoadingReason::EndPortal, _) => {
                 ui.draw_list

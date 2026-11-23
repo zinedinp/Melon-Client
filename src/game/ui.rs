@@ -35,7 +35,6 @@ impl InWorld {
             .and_then(|overlay| overlay.effects_panel())
             .filter(|panel| panel.fits(size.0));
         let partial = self.partial_tick();
-        let (font, pages, white) = (painter.font, painter.font_textures, painter.white);
         if shown {
             if panel.is_none() {
                 crate::gui::hud::effects::draw_hud(
@@ -106,7 +105,7 @@ impl InWorld {
         let chat_open = self.overlay_kind() == Some(OverlayKind::Chat);
         if shown || chat_open {
             self.chat
-                .draw(draw_list, font, pages, white, lang, size.1, chat_open);
+                .draw(draw_list, painter.glyphs(), lang, size.1, chat_open);
         }
         if shown {
             self.draw_tab_list(draw_list, assets, painter, lang, size.0);

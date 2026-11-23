@@ -85,17 +85,14 @@ impl ChatInput {
         text::draw(draw_list, &paint, &line, Self::text_x(), text_y);
         self.input.draw_cursor(
             draw_list,
-            font,
-            painter.font_textures,
-            painter.white,
+            painter.glyphs(),
             start,
             (Self::text_x(), text_y),
             [TEXT_COLOR[0], TEXT_COLOR[1], TEXT_COLOR[2], 1.0],
         );
         self.input.draw_selection(
             draw_list,
-            font,
-            painter.white,
+            painter.glyphs(),
             (start, end),
             (Self::text_x(), text_y),
         );

@@ -8,12 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::game::InWorld;
 use crate::game::camera::{Camera, CameraMode};
 use crate::game::gizmos::{DEFAULT_WIDTH, GizmoMesh, Gizmos, TextView};
+use crate::game::scene::OverlayInput;
 use crate::gui::hud::debug_entries::Category;
-use crate::gui::text::font::Font;
 use crate::math::argb;
-use crate::renderer::TextureId;
 use crate::renderer::{EntityDraw, Renderer};
-use crate::world::culling::frustum::Frustum;
 use crate::world::physics::Aabb;
 
 /// `Window`'s default line width, pixels.
@@ -97,18 +95,22 @@ fn still_in_view(camera: &Camera) -> impl Fn(DVec3) -> DVec3 {
 impl InWorld {
     /// The hitboxes, chunk borders and the other world renderers F3 + F6
     /// switched on, in view this frame, into `out`.
-    #[allow(clippy::too_many_arguments)]
     pub(in crate::game) fn draw_debug_view(
         &mut self,
         renderer: &mut Renderer,
-        camera: &Camera,
-        frustum: &Frustum,
-        visible: &[i32],
-        partial: f32,
-        (font, pages): (&Font, &[TextureId]),
+        input: &OverlayInput<'_>,
         out: &mut Vec<EntityDraw>,
         lines: &mut Vec<crate::renderer::LineDraw>,
     ) {
+        let OverlayInput {
+            camera,
+            visible,
+            partial,
+            font: (font, pages),
+            ..
+        } = *input;
+        // Like culling's, never narrower than the fov option.
+        let frustum = &camera.frustum_with_fov(input.aspect, camera.fov.max(input.fov_setting));
         use crate::gui::hud::debug_entries::Entry;
         let entries = self.debug.entries();
         let crosshair = entries.is_enabled(Entry::ThreeDimensionalCrosshair)

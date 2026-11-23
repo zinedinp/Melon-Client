@@ -325,7 +325,7 @@ pub fn memory_details() -> Option<MemoryDetails> {
 }
 
 /// `/proc/self/status`'s memory lines, in kB there.
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+#[cfg(any(target_os = "linux", test))]
 fn parse_proc_status(status: &str) -> Option<MemoryDetails> {
     let field = |name: &str| {
         status.lines().find_map(|line| {

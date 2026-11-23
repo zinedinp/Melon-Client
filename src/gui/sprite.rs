@@ -209,18 +209,9 @@ impl GuiSprite {
         }
     }
 
-    /// `blitSprite` with a texture region: the part of the `sprite_w`x`sprite_h`
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_region(
-        &self,
-        list: &mut DrawList,
-        sprite_size: [f32; 2],
-        tex: [f32; 2],
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-    ) {
+    /// `blitSprite` with a texture region: `rect` shows the `sprite_size` sprite from `tex` on.
+    pub fn draw_region(&self, list: &mut DrawList, sprite_size: [f32; 2], tex: [f32; 2], rect: [f32; 4]) {
+        let [x, y, w, h] = rect;
         let [sw, sh] = sprite_size;
         let [tx, ty] = tex;
         if self.scaling == Scaling::Stretch {
@@ -286,7 +277,7 @@ impl Blit {
         let [fu, fv] = self.frame;
         let [u0, v0, u1, v1] = uv;
         let uv = [ou + u0 * fu, ov + v0 * fv, ou + u1 * fu, ov + v1 * fv];
-        list.push_rect(self.texture, x, y, w, h, uv, self.color);
+        list.push_rect(self.texture, [x, y, w, h], uv, self.color);
     }
 
     /// `blitTiledSprite`.

@@ -284,7 +284,6 @@ impl GizmoMesh {
     /// `gizmos` seen from `camera`, looking along `forward`: the lines and
     /// points into `lines`, the rest into `out`. Text needs `text`; without
     /// it, none is drawn.
-    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &mut self,
         renderer: &mut Renderer,

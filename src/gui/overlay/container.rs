@@ -617,20 +617,12 @@ pub fn draw_panel(draw_list: &mut DrawList, texture: TextureId, layout: &MenuLay
     let (sheet_w, sheet_h) = layout.sheet_size();
     for strip in layout.strip_list() {
         let (x, y) = (layout.left(), layout.top() + strip.y);
-        draw_list.push_rect(
-            texture,
-            x,
-            y,
-            width,
-            strip.height,
-            [
+        draw_list.push_rect(texture, [x, y, width, strip.height], [
                 0.0,
                 strip.v / sheet_h,
                 width / sheet_w,
                 (strip.v + strip.height) / sheet_h,
-            ],
-            [1.0; 4],
-        );
+            ], [1.0; 4]);
     }
 }
 

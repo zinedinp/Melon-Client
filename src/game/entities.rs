@@ -5,10 +5,11 @@ use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use super::InWorld;
+use super::crystal_beams::Beam;
 use super::entity_models::{DrawStyle, PlayerLook};
 use super::entity_sprites;
 use super::held_items::Held;
-use super::shadows::OWN;
+use super::shadows::{OWN, ShadowScene};
 use super::world_resources::WorldResources;
 use crate::math::angle::Rotation;
 use crate::network::play::game::EntityPacket;
@@ -85,6 +86,16 @@ impl EntityMeshes {
         self.text_displays.clear(renderer);
         self.poses.clear();
     }
+}
+
+/// What the entity layer draws for: the camera, and the frame's partial tick and light.
+#[derive(Clone, Copy)]
+pub(super) struct EntityFrame<'a> {
+    pub camera: DVec3,
+    /// `Camera.yRot` / `xRot`, which billboards turn to.
+    pub angles: (f32, f32),
+    pub partial: f32,
+    pub lightmap: &'a LightmapParams,
 }
 
 /// Where one entity's draws go.
@@ -385,31 +396,34 @@ impl InWorld {
     }
 
     /// The draws and shadows of the entities in `visible`.
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn entity_draws(
         &mut self,
         renderer: &mut Renderer,
         assets: &WorldResources,
         visible: &[i32],
-        camera: DVec3,
-        partial: f32,
-        params: &LightmapParams,
-        view: (f32, f32),
+        frame: EntityFrame<'_>,
         out: &mut Vec<EntityDraw>,
         glowing: &mut Vec<(usize, [u8; 3])>,
     ) {
-        let mut layers = Vec::new();
+        let params = frame.lightmap;
+        let shadows = ShadowScene {
+            level: &self.level,
+            light: self.shadow_light(),
+            texture: assets.shadow,
+            camera: frame.camera.as_vec3(),
+        };
         for entity in visible.iter().filter_map(|&id| self.entities.get(id)) {
             // `LevelRenderer`: a frozen entity's partial tick is 1.
             let partial = if self.entities.is_frozen(entity.id) {
                 1.0
             } else {
-                partial
+                frame.partial
             };
+            let frame = EntityFrame { partial, ..frame };
             let first = out.len();
             let outline = self.outline_color(entity);
             if entity.kind.is_display() {
-                self.submit_display(assets, entity, camera, partial, view, params, out);
+                self.submit_display(assets, entity, frame, out);
                 mark_glowing(glowing, first..out.len(), outline);
                 if let Some(state) = entity.display.as_deref()
                     && !entity.appearance.invisible()
@@ -417,13 +431,10 @@ impl InWorld {
                     let tick = entity.age_in_ticks(0.0) as i32;
                     self.entity_meshes.shadows.draw(
                         renderer,
-                        &self.level,
+                        shadows,
                         entity.id,
                         entity.pos(partial).as_vec3(),
-                        camera.as_vec3(),
                         state.shadow(tick, partial),
-                        self.shadow_light(),
-                        assets.shadow,
                         out,
                     );
                 }
@@ -459,6 +470,11 @@ impl InWorld {
             let at = entity.pos(partial);
             let origin = at.floor().as_ivec3();
             let feet = at.as_vec3();
+            let placed = Placed {
+                origin,
+                layer: RenderLayer::Entities,
+                light,
+            };
             if entity.kind.is_avatar() {
                 let spectator = entity.kind == EntityKind::Player
                     && self
@@ -485,9 +501,8 @@ impl InWorld {
                 let avatar = remote_avatar(
                     entity,
                     look,
-                    origin,
+                    placed,
                     partial,
-                    light,
                     spectator,
                     upside_down,
                     self.entities.is_fishing(entity.id),
@@ -498,15 +513,6 @@ impl InWorld {
                     continue;
                 }
             } else {
-                let placed = Placed {
-                    origin,
-                    layer: RenderLayer::Entities,
-                    light,
-                };
-                layers.clear();
-                if !entity.kind.is_block() {
-                    mobs::layers(entity, partial, &|id| assets.mobs.hat(id), &mut layers);
-                }
                 let at = block_at(entity);
                 if entity.kind.is_sprite() {
                     entity_sprites::submit(
@@ -514,10 +520,8 @@ impl InWorld {
                         renderer,
                         assets,
                         entity,
-                        from_block(entity.pos(partial), origin),
                         placed,
-                        partial,
-                        view,
+                        frame,
                         out,
                     );
                 } else if entity.kind.is_block() {
@@ -536,7 +540,6 @@ impl InWorld {
                         assets,
                         &mut self.entity_meshes.poses,
                         entity,
-                        &layers,
                         placed,
                         partial,
                         |kind| self.level.tint_at(kind, at),
@@ -563,10 +566,10 @@ impl InWorld {
                             out,
                         );
                     }
-                    if let Some((from, delta, time)) = self.crystal_beam(entity, partial) {
+                    if let Some(beam) = self.crystal_beam(entity, partial) {
                         self.entity_meshes
                             .beams
-                            .draw(renderer, assets, entity.id, from, delta, time, light, out);
+                            .draw(renderer, assets, entity.id, beam, light, out);
                     }
                 }
             }
@@ -576,24 +579,20 @@ impl InWorld {
             if !entity.appearance.invisible() {
                 self.entity_meshes.shadows.draw(
                     renderer,
-                    &self.level,
+                    shadows,
                     entity.id,
                     feet,
-                    camera.as_vec3(),
                     (mobs::shadow_radius(entity), mobs::shadow_strength(entity)),
-                    self.shadow_light(),
-                    assets.shadow,
                     out,
                 );
             }
         }
     }
 
-    /// The crystal beam `entity` casts, if any: where it starts, toward
-    /// where (in blocks) and the time it scrolls by. An end crystal's runs
-    /// from its target to itself (`EndCrystalRenderer.submit`), a dragon's
-    /// from itself to the crystal healing it (`EnderDragonRenderer`).
-    fn crystal_beam(&self, entity: &ClientEntity, partial: f32) -> Option<(DVec3, Vec3, f32)> {
+    /// The crystal beam `entity` casts, if any. An end crystal's runs from its
+    /// target to itself (`EndCrystalRenderer.submit`), a dragon's from itself
+    /// to the crystal healing it (`EnderDragonRenderer`).
+    fn crystal_beam(&self, entity: &ClientEntity, partial: f32) -> Option<Beam> {
         use crate::world::entity::mobs::projectile::crystal_y;
         let at = entity.pos(partial);
         match entity.kind {
@@ -603,32 +602,42 @@ impl InWorld {
                 let age = entity.age_in_ticks(partial);
                 let mut delta = (at - target).as_vec3();
                 delta.y += crystal_y(age);
-                Some((target, delta, age))
+                Some(Beam {
+                    from: target,
+                    delta,
+                    time_in_ticks: age,
+                })
             }
             EntityKind::EnderDragon => {
                 let crystal = self.entities.get(entity.nearest_crystal?)?;
                 let age = crystal.age_in_ticks(partial);
                 let mut delta = (crystal.pos(partial) - at).as_vec3();
                 delta.y += crystal_y(age);
-                Some((at, delta, entity.age_in_ticks(partial)))
+                Some(Beam {
+                    from: at,
+                    delta,
+                    time_in_ticks: entity.age_in_ticks(partial),
+                })
             }
             _ => None,
         }
     }
 
     /// A display entity's model (`DisplayRenderer`).
-    #[allow(clippy::too_many_arguments)]
     fn submit_display(
         &self,
         assets: &WorldResources,
         entity: &ClientEntity,
-        camera: DVec3,
-        partial: f32,
-        view: (f32, f32),
-        params: &LightmapParams,
+        frame: EntityFrame<'_>,
         out: &mut Vec<EntityDraw>,
     ) {
         use crate::world::entity::display;
+        let EntityFrame {
+            camera,
+            angles: view,
+            partial,
+            lightmap: params,
+        } = frame;
         let Some(state) = entity.display.as_deref() else {
             return;
         };
@@ -830,17 +839,16 @@ impl InWorld {
     }
 
     /// The own player in third person: its body, armor, items and shadow.
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn own_avatar_draws(
         &mut self,
         renderer: &mut Renderer,
         assets: &WorldResources,
         state: AvatarRenderState,
         main_arm: Arm,
-        camera: DVec3,
-        light: [f32; 3],
+        frame: EntityFrame<'_>,
         out: &mut Vec<EntityDraw>,
     ) {
+        let light = self.light_at_eye(self.player.tick_eye().as_vec3(), 0, frame.lightmap);
         let mut state = state;
         let at = self.player.pos();
         let origin = at.floor().as_ivec3();
@@ -867,18 +875,21 @@ impl InWorld {
         if !spectator {
             // `LivingEntityRenderer.getShadowRadius`: times the `scale`
             // attribute.
+            let scene = ShadowScene {
+                level: &self.level,
+                light: self.shadow_light(),
+                texture: assets.shadow,
+                camera: frame.camera.as_vec3(),
+            };
             self.entity_meshes.shadows.draw(
                 renderer,
-                &self.level,
+                scene,
                 OWN,
                 feet,
-                camera.as_vec3(),
                 (
                     crate::world::shadow::PLAYER_RADIUS * self.player.scale() as f32,
                     1.0,
                 ),
-                self.shadow_light(),
-                assets.shadow,
                 out,
             );
         }
@@ -894,7 +905,7 @@ fn shows_when_invisible(entity: &crate::world::entity::tracker::ClientEntity) ->
 /// `point` from the block `origin`, worked out in doubles: a model
 /// placed a million blocks out is as exact as one at the origin.
 #[inline]
-fn from_block(point: DVec3, origin: IVec3) -> Vec3 {
+pub(super) fn from_block(point: DVec3, origin: IVec3) -> Vec3 {
     (point - origin.as_dvec3()).as_vec3()
 }
 
@@ -931,13 +942,11 @@ pub(super) fn visible_entities(
 }
 
 /// Another player as the tracker knows it.
-#[allow(clippy::too_many_arguments)]
 fn remote_avatar<'a>(
     entity: &'a ClientEntity,
     look: PlayerLook<'a>,
-    origin: IVec3,
+    placed: Placed,
     partial: f32,
-    light: [f32; 3],
     spectator: bool,
     upside_down: bool,
     fishing: bool,
@@ -963,7 +972,7 @@ fn remote_avatar<'a>(
     humanoid.left_arm_pose = arms.left;
     let mut state = AvatarRenderState {
         humanoid,
-        position: from_block(entity.pos(partial), origin),
+        position: from_block(entity.pos(partial), placed.origin),
         body_yaw: input.living.body_rot,
         spectator,
         shown: entity.appearance.shown,
@@ -987,7 +996,7 @@ fn remote_avatar<'a>(
             )
         }),
         armor: entity.equipment.armor(),
-        light,
+        light: placed.light,
         overlay: mobs::overlay(entity, &input.living, partial),
     }
 }
@@ -1045,9 +1054,11 @@ pub(super) fn submit_avatar(
             walk_position: avatar.state.humanoid.walk_position,
         },
         root,
-        origin,
-        layer,
-        avatar.light,
+        Placed {
+            origin,
+            layer,
+            light: avatar.light,
+        },
         out,
     );
     for (hand, (stack, using)) in Hand::ALL.into_iter().zip(avatar.hands) {
@@ -1312,17 +1323,17 @@ fn submit_held_cluster(
 }
 
 /// A mob's layers, and a humanoid's armor and items in hand.
-#[allow(clippy::too_many_arguments)]
 fn submit_mob(
     assets: &WorldResources,
     poses: &mut PoseCache,
     entity: &ClientEntity,
-    layers: &[LayerSpec],
     placed: Placed,
     partial: f32,
     tint: impl FnOnce(TintKind) -> [u8; 3],
     out: &mut Vec<EntityDraw>,
 ) {
+    let mut layers = Vec::new();
+    mobs::layers(entity, partial, &|id| assets.mobs.hat(id), &mut layers);
     let hide_body = entity.appearance.invisible();
     let mut input = mobs::pose_input(entity, partial);
     input.living.position = from_block(entity.pos(partial), placed.origin);
@@ -1333,7 +1344,7 @@ fn submit_mob(
     let mut matrices: &[Option<Mat4>] = &[];
     let mut body = None;
     let mut last: Option<(ModelId, &MobModel, ModelPose)> = None;
-    for layer in layers {
+    for layer in &layers {
         let (mob, meshes) = assets.mobs.get(layer.model);
         let Some(texture) = assets.mobs.texture(&layer.texture) else {
             continue;
@@ -1453,9 +1464,7 @@ fn submit_mob(
                 walk_position: input.living.walk_position,
             },
             root,
-            placed.origin,
-            placed.layer,
-            placed.light,
+            placed,
             out,
         );
     }

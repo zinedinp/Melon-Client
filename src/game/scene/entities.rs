@@ -56,8 +56,8 @@ impl InWorld {
         let camera = &view.camera;
         let (partial, params) = (view.partial, &view.lightmap);
         let main_arm = config.main_hand;
-        // `Camera.yRot` / `xRot`, which vanilla's billboards turn to.
-        let angles = (camera.look().y_rot, camera.look().x_rot);
+        let frame = view.entity_frame();
+        let angles = frame.angles;
         let mut draws = std::mem::take(&mut self.spare_entities);
         draws.clear();
         let mut drawn = visible.len();
@@ -72,29 +72,16 @@ impl InWorld {
             self.own_body_draws(renderer, assets, view, config, &mut draws);
         }
         let mut glowing = Vec::new();
-        self.entity_draws(
-            renderer,
-            assets,
-            visible,
-            camera.position,
-            partial,
-            params,
-            angles,
-            &mut draws,
-            &mut glowing,
-        );
+        self.entity_draws(renderer, assets, visible, frame, &mut draws, &mut glowing);
         self.pickup_draws(assets, partial, params, &mut draws);
         self.head_draws(assets, &heads, params, &mut draws);
-        self.lead_draws(
-            renderer, assets, visible, leads, partial, params, &mut draws,
-        );
+        self.lead_draws(renderer, assets, visible, leads, frame, &mut draws);
         self.fishing_draws(
             renderer,
             assets,
             visible,
             &crate::game::fishing::View {
-                position: camera.position.as_vec3(),
-                angles,
+                frame,
                 plane: crate::world::entity::fishing::NearPlane {
                     forward: camera.forward(),
                     left: camera.left(),
@@ -105,8 +92,6 @@ impl InWorld {
                 },
             },
             main_arm,
-            partial,
-            params,
             &mut draws,
         );
         self.text_display_draws(
@@ -250,15 +235,6 @@ impl InWorld {
         if state.death_time > 0.0 {
             state.humanoid.walk_speed = 0.0;
         }
-        let light = self.light_at_eye(self.player.tick_eye().as_vec3(), 0, &view.lightmap);
-        self.own_avatar_draws(
-            renderer,
-            assets,
-            state,
-            main_arm,
-            view.camera.position,
-            light,
-            out,
-        );
+        self.own_avatar_draws(renderer, assets, state, main_arm, view.entity_frame(), out);
     }
 }

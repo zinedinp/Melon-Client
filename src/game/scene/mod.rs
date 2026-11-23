@@ -8,6 +8,9 @@ mod particles;
 mod sky;
 mod view;
 
+pub(super) use overlays::OverlayInput;
+pub(super) use view::FrameView;
+
 use super::InWorld;
 use super::world_resources::WorldResources;
 use crate::gui::hud::debug::RenderStats;

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use glam::{IVec3, Mat4, Vec3};
 
 use super::InWorld;
+use super::entities::EntityFrame;
 use super::entity_models::DrawStyle;
 use super::world_resources::WorldResources;
 use crate::math::ChunkHash;
@@ -16,7 +17,6 @@ use crate::world::entity::mobs::{ModelId, leash_knot};
 use crate::world::entity::player::Arm;
 use crate::world::entity::tracker::{ClientEntity, Entities};
 use crate::world::level::Level;
-use crate::world::lightmap::LightmapParams;
 
 struct Kept {
     mesh: Option<MeshId>,
@@ -98,17 +98,16 @@ impl LeadMeshes {
 
 impl InWorld {
     /// The knots in `visible` and the leads from [`visible_leads`].
-    #[allow(clippy::too_many_arguments)]
     pub(super) fn lead_draws(
         &mut self,
         renderer: &mut Renderer,
         assets: &WorldResources,
         visible: &[i32],
         leads: Vec<(i32, Lead)>,
-        partial: f32,
-        params: &LightmapParams,
+        frame: EntityFrame<'_>,
         out: &mut Vec<EntityDraw>,
     ) {
+        let (partial, params) = (frame.partial, frame.lightmap);
         for knot in visible
             .iter()
             .filter_map(|&id| self.entities.get(id))

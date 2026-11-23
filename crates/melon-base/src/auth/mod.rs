@@ -20,8 +20,6 @@ pub enum LoginEvent {
     DeviceCode(oauth::DeviceCodeResponse),
     Success {
         username: String,
-        #[allow(dead_code)]
-        uuid: String,
     },
     Error(String),
     /// A saved session could not be refreshed; the button returns to logged out.
@@ -55,8 +53,8 @@ pub fn start_restore(client_id: Option<String>, game_dir: PathBuf) -> LoginHandl
     let (tx, rx) = channel();
     std::thread::spawn(
         move || match restore_session(client_id.as_deref(), &game_dir) {
-            Ok((username, uuid)) => {
-                tx.send(LoginEvent::Success { username, uuid }).ok();
+            Ok(username) => {
+                tx.send(LoginEvent::Success { username }).ok();
             }
             Err(_) => {
                 tx.send(LoginEvent::SessionExpired).ok();
@@ -125,7 +123,6 @@ fn finish_alt_event(
     match finish_alt_login(pending, profile, game_dir) {
         Ok(account) => LoginEvent::Success {
             username: account.username,
-            uuid: account.uuid,
         },
         Err(e) => LoginEvent::Error(format!("{e:#}")),
     }
@@ -191,17 +188,17 @@ pub fn refresh_alt(account: &AltAccount, game_dir: &Path) -> anyhow::Result<AltA
 }
 
 fn run_login(client_id: &str, game_dir: &Path, tx: &Sender<LoginEvent>) {
-    let result = (|| -> anyhow::Result<(String, String)> {
+    let result = (|| -> anyhow::Result<String> {
         let device = oauth::request_device_code(client_id)?;
         tx.send(LoginEvent::DeviceCode(device.clone())).ok();
         let ms_token = oauth::poll_for_token(client_id, &device)?;
         let stored = finish_microsoft_login(ms_token, game_dir, true)?;
-        Ok((stored.username, stored.uuid))
+        Ok(stored.username)
     })();
 
     match result {
-        Ok((username, uuid)) => {
-            tx.send(LoginEvent::Success { username, uuid }).ok();
+        Ok(username) => {
+            tx.send(LoginEvent::Success { username }).ok();
         }
         Err(e) => {
             tx.send(LoginEvent::Error(format!("{e:#}"))).ok();
@@ -232,25 +229,25 @@ fn finish_microsoft_login(
     Ok(stored)
 }
 
-fn restore_session(client_id: Option<&str>, game_dir: &Path) -> anyhow::Result<(String, String)> {
+fn restore_session(client_id: Option<&str>, game_dir: &Path) -> anyhow::Result<String> {
     let account = match Accounts::load(game_dir).selected().cloned() {
         Some(Account::Microsoft(account)) => account,
         Some(Account::Alternative(account)) => {
             let fresh = refresh_alt(&account, game_dir)?;
-            return Ok((fresh.username, fresh.uuid));
+            return Ok(fresh.username);
         }
         _ => anyhow::bail!("no signed-in account is selected"),
     };
     if let (Some(client_id), Some(refresh)) = (client_id, account.refresh_token.as_deref()) {
         let ms = oauth::refresh_access_token(client_id, refresh)?;
         let stored = finish_microsoft_login(ms, game_dir, false)?;
-        return Ok((stored.username, stored.uuid));
+        return Ok(stored.username);
     }
     let session = minecraft::MinecraftSession {
         access_token: account.access_token,
     };
     let profile = minecraft::fetch_profile(&session)?;
-    Ok((profile.name, profile.id))
+    Ok(profile.name)
 }
 
 /// Melon's Azure Application (client) ID.
