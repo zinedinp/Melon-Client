@@ -15,6 +15,7 @@ use melon::world::fluid::FluidSprites;
 use melon::world::terrain::{self, MeshContext, Neighborhood};
 
 fn main() -> anyhow::Result<()> {
+    melon::platform::drop_cargo_stack();
     let dir = std::env::args().nth(1).expect("save dir");
     let assets = melon::assets::Assets::discover()?;
 

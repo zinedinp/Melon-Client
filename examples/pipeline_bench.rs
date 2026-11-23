@@ -144,6 +144,7 @@ fn args() -> anyhow::Result<Args> {
 }
 
 fn main() -> anyhow::Result<()> {
+    melon::platform::drop_cargo_stack();
     let args = args()?;
     let mut report = Report {
         machine: machine(),

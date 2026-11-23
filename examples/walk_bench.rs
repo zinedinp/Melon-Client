@@ -19,6 +19,7 @@ const MIN_Y: i32 = -64;
 type Sets = HashMap<(i32, i32), Vec<VisibilitySet>>;
 
 fn main() -> anyhow::Result<()> {
+    melon::platform::drop_cargo_stack();
     let dir = std::env::args().nth(1).expect("save dir");
     let cache = std::env::args()
         .nth(2)

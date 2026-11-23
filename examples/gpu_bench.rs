@@ -51,6 +51,7 @@ impl ApplicationHandler for Bench {
 }
 
 fn main() -> anyhow::Result<()> {
+    melon::platform::drop_cargo_stack();
     let event_loop = EventLoop::new()?;
     let mut bench = Bench { result: None };
     event_loop.run_app(&mut bench)?;

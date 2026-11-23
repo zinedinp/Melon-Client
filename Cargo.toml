@@ -35,7 +35,7 @@ image = { version = "0.25.10", default-features = false, features = ["png"] }
 png = "0.18.1"
 num-bigint = "0.5.1"
 open = "5.4.5"
-# The integrated server: Pumpkin, checked out next to this repository.
+# The integrated server: Pumpkin, from the `mod-zip` branch of our fork.
 pumpkin = { package = "pumpkin-core", git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
 pumpkin-config = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
 pumpkin-mod = { git = "https://github.com/zinedinp/pumpkin-mod", branch = "main" }
@@ -97,7 +97,7 @@ lto = false
 incremental = true
 codegen-units = 64
 
-# `tools/build-dist.sh --quick`: a dist build to try out, not to ship.
+# `cargo build --profile dist-quick`: a dist build to try out, not to ship.
 [profile.dist-quick]
 inherits = "release"
 lto = "thin"

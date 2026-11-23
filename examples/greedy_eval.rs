@@ -39,6 +39,7 @@ struct Face {
 }
 
 fn main() -> anyhow::Result<()> {
+    melon::platform::drop_cargo_stack();
     let assets = melon::assets::Assets::discover()?;
     let models = BlockModels::bake(assets.root(), Vec::new(), 16384).0;
     let s = |id: &str| models.sprite(id).unwrap_or([0.0; 4]);

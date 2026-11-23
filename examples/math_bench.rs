@@ -311,6 +311,7 @@ fn kernel_tiers() {
 }
 
 fn main() {
+    melon::platform::drop_cargo_stack();
     if std::env::var_os("MELON_BENCH_TIERS").is_some() {
         return kernel_tiers();
     }
