@@ -1,6 +1,6 @@
 [package]
 name = "melon"
-version = "0.10.0+mc26.3"
+version = "0.10.1+mc26.3"
 authors = ["Zinedin Polic"]
 edition = "2024"
 rust-version = "1.100.0"

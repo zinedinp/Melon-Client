@@ -7,3 +7,8 @@ RUST_MIN_STACK = "268435456"
 # lld links much faster than the default linker
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# Links the MinGW C++ runtime (shaderc) statically. Otherwise melon.exe needs a libstdc++-6.dll
+# and Windows takes whichever one is on PATH (Git's, for example), which may lack symbols.
+[target.x86_64-pc-windows-gnu]
+rustflags = ["-C", "target-feature=+crt-static"]
