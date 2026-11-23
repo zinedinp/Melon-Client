@@ -66,6 +66,9 @@ pub struct Features {
     pub pageable: bool,
     /// Indirect terrain draws; `MELON_NO_MULTIDRAW` turns them off.
     pub multi_draw: bool,
+    /// `VK_KHR_draw_indirect_count`, with `multi_draw`: draw counts the GPU
+    /// writes, for the terrain's occlusion culling.
+    pub draw_count: bool,
     /// Pipeline statistics: how much each pass shades, for the benchmark.
     pub statistics: bool,
     /// `robustBufferAccess`; `MELON_NO_ROBUST_BUFFERS` turns it off.
@@ -118,10 +121,12 @@ pub unsafe fn probe(instance: &ash::Instance, physical: vk::PhysicalDevice) -> F
     // safety net for broken data.
     let robust = std::env::var_os("MELON_NO_ROBUST_BUFFERS").is_none()
         && supported.robust_buffer_access == vk::TRUE;
+    let draw_count = multi_draw && offers(ash::khr::draw_indirect_count::NAME);
     Features {
         latest_ready,
         pageable,
         multi_draw,
+        draw_count,
         statistics: supported.pipeline_statistics_query == vk::TRUE,
         robust,
     }
@@ -140,6 +145,9 @@ pub unsafe fn create(
     let mut extensions = vec![ash::khr::swapchain::NAME.as_ptr()];
     if let Some(name) = features.latest_ready {
         extensions.push(name.as_ptr());
+    }
+    if features.draw_count {
+        extensions.push(ash::khr::draw_indirect_count::NAME.as_ptr());
     }
     if features.pageable {
         extensions.push(ash::ext::memory_priority::NAME.as_ptr());

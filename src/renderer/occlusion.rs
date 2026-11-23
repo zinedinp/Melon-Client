@@ -6,6 +6,8 @@
 //! Phase 2 draws the ones phase 1 left out that may be visible, and each
 //! section's result is kept for the next frame. Only sections the pyramid
 //! proves hidden are skipped, so the picture is the same as drawing all.
+//! `shaders/compact.comp` packs each phase's draws, keeping each run's
+//! order, and `vkCmdDrawIndexedIndirectCount` draws just those.
 //! Off unless `MELON_OCCLUSION=1`: so far its overhead (a render pass split
 //! and every draw issued twice) costs more than it saves in open terrain.
 
@@ -17,6 +19,7 @@ use super::vk_util::{create_buffer, create_sampler};
 const HIZ_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/hiz.comp.spv"));
 const SELECT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/occlusion_select.comp.spv"));
 const CULL_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/occlusion.comp.spv"));
+const COMPACT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/compact.comp.spv"));
 
 /// `occlusion.comp`'s threads per group.
 const DRAWS_PER_GROUP: u32 = 64;
@@ -102,6 +105,7 @@ pub(super) struct Occlusion {
     hiz: vk::Pipeline,
     select: vk::Pipeline,
     cull: vk::Pipeline,
+    compact: vk::Pipeline,
     pool: vk::DescriptorPool,
     sampler: vk::Sampler,
     /// One per pyramid level.
@@ -110,6 +114,8 @@ pub(super) struct Occlusion {
     cull_sets: Vec<vk::DescriptorSet>,
     visible: Visible,
     pyramid: Option<Pyramid>,
+    /// `VK_KHR_draw_indirect_count`, which draws what the culling packed.
+    pub draw_count: Option<ash::khr::draw_indirect_count::Device>,
 }
 
 unsafe fn set_layout(
@@ -214,13 +220,16 @@ unsafe fn memory_barrier(
 }
 
 impl Occlusion {
+    /// `draw_count` may be `None` only where nothing is drawn (the tests).
     pub unsafe fn new(
         device: &ash::Device,
         mem_props: &vk::PhysicalDeviceMemoryProperties,
         frames: usize,
+        draw_count: Option<ash::khr::draw_indirect_count::Device>,
     ) -> anyhow::Result<Self> {
         use vk::DescriptorType as Ty;
         let reduce_layout = set_layout(device, &[Ty::COMBINED_IMAGE_SAMPLER, Ty::STORAGE_IMAGE])?;
+        // `occlusion.glsl`'s bindings.
         let cull_layout = set_layout(
             device,
             &[
@@ -228,6 +237,9 @@ impl Occlusion {
                 Ty::STORAGE_BUFFER,
                 Ty::STORAGE_BUFFER,
                 Ty::COMBINED_IMAGE_SAMPLER,
+                Ty::STORAGE_BUFFER,
+                Ty::STORAGE_BUFFER,
+                Ty::STORAGE_BUFFER,
             ],
         )?;
         let reduce_pipeline_layout = pipeline_layout(device, reduce_layout, HIZ_PUSH_SIZE)?;
@@ -235,6 +247,7 @@ impl Occlusion {
         let hiz = compute_pipeline(device, reduce_pipeline_layout, HIZ_SPV)?;
         let select = compute_pipeline(device, cull_pipeline_layout, SELECT_SPV)?;
         let cull = compute_pipeline(device, cull_pipeline_layout, CULL_SPV)?;
+        let compact = compute_pipeline(device, cull_pipeline_layout, COMPACT_SPV)?;
         let frames = frames as u32;
         let sizes = [
             vk::DescriptorPoolSize {
@@ -247,7 +260,7 @@ impl Occlusion {
             },
             vk::DescriptorPoolSize {
                 ty: Ty::STORAGE_BUFFER,
-                descriptor_count: 3 * frames,
+                descriptor_count: 6 * frames,
             },
         ];
         let pool = device.create_descriptor_pool(
@@ -280,12 +293,14 @@ impl Occlusion {
             hiz,
             select,
             cull,
+            compact,
             pool,
             sampler,
             reduce_sets,
             cull_sets,
             visible: create_visible(device, mem_props, MIN_SLOTS)?,
             pyramid: None,
+            draw_count,
         })
     }
 
@@ -451,7 +466,7 @@ impl Occlusion {
         mem_props: &vk::PhysicalDeviceMemoryProperties,
         frame: usize,
         slots: u32,
-        (commands, bounds): (vk::Buffer, vk::Buffer),
+        buffers: super::indirect::CullingBuffers,
     ) -> anyhow::Result<()> {
         if slots > self.visible.slots {
             // Only while a world loads, a few times at most.
@@ -471,9 +486,14 @@ impl Occlusion {
                 .range(vk::WHOLE_SIZE)]
         };
         let (commands, bounds, visible) = (
-            buffer(commands),
-            buffer(bounds),
+            buffer(buffers.commands),
+            buffer(buffers.bounds),
             buffer(self.visible.buffer),
+        );
+        let (keep, runs, counts) = (
+            buffer(buffers.keep),
+            buffer(buffers.runs),
+            buffer(buffers.counts),
         );
         let hiz = [vk::DescriptorImageInfo::default()
             .sampler(self.sampler)
@@ -493,20 +513,23 @@ impl Occlusion {
                 write(1, Ty::STORAGE_BUFFER).buffer_info(&bounds),
                 write(2, Ty::STORAGE_BUFFER).buffer_info(&visible),
                 write(3, Ty::COMBINED_IMAGE_SAMPLER).image_info(&hiz),
+                write(4, Ty::STORAGE_BUFFER).buffer_info(&keep),
+                write(5, Ty::STORAGE_BUFFER).buffer_info(&runs),
+                write(6, Ty::STORAGE_BUFFER).buffer_info(&counts),
             ],
             &[],
         );
         Ok(())
     }
 
-    /// Picks phase 1's draws among `count`: the ones visible last frame.
-    /// Outside a render pass, before the frame's first draw.
+    /// Picks phase 1's draws among `count` in `runs` runs: the ones visible
+    /// last frame. Outside a render pass, before the frame's first draw.
     pub unsafe fn record_select(
         &mut self,
         device: &ash::Device,
         cmd: vk::CommandBuffer,
         frame: usize,
-        count: u32,
+        (count, runs): (u32, u32),
     ) {
         if !self.visible.cleared {
             self.visible.cleared = true;
@@ -525,7 +548,9 @@ impl Occlusion {
             (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_WRITE),
             (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_READ),
         );
-        self.dispatch_draws(device, cmd, self.select, frame, &push(Default::default(), count, [0.0; 2], 0));
+        let words = push(Default::default(), count, [0.0; 2], 0);
+        self.dispatch(device, cmd, self.select, frame, &words, count.div_ceil(DRAWS_PER_GROUP));
+        self.record_compact(device, cmd, frame, (count, runs), 0);
         memory_barrier(
             device,
             cmd,
@@ -537,6 +562,25 @@ impl Occlusion {
         );
     }
 
+    /// Packs phase `phase`'s kept draws, after a barrier for what picked them.
+    unsafe fn record_compact(
+        &self,
+        device: &ash::Device,
+        cmd: vk::CommandBuffer,
+        frame: usize,
+        (count, runs): (u32, u32),
+        phase: u32,
+    ) {
+        memory_barrier(
+            device,
+            cmd,
+            (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_WRITE),
+            (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_READ),
+        );
+        let words = push(Default::default(), count, [0.0; 2], phase);
+        self.dispatch(device, cmd, self.compact, frame, &words, runs);
+    }
+
     /// Builds the pyramid from the depth phase 1 left and picks phase 2's
     /// draws. Between the render passes of the two phases; the depth buffer
     /// in `DEPTH_STENCIL_READ_ONLY_OPTIMAL`.
@@ -545,7 +589,7 @@ impl Occlusion {
         device: &ash::Device,
         cmd: vk::CommandBuffer,
         frame: usize,
-        count: u32,
+        (count, runs): (u32, u32),
         view_proj: &glam::Mat4,
     ) {
         let Some(pyramid) = &self.pyramid else {
@@ -629,7 +673,9 @@ impl Occlusion {
             );
         }
         let screen = [pyramid.screen.width as f32, pyramid.screen.height as f32];
-        self.dispatch_draws(device, cmd, self.cull, frame, &push(*view_proj, count, screen, levels));
+        let words = push(*view_proj, count, screen, levels);
+        self.dispatch(device, cmd, self.cull, frame, &words, count.div_ceil(DRAWS_PER_GROUP));
+        self.record_compact(device, cmd, frame, (count, runs), 1);
         // Phase 2 reads the commands, and writes the depth this read.
         memory_barrier(
             device,
@@ -644,14 +690,15 @@ impl Occlusion {
         );
     }
 
-    /// Runs `pipeline` once per draw of the `count` in `push`.
-    unsafe fn dispatch_draws(
+    /// Runs `pipeline` in `groups` workgroups with the push constants `push`.
+    unsafe fn dispatch(
         &self,
         device: &ash::Device,
         cmd: vk::CommandBuffer,
         pipeline: vk::Pipeline,
         frame: usize,
         push: &[u32; 20],
+        groups: u32,
     ) {
         device.cmd_bind_pipeline(cmd, vk::PipelineBindPoint::COMPUTE, pipeline);
         device.cmd_bind_descriptor_sets(
@@ -669,7 +716,9 @@ impl Occlusion {
             0,
             bytes_of(push),
         );
-        device.cmd_dispatch(cmd, push[18].div_ceil(DRAWS_PER_GROUP), 1, 1);
+        if groups > 0 {
+            device.cmd_dispatch(cmd, groups, 1, 1);
+        }
     }
 
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
@@ -678,7 +727,7 @@ impl Occlusion {
         device.free_memory(self.visible.memory, None);
         device.destroy_sampler(self.sampler, None);
         device.destroy_descriptor_pool(self.pool, None);
-        for pipeline in [self.hiz, self.select, self.cull] {
+        for pipeline in [self.hiz, self.select, self.cull, self.compact] {
             device.destroy_pipeline(pipeline, None);
         }
         device.destroy_pipeline_layout(self.reduce_pipeline_layout, None);
@@ -688,8 +737,8 @@ impl Occlusion {
     }
 }
 
-/// `occlusion.comp`'s push constants as words: `view_proj`, `screen`, `count`, `levels`.
-fn push(view_proj: glam::Mat4, count: u32, screen: [f32; 2], levels: u32) -> [u32; 20] {
+/// `occlusion.glsl`'s push constants as words: `view_proj`, `screen`, `count`, `extra`.
+fn push(view_proj: glam::Mat4, count: u32, screen: [f32; 2], extra: u32) -> [u32; 20] {
     let mut words = [0u32; 20];
     for (word, value) in words.iter_mut().zip(view_proj.to_cols_array()) {
         *word = value.to_bits();
@@ -697,7 +746,7 @@ fn push(view_proj: glam::Mat4, count: u32, screen: [f32; 2], levels: u32) -> [u3
     words[16] = screen[0].to_bits();
     words[17] = screen[1].to_bits();
     words[18] = count;
-    words[19] = levels;
+    words[19] = extra;
     words
 }
 

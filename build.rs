@@ -159,9 +159,11 @@ fn main() {
         "terrain_indirect.vert",
         &["INDIRECT"],
     );
-    // Occlusion culling of those multi-draws: the depth pyramid, then the
-    // phase 1 selection and the phase 2 test.
+    // Occlusion culling of those multi-draws: the depth pyramid, the phase 1
+    // selection and the phase 2 test, and packing what each phase keeps.
+    println!("cargo:rerun-if-changed=shaders/occlusion.glsl");
     compile_shader("shaders/hiz.comp", &out_dir, "compute");
+    compile_shader("shaders/compact.comp", &out_dir, "compute");
     compile_variant(
         "shaders/occlusion.comp",
         &out_dir,

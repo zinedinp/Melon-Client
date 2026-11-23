@@ -66,11 +66,18 @@ impl Renderer {
             .get_physical_device_format_properties(gpu.physical, depth_format)
             .optimal_tiling_features
             .contains(vk::FormatFeatureFlags::SAMPLED_IMAGE);
-        let occlusion = if indirect.is_some() && depth_readable && super::occlusion::wanted() {
+        let occlusion = if indirect.is_some()
+            && features.draw_count
+            && depth_readable
+            && super::occlusion::wanted()
+        {
             Some(super::occlusion::Occlusion::new(
                 &device,
                 &mem_props,
                 MAX_FRAMES_IN_FLIGHT,
+                Some(ash::khr::draw_indirect_count::Device::new(
+                    &instance, &device,
+                )),
             )?)
         } else {
             None

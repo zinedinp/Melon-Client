@@ -1,0 +1,43 @@
+#version 450
+
+// Packs one phase's kept draws (`occlusion.comp`) to the front of each run,
+// in the order they were gathered (near to far). One workgroup per run. The
+// phase's copy starts at `(phase + 1) * count`, so a run's packed draws
+// start at the same place within it, and `counts` says how many there are.
+
+#include "occlusion.glsl"
+
+#define GROUP 256
+layout(local_size_x = GROUP) in;
+
+shared uint sums[GROUP];
+
+void main() {
+    uint lane = gl_LocalInvocationID.x;
+    uvec2 run = runs[gl_WorkGroupID.x];
+    uint phase = pc.extra;
+    uint flags = phase * pc.count;
+    uint out_start = (phase + 1u) * pc.count + run.x;
+    uint total = 0u;
+    for (uint base = 0u; base < run.y; base += GROUP) {
+        uint at = base + lane;
+        uint kept = at < run.y ? keep[flags + run.x + at] : 0u;
+        // Inclusive prefix sum over the group (Hillis-Steele).
+        sums[lane] = kept;
+        barrier();
+        for (uint step = 1u; step < GROUP; step <<= 1u) {
+            uint add = lane >= step ? sums[lane - step] : 0u;
+            barrier();
+            sums[lane] += add;
+            barrier();
+        }
+        if (kept != 0u) {
+            commands[out_start + total + sums[lane] - 1u] = commands[run.x + at];
+        }
+        total += sums[GROUP - 1u];
+        barrier();
+    }
+    if (lane == 0u) {
+        counts[2u * gl_WorkGroupID.x + phase] = total;
+    }
+}

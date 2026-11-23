@@ -1063,7 +1063,7 @@ fn occlusion_culls_what_the_depth_hides() {
             .bind_image_memory(depth, depth_memory, 0)
             .expect("bind depth");
 
-        let mut occlusion = Occlusion::new(device, &mem_props, 1).expect("occlusion");
+        let mut occlusion = Occlusion::new(device, &mem_props, 1, None).expect("occlusion");
         occlusion
             .resize(device, &mem_props, depth, format, extent)
             .expect("pyramid");
@@ -1085,13 +1085,25 @@ fn occlusion_culls_what_the_depth_hides() {
                 .expect("map");
             (buffer, memory, ptr.cast::<u32>())
         };
+        let storage = vk::BufferUsageFlags::STORAGE_BUFFER;
         let (commands, commands_memory, commands_ptr) = mapped(
-            u64::from(2 * count * indirect::COMMAND_SIZE),
-            vk::BufferUsageFlags::STORAGE_BUFFER | vk::BufferUsageFlags::INDIRECT_BUFFER,
+            u64::from(3 * count * indirect::COMMAND_SIZE),
+            storage | vk::BufferUsageFlags::INDIRECT_BUFFER,
         );
-        let (bounds_buffer, bounds_memory, bounds_ptr) =
-            mapped(16 * u64::from(count), vk::BufferUsageFlags::STORAGE_BUFFER);
+        let (bounds_buffer, bounds_memory, bounds_ptr) = mapped(16 * u64::from(count), storage);
         std::ptr::copy_nonoverlapping(bounds.as_ptr(), bounds_ptr.cast(), bounds.len());
+        let (keep, keep_memory, _) = mapped(8 * u64::from(count), storage);
+        // One run of all three draws.
+        let (runs, runs_memory, runs_ptr) = mapped(8, storage);
+        std::ptr::copy_nonoverlapping([0u32, count].as_ptr(), runs_ptr, 2);
+        let (counts, counts_memory, counts_ptr) = mapped(8, storage);
+        let buffers = indirect::CullingBuffers {
+            commands,
+            bounds: bounds_buffer,
+            keep,
+            runs,
+            counts,
+        };
 
         let projection = super::world_projection(70.0, 37.0 / 23.0, 256.0);
         let wall_clip = projection * glam::Vec4::new(0.0, 0.0, -wall, 1.0);
@@ -1111,16 +1123,16 @@ fn occlusion_culls_what_the_depth_hides() {
             base_array_layer: 0,
             layer_count: 1,
         };
-        // One frame with the depth buffer at `depth_value`: (phase 1, phase 2)
-        // instance counts per draw.
-        let mut frame = |depth_value: f32| -> Vec<(u32, u32)> {
-            for i in 0..2 * count as usize {
-                let words = commands_ptr.add(i * 5);
+        // One frame with the depth buffer at `depth_value`: the draws phase 1
+        // and phase 2 packed, by their `firstInstance`.
+        let mut frame = |depth_value: f32| -> [Vec<u32>; 2] {
+            for i in 0..count {
+                let words = commands_ptr.add(i as usize * 5);
                 // Six indices of a quad, drawn once.
-                std::ptr::copy_nonoverlapping([6u32, 1, 0, 0, 0].as_ptr(), words, 5);
+                std::ptr::copy_nonoverlapping([6u32, 1, 0, 0, i].as_ptr(), words, 5);
             }
             occlusion
-                .prepare(device, &mem_props, 0, 3, (commands, bounds_buffer))
+                .prepare(device, &mem_props, 0, 3, buffers)
                 .expect("prepare");
             device
                 .begin_command_buffer(cmd, &vk::CommandBufferBeginInfo::default())
@@ -1174,8 +1186,8 @@ fn occlusion_culls_what_the_depth_hides() {
                     vk::AccessFlags::SHADER_READ,
                 )],
             );
-            occlusion.record_select(device, cmd, 0, count);
-            occlusion.record_cull(device, cmd, 0, count, &projection);
+            occlusion.record_select(device, cmd, 0, (count, 1));
+            occlusion.record_cull(device, cmd, 0, (count, 1), &projection);
             device.end_command_buffer(cmd).expect("end");
             let cmds = [cmd];
             device
@@ -1186,25 +1198,31 @@ fn occlusion_culls_what_the_depth_hides() {
                 )
                 .expect("submit");
             device.queue_wait_idle(queue).expect("idle");
-            (0..count as usize)
-                .map(|i| {
-                    let instances = |at: usize| *commands_ptr.add(at * 5 + 1);
-                    (instances(i), instances(count as usize + i))
-                })
-                .collect()
+            std::array::from_fn(|phase| {
+                let start = (phase + 1) * count as usize;
+                (0..*counts_ptr.add(phase))
+                    .map(|i| *commands_ptr.add((start + i as usize) * 5 + 4))
+                    .collect()
+            })
         };
         // Nothing seen yet: phase 1 draws only the never-culled draw, phase
         // 2 the one in front.
-        assert_eq!(frame(wall_depth), [(0, 0), (0, 1), (1, 0)]);
+        assert_eq!(frame(wall_depth), [vec![2], vec![1]]);
         // Now the one in front comes in phase 1, and isn't drawn again.
-        assert_eq!(frame(wall_depth), [(0, 0), (1, 0), (1, 0)]);
-        // Without the wall the far one is seen as well.
-        assert_eq!(frame(0.0), [(0, 1), (1, 0), (1, 0)]);
-        assert_eq!(frame(0.0), [(1, 0), (1, 0), (1, 0)]);
+        assert_eq!(frame(wall_depth), [vec![1, 2], vec![]]);
+        // Without the wall the far one is seen as well; packed in order.
+        assert_eq!(frame(0.0), [vec![1, 2], vec![0]]);
+        assert_eq!(frame(0.0), [vec![0, 1, 2], vec![]]);
 
         device.device_wait_idle().expect("idle");
         occlusion.destroy(device);
-        for (buffer, memory) in [(commands, commands_memory), (bounds_buffer, bounds_memory)] {
+        for (buffer, memory) in [
+            (commands, commands_memory),
+            (bounds_buffer, bounds_memory),
+            (keep, keep_memory),
+            (runs, runs_memory),
+            (counts, counts_memory),
+        ] {
             device.unmap_memory(memory);
             device.destroy_buffer(buffer, None);
             device.free_memory(memory, None);

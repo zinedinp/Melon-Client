@@ -54,16 +54,49 @@ impl Mapped {
 /// One frame in flight's buffers and the descriptor set binding them.
 #[derive(Default)]
 struct FrameDraws {
-    /// Each draw twice: the occlusion culling's phase 1, then phase 2 (see [`Phase`]).
+    /// The gathered draws, then room for the occlusion culling to pack
+    /// phase 1's and phase 2's (see [`Phase`]).
     commands: Mapped,
     offsets: Mapped,
     bounds: Mapped,
+    /// For the occlusion culling, per draw and phase: whether it is drawn.
+    keep: Mapped,
+    /// Each run's first draw and length, solid runs first.
+    run_table: Mapped,
+    /// Per run, phase 1's and phase 2's draw counts.
+    counts: Mapped,
     capacity: u32,
     set: vk::DescriptorSet,
 }
 
-/// Which copy of the commands a multi-draw reads. Without occlusion culling
-/// phase 1 draws everything.
+/// The buffers [`DrawBuffers::culling_buffers`] hands out.
+#[derive(Clone, Copy)]
+pub(super) struct CullingBuffers {
+    pub commands: vk::Buffer,
+    pub bounds: vk::Buffer,
+    pub keep: vk::Buffer,
+    pub runs: vk::Buffer,
+    pub counts: vk::Buffer,
+}
+
+impl FrameDraws {
+    unsafe fn destroy(&mut self, device: &ash::Device) {
+        for mapped in [
+            &mut self.commands,
+            &mut self.offsets,
+            &mut self.bounds,
+            &mut self.keep,
+            &mut self.run_table,
+            &mut self.counts,
+        ] {
+            mapped.destroy(device);
+        }
+        self.capacity = 0;
+    }
+}
+
+/// Which of the occlusion culling's packed copies of the commands a
+/// multi-draw reads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Phase {
     First,
@@ -162,7 +195,11 @@ impl Gathered {
         bounds: [f32; 4],
     ) {
         let index = self.commands.len() as u32;
-        self.commands.push(command);
+        // `terrain.vert` finds the draw's offset by it.
+        self.commands.push(vk::DrawIndexedIndirectCommand {
+            first_instance: index,
+            ..command
+        });
         self.offsets.push([offset[0], offset[1], offset[2], 0.0]);
         self.bounds.push(bounds);
         let runs = &mut self.runs[pass as usize];
@@ -257,16 +294,19 @@ impl DrawBuffers {
             return Ok(());
         }
         let capacity = draws.next_power_of_two().max(MIN_DRAWS);
-        slot.commands.destroy(device);
-        slot.offsets.destroy(device);
-        slot.bounds.destroy(device);
-        slot.capacity = 0;
+        slot.destroy(device);
+        let storage = vk::BufferUsageFlags::STORAGE_BUFFER;
+        let indirect = vk::BufferUsageFlags::INDIRECT_BUFFER | storage;
+        let capacity_64 = u64::from(capacity);
         slot.commands = Mapped::new(
             device,
             mem_props,
-            2 * u64::from(capacity) * u64::from(COMMAND_SIZE),
-            vk::BufferUsageFlags::INDIRECT_BUFFER | vk::BufferUsageFlags::STORAGE_BUFFER,
+            3 * capacity_64 * u64::from(COMMAND_SIZE),
+            indirect,
         )?;
+        slot.keep = Mapped::new(device, mem_props, 2 * capacity_64 * 4, storage)?;
+        slot.run_table = Mapped::new(device, mem_props, capacity_64 * 8, storage)?;
+        slot.counts = Mapped::new(device, mem_props, 2 * capacity_64 * 4, indirect)?;
         slot.offsets = Mapped::new(
             device,
             mem_props,
@@ -305,17 +345,39 @@ impl DrawBuffers {
         self.frames[frame].commands.buffer
     }
 
-    /// The [`Gathered::bounds`] buffer of frame `frame`.
-    pub fn bounds(&self, frame: usize) -> vk::Buffer {
-        self.frames[frame].bounds.buffer
+    /// Frame `frame`'s buffers the occlusion culling reads and writes.
+    pub fn culling_buffers(&self, frame: usize) -> CullingBuffers {
+        let slot = &self.frames[frame];
+        CullingBuffers {
+            commands: slot.commands.buffer,
+            bounds: slot.bounds.buffer,
+            keep: slot.keep.buffer,
+            runs: slot.run_table.buffer,
+            counts: slot.counts.buffer,
+        }
     }
 
-    /// Where `phase`'s copy of the commands starts, in commands.
+    /// Where `phase`'s packed commands start, in commands.
     pub fn phase_start(&self, phase: Phase) -> u32 {
-        match phase {
-            Phase::First => 0,
-            Phase::Second => self.gathered(),
-        }
+        self.gathered() * (phase as u32 + 1)
+    }
+
+    /// The runs both passes draw.
+    pub fn run_count(&self) -> u32 {
+        self.gathered.runs.iter().map(Vec::len).sum::<usize>() as u32
+    }
+
+    /// Where pass `pass`'s runs start among [`Self::run_count`].
+    pub fn run_start(&self, pass: Pass) -> u32 {
+        self.gathered.runs[..pass as usize]
+            .iter()
+            .map(Vec::len)
+            .sum::<usize>() as u32
+    }
+
+    /// The frame's draw counts, for `cmd_draw_indexed_indirect_count`.
+    pub fn counts(&self, frame: usize) -> vk::Buffer {
+        self.frames[frame].counts.buffer
     }
 
     /// One past the highest occlusion slot the gathered draws use.
@@ -354,17 +416,24 @@ impl DrawBuffers {
     pub unsafe fn upload(&self, frame: usize) {
         let slot = &self.frames[frame];
         let gathered = &self.gathered;
-        let (Some(commands), Some(offsets), Some(bounds)) =
-            (slot.commands.ptr, slot.offsets.ptr, slot.bounds.ptr)
-        else {
+        let (Some(commands), Some(offsets), Some(bounds), Some(run_table)) = (
+            slot.commands.ptr,
+            slot.offsets.ptr,
+            slot.bounds.ptr,
+            slot.run_table.ptr,
+        ) else {
             return;
         };
         let count = gathered.commands.len().min(slot.capacity as usize);
         debug_assert_eq!(count, gathered.commands.len(), "prepared too small");
-        let commands = commands.as_ptr().cast::<vk::DrawIndexedIndirectCommand>();
-        // Phase 1's copy, then phase 2's, which the occlusion culling rewrites.
-        for start in [0, count] {
-            std::ptr::copy_nonoverlapping(gathered.commands.as_ptr(), commands.add(start), count);
+        std::ptr::copy_nonoverlapping(
+            gathered.commands.as_ptr(),
+            commands.as_ptr().cast::<vk::DrawIndexedIndirectCommand>(),
+            count,
+        );
+        let run_table = run_table.as_ptr().cast::<[u32; 2]>();
+        for (i, run) in gathered.runs.iter().flatten().enumerate().take(count) {
+            run_table.add(i).write([run.first, run.count]);
         }
         std::ptr::copy_nonoverlapping(
             gathered.offsets.as_ptr(),
@@ -381,9 +450,7 @@ impl DrawBuffers {
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
         self.gathered = Gathered::default();
         for slot in &mut self.frames {
-            slot.commands.destroy(device);
-            slot.offsets.destroy(device);
-            slot.bounds.destroy(device);
+            slot.destroy(device);
         }
         device.destroy_descriptor_pool(self.pool, None);
     }

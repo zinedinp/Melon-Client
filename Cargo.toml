@@ -1,6 +1,6 @@
 [package]
 name = "melon"
-version = "0.10.1+mc26.3"
+version = "0.10.2+mc26.3"
 authors = ["Zinedin Polic"]
 edition = "2024"
 rust-version = "1.100.0"
@@ -16,9 +16,9 @@ members = ["crates/melon-base"]
 [dependencies]
 melon-base = { path = "crates/melon-base" }
 aes = "0.9.4"
-anyhow = "1.0.104"
+anyhow = "1.0.105"
 # Pumpkin's game profile holds its properties in one.
-arc-swap = "1.9.3"
+arc-swap = "1.9.5"
 chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
 arboard = { version = "3.7.0", features = ["wayland-data-control"] }
 ash = "0.38.0"

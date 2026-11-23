@@ -1,8 +1,8 @@
 #version 450
 
 // Two-phase occlusion culling of the terrain's multi-draws (`renderer/occlusion.rs`).
-// The commands hold each draw twice: phase 1 at [0, count), phase 2 at
-// [count, 2 * count).
+// Picks each phase's draws into `keep`: phase 1's at [0, count), phase 2's
+// at [count, 2 * count). `compact.comp` then gathers them for drawing.
 //
 // SELECT, before the frame: phase 1 draws what was visible last frame.
 // Otherwise, after phase 1: each draw's box is tested against the depth
@@ -10,38 +10,9 @@
 // visible. Every section's result goes to `visible` for the next frame.
 // Only what the pyramid proves hidden is skipped, so the picture is the same.
 
+#include "occlusion.glsl"
+
 layout(local_size_x = 64) in;
-
-struct Command {
-    uint index_count;
-    uint instance_count;
-    uint first_index;
-    int vertex_offset;
-    uint first_instance;
-};
-
-layout(std430, set = 0, binding = 0) buffer Commands {
-    Command commands[];
-};
-
-// Per draw: its section's lowest corner relative to the camera's block, and
-// its visibility slot (as `uint` bits; NO_SLOT for none).
-layout(std430, set = 0, binding = 1) readonly buffer Bounds {
-    vec4 bounds[];
-};
-
-layout(std430, set = 0, binding = 2) buffer Visible {
-    uint visible[];
-};
-
-layout(set = 0, binding = 3) uniform sampler2D hiz;
-
-layout(push_constant) uniform Push {
-    mat4 view_proj;
-    vec2 screen;
-    uint count;
-    uint levels;
-} pc;
 
 const uint NO_SLOT = 0xFFFFFFFFu;
 // Blocks a section's quads may reach past it: models span -1..2 blocks, plant offsets 0.25.
@@ -77,7 +48,7 @@ bool occluded(vec3 lo, vec3 hi) {
     // A level whose texels (2^(level+1) pixels) are at least the box's
     // span plus one, so its pixels fall in at most 2x2 of them.
     float span = max(hi_px.x - lo_px.x, hi_px.y - lo_px.y) + 1.0;
-    int level = clamp(int(ceil(log2(span))) - 1, 0, int(pc.levels) - 1);
+    int level = clamp(int(ceil(log2(span))) - 1, 0, int(pc.extra) - 1);
     ivec2 size = textureSize(hiz, level);
     ivec2 t0 = min(ivec2(floor(lo_px)) >> (level + 1), size - 1);
     ivec2 t1 = min(ivec2(floor(hi_px)) >> (level + 1), size - 1);
@@ -103,15 +74,15 @@ void main() {
     uint slot = floatBitsToUint(b.w);
 #ifdef SELECT
     bool shown = slot == NO_SLOT || visible[slot] != 0u;
-    commands[i].instance_count = shown ? 1u : 0u;
+    keep[i] = shown ? 1u : 0u;
 #else
     if (slot == NO_SLOT) {
-        commands[pc.count + i].instance_count = 0u;
+        keep[pc.count + i] = 0u;
         return;
     }
     bool hidden = occluded(b.xyz - REACH, b.xyz + 16.0 + REACH);
     visible[slot] = hidden ? 0u : 1u;
-    bool drawn = commands[i].instance_count != 0u;
-    commands[pc.count + i].instance_count = !drawn && !hidden ? 1u : 0u;
+    bool drawn = keep[i] != 0u;
+    keep[pc.count + i] = !drawn && !hidden ? 1u : 0u;
 #endif
 }

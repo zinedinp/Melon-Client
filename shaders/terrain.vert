@@ -10,9 +10,9 @@
 // occlusion per corner come from the quad. Same outputs and push constants
 // as `world.vert`.
 //
-// `gl_VertexIndex` is the Vulkan builtin. glslang's Vulkan GLSL still
-// spells the draw index `gl_DrawID` (OpenGL's name) and emits SPIR-V
-// `BuiltIn DrawIndex`. `shaderDrawParameters` is required for INDIRECT.
+// `gl_VertexIndex` and `gl_InstanceIndex` are the Vulkan builtins; the
+// latter counts from the draw's `firstInstance`
+// (`drawIndirectFirstInstance`).
 
 #include "fog.glsl"
 #include "world_push.glsl"
@@ -60,15 +60,15 @@ layout(std430, set = 1, binding = 0) readonly buffer QuadTable {
 // const float CORNER_POS_STEP = 1.0 / 4096.0;
 
 #ifdef INDIRECT
-// Multi-draw: the section's origin relative to the camera per draw. The
-// first entry of the run comes in `offset.w` (as `uint` bits), `gl_DrawID`
-// (SPIR-V DrawIndex) counts from there.
+// Multi-draw: the section's origin relative to the camera per draw. Each
+// draw's `firstInstance` is its place in the list (one instance each), so
+// the occlusion culling can leave draws out of a run without moving them.
 layout(std430, set = 2, binding = 0) readonly buffer DrawOffsets {
     vec4 offsets[];
 } draws;
 
 vec3 chunk_offset() {
-    return draws.offsets[floatBitsToUint(pc.offset.w) + uint(gl_DrawID)].xyz;
+    return draws.offsets[gl_InstanceIndex].xyz;
 }
 #else
 vec3 chunk_offset() {

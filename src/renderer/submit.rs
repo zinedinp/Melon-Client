@@ -71,7 +71,7 @@ impl Renderer {
             if let Some(occlusion) = &mut self.occlusion
                 && draws > 0
             {
-                let buffers = (indirect.commands(current), indirect.bounds(current));
+                let buffers = indirect.culling_buffers(current);
                 let slots = indirect.slots();
                 occlusion.prepare(&self.device, &self.mem_props, current, slots, buffers)?;
             }
@@ -211,7 +211,10 @@ impl Renderer {
         self.record_pictures(cmd, frame.pictures);
 
         // The terrain's occlusion culling: phase 1 picked before the scene's pass.
-        let draws = self.indirect.as_ref().map_or(0, |i| i.gathered());
+        let (draws, runs) = self
+            .indirect
+            .as_ref()
+            .map_or((0, 0), |i| (i.gathered(), i.run_count()));
         let occluding = draws > 0
             && frame.scene.is_some_and(|scene| scene.world.is_some())
             && self.occlusion.as_ref().is_some_and(|o| o.ready());
@@ -221,7 +224,7 @@ impl Renderer {
             .set(self.swapchain.framebuffers[image_index as usize]);
         if occluding && let Some(occlusion) = &mut self.occlusion {
             self.gpu_timer.pass("occlusion");
-            occlusion.record_select(&self.device, cmd, self.frames.current, draws);
+            occlusion.record_select(&self.device, cmd, self.frames.current, (draws, runs));
             self.gpu_timer.mark(&self.device, "occlusion");
         }
 

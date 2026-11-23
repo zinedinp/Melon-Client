@@ -385,8 +385,8 @@ impl Renderer {
         self.device.cmd_end_render_pass(cmd);
         if let (Some(occlusion), Some(indirect)) = (&self.occlusion, &self.indirect) {
             self.gpu_timer.pass("occlusion");
-            let count = indirect.gathered();
-            occlusion.record_cull(&self.device, cmd, self.frames.current, count, &view_proj);
+            let draws = (indirect.gathered(), indirect.run_count());
+            occlusion.record_cull(&self.device, cmd, self.frames.current, draws, &view_proj);
             self.gpu_timer.mark(&self.device, "occlusion");
         }
         let extent = self.swapchain.extent;
@@ -867,13 +867,16 @@ impl Renderer {
             &[indirect.set(frame)],
             &[],
         );
-        let start = indirect.phase_start(phase);
-        for &run in indirect.runs(pass) {
-            self.flush_run(cmd, layout, (view_proj, light), run, start);
+        // Culled, each phase draws what the GPU packed for it (see `occlusion.rs`).
+        let packed = self.recording.occluding.get().then(|| (indirect.run_start(pass), phase));
+        for (i, &run) in indirect.runs(pass).iter().enumerate() {
+            let packed = packed.map(|(start, phase)| (start + i as u32, phase));
+            self.flush_run(cmd, layout, (view_proj, light), run, packed);
         }
     }
 
-    /// Draws a run of [`Self::draw_terrain_multi`], its commands `start` on.
+    /// Draws a run of [`Self::draw_terrain_multi`]: as gathered, or what
+    /// the culling packed of it, given the run's place among all and the phase.
     unsafe fn flush_run(
         &self,
         cmd: vk::CommandBuffer,
@@ -884,14 +887,14 @@ impl Renderer {
             first,
             count,
         }: Run,
-        start: u32,
+        packed: Option<(u32, Phase)>,
     ) {
         let Some(indirect) = &self.indirect else {
             return;
         };
         self.bind_quads(cmd, layout, buffer);
         self.push_world(cmd, layout, view_proj, Vec3::ZERO, light);
-        let at = [0.0, 0.0, 0.0, f32::from_bits(first)];
+        let at = [0.0; 4];
         self.device.cmd_push_constants(
             cmd,
             layout,
@@ -900,13 +903,32 @@ impl Renderer {
             pipeline::push_constant_bytes(&at, pipeline::world::OFFSET_SIZE),
         );
         self.recording.offset.set(None);
-        self.device.cmd_draw_indexed_indirect(
-            cmd,
-            indirect.commands(self.frames.current),
-            u64::from(start + first) * u64::from(super::super::indirect::COMMAND_SIZE),
-            count,
-            super::super::indirect::COMMAND_SIZE,
-        );
+        let commands = indirect.commands(self.frames.current);
+        let stride = super::super::indirect::COMMAND_SIZE;
+        let draw_count = self.occlusion.as_ref().and_then(|o| o.draw_count.as_ref());
+        match (packed, draw_count) {
+            (Some((run, phase)), Some(draw_count)) => {
+                let start = indirect.phase_start(phase) + first;
+                let counts = indirect.counts(self.frames.current);
+                let at = (2 * run + phase as u32) * 4;
+                draw_count.cmd_draw_indexed_indirect_count(
+                    cmd,
+                    commands,
+                    u64::from(start) * u64::from(stride),
+                    counts,
+                    u64::from(at),
+                    count,
+                    stride,
+                );
+            }
+            _ => self.device.cmd_draw_indexed_indirect(
+                cmd,
+                commands,
+                u64::from(first) * u64::from(stride),
+                count,
+                stride,
+            ),
+        }
     }
 
     /// Draws `quads` of a terrain quad mesh with the bound terrain pass.

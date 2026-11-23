@@ -98,6 +98,7 @@ impl Renderer2d {
         let features = device::Features {
             latest_ready: None,
             multi_draw: false,
+            draw_count: false,
             statistics: false,
             ..device::probe(&instance, gpu.physical)
         };
