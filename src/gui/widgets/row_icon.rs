@@ -1,10 +1,10 @@
 //! The 32x32 icon at the left of a list row with vanilla's overlay arrows.
 
-use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::{Mutex, OnceLock};
 
 use image::RgbaImage;
+use rustc_hash::FxHashMap;
 
 use crate::gui::sprite::GuiSprite;
 use crate::gui::widgets::{Rect, Ui};
@@ -121,8 +121,8 @@ pub fn draw(ui: &mut Ui, icon: Rect, sprites: &RowIconSprites, zone: Option<Zone
 }
 
 /// Textures already on the GPU, by content.
-fn uploaded() -> &'static Mutex<HashMap<u64, TextureId>> {
-    static ICONS: OnceLock<Mutex<HashMap<u64, TextureId>>> = OnceLock::new();
+fn uploaded() -> &'static Mutex<FxHashMap<u64, TextureId>> {
+    static ICONS: OnceLock<Mutex<FxHashMap<u64, TextureId>>> = OnceLock::new();
     ICONS.get_or_init(Default::default)
 }
 

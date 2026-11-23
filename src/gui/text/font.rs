@@ -93,7 +93,7 @@ pub fn sprite_char(index: usize) -> Option<char> {
 pub const DYNAMIC_PAGE: u32 = 256;
 
 /// The characters of one font by `ceil(advance)`: `FontSet.glyphsByWidth`.
-type WidthPool = HashMap<i32, Vec<char>>;
+type WidthPool = rustc_hash::FxHashMap<i32, Vec<char>>;
 
 /// Glyphs made when a text first needed them, and what still has to go to the GPU.
 #[derive(Default)]
@@ -409,7 +409,7 @@ impl Font {
         }
         let face = font.and_then(|id| self.face(id));
         let glyphs = face.map_or(&self.glyphs, |face| &face.glyphs);
-        let mut pools: HashMap<i32, Vec<char>> = HashMap::new();
+        let mut pools = WidthPool::default();
         for (&c, glyph) in glyphs {
             pools
                 .entry(glyph.advance.ceil() as i32)
@@ -417,7 +417,7 @@ impl Font {
                 .push(c);
         }
         if face.is_none_or(|face| face.unihex) {
-            let mut seen = std::collections::HashSet::new();
+            let mut seen = rustc_hash::FxHashSet::default();
             for unihex in self.unihex.iter().filter_map(|u| u.get()) {
                 for (c, width) in unihex.widths() {
                     if !glyphs.contains_key(&c) && seen.insert(c) {

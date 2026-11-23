@@ -3,10 +3,9 @@
 //! entity in an inventory's box). They are drawn before the frame's pass,
 //! with the world's pipelines, so they look like the world's entities.
 
-use std::collections::HashMap;
-
 use ash::vk;
 use glam::{Mat4, Vec3};
+use rustc_hash::FxHashMap;
 
 use super::frame::DEPTH_CLEAR;
 use super::pipeline::world::{DrawLight, Mode};
@@ -47,7 +46,7 @@ impl Target {
 pub(super) struct Pictures {
     /// [`PassStart::Picture`].
     pass: vk::RenderPass,
-    targets: HashMap<usize, Target>,
+    targets: FxHashMap<usize, Target>,
     /// Freed targets with the frame they were freed in.
     retired: Vec<(u64, Target)>,
 }
@@ -62,7 +61,7 @@ impl Pictures {
             // Made as the frame's pass is, so the world's pipelines fit it:
             // render passes are compatible only with the same dependencies.
             pass: create_render_pass(device, format, depth_format, PassStart::Picture)?,
-            targets: HashMap::new(),
+            targets: FxHashMap::default(),
             retired: Vec::new(),
         })
     }

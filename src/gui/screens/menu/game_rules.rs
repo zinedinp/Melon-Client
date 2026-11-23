@@ -1,8 +1,9 @@
 //! Vanilla `WorldCreationGameRulesScreen` (`AbstractGameRulesScreen`).
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::gui::text::font::LINE_HEIGHT;
@@ -53,9 +54,9 @@ pub struct GameRulesScreen {
     /// Where Done writes them.
     output: Rc<RefCell<Changes>>,
     /// Number boxes by rule, kept while the filter hides their rows.
-    inputs: HashMap<usize, EditBox>,
+    inputs: FxHashMap<usize, EditBox>,
     /// The rules whose box holds something that isn't a valid value.
-    invalid: HashSet<usize>,
+    invalid: FxHashSet<usize>,
     /// The rows the filter leaves.
     rows: Vec<Row>,
     /// The rule whose box has the keyboard focus (the search box otherwise).
@@ -77,7 +78,7 @@ impl GameRulesScreen {
             })
             .collect();
         let work = output.borrow().clone();
-        let mut inputs = HashMap::new();
+        let mut inputs = FxHashMap::default();
         for (index, rule) in rules.iter().enumerate() {
             if let Value::Int(i) = work.get(&rule.name).copied().unwrap_or(rule.default) {
                 let mut field = EditBox::new("", VALUE_W, BUTTON_H);
@@ -98,7 +99,7 @@ impl GameRulesScreen {
             work,
             output,
             inputs,
-            invalid: HashSet::new(),
+            invalid: FxHashSet::default(),
             rows: Vec::new(),
             typing: None,
             list: ScrollList::new(ROW_W, ROW_H),
