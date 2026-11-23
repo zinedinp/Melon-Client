@@ -59,7 +59,7 @@ pub fn authenticate_xbox_live(oauth_access_token: &str) -> anyhow::Result<XboxRe
     };
 
     let parsed: XboxResponse = super::http::json(
-        "Xbox-Live-Anmeldung fehlgeschlagen",
+        "Xbox Live sign-in failed",
         super::http::post("https://user.auth.xboxlive.com/user/authenticate")
             .header("x-xbl-contract-version", "1")
             .send_json(&body),
@@ -103,7 +103,7 @@ pub fn authorize_xbox_live(xbl_token: &str) -> anyhow::Result<XboxLiveToken> {
     };
 
     let parsed: XboxResponse = super::http::json(
-        "XSTS-Autorisierung fehlgeschlagen (evtl. kein Xbox-Profil / regionale Sperre)",
+        "XSTS authorization failed (maybe no Xbox profile, or a regional block)",
         super::http::post("https://xsts.auth.xboxlive.com/xsts/authorize").send_json(&body),
     )?;
     let user_hash = parsed

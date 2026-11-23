@@ -110,7 +110,7 @@ pub unsafe fn create_buffer_in(
         None,
     )?;
     let requirements = device.get_buffer_memory_requirements(buffer);
-    let mut last = anyhow::anyhow!("kein passender Vulkan-Speichertyp gefunden");
+    let mut last = anyhow::anyhow!("no suitable Vulkan memory type found");
     let mut out_of_memory = false;
     for &flags in choices {
         // Every type with the flags, not only the first: a full heap (the

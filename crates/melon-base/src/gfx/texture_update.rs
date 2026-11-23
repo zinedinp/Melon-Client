@@ -118,7 +118,7 @@ pub unsafe fn submit_now(
         staging.ensure(device, mem_props, total, 0)?;
         let mapped = staging
             .mapped
-            .ok_or_else(|| anyhow::anyhow!("Staging-Speicher nicht abgebildet"))?;
+            .ok_or_else(|| anyhow::anyhow!("staging memory not mapped"))?;
         cmd = device.allocate_command_buffers(
             &vk::CommandBufferAllocateInfo::default()
                 .command_pool(command_pool)

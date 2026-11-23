@@ -28,7 +28,7 @@ pub struct MicrosoftAccessToken {
 pub fn request_device_code(client_id: &str) -> anyhow::Result<DeviceCodeResponse> {
     let url = format!("https://login.microsoftonline.com/{TENANT}/oauth2/v2.0/devicecode");
     super::http::json(
-        "Geraetecode konnte nicht angefragt werden",
+        "device code request failed",
         super::http::post(&url).send_form([("client_id", client_id), ("scope", SCOPE)]),
     )
 }
@@ -65,7 +65,7 @@ pub fn poll_for_token(
                 ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
                 ("device_code", &device.device_code),
             ])
-            .context("Token-Abfrage fehlgeschlagen (Netzwerk)")?;
+            .context("token request failed (network)")?;
 
         if response.status().is_success() {
             let success: TokenSuccessResponse = response
@@ -88,7 +88,7 @@ pub fn poll_for_token(
         match error.error.as_str() {
             "authorization_pending" => {}
             "slow_down" => interval += Duration::from_secs(5),
-            other => bail!("Microsoft-Login fehlgeschlagen: {other}"),
+            other => bail!("Microsoft login failed: {other}"),
         }
     }
 }
@@ -100,7 +100,7 @@ pub fn refresh_access_token(
 ) -> anyhow::Result<MicrosoftAccessToken> {
     let url = format!("https://login.microsoftonline.com/{TENANT}/oauth2/v2.0/token");
     let success: TokenSuccessResponse = super::http::json(
-        "Microsoft-Sitzung konnte nicht erneuert werden",
+        "Microsoft session refresh failed",
         super::http::post(&url).send_form([
             ("client_id", client_id),
             ("grant_type", "refresh_token"),
