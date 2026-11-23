@@ -77,8 +77,11 @@ void main() {
 #ifdef SCROLL
     // `APPLY_TEXTURE_MATRIX` with an `OffsetTextureTransform` (energy swirl,
     // breeze wind). The offset rides in `pc.params.xy`: these meshes are
-    // sentinel-lit and read no lightmap. Wrapped by hand, the sampler clamps.
-    vec4 slid = texture(atlas_sampler, fract(frag_uv + pc.params.xy));
+    // sentinel-lit and read no lightmap. Wrapped by hand, the sampler clamps;
+    // the unwrapped UV's derivatives keep `fract`'s jump from picking the
+    // smallest mip (a seam line once the texture is filtered).
+    vec4 slid = textureGrad(
+        atlas_sampler, fract(frag_uv + pc.params.xy), dFdx(frag_uv), dFdy(frag_uv));
     if (slid.a < 0.1) {
         discard;
     }
