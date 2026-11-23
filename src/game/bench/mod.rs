@@ -125,11 +125,16 @@ pub enum Phase {
     Fly,
     Sound,
     Idle,
+    /// The calm scene: off to the densest trees nearby, settling there.
+    Enter,
+    /// Turning at the ground under their leaves: cutout terrain seen through
+    /// layers of leaves, much of it hidden behind trunks and canopies.
+    Forest,
     Done,
 }
 
 impl Phase {
-    pub const MEASURED: [Phase; 8] = [
+    pub const MEASURED: [Phase; 9] = [
         Phase::Load,
         Phase::Spawn,
         Phase::Crowd,
@@ -138,6 +143,7 @@ impl Phase {
         Phase::Fly,
         Phase::Sound,
         Phase::Idle,
+        Phase::Forest,
     ];
 
     pub fn name(self) -> &'static str {
@@ -150,6 +156,8 @@ impl Phase {
             Phase::Fly => "fly",
             Phase::Sound => "sound",
             Phase::Idle => "idle",
+            Phase::Enter => "enter",
+            Phase::Forest => "forest",
             Phase::Done => "done",
         }
     }
@@ -164,6 +172,7 @@ impl Phase {
             Phase::Fly,
             Phase::Sound,
             Phase::Idle,
+            Phase::Forest,
         ]
         .into_iter()
         .find(|phase| phase.name() == name)
@@ -180,6 +189,8 @@ impl Phase {
             Phase::Fly => Some(400),
             Phase::Sound => Some(200),
             Phase::Idle => Some(100),
+            Phase::Enter => Some(ENTER_TICKS),
+            Phase::Forest => Some(200),
         }
     }
 
@@ -192,7 +203,10 @@ impl Phase {
             Phase::Turn => Phase::Fly,
             Phase::Fly => Phase::Sound,
             Phase::Sound => Phase::Idle,
-            Phase::Idle | Phase::Done => Phase::Done,
+            // Last, so the phases before compare with older runs.
+            Phase::Idle if scene == Scene::Calm => Phase::Enter,
+            Phase::Enter => Phase::Forest,
+            Phase::Idle | Phase::Forest | Phase::Done => Phase::Done,
         }
     }
 }
@@ -212,6 +226,8 @@ pub struct BenchStep {
     pub sound: Option<SoundInstance<'static>>,
     /// Commands for the server, without their slash.
     pub commands: Vec<String>,
+    /// Send the player to [`forest_spot`] (`tp`).
+    pub find_forest: bool,
 }
 
 pub struct BenchDriver {
@@ -276,6 +292,7 @@ impl BenchDriver {
             input,
             sound,
             commands,
+            find_forest,
         } = &mut step;
         match self.phase {
             Phase::Load | Phase::Done => {}
@@ -327,6 +344,14 @@ impl BenchDriver {
                 );
             }
             Phase::Idle => {}
+            Phase::Enter => {
+                *find_forest = self.ticks == 0;
+                player.set_rotation(self.yaw, 0.0);
+            }
+            Phase::Forest => {
+                let pitch = 10.0 * angle::sin(t * TAU);
+                player.set_rotation(self.yaw + 360.0 * t, pitch);
+            }
         }
         step
     }
@@ -342,6 +367,70 @@ impl BenchDriver {
         self.last_load = load;
         self.settled >= SETTLE_TICKS || self.ticks >= LOAD_TIMEOUT_TICKS
     }
+}
+
+/// Ticks the `enter` phase gives the teleport and the meshes around to land.
+const ENTER_TICKS: u32 = 60;
+/// How far from the player [`forest_spot`] looks, in blocks.
+const FOREST_SEARCH: i32 = 96;
+/// The square around a candidate whose tree tops count, in blocks either way.
+const FOREST_REACH: i32 = 12;
+
+/// Where to stand under the densest trees within [`FOREST_SEARCH`] of
+/// `around`: the feet on the ground below a leafy column with room to stand,
+/// or on the canopy if no such ground is found. `None` without leaves.
+/// `top(x, z)` is the motion-blocking height, `block(x, y, z)` the state there.
+pub fn forest_spot(
+    around: glam::DVec3,
+    top: impl Fn(i32, i32) -> Option<i32>,
+    block: impl Fn(i32, i32, i32) -> u16,
+) -> Option<glam::DVec3> {
+    let leafy = |x: i32, z: i32| {
+        top(x, z).filter(|&y| crate::world::block::state_flags::is_leaves(block(x, y - 1, z)))
+    };
+    let (cx, cz) = (around.x.floor() as i32, around.z.floor() as i32);
+    let mut best = (0, cx, cz);
+    for x in (cx - FOREST_SEARCH..=cx + FOREST_SEARCH).step_by(8) {
+        for z in (cz - FOREST_SEARCH..=cz + FOREST_SEARCH).step_by(8) {
+            let mut score = 0;
+            for dx in (-FOREST_REACH..=FOREST_REACH).step_by(3) {
+                for dz in (-FOREST_REACH..=FOREST_REACH).step_by(3) {
+                    score += i32::from(leafy(x + dx, z + dz).is_some());
+                }
+            }
+            if score > best.0 {
+                best = (score, x, z);
+            }
+        }
+    }
+    let (score, x, z) = best;
+    if score == 0 {
+        return None;
+    }
+    let feet = |x: i32, z: i32, y: i32| {
+        glam::DVec3::new(f64::from(x) + 0.5, f64::from(y), f64::from(z) + 0.5)
+    };
+    // A column under the canopy: leaves, air below them, then the ground
+    // with two blocks of air on it.
+    for dx in -FOREST_REACH..=FOREST_REACH {
+        for dz in -FOREST_REACH..=FOREST_REACH {
+            let (x, z) = (x + dx, z + dz);
+            let Some(top) = leafy(x, z) else { continue };
+            let mut y = top - 1;
+            while crate::world::block::state_flags::is_leaves(block(x, y, z)) {
+                y -= 1;
+            }
+            let mut air = 0;
+            while !crate::world::block::state_flags::is_drawn(block(x, y, z)) && y > top - 48 {
+                air += 1;
+                y -= 1;
+            }
+            if air >= 2 && !crate::world::block::state_flags::is_leaves(block(x, y, z)) {
+                return Some(feet(x, z, y + 1));
+            }
+        }
+    }
+    leafy(x, z).map(|y| feet(x, z, y))
 }
 
 /// The `index`th mob of the `spawn` phase, a block up so it lands on the
@@ -368,6 +457,7 @@ fn around(index: u32, radius: f32) -> (f32, f32) {
 mod tests {
     use super::*;
     use glam::DVec3;
+    use pumpkin_data::Block;
 
     fn run_until(driver: &mut BenchDriver, player: &mut PlayerState, phase: Phase) -> u32 {
         let load = LoadState {
@@ -395,7 +485,49 @@ mod tests {
         assert_eq!(run_until(&mut driver, &mut player, Phase::Fly), 200);
         assert_eq!(run_until(&mut driver, &mut player, Phase::Sound), 400);
         assert_eq!(run_until(&mut driver, &mut player, Phase::Idle), 200);
-        assert_eq!(run_until(&mut driver, &mut player, Phase::Done), 100);
+        assert_eq!(run_until(&mut driver, &mut player, Phase::Enter), 100);
+        assert_eq!(
+            run_until(&mut driver, &mut player, Phase::Forest),
+            ENTER_TICKS
+        );
+        assert_eq!(run_until(&mut driver, &mut player, Phase::Done), 200);
+    }
+
+    #[test]
+    fn the_forest_is_entered_once() {
+        let mut driver = BenchDriver::new(1, Scene::Calm, None);
+        let mut player = PlayerState::new(DVec3::ZERO);
+        let load = LoadState {
+            chunks: 9,
+            meshing: 0,
+        };
+        let mut asked = 0;
+        while driver.phase() != Phase::Done {
+            let step = driver.tick(&mut player, load);
+            if step.find_forest {
+                assert_eq!(driver.phase(), Phase::Enter);
+                asked += 1;
+            }
+        }
+        assert_eq!(asked, 1);
+    }
+
+    #[test]
+    fn the_forest_spot_is_on_the_ground_under_the_leaves() {
+        let leaves = Block::OAK_LEAVES.default_state.id.as_u16();
+        let grass = Block::GRASS_BLOCK.default_state.id.as_u16();
+        // A canopy at y 70..72 over x 100..120, ground at 63 everywhere.
+        let block = |x: i32, y: i32, _z: i32| match y {
+            ..=63 => grass,
+            70..=72 if (100..120).contains(&x) => leaves,
+            _ => 0,
+        };
+        let top = |x: i32, _z: i32| Some(if (100..120).contains(&x) { 73 } else { 64 });
+        let spot = forest_spot(DVec3::new(40.0, 64.0, 0.0), top, block).expect("trees");
+        assert!((100.0..120.0).contains(&spot.x), "{spot}");
+        assert_eq!(spot.y, 64.0);
+        let bare = |_x: i32, _y: i32, _z: i32| grass;
+        assert_eq!(forest_spot(DVec3::ZERO, |_, _| Some(64), bare), None);
     }
 
     #[test]

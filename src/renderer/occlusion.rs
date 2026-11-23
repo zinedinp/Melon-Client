@@ -169,8 +169,7 @@ unsafe fn compute_pipeline(
     let info = vk::ComputePipelineCreateInfo::default()
         .stage(stage)
         .layout(layout);
-    let result =
-        device.create_compute_pipelines(vk::PipelineCache::null(), &[info], None);
+    let result = device.create_compute_pipelines(vk::PipelineCache::null(), &[info], None);
     device.destroy_shader_module(module, None);
     match result {
         Ok(pipelines) => Ok(pipelines[0]),
@@ -407,7 +406,11 @@ impl Occlusion {
             Ok(())
         })();
         if let Err(e) = built {
-            for &view in pyramid.levels.iter().chain([&pyramid.whole, &pyramid.depth]) {
+            for &view in pyramid
+                .levels
+                .iter()
+                .chain([&pyramid.whole, &pyramid.depth])
+            {
                 if view != vk::ImageView::null() {
                     device.destroy_image_view(view, None);
                 }
@@ -418,7 +421,10 @@ impl Occlusion {
         }
         for level in 0..levels {
             let (src, src_layout) = if level == 0 {
-                (pyramid.depth, vk::ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+                (
+                    pyramid.depth,
+                    vk::ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+                )
             } else {
                 (pyramid.levels[level as usize - 1], vk::ImageLayout::GENERAL)
             };
@@ -537,24 +543,46 @@ impl Occlusion {
             memory_barrier(
                 device,
                 cmd,
-                (vk::PipelineStageFlags::TRANSFER, vk::AccessFlags::TRANSFER_WRITE),
-                (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_READ),
+                (
+                    vk::PipelineStageFlags::TRANSFER,
+                    vk::AccessFlags::TRANSFER_WRITE,
+                ),
+                (
+                    vk::PipelineStageFlags::COMPUTE_SHADER,
+                    vk::AccessFlags::SHADER_READ,
+                ),
             );
         }
         // The last frame's results.
         memory_barrier(
             device,
             cmd,
-            (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_WRITE),
-            (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_READ),
+            (
+                vk::PipelineStageFlags::COMPUTE_SHADER,
+                vk::AccessFlags::SHADER_WRITE,
+            ),
+            (
+                vk::PipelineStageFlags::COMPUTE_SHADER,
+                vk::AccessFlags::SHADER_READ,
+            ),
         );
         let words = push(Default::default(), count, [0.0; 2], 0);
-        self.dispatch(device, cmd, self.select, frame, &words, count.div_ceil(DRAWS_PER_GROUP));
+        self.dispatch(
+            device,
+            cmd,
+            self.select,
+            frame,
+            &words,
+            count.div_ceil(DRAWS_PER_GROUP),
+        );
         self.record_compact(device, cmd, frame, (count, runs), 0);
         memory_barrier(
             device,
             cmd,
-            (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_WRITE),
+            (
+                vk::PipelineStageFlags::COMPUTE_SHADER,
+                vk::AccessFlags::SHADER_WRITE,
+            ),
             (
                 vk::PipelineStageFlags::DRAW_INDIRECT | vk::PipelineStageFlags::COMPUTE_SHADER,
                 vk::AccessFlags::INDIRECT_COMMAND_READ | vk::AccessFlags::SHADER_READ,
@@ -574,8 +602,14 @@ impl Occlusion {
         memory_barrier(
             device,
             cmd,
-            (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_WRITE),
-            (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_READ),
+            (
+                vk::PipelineStageFlags::COMPUTE_SHADER,
+                vk::AccessFlags::SHADER_WRITE,
+            ),
+            (
+                vk::PipelineStageFlags::COMPUTE_SHADER,
+                vk::AccessFlags::SHADER_READ,
+            ),
         );
         let words = push(Default::default(), count, [0.0; 2], phase);
         self.dispatch(device, cmd, self.compact, frame, &words, runs);
@@ -668,19 +702,35 @@ impl Occlusion {
             memory_barrier(
                 device,
                 cmd,
-                (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_WRITE),
-                (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_READ),
+                (
+                    vk::PipelineStageFlags::COMPUTE_SHADER,
+                    vk::AccessFlags::SHADER_WRITE,
+                ),
+                (
+                    vk::PipelineStageFlags::COMPUTE_SHADER,
+                    vk::AccessFlags::SHADER_READ,
+                ),
             );
         }
         let screen = [pyramid.screen.width as f32, pyramid.screen.height as f32];
         let words = push(*view_proj, count, screen, levels);
-        self.dispatch(device, cmd, self.cull, frame, &words, count.div_ceil(DRAWS_PER_GROUP));
+        self.dispatch(
+            device,
+            cmd,
+            self.cull,
+            frame,
+            &words,
+            count.div_ceil(DRAWS_PER_GROUP),
+        );
         self.record_compact(device, cmd, frame, (count, runs), 1);
         // Phase 2 reads the commands, and writes the depth this read.
         memory_barrier(
             device,
             cmd,
-            (vk::PipelineStageFlags::COMPUTE_SHADER, vk::AccessFlags::SHADER_WRITE),
+            (
+                vk::PipelineStageFlags::COMPUTE_SHADER,
+                vk::AccessFlags::SHADER_WRITE,
+            ),
             (
                 vk::PipelineStageFlags::DRAW_INDIRECT
                     | vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS

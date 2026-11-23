@@ -98,6 +98,7 @@ impl RunningState {
         if let Some(world) = &mut self.world {
             world.set_chat_settings(&self.env.config.chat, &self.env.gui_assets.font);
             world.set_smooth_lighting(self.env.config.smooth_lighting);
+            world.set_cutout_leaves(self.env.config.cutout_leaves);
             world.set_chunk_builder(self.env.config.chunk_builder);
             world.set_biome_blend(self.env.config.biome_blend);
         }

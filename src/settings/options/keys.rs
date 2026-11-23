@@ -109,6 +109,11 @@ pub(super) const KEYS: &[OptionKey] = &[
         write: |c| c.smooth_lighting.to_string(),
     },
     OptionKey {
+        name: "cutoutLeaves",
+        read: |c, v| c.cutout_leaves = flag(v),
+        write: |c| c.cutout_leaves.to_string(),
+    },
+    OptionKey {
         name: "soundDevice",
         read: |c, v| {
             if let Ok(name) = serde_json::from_str::<String>(v) {

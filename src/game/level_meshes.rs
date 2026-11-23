@@ -721,8 +721,11 @@ impl LevelMeshes {
             let (x, z) = (f64::from(cx * SECTION_SIZE), f64::from(cz * SECTION_SIZE));
             let bottom = |y: u32| f64::from(min_y + y as i32 * SECTION_SIZE);
             let origin = DVec3::new(x, 0.0, z);
-            let sides: [bool; terrain::FACINGS] =
-                std::array::from_fn(|group| faces_camera(group, origin, 0, eye, min_y));
+            // Bit per facing group: whether some face of it can face the eye.
+            let sides = (0..terrain::FACINGS).fold(0u32, |mask, group| {
+                mask | u32::from(faces_camera(group, origin, 0, eye, min_y)) << group
+            });
+            let vertical = 1 << Direction::Up.index() | 1 << Direction::Down.index();
             let corner = (cx * SECTION_SIZE, cz * SECTION_SIZE);
             let quads_origin = IVec3::new(corner.0, min_y, corner.1);
             let vertices_origin = IVec3::new(corner.0, 0, corner.1);
@@ -736,15 +739,9 @@ impl LevelMeshes {
                 visible.count.drawn += 1;
                 let center = DVec3::new(x + 8.0, bottom(y) + 8.0, z + 8.0);
                 let distance = center.distance_squared(eye) as f32;
-                let shown = |group: usize| {
-                    if group == Direction::Up.index() {
-                        up >> y & 1 != 0
-                    } else if group == Direction::Down.index() {
-                        down >> y & 1 != 0
-                    } else {
-                        sides[group]
-                    }
-                };
+                let shown = sides & !vertical
+                    | (up >> y & 1) << Direction::Up.index()
+                    | (down >> y & 1) << Direction::Down.index();
                 for (layer, list) in [
                     (&section.solid, &mut self.solid),
                     (&section.cutout, &mut self.cutout),
@@ -778,7 +775,7 @@ impl LevelMeshes {
                         if range.is_empty() {
                             continue;
                         }
-                        if !shown(group) {
+                        if shown >> group & 1 == 0 {
                             flush(&mut run);
                             continue;
                         }
@@ -816,15 +813,9 @@ impl LevelMeshes {
                 }
             }
         }
-        for draw in self
-            .solid
-            .draws
-            .iter()
-            .chain(&self.cutout.draws)
-            .chain(&self.translucent.draws)
-        {
-            visible.count.vertices += draw.vertex_count();
-            visible.count.draws += 1;
+        for list in [&self.solid, &self.cutout, &self.translucent] {
+            visible.count.vertices += list.vertices;
+            visible.count.draws += list.draws.len();
         }
         self.solid.drain_sorted_into(&mut visible.solid);
         self.cutout.drain_sorted_into(&mut visible.cutout);
@@ -845,13 +836,20 @@ impl LevelMeshes {
     }
 }
 
-/// One layer's draws in the order culling found them, and a sort key for
-/// each ([`draw_key`]). Sorting the 8-byte keys and then picking the draws
-/// moves a sixth of the bytes that sorting the draws themselves did.
+/// One layer's draws in the order culling found them, sorted by distance
+/// as a stable sort would. Draws pushed one after another at the same
+/// distance (a section's) are one run with one sort key ([`draw_key`]):
+/// sorting the runs' 8-byte keys and copying each run whole moves far fewer
+/// bytes than sorting the draws, and reads them in order.
 #[derive(Default)]
 struct SortedDraws {
     draws: Vec<ChunkDraw>,
+    /// Per run, its key; the low half counts the runs.
     keys: Vec<u64>,
+    /// Per run, where its draws start.
+    starts: Vec<u32>,
+    /// The draws' vertices, for F3.
+    vertices: usize,
     /// [`radix_sort`]'s second buffer.
     scratch: Vec<u64>,
 }
@@ -859,31 +857,44 @@ struct SortedDraws {
 impl SortedDraws {
     /// Adds `draw`, `distance` (squared) from the eye, near ones first.
     fn push(&mut self, distance: f32, draw: ChunkDraw) {
-        self.keys.push(draw_key(distance, self.draws.len()));
-        self.draws.push(draw);
+        self.push_keyed(draw_key(distance, self.keys.len()), draw);
     }
 
     /// Adds `draw`, far ones first: translucent faces blend back to front.
     fn push_far_first(&mut self, distance: f32, draw: ChunkDraw) {
-        self.keys
-            .push(draw_key(distance, self.draws.len()) ^ !0 << 32);
+        self.push_keyed(draw_key(distance, self.keys.len()) ^ !0 << 32, draw);
+    }
+
+    /// Adds `draw` to the last run if `key` sorts it with it, else to a new run.
+    fn push_keyed(&mut self, key: u64, draw: ChunkDraw) {
+        if self.keys.last().is_none_or(|&last| last >> 32 != key >> 32) {
+            self.keys.push(key);
+            self.starts.push(self.draws.len() as u32);
+        }
+        self.vertices += draw.vertex_count();
         self.draws.push(draw);
     }
 
     fn clear(&mut self) {
         self.draws.clear();
         self.keys.clear();
+        self.starts.clear();
+        self.vertices = 0;
     }
 
     /// Appends the draws to `out` in key order and empties `self`.
     fn drain_sorted_into(&mut self, out: &mut Vec<ChunkDraw>) {
         radix_sort(&mut self.keys, &mut self.scratch);
-        out.reserve(self.keys.len());
-        out.extend(
-            self.keys
-                .iter()
-                .map(|&key| self.draws[(key & 0xFFFF_FFFF) as usize].clone()),
-        );
+        out.reserve(self.draws.len());
+        for &key in &self.keys {
+            let run = (key & 0xFFFF_FFFF) as usize;
+            let start = self.starts[run] as usize;
+            let end = self
+                .starts
+                .get(run + 1)
+                .map_or(self.draws.len(), |&end| end as usize);
+            out.extend_from_slice(&self.draws[start..end]);
+        }
         self.clear();
     }
 }
@@ -1135,6 +1146,65 @@ mod tests {
         }
     }
 
+    /// Times [`LevelMeshes::visible_sections`] at render distance 32: 65 x 65
+    /// columns of ten filled sections, every facing group of the solid and
+    /// cutout layers holding quads, the camera looking along a row. Run with
+    /// `cargo test --profile fast --lib visible_sections_at_rd32 -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn visible_sections_at_rd32() {
+        use crate::world::culling::frustum::Frustum;
+        use crate::world::culling::{CullSettings, Culler};
+        let layer = || LayerMesh {
+            items: vec![TerrainQuad([0; 5]); 70],
+            groups: std::array::from_fn(|g| g as u32 * 10..g as u32 * 10 + 10),
+        };
+        let mut meshes = LevelMeshes::default();
+        meshes.set_min_y(-64);
+        let mut next = 0;
+        for x in -32..=32 {
+            for z in -32..=32 {
+                for y in 4..14 {
+                    let mesh = SectionMesh {
+                        solid: layer(),
+                        cutout: layer(),
+                        ..SectionMesh::default()
+                    };
+                    let finished = FinishedMesh {
+                        pos: (x, y, z),
+                        mesh,
+                        sync: true,
+                    };
+                    meshes.insert_headless(finished, || {
+                        next += 1;
+                        next
+                    });
+                }
+            }
+        }
+        let eye = DVec3::new(0.5, 80.0, 0.5);
+        // Turns +x to the view's -z: looking along the row.
+        let view = glam::Mat4::from_rotation_y(std::f32::consts::FRAC_PI_2);
+        let frustum = Frustum::from_view_projection(
+            crate::renderer::world_projection(70.0, 16.0 / 9.0, 512.0) * view,
+        );
+        let culler = Culler::new(frustum, None, eye, (-64, 24), CullSettings::default());
+        let rounds = 300;
+        let mut draws = (0, 0, 0);
+        let started = std::time::Instant::now();
+        for _ in 0..rounds {
+            let visible = meshes.visible_sections(&culler);
+            draws = (
+                visible.count.draws,
+                visible.count.drawn,
+                visible.count.total,
+            );
+            meshes.recycle(visible.solid, visible.cutout, visible.translucent);
+        }
+        let each = started.elapsed() / rounds;
+        eprintln!("visible_sections: {each:?} per frame, (draws, sections drawn, of) {draws:?}");
+    }
+
     #[test]
     fn sorted_draws_come_out_like_a_stable_sort_by_distance() {
         let draw = |id: usize| ChunkDraw {
@@ -1143,7 +1213,8 @@ mod tests {
             range: 0..id as u32,
             cull: None,
         };
-        let distances = [9.0, 1.0, 4.0, 1.0, 0.0, 9.0, 2.5];
+        // Runs of one distance in a row too, as a section's draws come.
+        let distances = [9.0, 1.0, 1.0, 4.0, 1.0, 0.0, 9.0, 9.0, 9.0, 2.5, 1.0];
         let mut near = SortedDraws::default();
         let mut far = SortedDraws::default();
         for (id, &distance) in distances.iter().enumerate() {

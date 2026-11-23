@@ -28,6 +28,7 @@ pub enum VideoOption {
     SimulationDistance,
     BiomeBlend,
     SmoothLighting,
+    CutoutLeaves,
     Clouds,
     Particles,
     CloudRange,
@@ -66,6 +67,7 @@ static SECTIONS: [Section<VideoOption>; 3] = [
             VideoOption::Clouds,
             VideoOption::Particles,
             VideoOption::CloudRange,
+            VideoOption::CutoutLeaves,
             VideoOption::WeatherRadius,
             VideoOption::EntityDistance,
             VideoOption::FrustumCulling,
@@ -218,6 +220,7 @@ impl VideoOption {
         }
         match self {
             Self::SmoothLighting => config.smooth_lighting = !config.smooth_lighting,
+            Self::CutoutLeaves => config.cutout_leaves = !config.cutout_leaves,
             Self::Vignette => config.vignette = !config.vignette,
             Self::AttackIndicator => config.attack_indicator = config.attack_indicator.next(),
             Self::Fullscreen => config.fullscreen = !config.fullscreen,
@@ -248,6 +251,7 @@ impl VideoOption {
                 | Self::SimulationDistance
                 | Self::BiomeBlend
                 | Self::SmoothLighting
+                | Self::CutoutLeaves
                 | Self::Clouds
                 | Self::Particles
                 | Self::CloudRange
@@ -280,6 +284,7 @@ impl VideoOption {
                 lang.get(config.graphics_preset.key()),
             ),
             Self::SmoothLighting => on_off_label(lang, "options.ao", config.smooth_lighting),
+            Self::CutoutLeaves => on_off_label(lang, "options.cutoutLeaves", config.cutout_leaves),
             Self::Clouds => value_label(
                 lang,
                 "options.renderClouds",
@@ -365,6 +370,7 @@ impl OptionEntry for VideoOption {
             Self::GraphicsPreset => Some("options.graphics.preset.tooltip"),
             Self::Vsync => Some("melon.options.vsync.tooltip"),
             Self::Vignette => Some("options.vignette.tooltip"),
+            Self::CutoutLeaves => Some("options.cutoutLeaves.tooltip"),
             Self::DistortionEffects => Some("options.screenEffectScale.tooltip"),
             Self::FovEffects => Some("options.fovEffectScale.tooltip"),
             Self::DamageTilt => Some("options.damageTiltStrength.tooltip"),

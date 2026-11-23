@@ -81,8 +81,7 @@ impl Renderer {
                     let multi = self.indirect.is_some().then_some(Phase::First);
                     // Phase 2 draws the rest: what the culling let through and the
                     // vertex meshes (lava), which it doesn't cull.
-                    let occluding =
-                        layer == RenderLayer::Terrain && self.recording.occluding.get();
+                    let occluding = layer == RenderLayer::Terrain && self.recording.occluding.get();
                     for &layer_draws in passes {
                         let at = (view_proj, &light);
                         self.draw_terrain_layer(cmd, world, layer_draws, at, multi, !occluding);
@@ -186,10 +185,9 @@ impl Renderer {
                             _ if entity.scroll.is_some() => {
                                 (Mode::Scrolled, &self.pipelines.scrolled)
                             }
-                            Blending::Translucent if writes_depth => (
-                                Mode::EntityTranslucent,
-                                &self.pipelines.entity_translucent,
-                            ),
+                            Blending::Translucent if writes_depth => {
+                                (Mode::EntityTranslucent, &self.pipelines.entity_translucent)
+                            }
                             Blending::Translucent => {
                                 (Mode::Translucent, &self.pipelines.translucent)
                             }
@@ -868,7 +866,11 @@ impl Renderer {
             &[],
         );
         // Culled, each phase draws what the GPU packed for it (see `occlusion.rs`).
-        let packed = self.recording.occluding.get().then(|| (indirect.run_start(pass), phase));
+        let packed = self
+            .recording
+            .occluding
+            .get()
+            .then(|| (indirect.run_start(pass), phase));
         for (i, &run) in indirect.runs(pass).iter().enumerate() {
             let packed = packed.map(|(start, phase)| (start + i as u32, phase));
             self.flush_run(cmd, layout, (view_proj, light), run, packed);

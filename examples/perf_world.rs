@@ -136,6 +136,7 @@ fn main() -> anyhow::Result<()> {
     );
     let context = MeshContext {
         smooth_lighting: true,
+        cutout_leaves: true,
         models: &models,
         fluids: &fluids,
         min_y: -64,
@@ -261,6 +262,7 @@ fn main() -> anyhow::Result<()> {
     println!("per packed section: visgraph::compute_rows={:?}", per(t));
     let flat_context = MeshContext {
         smooth_lighting: false,
+        cutout_leaves: true,
         ..context
     };
     let mut flat_times = Vec::new();

@@ -364,6 +364,11 @@ impl RunningState {
                 ("acquire wait", waits.acquire),
                 ("present", waits.present),
                 ("record", waits.record),
+                ("record scene", waits.record_scene),
+                ("record ui", waits.record_ui),
+                ("submit", waits.submit),
+                ("gather", waits.gather),
+                ("prepare", waits.prepare),
             ],
         );
         world.profiler.end();

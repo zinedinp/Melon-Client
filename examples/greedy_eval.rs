@@ -52,6 +52,7 @@ fn main() -> anyhow::Result<()> {
     let plains_tints = TintSettings::plains();
     let context = MeshContext {
         smooth_lighting: true,
+        cutout_leaves: true,
         models: &models,
         fluids: &fluids,
         min_y: -64,

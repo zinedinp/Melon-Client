@@ -85,8 +85,11 @@ impl InWorld {
                     .traced(traced)
             });
         let culler = culler.with_occlusion(mask);
+        self.profiler.mark("cull caves");
         self.meshes.resort(renderer, camera.position);
+        self.profiler.mark("cull resort");
         let chunks = self.meshes.visible_sections(&culler);
+        self.profiler.mark("cull sections");
 
         let block_entities = self.block_entity_meshes.update(
             renderer,
@@ -96,6 +99,7 @@ impl InWorld {
             &culler,
             view.level_partial,
         );
+        self.profiler.mark("cull block entities");
         let entities =
             crate::game::entities::visible_entities(&self.entities, &culler, view.partial, |pos| {
                 self.meshes.section_compiled(pos)

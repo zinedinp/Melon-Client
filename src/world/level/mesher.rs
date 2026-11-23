@@ -23,6 +23,8 @@ pub(super) struct Job {
     pub chunks: [Option<Arc<Chunk>>; 9],
     /// The "Smooth Lighting" option.
     pub smooth_lighting: bool,
+    /// The "See-Through Leaves" option.
+    pub cutout_leaves: bool,
     /// The dimension's face shading, relative to the default.
     pub cardinal: [f32; 6],
     /// Where the camera was, to sort the translucent faces from.
@@ -201,6 +203,7 @@ fn work(
 fn build(job: &Job, models: &BlockModels, fluids: FluidSprites) -> Option<Done> {
     let context = MeshContext {
         smooth_lighting: job.smooth_lighting,
+        cutout_leaves: job.cutout_leaves,
         models,
         fluids: &fluids,
         min_y: 0,

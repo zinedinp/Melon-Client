@@ -260,6 +260,10 @@ pub struct MeshContext<'a> {
     pub min_y: i32,
     /// `Options.ambientOcclusion` ("Smooth Lighting").
     pub smooth_lighting: bool,
+    /// `Options.cutoutLeaves` ("See-Through Leaves"). Off, leaves are drawn
+    /// opaque, without their faces against other leaves
+    /// (`ModelBlockRenderer.forceOpaque`, `LeavesBlock.skipRendering`).
+    pub cutout_leaves: bool,
     /// The dimension's face shading relative to the default.
     pub cardinal: [f32; 6],
     /// Biome colours and the blend radius.
@@ -482,14 +486,18 @@ fn fill_section(
                 let smooth = context.smooth_lighting
                     && center.emission() == 0
                     && context.models.smooth_lighting(id);
+                let opaque_leaves = !context.cutout_leaves && state_flags::is_leaves(id);
                 context.models.quads_at(id, pos, |quads| {
                     for quad in quads {
                         let hidden = quad.cullface.is_some_and(|side| {
                             let [dx, dy, dz] = side.step();
                             solid.at(x + dx, y + dy, z + dz)
-                                || neighborhood
-                                    .block(s, x + dx, y + dy, z + dz)
-                                    .is_some_and(|next| skip_rendering::hides(id, next, side))
+                                || neighborhood.block(s, x + dx, y + dy, z + dz).is_some_and(
+                                    |next| {
+                                        skip_rendering::hides(id, next, side)
+                                            || opaque_leaves && state_flags::is_leaves(next)
+                                    },
+                                )
                         });
                         if hidden {
                             continue;
@@ -511,7 +519,12 @@ fn fill_section(
                         };
                         let tint = tints.color(quad.tint, pos);
                         let terrain = TerrainQuad::tinted(quad.index, block, corners, offset, tint);
-                        if quad.layer == ChunkLayer::Translucent {
+                        let chunk_layer = if opaque_leaves {
+                            ChunkLayer::Solid
+                        } else {
+                            quad.layer
+                        };
+                        if chunk_layer == ChunkLayer::Translucent {
                             translucent.extend(context.models.quad_vertices(
                                 terrain,
                                 [0, context.min_y, 0],
@@ -519,7 +532,7 @@ fn fill_section(
                             ));
                             continue;
                         }
-                        let layer = &mut quad_builders[quad.layer as usize];
+                        let layer = &mut quad_builders[chunk_layer as usize];
                         let group = quad.facing.map_or(SLANTED, Direction::index);
                         layer.groups[group].push(terrain);
                     }
@@ -667,9 +680,14 @@ mod tests {
     }
 
     fn build(neighborhood: &Neighborhood) -> Option<Built> {
+        build_with(neighborhood, true)
+    }
+
+    fn build_with(neighborhood: &Neighborhood, cutout_leaves: bool) -> Option<Built> {
         let (models, fluids) = test_models()?;
         let context = MeshContext {
             smooth_lighting: true,
+            cutout_leaves,
             models,
             fluids: &fluids,
             min_y: 0,
@@ -902,6 +920,24 @@ mod tests {
     }
 
     #[test]
+    fn opaque_leaves_go_solid_without_their_faces_against_leaves() {
+        let oak = pumpkin_data::Block::OAK_LEAVES.default_state.id.as_u16();
+        let birch = pumpkin_data::Block::BIRCH_LEAVES.default_state.id.as_u16();
+        let chunk = chunk_with(&[(4, 4, 4, oak), (5, 4, 4, birch)]);
+        let Some(see_through) = build_with(&Neighborhood::alone(&chunk), true) else {
+            return;
+        };
+        // Vanilla's fancy leaves: every face, seen through their holes.
+        assert_eq!(
+            (see_through.solid().len(), see_through.cutout().len()),
+            (0, 12)
+        );
+        let opaque = build_with(&Neighborhood::alone(&chunk), false).unwrap();
+        // Any leaves hide a leaves face, other kinds too.
+        assert_eq!((opaque.solid().len(), opaque.cutout().len()), (10, 0));
+    }
+
+    #[test]
     fn quads_rebuild_the_vertices_they_stand_for() {
         let poppy = pumpkin_data::Block::POPPY.default_state.id.as_u16();
         let chunk = chunk_with(&[(4, 20, 9, STONE), (7, 3, 2, poppy)]);
@@ -972,6 +1008,7 @@ mod tests {
             .with_biomes(crate::world::biome::ChunkBiomes::uniform(1, 2));
         let context = MeshContext {
             smooth_lighting: true,
+            cutout_leaves: true,
             models,
             fluids: &fluids,
             min_y: chunk.min_y(),

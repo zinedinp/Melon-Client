@@ -67,7 +67,7 @@ impl Renderer {
         if let Some(indirect) = &mut self.indirect {
             let draws = indirect.gathered();
             indirect.prepare(&self.device, &self.mem_props, current, draws)?;
-            indirect.upload(current);
+            indirect.upload(current, self.occlusion.is_some());
             if let Some(occlusion) = &mut self.occlusion
                 && draws > 0
             {
@@ -93,12 +93,14 @@ impl Renderer {
         let calls = fitting(&frame.ui.calls, ui_vertices);
         let mut waits = FrameWaits::default();
         // What only reads the CPU's state, before waiting for the frame's slot.
+        let started = Instant::now();
         if let Some(indirect) = &mut self.indirect {
             match frame.scene.and_then(|s| s.world.as_ref()) {
                 Some(world) => indirect.gather(world, &self.quad_meshes),
                 None => indirect.clear(),
             }
         }
+        waits.gather = started.elapsed();
         let started = Instant::now();
         let fence = self.frames.in_flight[self.frames.current];
         self.device.wait_for_fences(&[fence], true, u64::MAX)?;
@@ -111,7 +113,9 @@ impl Renderer {
         // past that point a failure would leave the image acquired and its
         // semaphore signalled with nothing to wait on it. Out of memory
         // (another program holding the VRAM) now just skips the frame.
+        let started = Instant::now();
         self.prepare_frame()?;
+        waits.prepare = started.elapsed();
 
         let started = Instant::now();
         let acquire = self.swapchain.loader.acquire_next_image(
@@ -301,7 +305,9 @@ impl Renderer {
             } else {
                 ScenePart::All
             };
+            let started = Instant::now();
             self.record_scene(cmd, scene, part);
+            waits.record_scene = started.elapsed();
             if split {
                 self.device.cmd_end_render_pass(cmd);
                 self.record_post(cmd, image_index as usize, scene, &chains);
@@ -320,7 +326,9 @@ impl Renderer {
             }
         }
         self.gpu_timer.counted_pass("ui");
+        let started = Instant::now();
         self.record_ui(cmd, frame, early, full_scissor);
+        waits.record_ui = started.elapsed();
         self.gpu_timer.mark(&self.device, "ui");
 
         self.device.cmd_end_render_pass(cmd);
@@ -347,8 +355,11 @@ impl Renderer {
             .wait_dst_stage_mask(&wait_stages)
             .command_buffers(&command_buffers)
             .signal_semaphores(&signal_semaphores);
+        let submitting = Instant::now();
         self.device.queue_submit(self.queue, &[submit], fence)?;
-        waits.record = recording.elapsed();
+        waits.submit = submitting.elapsed();
+        waits.record =
+            (submitting - recording).saturating_sub(waits.record_scene + waits.record_ui);
         self.frames.submitted[self.frames.current] = self.frames.number;
         for arena in [&mut self.meshes, &mut self.quad_meshes] {
             arena.submitted();

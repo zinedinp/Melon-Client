@@ -59,6 +59,25 @@ impl InWorld {
                 for command in &step.commands {
                     self.joined.session.send_command(command);
                 }
+                if step.find_forest {
+                    let level = &self.level;
+                    let spot = super::bench::forest_spot(
+                        self.player.feet(),
+                        |x, z| {
+                            level
+                                .is_loaded_at(x, z)
+                                .then(|| level.motion_blocking_height(x, z))
+                        },
+                        |x, y, z| level.block_state(x, y, z).unwrap_or(0),
+                    );
+                    match spot {
+                        Some(at) => {
+                            let tp = format!("tp {:.1} {:.1} {:.1}", at.x, at.y, at.z);
+                            self.joined.session.send_command(&tp);
+                        }
+                        None => crate::warn!("Bench: no trees nearby, the forest phase stays put"),
+                    }
+                }
             }
             self.tick(input, ui, !blocked && self.bench.is_none());
         }

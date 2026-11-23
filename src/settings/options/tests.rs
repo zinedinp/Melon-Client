@@ -14,6 +14,7 @@ fn reads_back_what_it_writes() {
         },
         graphics_preset: GraphicsPreset::Custom,
         smooth_lighting: false,
+        cutout_leaves: false,
         chunk_builder: ChunkBuilder::Nearby,
         biome_blend: 5,
         clouds: CloudStatus::Fast,

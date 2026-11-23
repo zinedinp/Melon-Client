@@ -94,6 +94,8 @@ pub(super) struct MeshQueue {
     ready_count: usize,
     /// The "Smooth Lighting" option is off: faces are lit flat.
     flat_lighting: bool,
+    /// The "See-Through Leaves" option is off: leaves are opaque.
+    opaque_leaves: bool,
     /// The "Chunk Builder" option.
     chunk_builder: ChunkBuilder,
     /// Rebuilds handed out in a row (`SectionTaskDynamicQueue`'s quota).
@@ -127,6 +129,20 @@ impl MeshQueue {
             return;
         }
         self.flat_lighting = !on;
+        self.queue_all();
+    }
+
+    /// The "See-Through Leaves" option.
+    pub fn set_cutout_leaves(&mut self, on: bool) {
+        if self.opaque_leaves != on {
+            return;
+        }
+        self.opaque_leaves = !on;
+        self.queue_all();
+    }
+
+    /// Meshes every known section again.
+    fn queue_all(&mut self) {
         let all: Vec<_> = self.versions.keys().copied().collect();
         for pos in all {
             self.queue(pos, false);
@@ -260,6 +276,7 @@ impl MeshQueue {
                     version: versions.current,
                     chunks: neighborhood_of(chunks, column),
                     smooth_lighting: !self.flat_lighting,
+                    cutout_leaves: !self.opaque_leaves,
                     cardinal,
                     camera,
                     tints: tints.clone(),
@@ -324,6 +341,7 @@ impl MeshQueue {
                 version,
                 chunks: neighborhood_of(chunks, (pos.0, pos.2)),
                 smooth_lighting: !self.flat_lighting,
+                cutout_leaves: !self.opaque_leaves,
                 cardinal,
                 camera,
                 tints: tints.clone(),

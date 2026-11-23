@@ -66,6 +66,8 @@ pub struct Config {
     pub graphics_preset: GraphicsPreset,
     /// `Options.ambientOcclusion`, "Smooth Lighting".
     pub smooth_lighting: bool,
+    /// `Options.cutoutLeaves`, "See-Through Leaves".
+    pub cutout_leaves: bool,
     /// `Options.prioritizeChunkUpdates`.
     pub chunk_builder: ChunkBuilder,
     /// `Options.biomeBlendRadius`.
@@ -155,6 +157,7 @@ impl Default for Config {
             cull: CullSettings::default(),
             graphics_preset: GraphicsPreset::Fancy,
             smooth_lighting: true,
+            cutout_leaves: true,
             chunk_builder: ChunkBuilder::None,
             biome_blend: BIOME_BLEND_DEFAULT,
             clouds: CloudStatus::Fancy,

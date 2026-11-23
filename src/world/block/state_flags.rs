@@ -48,6 +48,16 @@ const fn rule_drawn(state: BlockStateId) -> bool {
 static SOLID: StateBits = state_bits!(rule_solid);
 static DRAWN: StateBits = state_bits!(rule_drawn);
 
+/// Vanilla `instanceof LeavesBlock`: every `*_leaves` block.
+fn rule_leaves(state: BlockStateId) -> bool {
+    pumpkin_data::Block::from_state_id(state)
+        .name
+        .ends_with("_leaves")
+}
+
+static LEAVES: std::sync::LazyLock<StateBits> =
+    std::sync::LazyLock::new(|| state_bits!(rule_leaves));
+
 fn extra_state(id: u16) -> Option<&'static pumpkin_data::BlockState> {
     if id < BlockStateId::COUNT {
         return None;
@@ -67,6 +77,12 @@ pub fn is_drawn(id: u16) -> bool {
     DRAWN.contains(id) || extra_state(id).is_some_and(|state| !state.is_air())
 }
 
+/// See [`rule_leaves`].
+#[inline]
+pub fn is_leaves(id: u16) -> bool {
+    LEAVES.contains(id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,6 +99,28 @@ mod tests {
         assert!(!is_solid(ice) && is_drawn(ice));
         assert!(!is_solid(short_grass) && is_drawn(short_grass));
         assert!(!is_solid(u16::MAX));
+    }
+
+    #[test]
+    fn leaves_are_the_leaves_blocks() {
+        use pumpkin_data::Block;
+        for leaves in [
+            &Block::OAK_LEAVES,
+            &Block::CHERRY_LEAVES,
+            &Block::AZALEA_LEAVES,
+        ] {
+            for state in leaves.states {
+                assert!(is_leaves(state.id.as_u16()), "{}", leaves.name);
+            }
+        }
+        for other in [&Block::OAK_LOG, &Block::GRASS_BLOCK, &Block::AIR] {
+            assert!(
+                !is_leaves(other.default_state.id.as_u16()),
+                "{}",
+                other.name
+            );
+        }
+        assert!(!is_leaves(u16::MAX));
     }
 
     #[test]

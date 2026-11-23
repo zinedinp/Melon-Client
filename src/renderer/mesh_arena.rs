@@ -84,10 +84,11 @@ impl Block {
     }
 }
 
-/// Where one mesh sits.
+/// Where one mesh sits. Small, since gathering the terrain's draws reads
+/// one per draw from all over the slot table.
 #[derive(Clone, Copy)]
 pub struct Slot {
-    block: usize,
+    block: u32,
     /// First element in the block.
     offset: u32,
     /// Elements: vertices or quads.
@@ -201,7 +202,7 @@ impl MeshArena {
 
     /// The buffer a slot is in and its first element there.
     pub fn location(&self, slot: Slot) -> (vk::Buffer, u32) {
-        let block = self.blocks[slot.block]
+        let block = self.blocks[slot.block as usize]
             .as_ref()
             .expect("a live mesh's block is kept");
         (block.buffer, slot.offset)
@@ -304,6 +305,7 @@ impl MeshArena {
                     (index, offset)
                 }
             };
+            let block = u32::try_from(block)?;
             let dst = self
                 .location(Slot {
                     block,
@@ -451,7 +453,7 @@ impl MeshArena {
         self.retired.retain(|&(freed_at, slot)| {
             let done = freed_at < oldest_in_flight;
             if done {
-                if let Some(block) = &mut blocks[slot.block] {
+                if let Some(block) = &mut blocks[slot.block as usize] {
                     block.free.release(slot.offset, slot.count);
                 }
                 released = true;

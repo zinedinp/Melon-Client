@@ -139,6 +139,8 @@ struct Gathered {
     /// place among `buffers`, command, offset, bounds).
     pending: Vec<(u32, vk::DrawIndexedIndirectCommand, [f32; 3], [f32; 4])>,
     buffers: Vec<vk::Buffer>,
+    /// [`Self::finish`]'s draws per buffer, then where each buffer's go.
+    places: Vec<u32>,
     /// The world's [`super::WorldDraw::section_slots`].
     slots: u32,
 }
@@ -174,18 +176,52 @@ impl Gathered {
 
     /// Ends pass `pass`: its draws, grouped by buffer (in the order the
     /// buffers first came) so each buffer is one run, each group still in
-    /// the order the draws came (near to far).
+    /// the order the draws came (near to far). A counting sort: each draw is
+    /// written once, straight to its place.
     fn finish(&mut self, pass: Pass) {
-        let mut pending = std::mem::take(&mut self.pending);
-        pending.sort_by_key(|&(place, ..)| place);
-        for &(place, command, offset, bounds) in &pending {
-            self.push(pass, self.buffers[place as usize], command, offset, bounds);
+        let places = &mut self.places;
+        places.clear();
+        places.resize(self.buffers.len(), 0);
+        for &(place, ..) in &self.pending {
+            places[place as usize] += 1;
         }
-        pending.clear();
-        self.pending = pending;
+        let base = self.commands.len() as u32;
+        let mut first = base;
+        for (place, buffer) in places.iter_mut().zip(&self.buffers) {
+            let count = std::mem::replace(place, first);
+            if count > 0 {
+                self.runs[pass as usize].push(Run {
+                    buffer: *buffer,
+                    first,
+                    count,
+                });
+            }
+            first += count;
+        }
+        let total = self.pending.len();
+        let new_len = self.commands.len() + total;
+        self.commands
+            .resize(new_len, vk::DrawIndexedIndirectCommand::default());
+        self.offsets.resize(new_len, [0.0; 4]);
+        self.bounds.resize(new_len, [0.0; 4]);
+        for &(place, command, offset, bounds) in &self.pending {
+            let at = &mut places[place as usize];
+            let index = *at;
+            *at += 1;
+            // `terrain.vert` finds the draw's offset by it.
+            self.commands[index as usize] = vk::DrawIndexedIndirectCommand {
+                first_instance: index,
+                ..command
+            };
+            self.offsets[index as usize] = [offset[0], offset[1], offset[2], 0.0];
+            self.bounds[index as usize] = bounds;
+        }
+        self.pending.clear();
         self.buffers.clear();
     }
 
+    /// One draw at the end of pass `pass`, joining its last run if it can.
+    #[cfg(test)]
     fn push(
         &mut self,
         pass: Pass,
@@ -413,7 +449,8 @@ impl DrawBuffers {
 
     /// Copies what was gathered into frame `frame`'s buffers, made big enough
     /// by [`Self::prepare`]; call once its fence signalled.
-    pub unsafe fn upload(&self, frame: usize) {
+    /// With `culling`, also what the occlusion culling reads of them.
+    pub unsafe fn upload(&self, frame: usize, culling: bool) {
         let slot = &self.frames[frame];
         let gathered = &self.gathered;
         let (Some(commands), Some(offsets), Some(bounds), Some(run_table)) = (
@@ -431,15 +468,18 @@ impl DrawBuffers {
             commands.as_ptr().cast::<vk::DrawIndexedIndirectCommand>(),
             count,
         );
-        let run_table = run_table.as_ptr().cast::<[u32; 2]>();
-        for (i, run) in gathered.runs.iter().flatten().enumerate().take(count) {
-            run_table.add(i).write([run.first, run.count]);
-        }
         std::ptr::copy_nonoverlapping(
             gathered.offsets.as_ptr(),
             offsets.as_ptr().cast::<[f32; 4]>(),
             count,
         );
+        if !culling {
+            return;
+        }
+        let run_table = run_table.as_ptr().cast::<[u32; 2]>();
+        for (i, run) in gathered.runs.iter().flatten().enumerate().take(count) {
+            run_table.add(i).write([run.first, run.count]);
+        }
         std::ptr::copy_nonoverlapping(
             gathered.bounds.as_ptr(),
             bounds.as_ptr().cast::<[f32; 4]>(),
@@ -556,6 +596,69 @@ mod tests {
         // The bounds go with their draws.
         let bounds: Vec<f32> = gathered.bounds.iter().map(|b| b[0]).collect();
         assert_eq!(bounds, xs);
+    }
+
+    /// The counting sort in `finish` against a stable sort by buffer with
+    /// `push`, over two passes of draws from many buffers in random order.
+    #[test]
+    fn finishing_matches_a_stable_sort_by_buffer() {
+        let mut seed = 0x2545_f491_u64;
+        let mut random = move || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        let mut gathered = Gathered::default();
+        let mut expected = Gathered::default();
+        for pass in [Pass::Solid, Pass::Cutout] {
+            let mut draws = Vec::new();
+            for i in 0..2000u32 {
+                let buffer = vk::Buffer::from_raw(1 + random() % 9);
+                let command = vk::DrawIndexedIndirectCommand {
+                    index_count: 6 * (i + 1),
+                    instance_count: 1,
+                    first_index: 0,
+                    vertex_offset: random() as i32 & 0xFFFF,
+                    first_instance: 0,
+                };
+                let x = i as f32;
+                draws.push((buffer, command, [x, 1.0, 2.0], [x, 3.0, 4.0, 5.0]));
+                gathered.queue(buffer, command, [x, 1.0, 2.0], [x, 3.0, 4.0, 5.0]);
+            }
+            gathered.finish(pass);
+            let mut order: Vec<vk::Buffer> = Vec::new();
+            for &(buffer, ..) in &draws {
+                if !order.contains(&buffer) {
+                    order.push(buffer);
+                }
+            }
+            draws.sort_by_key(|&(buffer, ..)| order.iter().position(|&b| b == buffer));
+            for (buffer, command, offset, bounds) in draws {
+                expected.push(pass, buffer, command, offset, bounds);
+            }
+        }
+        let fields = |c: &vk::DrawIndexedIndirectCommand| {
+            (
+                c.index_count,
+                c.instance_count,
+                c.first_index,
+                c.vertex_offset,
+                c.first_instance,
+            )
+        };
+        let commands = |g: &Gathered| g.commands.iter().map(fields).collect::<Vec<_>>();
+        assert_eq!(commands(&gathered), commands(&expected));
+        assert_eq!(gathered.offsets, expected.offsets);
+        assert_eq!(gathered.bounds, expected.bounds);
+        assert_eq!(gathered.runs, expected.runs);
+        assert!(
+            gathered
+                .commands
+                .iter()
+                .enumerate()
+                .all(|(i, c)| c.first_instance == i as u32)
+        );
     }
 
     #[test]

@@ -585,6 +585,11 @@ impl InWorld {
         self.level.set_smooth_lighting(on);
     }
 
+    /// The "See-Through Leaves" option; changing it remeshes everything.
+    pub fn set_cutout_leaves(&mut self, on: bool) {
+        self.level.set_cutout_leaves(on);
+    }
+
     /// The "Chunk Builder" option.
     pub fn set_chunk_builder(&mut self, builder: crate::settings::options::ChunkBuilder) {
         self.level.set_chunk_builder(builder);

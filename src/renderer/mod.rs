@@ -250,8 +250,18 @@ pub struct FrameWaits {
     pub acquire: std::time::Duration,
     /// In `queue_present`, which some drivers block in.
     pub present: std::time::Duration,
-    /// Recording and submitting the commands, past the waits for the frame's slot and image.
+    /// Recording the commands, past the waits for the frame's slot and
+    /// image, but for the scene's and the UI's draws.
     pub record: std::time::Duration,
+    /// Of `record`: the 3D scene's draws, and the UI's.
+    pub record_scene: std::time::Duration,
+    pub record_ui: std::time::Duration,
+    /// `vkQueueSubmit`.
+    pub submit: std::time::Duration,
+    /// Gathering the terrain's multi-draws.
+    pub gather: std::time::Duration,
+    /// Growing and filling the frame's buffers before its image is acquired.
+    pub prepare: std::time::Duration,
 }
 
 /// One host-visible UI vertex buffer per frame in flight, mapped for good.

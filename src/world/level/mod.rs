@@ -235,6 +235,11 @@ impl Level {
         self.meshing.set_smooth_lighting(on);
     }
 
+    /// The "See-Through Leaves" option; changing it remeshes everything.
+    pub fn set_cutout_leaves(&mut self, on: bool) {
+        self.meshing.set_cutout_leaves(on);
+    }
+
     /// The "Chunk Builder" option.
     pub fn set_chunk_builder(&mut self, builder: ChunkBuilder) {
         self.meshing.set_chunk_builder(builder);

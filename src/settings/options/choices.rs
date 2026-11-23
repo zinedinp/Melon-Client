@@ -295,6 +295,7 @@ impl GraphicsPreset {
         config.chunk_builder = builder;
         config.simulation_distance = simulation;
         config.smooth_lighting = smooth;
+        config.cutout_leaves = self != Self::Fast;
         config.cull.entity_distance = entities;
         config.clouds = clouds;
         config.cloud_range = cloud_range;

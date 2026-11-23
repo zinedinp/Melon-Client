@@ -34,6 +34,7 @@ impl InWorld {
         font: DebugFont<'_>,
     ) -> (SceneFrame, RenderStats) {
         let view = self.frame_view(assets, aspect, now, config);
+        self.profiler.mark("view");
         let cull::Culled {
             chunks,
             block_entities,
@@ -42,6 +43,7 @@ impl InWorld {
             heads,
             own_visible,
         } = self.cull(renderer, assets, &view, aspect, config);
+        self.profiler.mark("cull");
 
         let mut layer = self.entity_layer(
             renderer,
@@ -57,6 +59,7 @@ impl InWorld {
                 config,
             },
         );
+        self.profiler.mark("entities");
         let particles = self.particle_layer(
             renderer,
             assets,
@@ -67,6 +70,7 @@ impl InWorld {
             },
             &mut layer.draws,
         );
+        self.profiler.mark("particles");
         let lines = self.overlay_layer(
             renderer,
             assets,
@@ -81,7 +85,9 @@ impl InWorld {
             },
             &mut layer.draws,
         );
+        self.profiler.mark("overlays");
         let sky = self.sky_layer(renderer, assets, &view, config, aspect);
+        self.profiler.mark("sky");
 
         let stats = RenderStats {
             sections_drawn: chunks.count.drawn,
