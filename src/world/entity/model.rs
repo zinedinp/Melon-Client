@@ -438,12 +438,14 @@ impl Model {
     }
 
     /// [`Self::part_vertices`], each face also wound the other way when
-    /// `two_sided`: what a render type without culling shows.
+    /// `two_sided`: what a render type without culling shows. The back is
+    /// shaded for the opposite normal (`PER_FACE_LIGHTING`'s `-light`).
     pub fn part_vertices_sided(&self, part: PartId, two_sided: bool) -> Vec<Vertex> {
         let mut out = Vec::new();
         self.part_faces(part, &mut |face| {
             let n = face.normal;
             let shade = geometry::shade(Vec3::new(-n.x, -n.y, n.z));
+            let back_shade = geometry::shade(Vec3::new(n.x, n.y, -n.z));
             let corners = std::array::from_fn(|i| {
                 let [u, v] = face.uvs[i].to_array();
                 (
@@ -453,7 +455,7 @@ impl Model {
             });
             geometry::push_quad(&mut out, corners, [shade; 3], false);
             if two_sided {
-                geometry::push_quad(&mut out, corners, [shade; 3], true);
+                geometry::push_quad(&mut out, corners, [back_shade; 3], true);
             }
         });
         out

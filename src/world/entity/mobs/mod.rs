@@ -480,9 +480,9 @@ impl ModelId {
         ]
     };
 
-    /// Both sides of its faces drawn: vanilla's `entityCutout` doesn't cull,
-    /// which only shows where the texture has holes to see the inside
-    /// through (the skeletons' ribs, the skeleton horse).
+    /// Both sides of its faces drawn. Vanilla's `entityCutout` and the
+    /// equipment layers' `armorCutoutNoCull` don't cull; Melon culls the
+    /// rest, where it only shows through texture holes (skeleton ribs, armor).
     pub const fn two_sided(self) -> bool {
         matches!(
             self,
@@ -493,6 +493,20 @@ impl ModelId {
                 | Self::BoggedClothes
                 | Self::Horse
                 | Self::HorseBaby
+                // `EquipmentLayerRenderer.renderLayers`: `armorCutoutNoCull`.
+                | Self::Armor(..)
+                | Self::BabyArmor(..)
+                | Self::HorseArmor
+                | Self::HorseSaddle
+                | Self::WolfArmor
+                | Self::PigSaddle
+                | Self::CamelSaddle
+                | Self::NautilusSaddle
+                | Self::NautilusArmor
+                | Self::LlamaDecor
+                | Self::LlamaBabyDecor
+                | Self::HappyGhastHarness
+                | Self::HappyGhastBabyHarness
         )
     }
 
