@@ -5,6 +5,7 @@
 //! (`GetHrtfCoeffs`), done per sound as its default `hrtf-mode = full` does.
 
 use super::spatial::{Listener, ListenerPose, linear_gain};
+use crate::math::slices;
 use rodio::source::{SeekError, UniformSourceIterator};
 use rodio::{ChannelCount, Sample, SampleRate, Source};
 use std::sync::{Arc, OnceLock};
@@ -17,10 +18,12 @@ static DEFAULT_MHR: &[u8] = include_bytes!("default.mhr");
 pub const TAPS: usize = 64;
 /// `HRIR_DELAY_FRACBITS`: delays are stored in quarter samples.
 const DELAY_FRACTION: f32 = 4.0;
-/// Room for the taps and the longest delay (63 quarter samples, 16 whole).
+/// Samples kept from the block before: room for the taps and the longest
+/// delay a data set can store (255 quarter samples, 64 whole).
 const HISTORY: usize = 128;
-/// Frames between two looks at where the listener is: about 5 ms.
-const REFRESH_FRAMES: u32 = 256;
+/// Frames rendered at once, each block fading to the filters for where the
+/// listener is then: about 5 ms.
+const BLOCK: usize = 256;
 /// The rate the responses are for; sounds are brought to it first.
 pub const RATE: u32 = 48_000;
 /// Where OpenAL Soft puts the two channels of a stereo file (`AL_STEREO_ANGLES`).
@@ -52,6 +55,16 @@ pub struct EarFilters {
     taps: [[f32; TAPS]; 2],
     /// Whole samples each ear hears it late.
     delays: [usize; 2],
+}
+
+impl EarFilters {
+    /// The same filters, `gain` times as loud.
+    fn scaled(mut self, gain: f32) -> Self {
+        for tap in self.taps.as_flattened_mut() {
+            *tap *= gain;
+        }
+        self
+    }
 }
 
 impl HrtfStore {
@@ -178,70 +191,75 @@ fn direction(pose: &ListenerPose, emitter: [f32; 3]) -> (f32, f32, f32) {
     (distance, y.clamp(-1.0, 1.0).asin(), x.atan2(z))
 }
 
-/// One source the head hears: its recent samples and its ears' filters,
-/// fading from the old filters to new ones over a refresh.
+/// Each frame's share of the new filters over a block: 0 up to almost 1.
+static FADE: [f32; BLOCK] = {
+    let mut fade = [0.0; BLOCK];
+    let mut i = 0;
+    while i < BLOCK {
+        fade[i] = i as f32 / BLOCK as f32;
+        i += 1;
+    }
+    fade
+};
+
+/// One source the head hears: its recent samples and its ears' filters
+/// (with the distance gain in them), fading from the old to the new over a
+/// block.
 struct Ears {
-    /// The history twice over, so a window never wraps.
-    history: Box<[f32; 2 * HISTORY]>,
-    pos: usize,
+    /// The last [`HISTORY`] samples of the block before, then this block's.
+    samples: Box<[f32; HISTORY + BLOCK]>,
     old: EarFilters,
     new: EarFilters,
-    old_gain: f32,
-    new_gain: f32,
 }
 
 impl Ears {
-    fn new(filters: EarFilters, gain: f32) -> Self {
+    fn new(filters: EarFilters) -> Self {
         Self {
-            history: Box::new([0.0; 2 * HISTORY]),
-            pos: 0,
+            samples: Box::new([0.0; HISTORY + BLOCK]),
             old: filters,
             new: filters,
-            old_gain: gain,
-            new_gain: gain,
         }
     }
 
-    fn retarget(&mut self, filters: EarFilters, gain: f32) {
-        self.old = self.new;
-        self.old_gain = self.new_gain;
-        self.new = filters;
-        self.new_gain = gain;
+    fn retarget(&mut self, filters: EarFilters) {
+        self.old = std::mem::replace(&mut self.new, filters);
     }
 
-    fn push(&mut self, sample: f32) {
-        self.pos = (self.pos + 1) % HISTORY;
-        self.history[self.pos] = sample;
-        self.history[self.pos + HISTORY] = sample;
+    /// The sample of the block's frame `frame`.
+    fn set(&mut self, frame: usize, sample: f32) {
+        self.samples[HISTORY + frame] = sample;
     }
 
-    fn convolve(&self, filters: &EarFilters, ear: usize) -> f32 {
-        let newest = self.pos + HISTORY - filters.delays[ear];
-        let window = &self.history[newest + 1 - TAPS..=newest];
-        window
-            .iter()
-            .zip(&filters.taps[ear])
-            .map(|(x, c)| x * c)
-            .sum()
+    /// `out[i]`: the block's frame `i` through one ear's filters.
+    fn convolve(&self, filters: &EarFilters, ear: usize, out: &mut [f32]) {
+        // The window that ends at frame 0, as late as the ear hears it.
+        let first = HISTORY + 1 - TAPS - filters.delays[ear];
+        for (i, o) in out.iter_mut().enumerate() {
+            *o = slices::dot(&self.samples[first + i..][..TAPS], &filters.taps[ear]);
+        }
     }
 
-    /// Both ears now, `fade` of the way (0 to 1) from the old filters.
-    fn hear(&self, fade: f32) -> [f32; 2] {
-        let steady = self.old == self.new;
-        [0, 1].map(|ear| {
-            let new = self.convolve(&self.new, ear);
-            let gain = self.old_gain + (self.new_gain - self.old_gain) * fade;
-            if steady {
-                return new * gain;
+    /// The block's first `frames` frames through both ears, into `out`;
+    /// then the block becomes the history of the next.
+    fn hear(&mut self, frames: usize, out: &mut [[f32; BLOCK]; 2]) {
+        let (mut old, mut change) = ([0.0; BLOCK], [0.0; BLOCK]);
+        for (ear, out) in out.iter_mut().enumerate() {
+            let out = &mut out[..frames];
+            self.convolve(&self.new, ear, out);
+            if self.old != self.new {
+                let (old, change) = (&mut old[..frames], &mut change[..frames]);
+                self.convolve(&self.old, ear, old);
+                // old + fade * (new - old)
+                slices::sub(out, old, change);
+                slices::fmadd(&FADE[..frames], change, old, out);
             }
-            let old = self.convolve(&self.old, ear);
-            (old * (1.0 - fade) * self.old_gain) + (new * fade * self.new_gain)
-        })
+        }
+        self.samples.copy_within(frames..frames + HISTORY, 0);
     }
 }
 
 /// A sound with a place, heard through the HRTF: two channels at
-/// [`RATE`], for headphones.
+/// [`RATE`], for headphones. Rendered a block at a time.
 pub struct Binaural<I: Source> {
     input: UniformSourceIterator<I>,
     /// 1 for a mono file, 2 for a stereo one (each side its own source).
@@ -251,11 +269,12 @@ pub struct Binaural<I: Source> {
     emitter: [f32; 3],
     range: f32,
     sources: Vec<Ears>,
-    frame: [f32; 2],
-    /// The output channel the next sample is for.
-    channel: usize,
-    /// Frames into the current refresh.
-    step: u32,
+    /// The block, `[ear][frame]`.
+    heard: Box<[[f32; BLOCK]; 2]>,
+    /// Frames in it.
+    frames: usize,
+    /// The next sample out of it, interleaved.
+    next: usize,
 }
 
 impl<I: Source> Binaural<I> {
@@ -277,31 +296,66 @@ impl<I: Source> Binaural<I> {
             emitter: emitter.map(|c| c as f32),
             range,
             sources: Vec::with_capacity(inputs),
-            frame: [0.0; 2],
-            channel: 0,
-            step: 0,
+            heard: Box::new([[0.0; BLOCK]; 2]),
+            frames: 0,
+            next: 0,
         };
-        for (filters, gain) in binaural.targets().into_iter().take(inputs) {
-            binaural.sources.push(Ears::new(filters, gain));
+        for filters in binaural.targets().into_iter().take(inputs) {
+            binaural.sources.push(Ears::new(filters));
         }
         binaural
     }
 
-    /// Each source's filters and gain for where the listener is now. A
-    /// stereo file's sides stay at ±30° from the listener and only fade
+    /// Each source's filters, gain included, for where the listener is now.
+    /// A stereo file's sides stay at Â±30Â° from the listener and only fade
     /// with distance, as OpenAL Soft renders multi-channel sources.
     /// Without allocating: it runs on the audio thread. Only the first
     /// [`Self::inputs`] entries are meant.
-    fn targets(&self) -> [(EarFilters, f32); 2] {
+    fn targets(&self) -> [EarFilters; 2] {
         let pose = self.listener.get();
         let (distance, elevation, azimuth) = direction(&pose, self.emitter);
         let gain = linear_gain(distance, self.range);
         if self.inputs == 1 {
-            let filters = self.store.filters(elevation, azimuth);
-            [(filters, gain), (filters, gain)]
+            [self.store.filters(elevation, azimuth).scaled(gain); 2]
         } else {
-            [-STEREO_ANGLE, STEREO_ANGLE].map(|side| (self.store.filters(0.0, side), gain))
+            [-STEREO_ANGLE, STEREO_ANGLE].map(|side| self.store.filters(0.0, side).scaled(gain))
         }
+    }
+
+    /// The next block, fading to the filters for where the listener is now,
+    /// with as many frames as the input still has; false once it has none.
+    fn render(&mut self) -> bool {
+        let targets = self.targets();
+        for (ears, filters) in self.sources.iter_mut().zip(targets) {
+            ears.retarget(filters);
+        }
+        let mut frames = 0;
+        'fill: while frames < BLOCK {
+            for ears in &mut self.sources {
+                let Some(sample) = self.input.next() else {
+                    break 'fill;
+                };
+                ears.set(frames, sample);
+            }
+            frames += 1;
+        }
+        if frames == 0 {
+            return false;
+        }
+        let (first, rest) = self.sources.split_first_mut().expect("one or two sources");
+        first.hear(frames, &mut self.heard);
+        for ears in rest {
+            let mut side = [[0.0; BLOCK]; 2];
+            ears.hear(frames, &mut side);
+            for (heard, side) in self.heard.iter_mut().zip(&side) {
+                for (h, s) in heard[..frames].iter_mut().zip(side) {
+                    *h += s;
+                }
+            }
+        }
+        self.frames = frames;
+        self.next = 0;
+        true
     }
 }
 
@@ -309,27 +363,11 @@ impl<I: Source> Iterator for Binaural<I> {
     type Item = Sample;
 
     fn next(&mut self) -> Option<Sample> {
-        if self.channel == 0 {
-            if self.step == REFRESH_FRAMES {
-                self.step = 0;
-                let targets = self.targets();
-                for (ears, (filters, gain)) in self.sources.iter_mut().zip(targets) {
-                    ears.retarget(filters, gain);
-                }
-            }
-            let fade = self.step as f32 / REFRESH_FRAMES as f32;
-            self.step += 1;
-            let mut out = [0.0; 2];
-            for ears in &mut self.sources {
-                ears.push(self.input.next()?);
-                let heard = ears.hear(fade);
-                out[0] += heard[0];
-                out[1] += heard[1];
-            }
-            self.frame = out;
+        if self.next == 2 * self.frames && !self.render() {
+            return None;
         }
-        let sample = self.frame[self.channel];
-        self.channel ^= 1;
+        let sample = self.heard[self.next % 2][self.next / 2];
+        self.next += 1;
         Some(sample)
     }
 }
@@ -352,8 +390,9 @@ impl<I: Source> Source for Binaural<I> {
     }
 
     fn try_seek(&mut self, position: Duration) -> Result<(), SeekError> {
-        self.channel = 0;
-        self.input.try_seek(position)
+        self.input.try_seek(position)?;
+        self.next = 2 * self.frames;
+        Ok(())
     }
 }
 
@@ -394,6 +433,43 @@ mod tests {
         assert_eq!(ahead.delays[0], ahead.delays[1]);
         let (l, r) = (energy(&ahead.taps[0]), energy(&ahead.taps[1]));
         assert!((l - r).abs() < 1e-6 * l.max(1e-9), "{l} {r}");
+    }
+
+    /// A click heard from the right comes out as each ear's response, as
+    /// late as that ear hears it, also across a block's end.
+    #[test]
+    fn a_click_is_heard_as_the_response() {
+        let listener = Arc::new(Listener::default());
+        let at = [4.0, 0.0, 0.0];
+        let (distance, elevation, azimuth) = direction(&listener.get(), at);
+        let filters = store()
+            .filters(elevation, azimuth)
+            .scaled(linear_gain(distance, 16.0));
+        let click = BLOCK - 6;
+        let mut input = vec![0.0; 3 * BLOCK];
+        input[click] = 1.0;
+        let one = ChannelCount::new(1).unwrap();
+        let rate = SampleRate::new(RATE).unwrap();
+        let binaural = Binaural::new(
+            SamplesBuffer::new(one, rate, input),
+            store(),
+            listener,
+            at.map(f64::from),
+            16.0,
+        );
+        let heard: Vec<f32> = binaural.collect();
+        assert_eq!(heard.len(), 6 * BLOCK);
+        for ear in 0..2 {
+            let start = click + filters.delays[ear];
+            for frame in 0..3 * BLOCK {
+                let want = frame
+                    .checked_sub(start)
+                    .filter(|&k| k < TAPS)
+                    .map_or(0.0, |k| filters.taps[ear][TAPS - 1 - k]);
+                let got = heard[2 * frame + ear];
+                assert!((got - want).abs() < 1e-7, "ear {ear} frame {frame}: {got} {want}");
+            }
+        }
     }
 
     #[test]

@@ -6,6 +6,7 @@ pub mod euler;
 pub mod lanes;
 pub mod simd;
 pub mod sin_cos;
+pub mod slices;
 
 #[cfg(target_arch = "aarch64")]
 pub mod aarch64;
