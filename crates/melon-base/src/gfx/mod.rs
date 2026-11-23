@@ -41,6 +41,9 @@ pub struct DeviceInfo {
     pub backend: String,
     /// The driver's version, unpacked as its vendor packs it.
     pub driver: String,
+    /// The driver's own name and version (Vulkan 1.2 `driverName` and `driverInfo`), e.g.
+    /// "NVIDIA 560.94" or "radv Mesa 24.2.4"; empty on older drivers.
+    pub driver_detail: String,
     /// Vendor and architecture, for what differs between them.
     pub gpu: numerobis::pci::Gpu,
 }

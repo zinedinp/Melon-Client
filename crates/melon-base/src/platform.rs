@@ -7,6 +7,16 @@ use std::process::Command;
 #[cfg(target_os = "linux")]
 use std::process::Output;
 
+/// PowerShell without a console window: the launcher is a GUI program, so Windows would open one.
+#[cfg(windows)]
+fn powershell() -> std::process::Command {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let mut cmd = std::process::Command::new("powershell");
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
+
 /// Native file dialog (zenity / kdialog / osascript / PowerShell). No Python, no Java.
 pub fn pick_file(title: &str, extension: &str) -> Option<std::path::PathBuf> {
     let output = {
@@ -47,7 +57,7 @@ pub fn pick_file(title: &str, extension: &str) -> Option<std::path::PathBuf> {
                 ext = extension,
                 title = title.replace('\'', "''"),
             );
-            std::process::Command::new("powershell")
+            powershell()
                 .args(["-NoProfile", "-Command", &script])
                 .output()
                 .ok()
@@ -92,7 +102,7 @@ pub fn pick_folder(title: &str) -> Option<std::path::PathBuf> {
                 "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = '{title}'; if ($f.ShowDialog() -eq 'OK') {{ $f.SelectedPath }}",
                 title = title.replace('\'', "''"),
             );
-            std::process::Command::new("powershell")
+            powershell()
                 .args(["-NoProfile", "-Command", &script])
                 .output()
                 .ok()

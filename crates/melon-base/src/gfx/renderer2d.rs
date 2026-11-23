@@ -29,6 +29,9 @@ pub struct Renderer2d {
     surface_loader: ash::khr::surface::Instance,
     surface: vk::SurfaceKHR,
     physical: vk::PhysicalDevice,
+    info: super::DeviceInfo,
+    /// The Vulkan loader's instance version, packed.
+    loader_version: u32,
     mem_props: vk::PhysicalDeviceMemoryProperties,
     device: ash::Device,
     queue: vk::Queue,
@@ -135,6 +138,11 @@ impl Renderer2d {
         )?;
         let frames = create_frames(&device, gpu.queue_family)?;
         let vertices = create_vertices(&device, &mem_props)?;
+        let loader_version = entry
+            .try_enumerate_instance_version()
+            .ok()
+            .flatten()
+            .unwrap_or(vk::API_VERSION_1_0);
 
         let mut renderer = Self {
             entry,
@@ -151,6 +159,8 @@ impl Renderer2d {
             surface_loader,
             surface,
             physical: gpu.physical,
+            info: gpu.info.clone(),
+            loader_version,
             mem_props,
             device,
             queue,
@@ -177,6 +187,17 @@ impl Renderer2d {
             .gui
             .bind_glint(&renderer.device, view, renderer.sampler);
         Ok(renderer)
+    }
+
+    /// The GPU it draws with.
+    pub fn device_info(&self) -> &super::DeviceInfo {
+        &self.info
+    }
+
+    /// The Vulkan loader's version, e.g. "1.4.304".
+    pub fn loader_version(&self) -> String {
+        let v = self.loader_version;
+        format!("{}.{}.{}", vk::api_version_major(v), vk::api_version_minor(v), vk::api_version_patch(v))
     }
 
     /// A 1x1 white texture, for untextured quads.
