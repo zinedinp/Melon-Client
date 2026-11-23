@@ -34,6 +34,11 @@ pub struct DescriptorPools {
 }
 
 impl DescriptorPools {
+    /// Pools whose first holds `base` sets.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live.
     pub unsafe fn new(device: &ash::Device, base: u32) -> anyhow::Result<Self> {
         let handle = create_pool(device, base)?;
         Ok(Self {
@@ -51,6 +56,10 @@ impl DescriptorPools {
 
     /// A new set from the newest pool with room, else from a new pool twice
     /// the size of the last one.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live, `layout` made on it with this kind's one binding.
     pub unsafe fn allocate(
         &self,
         device: &ash::Device,
@@ -84,6 +93,10 @@ impl DescriptorPools {
 
     /// Frees `set`, once no frame in flight uses it. Null and unknown sets
     /// (freed already) are ignored.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live; `set` must come from these pools.
     pub unsafe fn free(&self, device: &ash::Device, set: vk::DescriptorSet) {
         let mut inner = self.inner.borrow_mut();
         let Some(index) = inner.owner.remove(&set) else {
@@ -123,6 +136,10 @@ impl DescriptorPools {
     /// leaves alone.
     ///
     /// No frame may be in flight (wait for the device first).
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live and idle, `layout` the one the sets were made with.
     pub unsafe fn compact(
         &self,
         device: &ash::Device,
@@ -193,6 +210,11 @@ impl DescriptorPools {
             .collect()
     }
 
+    /// Destroys every pool, and with them their sets.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live and done with every set.
     pub unsafe fn destroy(&self, device: &ash::Device) {
         let mut inner = self.inner.borrow_mut();
         for pool in inner.pools.drain(..) {

@@ -4,6 +4,10 @@ use ash::vk;
 use std::ffi::CStr;
 
 /// `mipmapped`.
+///
+/// # Safety
+///
+/// `device` must be live.
 pub unsafe fn create_sampler(
     device: &ash::Device,
     filter: vk::Filter,
@@ -70,6 +74,10 @@ pub const READBACK: [vk::MemoryPropertyFlags; 2] = [
 ];
 
 /// A buffer with its own memory, bound.
+///
+/// # Safety
+///
+/// `device` must be live, `mem_props` its physical device's.
 pub unsafe fn create_buffer(
     device: &ash::Device,
     mem_props: &vk::PhysicalDeviceMemoryProperties,
@@ -83,6 +91,10 @@ pub unsafe fn create_buffer(
 /// A buffer with its own memory, bound, from the first of `choices` that a
 /// memory type has and whose heap has room: a small heap such as the BAR
 /// window can run out where host memory still has plenty.
+///
+/// # Safety
+///
+/// `device` must be live, `mem_props` its physical device's.
 pub unsafe fn create_buffer_in(
     device: &ash::Device,
     mem_props: &vk::PhysicalDeviceMemoryProperties,
@@ -172,6 +184,11 @@ pub enum PassStart {
     Picture,
 }
 
+/// The scene's render pass: one colour and one depth attachment, loaded as `start` says.
+///
+/// # Safety
+///
+/// `device` must be live.
 pub unsafe fn create_render_pass(
     device: &ash::Device,
     format: vk::Format,
@@ -272,6 +289,10 @@ pub unsafe fn create_render_pass(
 }
 
 /// First supported candidate with `DEPTH_STENCIL_ATTACHMENT` optimal-tiling support.
+///
+/// # Safety
+///
+/// `physical_device` must belong to `instance`.
 pub unsafe fn find_depth_format(
     instance: &ash::Instance,
     physical_device: vk::PhysicalDevice,
@@ -292,6 +313,11 @@ pub unsafe fn find_depth_format(
     anyhow::bail!("no supported depth buffer format")
 }
 
+/// A depth image with its memory and view; `sampled` lets shaders read it.
+///
+/// # Safety
+///
+/// `device` must be live, `mem_props` its physical device's.
 pub unsafe fn create_depth_image(
     device: &ash::Device,
     mem_props: &vk::PhysicalDeviceMemoryProperties,
@@ -414,9 +440,14 @@ pub fn find_memory_type(
             return Ok(i);
         }
     }
-    anyhow::bail!("kein passender Vulkan-Speichertyp gefunden")
+    anyhow::bail!("no suitable Vulkan memory type found")
 }
 
+/// The debug messenger's callback: the validation layer's warnings and errors to the log.
+///
+/// # Safety
+///
+/// Only the Vulkan loader calls it, with a valid `data`.
 pub unsafe extern "system" fn debug_callback(
     _severity: vk::DebugUtilsMessageSeverityFlagsEXT,
     _types: vk::DebugUtilsMessageTypeFlagsEXT,

@@ -64,6 +64,10 @@ impl UiPipelines {
     }
 
     /// Drops the pack's pipelines; the GPU must be done with them.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live.
     pub unsafe fn clear_pack(&mut self, device: &ash::Device) {
         for passes in self.pack.iter_mut().filter_map(Option::take) {
             for pass in &passes {
@@ -72,6 +76,11 @@ impl UiPipelines {
         }
     }
 
+    /// Destroys every pipeline.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live and done with them.
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
         self.clear_pack(device);
         for pass in &self.built_in {
@@ -82,6 +91,10 @@ impl UiPipelines {
 }
 
 /// `shaders` once per blend mode.
+///
+/// # Safety
+///
+/// `device` must be live, `render_pass` and the layouts made on it.
 pub unsafe fn create_all(
     device: &ash::Device,
     render_pass: vk::RenderPass,
@@ -117,6 +130,10 @@ pub unsafe fn create_all(
 pub const PUSH_CONSTANT_SIZE: u32 = 8;
 
 /// Same vertex format, shaders and layout for every [`BlendMode`]; only the blend differs.
+///
+/// # Safety
+///
+/// `device` must be live, `render_pass` and the layouts made on it.
 pub unsafe fn create(
     device: &ash::Device,
     render_pass: vk::RenderPass,
@@ -188,6 +205,10 @@ pub struct Target<'a> {
 }
 
 /// Records `calls`, in GUI coordinates spanning `ui_size`; `set_of` gives a texture's set.
+///
+/// # Safety
+///
+/// `target`'s command buffer must be recording inside its render pass; `set_of`'s sets must be live.
 pub unsafe fn record(
     target: &Target,
     ui_size: (f32, f32),

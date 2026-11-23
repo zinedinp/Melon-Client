@@ -11,12 +11,22 @@ pub struct Pass {
 }
 
 impl Pass {
+    /// Destroys the pipeline and its layout.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live and done with the pipeline.
     pub unsafe fn destroy(&self, device: &ash::Device) {
         device.destroy_pipeline(self.pipeline, None);
         device.destroy_pipeline_layout(self.layout, None);
     }
 }
 
+/// The texture set's layout: one combined image sampler at binding 0.
+///
+/// # Safety
+///
+/// `device` must be live.
 pub unsafe fn create_descriptor_set_layout(
     device: &ash::Device,
 ) -> anyhow::Result<vk::DescriptorSetLayout> {
@@ -31,6 +41,11 @@ pub unsafe fn create_descriptor_set_layout(
     )?)
 }
 
+/// A shader module from SPIR-V bytes.
+///
+/// # Safety
+///
+/// `device` must be live; `spirv` must be valid SPIR-V for it.
 pub unsafe fn create_shader_module(
     device: &ash::Device,
     spirv: &[u8],
@@ -68,6 +83,11 @@ pub struct PipelineDesc<'a> {
 }
 
 impl PipelineDesc<'_> {
+    /// The pipeline and its layout.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live, `render_pass` and `descriptor_set_layout` made on it.
     pub unsafe fn build(
         &self,
         device: &ash::Device,

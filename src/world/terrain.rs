@@ -580,7 +580,7 @@ impl SolidCache {
         let beside = |dx: i32, dy: i32, dz: i32| {
             neighborhood.chunks[((dx + 1) + (dz + 1) * 3) as usize]
                 .and_then(|chunk| chunk.sections.get(usize::try_from(s as i32 + dy).ok()?))
-                .map_or([0; 256], solid_rows)
+                .map_or([0; 256], |section| solid_rows(section))
         };
         let [west, east] = [beside(-1, 0, 0), beside(1, 0, 0)];
         let [north, south] = [beside(0, 0, -1), beside(0, 0, 1)];

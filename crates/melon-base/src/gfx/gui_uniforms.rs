@@ -110,6 +110,10 @@ struct Frame {
 pub const GLINT_BINDING: u32 = BLOCKS.len() as u32;
 
 /// The set layout.
+///
+/// # Safety
+///
+/// `device` must be live.
 pub unsafe fn create_layout(device: &ash::Device) -> anyhow::Result<vk::DescriptorSetLayout> {
     let mut bindings: Vec<_> = (0..BLOCKS.len() as u32)
         .map(|binding| {
@@ -134,6 +138,11 @@ pub unsafe fn create_layout(device: &ash::Device) -> anyhow::Result<vk::Descript
 }
 
 impl GuiUniforms {
+    /// One uniform block per frame in flight, each with its set.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live, `layout` from [`create_layout`] on it.
     pub unsafe fn new(
         device: &ash::Device,
         mem_props: &vk::PhysicalDeviceMemoryProperties,
@@ -215,11 +224,19 @@ impl GuiUniforms {
     }
 
     /// Writes frame `frame`'s blocks; call once its fence was waited on.
+    ///
+    /// # Safety
+    ///
+    /// No submitted frame may still read frame `frame`'s blocks.
     pub unsafe fn write(&self, frame: usize, gui: &GuiFrame) {
         self.frames[frame].write(gui);
     }
 
     /// Binds `view` sampled by `sampler` as the item glint, every frame.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live, `view` and `sampler` live; no frame in flight may use the sets.
     pub unsafe fn bind_glint(
         &self,
         device: &ash::Device,
@@ -246,6 +263,11 @@ impl GuiUniforms {
         self.frames[frame].set
     }
 
+    /// Frees the buffers and the sets' pool.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live and done with them.
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
         for frame in self.frames.drain(..) {
             device.unmap_memory(frame.memory);

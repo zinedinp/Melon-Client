@@ -47,6 +47,10 @@ fn total(inits: &[PendingInit], updates: &[PendingUpdate]) -> u64 {
 
 /// Room in `staging` for `inits` and `updates`, before the frame acquires
 /// an image.
+///
+/// # Safety
+///
+/// `device` must be live; no frame in flight may read `staging`.
 pub unsafe fn prepare(
     staging: &mut Staging,
     device: &ash::Device,
@@ -64,6 +68,10 @@ pub unsafe fn prepare(
 
 /// Copies `inits`, then `updates`, into `staging` and records their
 /// uploads into `cmd`, ahead of the frame's draws.
+///
+/// # Safety
+///
+/// `device` must be live, `cmd` recording; no frame in flight may read `staging`.
 pub unsafe fn record(
     staging: &mut Staging,
     device: &ash::Device,
@@ -88,6 +96,10 @@ pub unsafe fn record(
 /// Uploads `inits` at once in a command buffer of their own, waiting for
 /// just that submit: a burst too big for the frame's staging buffer (the
 /// block atlas while loading), and the post chains' inputs.
+///
+/// # Safety
+///
+/// `device` must be live, `command_pool` and `queue` on it, `queue` unused by other threads meanwhile.
 pub unsafe fn submit_now(
     device: &ash::Device,
     mem_props: &vk::PhysicalDeviceMemoryProperties,

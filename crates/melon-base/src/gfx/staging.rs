@@ -24,6 +24,10 @@ impl Staging {
     /// host memory for the rest of the session. `size` is what this frame
     /// needs; call it once per frame, when no frame in flight reads the
     /// buffer, before [`Self::ensure`].
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live; no frame in flight may read the buffer.
     pub unsafe fn trim(&mut self, device: &ash::Device, size: u64, keep: u64) {
         if self.capacity <= keep || size.saturating_mul(4) > self.capacity {
             self.slack = 0;
@@ -36,6 +40,10 @@ impl Staging {
     }
 
     /// Room for `size` bytes, at least `min_capacity` when it has to grow.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live; no frame in flight may read the buffer.
     pub unsafe fn ensure(
         &mut self,
         device: &ash::Device,
@@ -67,6 +75,11 @@ impl Staging {
         Ok(())
     }
 
+    /// Frees the buffer.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be live and done with it.
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
         if self.buffer != vk::Buffer::null() {
             device.unmap_memory(self.memory);

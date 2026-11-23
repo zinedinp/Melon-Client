@@ -62,6 +62,10 @@ fn forced(candidates: &[Candidate], setting: &str) -> Option<usize> {
 }
 
 /// The device to render with and a graphics + present queue family on it.
+///
+/// # Safety
+///
+/// `instance` and `surface` must be live, `surface` made from `instance`.
 pub unsafe fn pick(
     instance: &ash::Instance,
     surface_loader: &ash::khr::surface::Instance,

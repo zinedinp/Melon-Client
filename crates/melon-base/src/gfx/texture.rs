@@ -30,11 +30,20 @@ pub struct Uploader<'a> {
 }
 
 impl Uploader<'_> {
+    /// A 2D texture of `rgba`, uploaded by the next frame.
+    ///
+    /// # Safety
+    ///
+    /// The uploader's handles must be live and from one device.
     pub unsafe fn image_2d(&self, rgba: &RgbaImage) -> anyhow::Result<(Texture, PendingInit)> {
         self.upload(std::slice::from_ref(rgba), &[], vk::ImageViewType::TYPE_2D)
     }
 
     /// A 2D texture with its smaller levels, each half the size of the one before.
+    ///
+    /// # Safety
+    ///
+    /// The uploader's handles must be live and from one device.
     pub unsafe fn image_2d_mipmapped(
         &self,
         rgba: &RgbaImage,
@@ -44,6 +53,10 @@ impl Uploader<'_> {
     }
 
     /// Six equal-size faces in Vulkan cubemap order (+X, -X, +Y, -Y, +Z, -Z).
+    ///
+    /// # Safety
+    ///
+    /// The uploader's handles must be live and from one device.
     pub unsafe fn cubemap(&self, faces: &[RgbaImage; 6]) -> anyhow::Result<(Texture, PendingInit)> {
         self.upload(faces, &[], vk::ImageViewType::CUBE)
     }

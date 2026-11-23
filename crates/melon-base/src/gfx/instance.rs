@@ -21,6 +21,10 @@ pub struct Instance {
 
 /// The instance, with `VK_LAYER_KHRONOS_validation` if asked for and
 /// installed.
+///
+/// # Safety
+///
+/// `entry` must be loaded; `display` must outlive the instance's surfaces.
 pub unsafe fn create(
     entry: &ash::Entry,
     display: RawDisplayHandle,
@@ -100,6 +104,10 @@ unsafe fn create_messenger(
 }
 
 /// The window's surface and its loader.
+///
+/// # Safety
+///
+/// `instance` must be made from `entry`; `display` and `window` must be live and outlive the surface.
 pub unsafe fn create_surface(
     entry: &ash::Entry,
     instance: &ash::Instance,
