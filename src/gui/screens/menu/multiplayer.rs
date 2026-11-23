@@ -294,8 +294,18 @@ impl Screen for MultiplayerScreen {
     fn tick(&mut self) {
         // `JoinMultiplayerScreen.tick`: the LAN's worlds, when one is new.
         if let Some(servers) = self.lan.as_ref().and_then(LanDetector::take_dirty) {
+            // `refreshEntries` keeps the selected world, wherever it moved; worlds can leave.
+            let selected = match self.list.selected().map(|i| self.entry(i)) {
+                Some(Entry::Lan(i)) => self.lan_servers.get(i).map(|s| s.address.clone()),
+                _ => None,
+            };
             self.lan_servers = servers;
             self.update_len();
+            if let Some(address) = selected {
+                let row = self.lan_servers.iter().position(|s| s.address == address);
+                self.list.select(row.map(|i| self.servers.len() + 1 + i));
+            }
+            self.update_buttons();
         }
         while let Ok((generation, id, result)) = self.ping_rx.try_recv() {
             if generation != self.generation {
