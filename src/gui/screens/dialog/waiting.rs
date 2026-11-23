@@ -107,6 +107,11 @@ impl Screen for WaitingScreen {
         self.active()
     }
 
+    /// `WaitingForResponseScreen.isPauseScreen`.
+    fn is_pause_screen(&self) -> bool {
+        false
+    }
+
     fn dialog_layer(&self) -> Option<DialogLayer> {
         Some(DialogLayer::Waiting)
     }

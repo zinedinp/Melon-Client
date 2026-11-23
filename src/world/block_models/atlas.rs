@@ -60,6 +60,12 @@ pub(super) fn pack_atlas(
         })
         .collect();
     fit(&mut sprites, max_side);
+    // `generateMipLevels`: a cutout sprite's clear pixels take their neighbours' colour.
+    for sprite in &mut sprites {
+        if has_holes(&sprite.image) {
+            mipmap::solidify(&mut sprite.image);
+        }
+    }
 
     let mut unique: Vec<usize> = Vec::new();
     let mut slot_of = vec![0usize; sprites.len()];

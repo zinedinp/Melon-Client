@@ -176,6 +176,14 @@ fn main() {
         "world_solid.frag",
         &["SOLID"],
     );
+    // Cutout terrain (`RenderPipelines.CUTOUT_TERRAIN`): alpha cutoff 0.5.
+    compile_variant(
+        "shaders/world.frag",
+        &out_dir,
+        "fragment",
+        "world_cutout_terrain.frag",
+        &["ALPHA_CUTOUT=0.5"],
+    );
     // Rain and snow: the texture times a colour with the light in it.
     compile_variant(
         "shaders/world.frag",

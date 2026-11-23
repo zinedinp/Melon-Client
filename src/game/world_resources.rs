@@ -350,8 +350,11 @@ impl WorldResources {
                 latest.insert((x, y), image);
             }
         }
-        for ((x, y), image) in latest {
+        for ((x, y), mut image) in latest {
             let holes = image.pixels().any(|p| p.0[3] == 0);
+            if holes {
+                mipmap::solidify(&mut image);
+            }
             for (level, mip) in (1..).zip(mipmap::chain(&image, holes)) {
                 renderer.update_texture(self.atlas, level, x >> level, y >> level, mip);
             }

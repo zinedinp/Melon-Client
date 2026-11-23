@@ -631,6 +631,11 @@ impl Screen for DialogScreen {
         self.dialog.common.can_close_with_escape
     }
 
+    /// `DialogScreen.isPauseScreen`.
+    fn is_pause_screen(&self) -> bool {
+        self.dialog.common.pause
+    }
+
     /// `DialogScreen.onClose`: the cancel action, and back.
     fn on_escape(&mut self, _ctx: &ScreenContext) -> Option<ScreenAction> {
         let click = self.dialog.on_cancel().map(|a| a.resolve(&self.values()));

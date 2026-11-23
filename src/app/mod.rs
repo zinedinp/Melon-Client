@@ -291,14 +291,14 @@ impl RunningState {
 
     /// `Minecraft.pause`: a singleplayer world not open to others, behind a
     /// screen that pauses (`Gui.isPausing`). Sets it, and tells the sounds
-    /// and the integrated server.
+    /// and the integrated server. Overlays never pause: they are vanilla's
+    /// container, chat and game mode switcher screens (`isPauseScreen` false).
     fn update_pause(&mut self) {
         let paused = self.world.as_ref().is_some_and(|world| {
             world
                 .integrated_server()
                 .is_some_and(|server| server.published().is_none())
-                && (self.screens.top().is_some_and(|s| s.is_pause_screen())
-                    || world.overlay_pauses())
+                && self.screens.top().is_some_and(|s| s.is_pause_screen())
         });
         if paused != self.game_paused {
             self.game_paused = paused;

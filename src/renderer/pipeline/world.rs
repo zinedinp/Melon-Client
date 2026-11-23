@@ -18,6 +18,8 @@ const SKY_DISC_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/skydi
 const SKY_DISC_FRAG_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/skydisc.frag.spv"));
 /// `world.frag` without `discard`.
 const SOLID_FRAG_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/world_solid.frag.spv"));
+const CUTOUT_TERRAIN_FRAG_SPV: &[u8] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/world_cutout_terrain.frag.spv"));
 const CRUMBLING_FRAG_SPV: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/world_crumbling.frag.spv"));
 const WEATHER_FRAG_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/world_weather.frag.spv"));
@@ -486,6 +488,7 @@ pub unsafe fn create(
         vert,
         frag: match mode {
             Mode::Solid => SOLID_FRAG_SPV,
+            Mode::Opaque if matches!(geometry, Geometry::Quads { .. }) => CUTOUT_TERRAIN_FRAG_SPV,
             Mode::Clouds => CLOUDS_FRAG_SPV,
             Mode::Weather => WEATHER_FRAG_SPV,
             Mode::SkyDisc => SKY_DISC_FRAG_SPV,

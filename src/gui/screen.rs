@@ -208,11 +208,11 @@ pub trait Screen {
     fn is_level_loading(&self) -> bool {
         false
     }
-    /// Whether leaving a world returns to this screen (`Minecraft.disconnect`'s next screen).
     /// `Screen.isPauseScreen`: a singleplayer world stands still behind it.
     fn is_pause_screen(&self) -> bool {
         !self.is_level_loading()
     }
+    /// Whether leaving a world returns to this screen (`Minecraft.disconnect`'s next screen).
     fn is_world_exit(&self, _integrated: bool) -> bool {
         false
     }

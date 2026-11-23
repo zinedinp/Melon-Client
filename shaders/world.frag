@@ -109,11 +109,15 @@ void main() {
 #endif
     vec4 tex = texture(atlas_sampler, frag_uv);
 #ifndef SOLID
-    // Vanilla's cutout (`RenderType.cutout`, alpha cutoff 0.1): leaves,
-    // glass and plants show through their holes. Built without it for the
-    // solid layer (`-DSOLID`), whose textures have no holes: a shader that
-    // can discard makes many GPUs test depth only after shading.
-    if (tex.a < 0.1) {
+    // Vanilla's `ALPHA_CUTOUT`: 0.1 for entities and items, 0.5 for cutout
+    // terrain (`-DALPHA_CUTOUT=0.5`, `RenderPipelines.CUTOUT_TERRAIN`).
+    // Built without it for the solid layer (`-DSOLID`), whose textures have
+    // no holes: a shader that can discard makes many GPUs test depth only
+    // after shading.
+#ifndef ALPHA_CUTOUT
+#define ALPHA_CUTOUT 0.1
+#endif
+    if (tex.a < ALPHA_CUTOUT) {
         discard;
     }
 #endif
