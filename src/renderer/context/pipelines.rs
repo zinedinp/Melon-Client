@@ -15,11 +15,19 @@ pub(in crate::renderer) struct RenderPasses {
     pub split: vk::RenderPass,
     /// [`PassStart::Resume`]: what comes after the chain.
     pub resume: vk::RenderPass,
+    /// [`PassStart::ResumeKeep`]: the terrain's occlusion culling phase 2 on.
+    pub resume_keep: vk::RenderPass,
 }
 
 impl RenderPasses {
     pub unsafe fn destroy(&self, device: &ash::Device) {
-        for pass in [self.clear, self.overwrite, self.split, self.resume] {
+        for pass in [
+            self.clear,
+            self.overwrite,
+            self.split,
+            self.resume,
+            self.resume_keep,
+        ] {
             device.destroy_render_pass(pass, None);
         }
     }
@@ -36,6 +44,7 @@ pub(super) unsafe fn create_render_passes(
         overwrite: pass(PassStart::Overwrite)?,
         split: pass(PassStart::SceneSplit)?,
         resume: pass(PassStart::Resume)?,
+        resume_keep: pass(PassStart::ResumeKeep)?,
     })
 }
 

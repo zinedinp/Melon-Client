@@ -10,6 +10,10 @@ use super::{ChunkDraw, TerrainMesh, WorldDraw};
 pub const COMMAND_SIZE: u32 = std::mem::size_of::<vk::DrawIndexedIndirectCommand>() as u32;
 /// Bytes of one section offset: a `vec4`.
 const OFFSET_SIZE: u32 = 16;
+/// Bytes of one draw's [`Gathered::bounds`]: a `vec4`.
+const BOUNDS_SIZE: u32 = 16;
+/// A [`Gathered::bounds`] slot for a draw that is never culled.
+pub(super) const NO_SLOT: u32 = u32::MAX;
 /// Draws a frame's buffers hold at first.
 const MIN_DRAWS: u32 = 4096;
 
@@ -50,10 +54,20 @@ impl Mapped {
 /// One frame in flight's buffers and the descriptor set binding them.
 #[derive(Default)]
 struct FrameDraws {
+    /// Each draw twice: the occlusion culling's phase 1, then phase 2 (see [`Phase`]).
     commands: Mapped,
     offsets: Mapped,
+    bounds: Mapped,
     capacity: u32,
     set: vk::DescriptorSet,
+}
+
+/// Which copy of the commands a multi-draw reads. Without occlusion culling
+/// phase 1 draws everything.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Phase {
+    First,
+    Second,
 }
 
 pub(super) struct DrawBuffers {
@@ -84,17 +98,24 @@ pub(super) enum Pass {
 struct Gathered {
     commands: Vec<vk::DrawIndexedIndirectCommand>,
     offsets: Vec<[f32; 4]>,
+    /// Per draw: its section's lowest corner relative to the camera's block,
+    /// and its occlusion slot as `f32` bits ([`NO_SLOT`] for none).
+    bounds: Vec<[f32; 4]>,
     runs: [Vec<Run>; 2],
     /// One pass's draws before they are grouped by buffer: (buffer's
-    /// place among `buffers`, command, offset).
-    pending: Vec<(u32, vk::DrawIndexedIndirectCommand, [f32; 3])>,
+    /// place among `buffers`, command, offset, bounds).
+    pending: Vec<(u32, vk::DrawIndexedIndirectCommand, [f32; 3], [f32; 4])>,
     buffers: Vec<vk::Buffer>,
+    /// The world's [`super::WorldDraw::section_slots`].
+    slots: u32,
 }
 
 impl Gathered {
     fn clear(&mut self) {
         self.commands.clear();
         self.offsets.clear();
+        self.bounds.clear();
+        self.slots = 0;
         for runs in &mut self.runs {
             runs.clear();
         }
@@ -106,6 +127,7 @@ impl Gathered {
         buffer: vk::Buffer,
         command: vk::DrawIndexedIndirectCommand,
         offset: [f32; 3],
+        bounds: [f32; 4],
     ) {
         let place = match self.buffers.iter().position(|&b| b == buffer) {
             Some(place) => place,
@@ -114,7 +136,7 @@ impl Gathered {
                 self.buffers.len() - 1
             }
         };
-        self.pending.push((place as u32, command, offset));
+        self.pending.push((place as u32, command, offset, bounds));
     }
 
     /// Ends pass `pass`: its draws, grouped by buffer (in the order the
@@ -123,8 +145,8 @@ impl Gathered {
     fn finish(&mut self, pass: Pass) {
         let mut pending = std::mem::take(&mut self.pending);
         pending.sort_by_key(|&(place, ..)| place);
-        for &(place, command, offset) in &pending {
-            self.push(pass, self.buffers[place as usize], command, offset);
+        for &(place, command, offset, bounds) in &pending {
+            self.push(pass, self.buffers[place as usize], command, offset, bounds);
         }
         pending.clear();
         self.pending = pending;
@@ -137,10 +159,12 @@ impl Gathered {
         buffer: vk::Buffer,
         command: vk::DrawIndexedIndirectCommand,
         offset: [f32; 3],
+        bounds: [f32; 4],
     ) {
         let index = self.commands.len() as u32;
         self.commands.push(command);
         self.offsets.push([offset[0], offset[1], offset[2], 0.0]);
+        self.bounds.push(bounds);
         let runs = &mut self.runs[pass as usize];
         match runs.last_mut() {
             Some(run) if run.buffer == buffer && run.first + run.count == index => run.count += 1,
@@ -235,17 +259,24 @@ impl DrawBuffers {
         let capacity = draws.next_power_of_two().max(MIN_DRAWS);
         slot.commands.destroy(device);
         slot.offsets.destroy(device);
+        slot.bounds.destroy(device);
         slot.capacity = 0;
         slot.commands = Mapped::new(
             device,
             mem_props,
-            u64::from(capacity) * u64::from(COMMAND_SIZE),
-            vk::BufferUsageFlags::INDIRECT_BUFFER,
+            2 * u64::from(capacity) * u64::from(COMMAND_SIZE),
+            vk::BufferUsageFlags::INDIRECT_BUFFER | vk::BufferUsageFlags::STORAGE_BUFFER,
         )?;
         slot.offsets = Mapped::new(
             device,
             mem_props,
             u64::from(capacity) * u64::from(OFFSET_SIZE),
+            vk::BufferUsageFlags::STORAGE_BUFFER,
+        )?;
+        slot.bounds = Mapped::new(
+            device,
+            mem_props,
+            u64::from(capacity) * u64::from(BOUNDS_SIZE),
             vk::BufferUsageFlags::STORAGE_BUFFER,
         )?;
         slot.capacity = capacity;
@@ -274,11 +305,30 @@ impl DrawBuffers {
         self.frames[frame].commands.buffer
     }
 
+    /// The [`Gathered::bounds`] buffer of frame `frame`.
+    pub fn bounds(&self, frame: usize) -> vk::Buffer {
+        self.frames[frame].bounds.buffer
+    }
+
+    /// Where `phase`'s copy of the commands starts, in commands.
+    pub fn phase_start(&self, phase: Phase) -> u32 {
+        match phase {
+            Phase::First => 0,
+            Phase::Second => self.gathered(),
+        }
+    }
+
+    /// One past the highest occlusion slot the gathered draws use.
+    pub fn slots(&self) -> u32 {
+        self.gathered.slots
+    }
+
     /// Gathers the quad meshes of `world`'s solid and cutout passes, before
     /// the frame's slot is free: it reads only the CPU's own state.
     pub fn gather(&mut self, world: &WorldDraw, meshes: &MeshArena) {
         let gathered = &mut self.gathered;
         gathered.clear();
+        gathered.slots = world.section_slots;
         for (pass, chunks) in [(Pass::Solid, &world.chunks), (Pass::Cutout, &world.cutout)] {
             gather_pass(gathered, pass, world, chunks, meshes);
         }
@@ -304,19 +354,26 @@ impl DrawBuffers {
     pub unsafe fn upload(&self, frame: usize) {
         let slot = &self.frames[frame];
         let gathered = &self.gathered;
-        let (Some(commands), Some(offsets)) = (slot.commands.ptr, slot.offsets.ptr) else {
+        let (Some(commands), Some(offsets), Some(bounds)) =
+            (slot.commands.ptr, slot.offsets.ptr, slot.bounds.ptr)
+        else {
             return;
         };
         let count = gathered.commands.len().min(slot.capacity as usize);
         debug_assert_eq!(count, gathered.commands.len(), "prepared too small");
-        std::ptr::copy_nonoverlapping(
-            gathered.commands.as_ptr(),
-            commands.as_ptr().cast::<vk::DrawIndexedIndirectCommand>(),
-            count,
-        );
+        let commands = commands.as_ptr().cast::<vk::DrawIndexedIndirectCommand>();
+        // Phase 1's copy, then phase 2's, which the occlusion culling rewrites.
+        for start in [0, count] {
+            std::ptr::copy_nonoverlapping(gathered.commands.as_ptr(), commands.add(start), count);
+        }
         std::ptr::copy_nonoverlapping(
             gathered.offsets.as_ptr(),
             offsets.as_ptr().cast::<[f32; 4]>(),
+            count,
+        );
+        std::ptr::copy_nonoverlapping(
+            gathered.bounds.as_ptr(),
+            bounds.as_ptr().cast::<[f32; 4]>(),
             count,
         );
     }
@@ -326,6 +383,7 @@ impl DrawBuffers {
         for slot in &mut self.frames {
             slot.commands.destroy(device);
             slot.offsets.destroy(device);
+            slot.bounds.destroy(device);
         }
         device.destroy_descriptor_pool(self.pool, None);
     }
@@ -352,6 +410,13 @@ fn gather_pass(
         };
         let (buffer, base) = meshes.location(slot);
         let offset = world.offset(chunk.origin).to_array();
+        let (bottom, cull_slot) = chunk.cull.map_or((0, NO_SLOT), |c| (c.bottom, c.slot));
+        let bounds = [
+            offset[0],
+            offset[1] + bottom as f32,
+            offset[2],
+            f32::from_bits(cull_slot),
+        ];
         for (first, quads) in quad_draws(&chunk.range, slot.count) {
             gathered.queue(
                 buffer,
@@ -363,6 +428,7 @@ fn gather_pass(
                     first_instance: 0,
                 },
                 offset,
+                bounds,
             );
         }
     }
@@ -383,9 +449,9 @@ mod tests {
         let (a, b) = (vk::Buffer::from_raw(1), vk::Buffer::from_raw(2));
         let mut gathered = Gathered::default();
         for buffer in [a, a, b, a] {
-            gathered.push(Pass::Solid, buffer, command(), [0.0; 3]);
+            gathered.push(Pass::Solid, buffer, command(), [0.0; 3], [0.0; 4]);
         }
-        gathered.push(Pass::Cutout, a, command(), [1.0, 2.0, 3.0]);
+        gathered.push(Pass::Cutout, a, command(), [1.0, 2.0, 3.0], [4.0; 4]);
         let run = |buffer, first, count| Run {
             buffer,
             first,
@@ -398,6 +464,7 @@ mod tests {
         // The cutout pass numbers on from the solid one, into the same buffers.
         assert_eq!(gathered.runs[Pass::Cutout as usize], [run(a, 4, 1)]);
         assert_eq!(gathered.offsets[4], [1.0, 2.0, 3.0, 0.0]);
+        assert_eq!(gathered.bounds[4], [4.0; 4]);
     }
 
     #[test]
@@ -405,7 +472,7 @@ mod tests {
         let (a, b) = (vk::Buffer::from_raw(1), vk::Buffer::from_raw(2));
         let mut gathered = Gathered::default();
         for (buffer, x) in [(a, 0.0), (b, 1.0), (a, 2.0), (b, 3.0), (a, 4.0)] {
-            gathered.queue(buffer, command(), [x, 0.0, 0.0]);
+            gathered.queue(buffer, command(), [x, 0.0, 0.0], [x; 4]);
         }
         gathered.finish(Pass::Solid);
         let run = |buffer, first, count| Run {
@@ -419,6 +486,9 @@ mod tests {
         );
         let xs: Vec<f32> = gathered.offsets.iter().map(|o| o[0]).collect();
         assert_eq!(xs, [0.0, 2.0, 4.0, 1.0, 3.0]);
+        // The bounds go with their draws.
+        let bounds: Vec<f32> = gathered.bounds.iter().map(|b| b[0]).collect();
+        assert_eq!(bounds, xs);
     }
 
     #[test]

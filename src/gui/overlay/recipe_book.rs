@@ -25,6 +25,10 @@ const PER_PAGE: usize = 20;
 const BUTTON: f32 = 25.0;
 const TAB_W: f32 = 35.0;
 const TAB_H: f32 = 27.0;
+/// The search `EditBox` at `(xo + 25, yo + 13)`, `81 x (9 + 5)`; its text
+/// 4 and 3 pixels in (`textX`, `textY`).
+const SEARCH: (f32, f32, f32, f32) = (25.0, 13.0, 81.0, 14.0);
+const SEARCH_TEXT: (f32, f32) = (SEARCH.0 + 4.0, SEARCH.1 + 3.0);
 /// Ticks one recipe of a button is shown before the next (`TICKS_TO_SWAP_SLOT`).
 const SWAP_TICKS: f32 = 30.0;
 
@@ -98,12 +102,14 @@ impl Mode {
         }
     }
 
-    /// The button that opens the book, relative to the menu panel.
+    /// The button that opens the book, `x` relative to the menu panel
+    /// (`getRecipeBookButtonPosition`: `this.height / 2` in whole pixels).
     pub fn toggle_at(self, inventory: bool, height: f32) -> (f32, f32) {
+        let middle = (height / 2.0).floor();
         match (self, inventory) {
-            (_, true) => (104.0, height / 2.0 - 22.0),
-            (Self::Crafting { .. }, false) => (5.0, height / 2.0 - 49.0),
-            (Self::Furnace(_), false) => (20.0, height / 2.0 - 49.0),
+            (_, true) => (104.0, middle - 22.0),
+            (Self::Crafting { .. }, false) => (5.0, middle - 49.0),
+            (Self::Furnace(_), false) => (20.0, middle - 49.0),
         }
     }
 
@@ -134,6 +140,13 @@ pub struct RecipeBookSprites {
     page_backward: [GuiSprite; 2],
     /// Craftable, many craftable, uncraftable, many uncraftable.
     slot: [GuiSprite; 4],
+    /// The search field's border (`EditBox`), unfocused and focused.
+    text_field: [GuiSprite; 2],
+    /// The alternatives' popup (`OverlayRecipeComponent`).
+    overlay: GuiSprite,
+    /// Its buttons, crafting then furnace: enabled, enabled highlighted,
+    /// disabled, disabled highlighted.
+    overlay_button: [[GuiSprite; 4]; 2],
 }
 
 impl RecipeBookSprites {
@@ -156,6 +169,14 @@ impl RecipeBookSprites {
         let crafting = filter("")?;
         let furnace = filter("furnace_")?;
         let background = assets.texture(renderer, "minecraft:gui/recipe_book.png")?;
+        let mut widget = |name: &str| {
+            GuiSprite::load(
+                renderer,
+                assets,
+                &format!("minecraft:gui/sprites/widget/{name}.png"),
+            )
+        };
+        let text_field = [widget("text_field")?, widget("text_field_highlighted")?];
         let mut sprite = |name: &str| {
             GuiSprite::load(
                 renderer,
@@ -181,6 +202,22 @@ impl RecipeBookSprites {
                 sprite("slot_uncraftable")?,
                 sprite("slot_many_uncraftable")?,
             ],
+            text_field,
+            overlay: sprite("overlay_recipe")?,
+            overlay_button: [
+                [
+                    sprite("crafting_overlay")?,
+                    sprite("crafting_overlay_highlighted")?,
+                    sprite("crafting_overlay_disabled")?,
+                    sprite("crafting_overlay_disabled_highlighted")?,
+                ],
+                [
+                    sprite("furnace_overlay")?,
+                    sprite("furnace_overlay_highlighted")?,
+                    sprite("furnace_overlay_disabled")?,
+                    sprite("furnace_overlay_disabled_highlighted")?,
+                ],
+            ],
         })
     }
 }
@@ -191,7 +228,47 @@ struct Cell {
     recipes: Vec<(RecipeId, Vec<ItemStack>)>,
     craftable: bool,
     highlight: bool,
+    /// Its popup's buttons: the craftable recipes, then (not filtering)
+    /// the others (`OverlayRecipeComponent.init`).
+    alternatives: Vec<Alternative>,
 }
+
+/// One button of the popup (`OverlayRecipeButton`).
+struct Alternative {
+    id: RecipeId,
+    craftable: bool,
+    /// The inputs on its 3x3 mini grid ([`RecipeDisplay::mini_grid`]).
+    grid: Vec<((usize, usize), Vec<ItemStack>)>,
+}
+
+/// Where a popup sits and how its buttons are laid out.
+struct PopupLayout {
+    x: f32,
+    y: f32,
+    /// Buttons a row (`MAX_ROW` or `MAX_ROW_LARGE`).
+    per_row: usize,
+    count: usize,
+}
+
+impl PopupLayout {
+    /// The background, 4 pixels of border round the buttons.
+    fn rect(&self) -> (f32, f32, f32, f32) {
+        let columns = self.count.min(self.per_row) as f32;
+        let rows = self.count.div_ceil(self.per_row) as f32;
+        (self.x, self.y, columns * BUTTON + 8.0, rows * BUTTON + 8.0)
+    }
+
+    /// Button `i`, 24 square.
+    fn button(&self, i: usize) -> (f32, f32) {
+        (
+            self.x + 4.0 + BUTTON * (i % self.per_row) as f32,
+            self.y + 5.0 + BUTTON * (i / self.per_row) as f32,
+        )
+    }
+}
+
+/// `OverlayRecipeButton`'s size.
+const POPUP_BUTTON: f32 = 24.0;
 
 struct TabView {
     tab: Tab,
@@ -306,6 +383,13 @@ impl RecipeBookPanel {
 
     fn too_narrow(&self, width: f32) -> bool {
         width < 379.0
+    }
+
+    /// The open book over a screen too narrow for both
+    /// (`AbstractRecipeBookScreen`'s `widthTooNarrow`): the menu shows only
+    /// its background, and its slots, labels and the toggle take no mouse.
+    pub fn covers_menu(&self, width: f32) -> bool {
+        self.visible && self.too_narrow(width)
     }
 
     fn origin(&self) -> (f32, f32) {
@@ -436,10 +520,30 @@ impl RecipeBookPanel {
             {
                 continue;
             }
+            let alternative = |e: &crate::world::recipes::book::Entry, craftable| {
+                Alternative {
+                    id: e.id,
+                    craftable,
+                    grid: e
+                        .display
+                        .mini_grid()
+                        .into_iter()
+                        .map(|(at, slot)| (at, slot.stacks()))
+                        .collect(),
+                }
+            };
+            let (can, cannot): (Vec<_>, Vec<_>) =
+                shown.iter().copied().partition(|e| craftable_ids.contains(&e.id));
+            let mut alternatives: Vec<Alternative> =
+                can.into_iter().map(|e| alternative(e, true)).collect();
+            if !filtering {
+                alternatives.extend(cannot.into_iter().map(|e| alternative(e, false)));
+            }
             cells.push(Cell {
                 highlight: recipes.iter().any(|(id, _)| book.will_highlight(*id)),
                 craftable: !craftable_ids.is_empty(),
                 recipes,
+                alternatives,
             });
         }
         self.cells = cells;
@@ -459,6 +563,13 @@ impl RecipeBookPanel {
         for cell in self.cells.iter().skip(self.page * PER_PAGE).take(PER_PAGE) {
             for (_, stacks) in &cell.recipes {
                 self.shown.extend(stacks.iter().cloned().map(Into::into));
+            }
+        }
+        if let Some(cell) = self.popup.and_then(|cell| self.cells.get(cell)) {
+            for alternative in &cell.alternatives {
+                for (_, stacks) in &alternative.grid {
+                    self.shown.extend(stacks.iter().cloned().map(Into::into));
+                }
             }
         }
     }
@@ -510,7 +621,7 @@ impl RecipeBookPanel {
         let inside =
             |(x, y, w, h): (f32, f32, f32, f32)| mx >= x && my >= y && mx < x + w && my < y + h;
         let toggle = self.toggle_rect(layout);
-        if inside(toggle) {
+        if !self.covers_menu(self.size.0) && inside(toggle) {
             if button != MouseButtonKind::Left {
                 return Some(Vec::new());
             }
@@ -547,9 +658,11 @@ impl RecipeBookPanel {
             self.focused = false;
             return None;
         }
-        if inside((xo + 8.0, yo + 13.0, 98.0, 14.0)) {
+        // The box, or the magnifier left of it (`magnifierIconPlacement`).
+        let search_right = SEARCH.0 + SEARCH.2;
+        if inside((xo + 8.0, yo + SEARCH.1, search_right - 8.0, SEARCH.3)) {
             self.focused = true;
-            self.search.click(mx - (xo + 28.0), shift);
+            self.search.click(mx - (xo + SEARCH_TEXT.0), shift);
             return Some(Vec::new());
         }
         self.focused = false;
@@ -590,6 +703,7 @@ impl RecipeBookPanel {
                 },
                 MouseButtonKind::Right if cell.recipes.len() > 1 => {
                     self.popup = Some(self.page * PER_PAGE + i);
+                    self.refresh_shown();
                     Vec::new()
                 }
                 _ => Vec::new(),
@@ -631,31 +745,49 @@ impl RecipeBookPanel {
         })]
     }
 
-    fn popup_rect(&self, cell: usize) -> (f32, f32, f32, f32) {
-        let n = self.cells[cell].recipes.len();
-        let i = cell - self.page * PER_PAGE;
-        let (x, y) = self.cell_pos(i);
-        let columns = n.min(4) as f32;
-        let rows = n.div_ceil(4) as f32;
-        (
-            x - 4.0,
-            y - rows * BUTTON - 4.0,
-            columns * BUTTON + 8.0,
-            rows * BUTTON + 4.0,
-        )
+    /// `OverlayRecipeComponent.init`: from the button clicked, moved back
+    /// whole buttons to stay within 50 pixels right of and below the book's
+    /// middle, and no more than 100 above it.
+    fn popup_layout(&self, cell: usize) -> Option<PopupLayout> {
+        let count = self.cells.get(cell)?.alternatives.len();
+        let per_row = if count <= 16 { 4 } else { 5 };
+        let rows = count.div_ceil(per_row) as f32;
+        let (mut x, mut y) = self.cell_pos(cell.checked_sub(self.page * PER_PAGE)?);
+        let (xo, yo) = self.origin();
+        // `xo + imageWidth / 2`, `yo + 13 + imageHeight / 2` in whole pixels.
+        let (center_x, center_y) = (xo + (WIDTH / 2.0).floor(), yo + 13.0 + HEIGHT / 2.0);
+        let right = x + count.min(per_row) as f32 * BUTTON;
+        if right > center_x + 50.0 {
+            x -= BUTTON * ((right - (center_x + 50.0)) / BUTTON).trunc();
+        }
+        let bottom = y + rows * BUTTON;
+        if bottom > center_y + 50.0 {
+            y -= BUTTON * ((bottom - (center_y + 50.0)) / BUTTON).ceil();
+        }
+        if y < center_y - 100.0 {
+            y -= BUTTON * ((y - (center_y - 100.0)) / BUTTON).ceil();
+        }
+        Some(PopupLayout {
+            x,
+            y,
+            per_row,
+            count,
+        })
+    }
+
+    /// The popup button under the mouse.
+    fn popup_button_at(&self, cell: usize) -> Option<usize> {
+        let layout = self.popup_layout(cell)?;
+        let (mx, my) = self.cursor;
+        (0..layout.count).find(|&i| {
+            let (x, y) = layout.button(i);
+            mx >= x && my >= y && mx < x + POPUP_BUTTON && my < y + POPUP_BUTTON
+        })
     }
 
     fn popup_hit(&self, cell: usize) -> Option<RecipeId> {
-        let (x, y, ..) = self.popup_rect(cell);
-        let (mx, my) = self.cursor;
-        let c = self.cells.get(cell)?;
-        c.recipes.iter().enumerate().find_map(|(i, (id, _))| {
-            let (cx, cy) = (
-                x + 4.0 + BUTTON * (i % 4) as f32,
-                y + 4.0 + BUTTON * (i / 4) as f32,
-            );
-            (mx >= cx && my >= cy && mx < cx + BUTTON && my < cy + BUTTON).then_some(*id)
-        })
+        let i = self.popup_button_at(cell)?;
+        Some(self.cells.get(cell)?.alternatives.get(i)?.id)
     }
 
     /// Typing into the search field; `true` when it took the keys.
@@ -694,12 +826,15 @@ impl RecipeBookPanel {
         let (mx, my) = self.cursor;
         let hovered =
             |(x, y, w, h): (f32, f32, f32, f32)| mx >= x && my >= y && mx < x + w && my < y + h;
-        let sprite = if hovered(toggle) {
-            &sprites.button_highlighted
-        } else {
-            &sprites.button
-        };
-        sprite.draw(ui.draw_list, toggle.0, toggle.1, toggle.2, toggle.3);
+        // Narrow, the toggle is one of the menu's widgets vanilla leaves out.
+        if !self.covers_menu(self.size.0) {
+            let sprite = if hovered(toggle) {
+                &sprites.button_highlighted
+            } else {
+                &sprites.button
+            };
+            sprite.draw(ui.draw_list, toggle.0, toggle.1, toggle.2, toggle.3);
+        }
         if !self.visible {
             return;
         }
@@ -718,7 +853,7 @@ impl RecipeBookPanel {
             ],
             [1.0; 4],
         );
-        self.draw_search(ui, xo, yo);
+        self.draw_search(ui, sprites, xo, yo);
         let filtering = self.filtering(book);
         let kind = usize::from(matches!(self.mode, Mode::Furnace(_)));
         let filter_hover = hovered((xo + 110.0, yo + 12.0, 26.0, 16.0));
@@ -731,6 +866,8 @@ impl RecipeBookPanel {
             }
             let (x, y) = self.tab_pos(slot);
             slot += 1;
+            // `RecipeBookTabButton`: a selected tab, sprite and icons, sits
+            // 2 pixels to the left; it is still hit where it would be.
             let selected = i == self.tab;
             let x = if selected { x - 2.0 } else { x };
             let tab = if selected {
@@ -739,19 +876,11 @@ impl RecipeBookPanel {
                 &sprites.tab
             };
             tab.draw(ui.draw_list, x, y, TAB_W, TAB_H);
-            let shift = if selected { -2.0 } else { 0.0 };
             match view.icons.as_slice() {
-                [only] => ui.painter.stack(
-                    ui.draw_list,
-                    only,
-                    x + 9.0 + 2.0 * (-shift) + shift,
-                    y + 5.0,
-                ),
+                [only] => ui.painter.stack(ui.draw_list, only, x + 9.0, y + 5.0),
                 [a, b] => {
-                    ui.painter
-                        .stack(ui.draw_list, a, x + 3.0 + 2.0 * (-shift) + shift, y + 5.0);
-                    ui.painter
-                        .stack(ui.draw_list, b, x + 14.0 + 2.0 * (-shift) + shift, y + 5.0);
+                    ui.painter.stack(ui.draw_list, a, x + 3.0, y + 5.0);
+                    ui.painter.stack(ui.draw_list, b, x + 14.0, y + 5.0);
                 }
                 _ => {}
             }
@@ -807,63 +936,76 @@ impl RecipeBookPanel {
             let hover = usize::from(hovered((xo + 38.0, yo + 137.0, 12.0, 17.0)));
             sprites.page_backward[hover].draw(ui.draw_list, xo + 38.0, yo + 137.0, 12.0, 17.0);
         }
+        self.draw_popup(ui, sprites);
     }
 
-    fn draw_search(&self, ui: &mut OverlayDraw, xo: f32, yo: f32) {
-        let (x, y) = (xo + 28.0, yo + 16.0);
+    /// `OverlayRecipeComponent.extractRenderState`, over the page.
+    fn draw_popup(&self, ui: &mut OverlayDraw, sprites: &RecipeBookSprites) {
+        let Some(cell) = self.popup else {
+            return;
+        };
+        let (Some(layout), Some(cell_data)) = (self.popup_layout(cell), self.cells.get(cell)) else {
+            return;
+        };
+        let (x, y, w, h) = layout.rect();
+        sprites.overlay.draw(ui.draw_list, x, y, w, h);
+        let hovered = self.popup_button_at(cell);
+        let kind = usize::from(matches!(self.mode, Mode::Furnace(_)));
+        let step = (self.time / SWAP_TICKS) as usize;
+        for (i, alternative) in cell_data.alternatives.iter().enumerate() {
+            let (bx, by) = layout.button(i);
+            let frame = 2 * usize::from(!alternative.craftable) + usize::from(hovered == Some(i));
+            sprites.overlay_button[kind][frame].draw(ui.draw_list, bx, by, POPUP_BUTTON, POPUP_BUTTON);
+            // Each input 0.375 of an item (6 pixels), on a 7 pixel pitch
+            // from 2 pixels in: `translate(+2 + 3 + 7n)`, `scale`, `translate(-8)`.
+            for ((gx, gy), stacks) in &alternative.grid {
+                let Some(stack) = stacks.get(step % stacks.len().max(1)) else {
+                    continue;
+                };
+                let (ix, iy) = (bx + 2.0 + 7.0 * *gx as f32, by + 2.0 + 7.0 * *gy as f32);
+                ui.painter.icon_sized(ui.draw_list, stack, ix, iy, 6.0);
+            }
+        }
+    }
+
+    /// The search `EditBox`: its border, then the text kept to the box and
+    /// scrolled to the cursor (`setTextColor(-1)`), or the gray italic hint.
+    fn draw_search(&self, ui: &mut OverlayDraw, sprites: &RecipeBookSprites, xo: f32, yo: f32) {
+        let (bx, by, bw, bh) = SEARCH;
+        sprites.text_field[usize::from(self.focused)].draw(ui.draw_list, xo + bx, yo + by, bw, bh);
+        let at = (xo + SEARCH_TEXT.0, yo + SEARCH_TEXT.1);
         let font = ui.painter.font;
-        let value = self.search.value();
-        if value.is_empty() && !self.focused {
-            font.push_text_flat(
+        if self.search.is_empty() && !self.focused {
+            font.push_text_italic(
                 ui.draw_list,
                 ui.painter.font_textures,
                 ui.lang.get("gui.recipebook.search_hint"),
-                x,
-                y,
+                at.0,
+                at.1,
                 argb(0xFFAA_AAAA),
             );
             return;
         }
-        font.push_text_flat(
+        self.search.draw(
             ui.draw_list,
+            font,
             ui.painter.font_textures,
-            &value,
-            x,
-            y,
+            ui.painter.white,
+            at,
+            bw,
             argb(0xFFFF_FFFF),
+            self.focused,
         );
-        if self.focused && self.search.cursor_visible() {
-            let at = x + font.text_width(&self.search.before_cursor());
-            ui.draw_list
-                .push_fill(ui.painter.white, at, y - 1.0, 1.0, 10.0, argb(0xFFD0_D0D0));
-        }
     }
 
     /// The tooltip of the button under the mouse and the popup, over everything else.
-    pub fn draw_overlay(&self, ui: &mut OverlayDraw, sprites: &RecipeBookSprites) {
+    pub fn draw_overlay(&self, ui: &mut OverlayDraw) {
         if !self.visible {
             return;
         }
         let (mx, my) = self.cursor;
-        if let Some(cell) = self.popup {
-            let (x, y, w, h) = self.popup_rect(cell);
-            ui.draw_list
-                .push_fill(ui.painter.white, x, y, w, h, argb(0xF010_1010));
-            if let Some(c) = self.cells.get(cell) {
-                for (i, (id, stacks)) in c.recipes.iter().enumerate() {
-                    let (cx, cy) = (
-                        x + 4.0 + BUTTON * (i % 4) as f32,
-                        y + 4.0 + BUTTON * (i / 4) as f32,
-                    );
-                    let craftable = c.craftable;
-                    let frame = if craftable { 0 } else { 2 };
-                    sprites.slot[frame].draw(ui.draw_list, cx, cy, BUTTON, BUTTON);
-                    if let Some(stack) = stacks.first() {
-                        ui.painter.stack(ui.draw_list, stack, cx + 4.0, cy + 4.0);
-                    }
-                    let _ = id;
-                }
-            }
+        // `RecipeBookPage.extractTooltip`: none while the popup is open.
+        if self.popup.is_some() {
             return;
         }
         for (i, cell) in self

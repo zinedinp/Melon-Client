@@ -107,6 +107,11 @@ impl ContainerOverlay {
         overlay
     }
 
+    /// An open recipe book covers the menu on a screen `width` this narrow.
+    fn book_covers(&self, width: f32) -> bool {
+        self.book.as_ref().is_some_and(|book| book.covers_menu(width))
+    }
+
     /// Centres the panel, or shifts it right of an open recipe book.
     fn place(&mut self, width: f32, height: f32) {
         match &self.book {
@@ -428,6 +433,10 @@ impl Overlay for ContainerOverlay {
             self.place(ctx.size.0, ctx.size.1);
             return OverlayAction::Sequence(actions);
         }
+        // `AbstractRecipeBookScreen.mouseClicked`: the covered menu takes no click.
+        if pressed && self.book_covers(ctx.size.0) {
+            return OverlayAction::None;
+        }
         let frame = self.frame();
         if let Some(screen) = self.screen.as_mut() {
             if !pressed {
@@ -479,6 +488,9 @@ impl Overlay for ContainerOverlay {
         let Some(menu) = ctx.container.as_deref() else {
             return Vec::new();
         };
+        if self.book_covers(ctx.size.0) {
+            return Vec::new();
+        }
         let carried_empty = ctx.inventory.carried().is_empty();
         let view = LiveView {
             layout: &self.layout,
@@ -549,9 +561,7 @@ fn draw_container<'a>(
         draw_panel(ui.draw_list, texture, &overlay.layout);
     }
     let recipe_sprites = ui.textures.container.recipe_book.as_ref();
-    if let (Some(book), Some(sprites)) = (&mut overlay.book, recipe_sprites) {
-        book.draw(ui, sprites, ui.recipes, &overlay.layout);
-    }
+    let covered = overlay.book_covers(width);
     let sprites: &'a MenuSprites = &ui.textures.container.menus;
     let frame = overlay.frame();
     let mut screen = overlay.screen.take();
@@ -566,27 +576,38 @@ fn draw_container<'a>(
     if let (Some(texture), Some(preview)) = (ui.entity_preview, overlay.entity_preview()) {
         push_entity_preview(ui.draw_list, texture, &preview);
     }
-    draw_titles(&overlay.layout, ui, menu);
-    draw_slot_grid(overlay, screen.as_deref(), sprites, ui, menu);
-    if let Some(screen) = screen.as_mut() {
-        screen.foreground(&mut MenuDraw {
-            ui,
-            sprites,
-            menu,
-            frame,
-        });
+    // Under a book that covers it the menu is only its background
+    // (`AbstractRecipeBookScreen.extractRenderState`).
+    if !covered {
+        draw_titles(&overlay.layout, ui, menu);
+        draw_slot_grid(overlay, screen.as_deref(), sprites, ui, menu);
+        if let Some(screen) = screen.as_mut() {
+            screen.foreground(&mut MenuDraw {
+                ui,
+                sprites,
+                menu,
+                frame,
+            });
+        }
     }
     overlay.screen = screen;
+    // The ghost goes with the slots, the book over the whole menu.
     if let Some(book) = &overlay.book
         && recipe_sprites.is_some()
+        && !covered
         && let Some((container, display)) = ui.ghost
         && *container == menu.id
     {
         book.draw_ghost(ui, &overlay.layout, display);
     }
+    if let (Some(book), Some(sprites)) = (&mut overlay.book, recipe_sprites) {
+        book.draw(ui, sprites, ui.recipes, &overlay.layout);
+    }
     draw_hand_and_tooltip(overlay, ui, menu);
-    if let (Some(book), Some(sprites)) = (&overlay.book, recipe_sprites) {
-        book.draw_overlay(ui, sprites);
+    if let Some(book) = &overlay.book
+        && recipe_sprites.is_some()
+    {
+        book.draw_overlay(ui);
     }
 }
 
@@ -677,7 +698,7 @@ fn draw_hand_and_tooltip(overlay: &ContainerOverlay, ui: &mut OverlayDraw, menu:
     let hovered = overlay
         .layout
         .slot_at(overlay.cursor)
-        .filter(|&slot| slot < menu.slots.len());
+        .filter(|&slot| slot < menu.slots.len() && !overlay.book_covers(ui.size.0));
     let drag = overlay.mouse.quick_craft();
     draw_carried(
         ui.draw_list,

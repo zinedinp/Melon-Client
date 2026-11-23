@@ -44,13 +44,25 @@ impl ItemPainter<'_> {
 
     /// The item alone, without its count or durability bar.
     pub fn icon(&self, draw_list: &mut DrawList, keyed: &(impl StackKey + ?Sized), x: f32, y: f32) {
+        self.icon_sized(draw_list, keyed, x, y, 16.0);
+    }
+
+    /// [`Self::icon`] `size` pixels square (the recipe book popup's 0.375).
+    pub fn icon_sized(
+        &self,
+        draw_list: &mut DrawList,
+        keyed: &(impl StackKey + ?Sized),
+        x: f32,
+        y: f32,
+        size: f32,
+    ) {
         let stack = keyed.stack();
         if stack.is_empty() {
             return;
         }
         if let Some(icon) = self.icons.get(keyed) {
             let previous = keyed.foil().then(|| draw_list.set_program(Program::Glint));
-            icon.draw(draw_list, x, y, 16.0, 16.0);
+            icon.draw(draw_list, x, y, size, size);
             if let Some(previous) = previous {
                 draw_list.set_program(previous);
             }

@@ -78,53 +78,22 @@ impl Renderer {
                         &[(Mode::Solid, &world.chunks), (Mode::Opaque, &world.cutout)]
                     };
                     let light = world.light([1.0; 4]);
-                    let multi = self.indirect.is_some();
-                    for &(mode, chunks) in passes {
-                        let by_multi = multi && matches!(mode, Mode::Solid | Mode::Opaque);
-                        let label = match mode {
-                            Mode::Solid => "solid",
-                            Mode::Opaque => "cutout",
-                            Mode::TranslucentTerrain => "translucent",
-                            _ => "terrain",
-                        };
-                        self.gpu_timer.counted_pass(label);
-                        if by_multi {
-                            self.draw_terrain_multi(cmd, world, mode, view_proj, &light);
+                    let multi = self.indirect.is_some().then_some(Phase::First);
+                    // Phase 2 draws the rest: what the culling let through and the
+                    // vertex meshes (lava), which it doesn't cull.
+                    let occluding =
+                        layer == RenderLayer::Terrain && self.recording.occluding.get();
+                    for &layer_draws in passes {
+                        let at = (view_proj, &light);
+                        self.draw_terrain_layer(cmd, world, layer_draws, at, multi, !occluding);
+                    }
+                    if occluding {
+                        self.cull_terrain(cmd, view_proj);
+                        for &layer_draws in passes {
+                            let at = (view_proj, &light);
+                            let phase = Some(Phase::Second);
+                            self.draw_terrain_layer(cmd, world, layer_draws, at, phase, true);
                         }
-                        let mut bound: Option<bool> = None;
-                        for chunk in chunks {
-                            let quads = matches!(chunk.mesh, TerrainMesh::Quads(_));
-                            if quads && by_multi {
-                                continue;
-                            }
-                            if bound != Some(quads) {
-                                let ok = if quads {
-                                    self.bind_terrain_pass(cmd, world.atlas, mode)
-                                } else {
-                                    self.bind_world_pass(cmd, world.atlas, mode)
-                                };
-                                if !ok {
-                                    bound = None;
-                                    continue;
-                                }
-                                bound = Some(quads);
-                            }
-                            let at = (view_proj, world.offset(chunk.origin));
-                            match chunk.mesh {
-                                TerrainMesh::Quads(id) => {
-                                    self.draw_terrain_quads(cmd, id, at, &light, &chunk.range);
-                                }
-                                TerrainMesh::Vertices(id) => self.draw_world_mesh(
-                                    cmd,
-                                    self.pipelines.world.layout,
-                                    id,
-                                    at,
-                                    &light.fogged(FogInput::Chunk),
-                                    Some(&chunk.range),
-                                ),
-                            }
-                        }
-                        self.gpu_timer.mark(&self.device, label);
                     }
                     if layer == RenderLayer::Translucent {
                         let fog = self.model_fog(world, layer);
@@ -346,6 +315,104 @@ impl Renderer {
         // A layer that had nothing to draw left its counted pass open: it
         // has to end in this render pass.
         self.gpu_timer.close_pass();
+    }
+
+    /// One terrain layer's draws: `phase`'s multi-draws, when there are
+    /// any, and with `rest` the draws they leave out.
+    unsafe fn draw_terrain_layer(
+        &self,
+        cmd: vk::CommandBuffer,
+        world: &WorldDraw,
+        (mode, chunks): (Mode, &[ChunkDraw]),
+        (view_proj, light): (Mat4, &DrawLight),
+        phase: Option<Phase>,
+        rest: bool,
+    ) {
+        let by_multi = phase.is_some() && matches!(mode, Mode::Solid | Mode::Opaque);
+        let label = match mode {
+            Mode::Solid => "solid",
+            Mode::Opaque => "cutout",
+            Mode::TranslucentTerrain => "translucent",
+            _ => "terrain",
+        };
+        self.gpu_timer.counted_pass(label);
+        if let Some(phase) = phase
+            && by_multi
+        {
+            self.draw_terrain_multi(cmd, world, mode, view_proj, light, phase);
+        }
+        let mut bound: Option<bool> = None;
+        for chunk in chunks.iter().filter(|_| rest) {
+            let quads = matches!(chunk.mesh, TerrainMesh::Quads(_));
+            if quads && by_multi {
+                continue;
+            }
+            if bound != Some(quads) {
+                let ok = if quads {
+                    self.bind_terrain_pass(cmd, world.atlas, mode)
+                } else {
+                    self.bind_world_pass(cmd, world.atlas, mode)
+                };
+                if !ok {
+                    bound = None;
+                    continue;
+                }
+                bound = Some(quads);
+            }
+            let at = (view_proj, world.offset(chunk.origin));
+            match chunk.mesh {
+                TerrainMesh::Quads(id) => {
+                    self.draw_terrain_quads(cmd, id, at, light, &chunk.range);
+                }
+                TerrainMesh::Vertices(id) => self.draw_world_mesh(
+                    cmd,
+                    self.pipelines.world.layout,
+                    id,
+                    at,
+                    &light.fogged(FogInput::Chunk),
+                    Some(&chunk.range),
+                ),
+            }
+        }
+        self.gpu_timer.mark(&self.device, label);
+    }
+
+    /// Between the culling's two phases: ends the render pass, picks phase
+    /// 2's draws against what phase 1 drew (see [`super::super::occlusion`]),
+    /// and starts the pass again on top of it.
+    unsafe fn cull_terrain(&self, cmd: vk::CommandBuffer, view_proj: Mat4) {
+        self.gpu_timer.close_pass();
+        self.device.cmd_end_render_pass(cmd);
+        if let (Some(occlusion), Some(indirect)) = (&self.occlusion, &self.indirect) {
+            self.gpu_timer.pass("occlusion");
+            let count = indirect.gathered();
+            occlusion.record_cull(&self.device, cmd, self.frames.current, count, &view_proj);
+            self.gpu_timer.mark(&self.device, "occlusion");
+        }
+        let extent = self.swapchain.extent;
+        let area = vk::Rect2D {
+            offset: vk::Offset2D::default(),
+            extent,
+        };
+        self.device.cmd_begin_render_pass(
+            cmd,
+            &vk::RenderPassBeginInfo::default()
+                .render_pass(self.passes.resume_keep)
+                .framebuffer(self.recording.framebuffer.get())
+                .render_area(area),
+            vk::SubpassContents::INLINE,
+        );
+        let viewport = vk::Viewport {
+            x: 0.0,
+            y: 0.0,
+            width: extent.width as f32,
+            height: extent.height as f32,
+            min_depth: 0.0,
+            max_depth: 1.0,
+        };
+        self.device.cmd_set_viewport(cmd, 0, &[viewport]);
+        self.device.cmd_set_scissor(cmd, 0, &[area]);
+        self.recording.forget_all();
     }
 
     /// How the fog finds the distance of a model drawn in `layer`.
@@ -769,7 +836,7 @@ impl Renderer {
     }
 
     /// The quad meshes of `mode`'s pass as multi-draws, gathered before the
-    /// frame (see [`super::super::indirect`]).
+    /// frame (see [`super::super::indirect`]), from `phase`'s commands.
     unsafe fn draw_terrain_multi(
         &self,
         cmd: vk::CommandBuffer,
@@ -777,6 +844,7 @@ impl Renderer {
         mode: Mode,
         view_proj: Mat4,
         light: &DrawLight,
+        phase: Phase,
     ) {
         let Some(indirect) = &self.indirect else {
             return;
@@ -799,23 +867,24 @@ impl Renderer {
             &[indirect.set(frame)],
             &[],
         );
+        let start = indirect.phase_start(phase);
         for &run in indirect.runs(pass) {
-            self.flush_run(cmd, layout, view_proj, light, run);
+            self.flush_run(cmd, layout, (view_proj, light), run, start);
         }
     }
 
-    /// Draws a run of [`Self::draw_terrain_multi`].
+    /// Draws a run of [`Self::draw_terrain_multi`], its commands `start` on.
     unsafe fn flush_run(
         &self,
         cmd: vk::CommandBuffer,
         layout: vk::PipelineLayout,
-        view_proj: Mat4,
-        light: &DrawLight,
+        (view_proj, light): (Mat4, &DrawLight),
         Run {
             buffer,
             first,
             count,
         }: Run,
+        start: u32,
     ) {
         let Some(indirect) = &self.indirect else {
             return;
@@ -834,7 +903,7 @@ impl Renderer {
         self.device.cmd_draw_indexed_indirect(
             cmd,
             indirect.commands(self.frames.current),
-            u64::from(first) * u64::from(super::super::indirect::COMMAND_SIZE),
+            u64::from(start + first) * u64::from(super::super::indirect::COMMAND_SIZE),
             count,
             super::super::indirect::COMMAND_SIZE,
         );
@@ -946,4 +1015,4 @@ impl Renderer {
     }
 }
 
-use super::super::indirect::{Pass, Run, corner_offset, quad_draws};
+use super::super::indirect::{Pass, Phase, Run, corner_offset, quad_draws};

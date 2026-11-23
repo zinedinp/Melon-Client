@@ -164,6 +164,9 @@ pub enum PassStart {
     SceneSplit,
     /// What follows a post chain.
     Resume,
+    /// terrain's occlusion culling: loads the scene and keeps
+    /// its depth for a post chain to read, as [`Self::SceneSplit`] does.
+    ResumeKeep,
     /// A [`super::PictureDraw`]'s own target: clears, and leaves the colour
     /// as an attachment for the barrier that hands it to the UI.
     Picture,
@@ -180,10 +183,10 @@ pub unsafe fn create_render_pass(
             vk::AttachmentLoadOp::CLEAR
         }
         PassStart::Overwrite => vk::AttachmentLoadOp::DONT_CARE,
-        PassStart::Resume => vk::AttachmentLoadOp::LOAD,
+        PassStart::Resume | PassStart::ResumeKeep => vk::AttachmentLoadOp::LOAD,
     };
-    let resume = start == PassStart::Resume;
-    let keep_depth = matches!(start, PassStart::SceneSplit);
+    let resume = matches!(start, PassStart::Resume | PassStart::ResumeKeep);
+    let keep_depth = matches!(start, PassStart::SceneSplit | PassStart::ResumeKeep);
     let color_attachment = vk::AttachmentDescription::default()
         .format(format)
         .samples(vk::SampleCountFlags::TYPE_1)
@@ -286,7 +289,7 @@ pub unsafe fn find_depth_format(
             return Ok(format);
         }
     }
-    anyhow::bail!("keine unterstuetzte Tiefenpuffer-Formatvariante gefunden")
+    anyhow::bail!("no supported depth buffer format")
 }
 
 pub unsafe fn create_depth_image(

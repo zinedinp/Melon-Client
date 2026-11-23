@@ -174,7 +174,11 @@ impl InventoryOverlay {
         screen
     }
 
+    /// None under a book that covers the menu (`AbstractRecipeBookScreen.isHovering`).
     pub fn hovered_slot(&self) -> Option<usize> {
+        if self.book.covers_menu(self.size.0) {
+            return None;
+        }
         self.layout.hovered_slot(self.cursor)
     }
 
@@ -216,6 +220,13 @@ impl InventoryOverlay {
             height,
         );
         draw_panel(draw_list, textures.background, &layout.menu);
+        // Under a book that covers it, only `extractBackground`: panel and player.
+        if self.book.covers_menu(width) {
+            if let (Some(texture), Some(preview)) = (player, self.entity_preview()) {
+                push_entity_preview(draw_list, texture, &preview);
+            }
+            return;
+        }
         let (title_x, title_y) = layout.menu.title_origin(0.0);
         painter.font.push_text_flat(
             draw_list,
@@ -333,6 +344,9 @@ impl Overlay for InventoryOverlay {
             self.resize(self.size.0, self.size.1);
             return OverlayAction::Sequence(actions);
         }
+        if pressed && self.book.covers_menu(self.size.0) {
+            return OverlayAction::None;
+        }
         let view = SurvivalView {
             layout: &self.layout,
             inventory: ctx.inventory,
@@ -381,17 +395,19 @@ impl Overlay for InventoryOverlay {
             ui.size,
             ui.entity_preview,
         );
+        // The ghost goes with the slots (`extractSlots`), the book over both.
         if let Some(sprites) = ui.textures.container.recipe_book.as_ref() {
-            self.book.draw(ui, sprites, ui.recipes, &self.layout.menu);
             if let Some((container, display)) = ui.ghost
                 && *container == 0
+                && !self.book.covers_menu(ui.size.0)
             {
                 self.book.draw_ghost(ui, &self.layout.menu, display);
             }
+            self.book.draw(ui, sprites, ui.recipes, &self.layout.menu);
         }
         self.draw_hand_and_tooltip(ui.draw_list, ui.painter, ui.inventory, ui.lang, ui.size);
-        if let Some(sprites) = ui.textures.container.recipe_book.as_ref() {
-            self.book.draw_overlay(ui, sprites);
+        if ui.textures.container.recipe_book.is_some() {
+            self.book.draw_overlay(ui);
         }
     }
 

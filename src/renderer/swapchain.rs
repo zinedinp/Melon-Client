@@ -160,12 +160,24 @@ impl Renderer {
         self.frames.images_in_flight = vec![vk::Fence::null(); images.len()];
         self.swapchain.images = images;
         self.resize_post()?;
+        if let Some(occlusion) = &mut self.occlusion {
+            occlusion.resize(
+                &self.device,
+                &self.mem_props,
+                self.swapchain.depth.image,
+                self.swapchain.depth_format,
+                extent,
+            )?;
+        }
         Ok(())
     }
 
     pub(super) unsafe fn destroy_swapchain_resources(&mut self) {
         self.blur.destroy_targets(&self.device);
         self.post.release_sized(&self.device);
+        if let Some(occlusion) = &mut self.occlusion {
+            occlusion.release_sized(&self.device);
+        }
         for &fb in &self.swapchain.framebuffers {
             self.device.destroy_framebuffer(fb, None);
         }

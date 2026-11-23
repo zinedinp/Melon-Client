@@ -68,6 +68,13 @@ impl Renderer {
             let draws = indirect.gathered();
             indirect.prepare(&self.device, &self.mem_props, current, draws)?;
             indirect.upload(current);
+            if let Some(occlusion) = &mut self.occlusion
+                && draws > 0
+            {
+                let buffers = (indirect.commands(current), indirect.bounds(current));
+                let slots = indirect.slots();
+                occlusion.prepare(&self.device, &self.mem_props, current, slots, buffers)?;
+            }
         }
         Ok(())
     }
@@ -203,6 +210,21 @@ impl Renderer {
         self.gpu_timer.mark(&self.device, "upload");
         self.record_pictures(cmd, frame.pictures);
 
+        // The terrain's occlusion culling: phase 1 picked before the scene's pass.
+        let draws = self.indirect.as_ref().map_or(0, |i| i.gathered());
+        let occluding = draws > 0
+            && frame.scene.is_some_and(|scene| scene.world.is_some())
+            && self.occlusion.as_ref().is_some_and(|o| o.ready());
+        self.recording.occluding.set(occluding);
+        self.recording
+            .framebuffer
+            .set(self.swapchain.framebuffers[image_index as usize]);
+        if occluding && let Some(occlusion) = &mut self.occlusion {
+            self.gpu_timer.pass("occlusion");
+            occlusion.record_select(&self.device, cmd, self.frames.current, draws);
+            self.gpu_timer.mark(&self.device, "occlusion");
+        }
+
         let clear_values = [
             vk::ClearValue {
                 color: vk::ClearColorValue {
@@ -231,7 +253,8 @@ impl Renderer {
         }
         let split = !chains.is_empty() && self.swapchain.depth_sampled;
         let render_pass_info = vk::RenderPassBeginInfo::default()
-            .render_pass(if split {
+            // Culling reads the depth phase 1 leaves, as a post chain does.
+            .render_pass(if split || occluding {
                 self.passes.split
             } else {
                 self.passes.clear

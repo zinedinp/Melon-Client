@@ -126,7 +126,7 @@ impl RunningState {
         let frame = Frame {
             scene: scene.as_ref(),
             ui: &self.draw_list,
-            ui_size: size,
+            ui_size: scale.projection_size(),
             clear_color: crate::gui::background::CLEAR_COLOR,
             blur,
             pictures: &[],
@@ -331,7 +331,7 @@ impl RunningState {
         let frame = Frame {
             scene: Some(&scene),
             ui: &self.draw_list,
-            ui_size: size,
+            ui_size: scale.projection_size(),
             clear_color: world.sky_clear_color(),
             blur,
             pictures: world.pictures(),

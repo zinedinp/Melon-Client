@@ -23,6 +23,11 @@ pub(in crate::renderer) struct Recording {
     pub offset: Cell<Option<Vec4>>,
     /// How the fog finds distances (`FogInput` bytes), the same way.
     pub view: Cell<Option<PushBlock<4>>>,
+    /// The frame's framebuffer, for the render pass the terrain's
+    /// occlusion culling resumes.
+    pub framebuffer: Cell<vk::Framebuffer>,
+    /// Whether this frame culls the terrain's multi-draws (see `occlusion.rs`).
+    pub occluding: Cell<bool>,
 }
 
 impl Recording {
@@ -33,6 +38,8 @@ impl Recording {
             push: Cell::new(None),
             offset: Cell::new(None),
             view: Cell::new(None),
+            framebuffer: Cell::new(vk::Framebuffer::null()),
+            occluding: Cell::new(false),
         }
     }
 

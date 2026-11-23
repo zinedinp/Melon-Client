@@ -120,6 +120,7 @@ impl InWorld {
                 cardinal: self.level_info.dimension_type.cardinal_light.relative(),
                 distortion: view.distortion,
                 bob: camera.bob,
+                section_slots: chunks.slots,
             }),
             entities: layer.draws,
             clouds: sky.clouds,

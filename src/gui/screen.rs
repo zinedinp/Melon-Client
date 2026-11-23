@@ -305,6 +305,18 @@ impl GuiScale {
         )
     }
 
+    /// The GUI pixels the window shows, fractional (`GuiRenderer`'s ortho
+    /// `width / guiScale`): drawn over this, one GUI pixel is exactly
+    /// `scale` window pixels. [`Self::virtual_size`] rounds up for layout,
+    /// so its last partial pixel runs off the edge, as in vanilla.
+    pub fn projection_size(&self) -> (f32, f32) {
+        let scale = self.scale() as f32;
+        (
+            self.window_width as f32 / scale,
+            self.window_height as f32 / scale,
+        )
+    }
+
     /// GUI pixels to window pixels: the inverse of [`Self::to_virtual`].
     pub fn to_physical(&self, position: (f32, f32)) -> (f64, f64) {
         let (virtual_w, virtual_h) = self.virtual_size();

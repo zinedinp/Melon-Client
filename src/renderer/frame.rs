@@ -10,7 +10,8 @@ pub struct Frame<'a> {
     /// World. `None`: no 3D background, only [`Frame::clear_color`].
     pub scene: Option<&'a SceneFrame>,
     pub ui: &'a DrawList,
-    /// GUI coordinate system of the `ui` vertices (`gui::screen::virtual_size`).
+    /// The GUI pixels the window spans (`GuiScale::projection_size`): the
+    /// `ui` vertices are drawn over this, whole window pixels per GUI pixel.
     pub ui_size: (f32, f32),
     pub clear_color: [f32; 4],
     /// Blur what was drawn before a point in the UI list, then draw the rest over it.
@@ -333,6 +334,8 @@ pub struct WorldDraw {
     pub distortion: Mat4,
     /// `GameRenderer.bobView`.
     pub bob: Mat4,
+    /// One past the highest [`SectionCull::slot`] in use.
+    pub section_slots: u32,
 }
 
 impl WorldDraw {
@@ -384,6 +387,18 @@ pub struct ChunkDraw {
     pub origin: glam::IVec3,
     /// Quads of a [`TerrainMesh::Quads`] mesh, vertices of a vertex mesh.
     pub range: std::ops::Range<u32>,
+    /// The section it belongs to, for occlusion culling; `None` is never culled.
+    pub cull: Option<SectionCull>,
+}
+
+/// A section as the occlusion culling knows it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SectionCull {
+    /// Where its visibility is kept from frame to frame. Its solid and
+    /// cutout draws share it, so they always go in the same phase.
+    pub slot: u32,
+    /// Its bottom, in blocks above the draw's `origin`.
+    pub bottom: i32,
 }
 
 impl ChunkDraw {
@@ -794,6 +809,7 @@ mod tests {
             cardinal: [1.0; 6],
             distortion: Mat4::IDENTITY,
             bob: Mat4::IDENTITY,
+            section_slots: 0,
         };
         for x in [1216, 1232, -1008, -992] {
             let a = world.offset(glam::IVec3::new(x, 0, -992));

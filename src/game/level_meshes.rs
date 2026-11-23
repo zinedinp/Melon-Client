@@ -7,7 +7,7 @@ use glam::{DVec3, IVec3, Vec3};
 
 use crate::math::{ChunkMap, SECTION_SIZE, section_coord};
 use crate::renderer::{
-    ChunkDraw, MeshId, QuadMeshId, Renderer, TerrainMesh, TerrainQuad, WorldVertex,
+    ChunkDraw, MeshId, QuadMeshId, Renderer, SectionCull, TerrainMesh, TerrainQuad, WorldVertex,
 };
 use crate::world::block::direction::Direction;
 use crate::world::block_entity::BlockEntities;
@@ -199,6 +199,9 @@ struct SectionDraws {
     /// Mesh and vertex count, [`NO_MESH`] for none.
     lava: (u32, u32),
     translucent: (u32, u32),
+    /// Its occlusion culling slot ([`SectionCull::slot`]) while it has solid
+    /// or cutout quads, [`NO_MESH`] otherwise.
+    slot: u32,
 }
 
 impl Default for SectionDraws {
@@ -208,6 +211,7 @@ impl Default for SectionDraws {
             cutout: QuadRuns::NONE,
             lava: (NO_MESH, 0),
             translucent: (NO_MESH, 0),
+            slot: NO_MESH,
         }
     }
 }
@@ -223,6 +227,36 @@ impl SectionDraws {
             translucent: meshes.translucent.as_ref().map_or((NO_MESH, 0), |t| {
                 (mesh_index(t.mesh.0), t.faces.vertices.len() as u32)
             }),
+            slot: NO_MESH,
+        }
+    }
+
+    fn has_quads(&self) -> bool {
+        self.solid.mesh != NO_MESH || self.cutout.mesh != NO_MESH
+    }
+}
+
+/// Hands out [`SectionCull::slot`]s, the freed ones first. A slot handed
+/// out again keeps its last section's visibility: that only decides which
+/// culling phase draws the section first, never whether it is drawn.
+#[derive(Default)]
+struct Slots {
+    /// One past the highest slot handed out.
+    next: u32,
+    free: Vec<u32>,
+}
+
+impl Slots {
+    fn take(&mut self) -> u32 {
+        self.free.pop().unwrap_or_else(|| {
+            self.next += 1;
+            self.next - 1
+        })
+    }
+
+    fn give_back(&mut self, slot: u32) {
+        if slot != NO_MESH {
+            self.free.push(slot);
         }
     }
 }
@@ -337,6 +371,8 @@ pub struct VisibleChunks {
     pub cutout: Vec<ChunkDraw>,
     pub translucent: Vec<ChunkDraw>,
     pub count: SectionCount,
+    /// One past the highest [`SectionCull::slot`] in use.
+    pub slots: u32,
 }
 
 pub struct LevelMeshes {
@@ -355,6 +391,8 @@ pub struct LevelMeshes {
     spare_translucent: Vec<ChunkDraw>,
     /// The sections with translucent faces the last frame drew.
     seen_translucent: Vec<SectionPos>,
+    /// The sections' occlusion culling slots.
+    slots: Slots,
 }
 
 impl Default for LevelMeshes {
@@ -370,6 +408,7 @@ impl Default for LevelMeshes {
             spare_cutout: Vec::new(),
             spare_translucent: Vec::new(),
             seen_translucent: Vec::new(),
+            slots: Slots::default(),
         }
     }
 }
@@ -463,7 +502,18 @@ impl LevelMeshes {
             column.sections.resize_with(y + 1, SectionMeshes::default);
             column.draws.resize_with(y + 1, SectionDraws::default);
         }
-        column.draws[y] = SectionDraws::of(&meshes);
+        let old_slot = column.draws[y].slot;
+        let mut draws = SectionDraws::of(&meshes);
+        if draws.has_quads() {
+            draws.slot = if old_slot == NO_MESH {
+                self.slots.take()
+            } else {
+                old_slot
+            };
+        } else {
+            self.slots.give_back(old_slot);
+        }
+        column.draws[y] = draws;
         column.compiled |= 1 << y;
         if meshes.is_empty() {
             column.filled &= !(1 << y);
@@ -483,6 +533,9 @@ impl LevelMeshes {
         self.waiting
             .retain(|waiting| (waiting.pos.0, waiting.pos.2) != key);
         if let Some(column) = self.columns.remove(&key) {
+            for draws in &column.draws {
+                self.slots.give_back(draws.slot);
+            }
             for section in column.sections {
                 section.free(renderer);
             }
@@ -493,6 +546,7 @@ impl LevelMeshes {
     pub fn clear(&mut self, renderer: &mut Renderer) {
         self.waiting.clear();
         self.seen_translucent.clear();
+        self.slots = Slots::default();
         for column in self.columns.drain() {
             for section in column.sections {
                 section.free(renderer);
@@ -636,6 +690,7 @@ impl LevelMeshes {
             cutout: std::mem::take(&mut self.spare_cutout),
             translucent: std::mem::take(&mut self.spare_translucent),
             count: SectionCount::default(),
+            slots: self.slots.next,
         };
         visible.solid.clear();
         visible.cutout.clear();
@@ -698,6 +753,10 @@ impl LevelMeshes {
                         continue;
                     }
                     let mesh = TerrainMesh::Quads(QuadMeshId(layer.mesh as usize));
+                    let cull = Some(SectionCull {
+                        slot: section.slot,
+                        bottom: y as i32 * SECTION_SIZE,
+                    });
                     let mut flush = |run: &mut Option<Range<u32>>| {
                         if let Some(range) = run.take() {
                             list.push(
@@ -706,6 +765,7 @@ impl LevelMeshes {
                                     mesh,
                                     origin: quads_origin,
                                     range,
+                                    cull,
                                 },
                             );
                         }
@@ -737,6 +797,7 @@ impl LevelMeshes {
                             mesh: TerrainMesh::Vertices(MeshId(lava as usize)),
                             origin: vertices_origin,
                             range: 0..count,
+                            cull: None,
                         },
                     );
                 }
@@ -749,6 +810,7 @@ impl LevelMeshes {
                             mesh: TerrainMesh::Vertices(MeshId(translucent as usize)),
                             origin: vertices_origin,
                             range: 0..count,
+                            cull: None,
                         },
                     );
                 }
@@ -1079,6 +1141,7 @@ mod tests {
             mesh: TerrainMesh::Quads(QuadMeshId(id)),
             origin: IVec3::new(id as i32, 0, 0),
             range: 0..id as u32,
+            cull: None,
         };
         let distances = [9.0, 1.0, 4.0, 1.0, 0.0, 9.0, 2.5];
         let mut near = SortedDraws::default();

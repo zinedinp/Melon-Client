@@ -313,6 +313,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                         cardinal: [1.0; 6],
                         distortion: glam::Mat4::IDENTITY,
                         bob: glam::Mat4::IDENTITY,
+                        section_slots: visible.slots,
                     }),
                     entities: Vec::new(),
                     clouds: atmosphere

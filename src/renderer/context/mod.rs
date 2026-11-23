@@ -11,6 +11,7 @@ use super::{
     MAX_FRAMES_IN_FLIGHT, MAX_TEXTURES, Renderer, blur, choose_surface_format, find_depth_format,
     mesh_arena,
 };
+use ash::vk;
 use image::RgbaImage;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
@@ -56,6 +57,20 @@ impl Renderer {
                 &device,
                 MAX_FRAMES_IN_FLIGHT,
                 layouts.world.draws,
+            )?)
+        } else {
+            None
+        };
+        // Level 0 of its pyramid is read from the depth buffer.
+        let depth_readable = instance
+            .get_physical_device_format_properties(gpu.physical, depth_format)
+            .optimal_tiling_features
+            .contains(vk::FormatFeatureFlags::SAMPLED_IMAGE);
+        let occlusion = if indirect.is_some() && depth_readable && super::occlusion::wanted() {
+            Some(super::occlusion::Occlusion::new(
+                &device,
+                &mem_props,
+                MAX_FRAMES_IN_FLIGHT,
             )?)
         } else {
             None
@@ -146,6 +161,7 @@ impl Renderer {
             quad_table: None,
             gpu_timer,
             indirect,
+            occlusion,
             quad_sets,
             globals,
             recording: crate::renderer::record::Recording::new(),
@@ -154,6 +170,7 @@ impl Renderer {
             textures: resources::textures(descriptor_pools, samplers),
         };
 
+        renderer.swapchain.depth_sampled = renderer.occlusion.is_some();
         let size = window.inner_size();
         renderer.create_swapchain(size.width.max(1), size.height.max(1))?;
 

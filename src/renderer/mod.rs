@@ -9,6 +9,7 @@ mod globals;
 mod gpu_timer;
 mod indirect;
 mod mesh_arena;
+mod occlusion;
 pub(crate) mod pack_outline;
 mod picture;
 mod pipeline;
@@ -34,8 +35,8 @@ use vk_util::{
 
 pub use frame::{
     Blending, Blur, CelestialDraw, ChunkDraw, CloudDraw, CornerLight, EntityDraw, Frame, Glint,
-    LineDraw, LineStyle, QuadCorner, RenderLayer, SceneFrame, Sky, SkyKind, TerrainMesh,
-    TerrainQuad, WORLD_Z_NEAR, WeatherDraw, WorldDraw, WorldVertex, world_projection,
+    LineDraw, LineStyle, QuadCorner, RenderLayer, SceneFrame, SectionCull, Sky, SkyKind,
+    TerrainMesh, TerrainQuad, WORLD_Z_NEAR, WeatherDraw, WorldDraw, WorldVertex, world_projection,
 };
 
 use ash::vk;
@@ -109,6 +110,8 @@ pub struct Renderer {
     gpu_timer: gpu_timer::GpuTimer,
     /// The buffers of the terrain's multi-draws; `None` when the device can't draw indirect.
     indirect: Option<indirect::DrawBuffers>,
+    /// Occlusion culling of those multi-draws; `None` without them, or when turned off.
+    occlusion: Option<occlusion::Occlusion>,
     /// A set per terrain mesh buffer, binding it for the shader (set 4).
     quad_sets: quad_table::QuadSets,
     /// The fog and the dimension's light, per frame in flight.
@@ -349,6 +352,9 @@ impl Drop for Renderer {
             self.gpu_timer.destroy(&self.device);
             if let Some(indirect) = &mut self.indirect {
                 indirect.destroy(&self.device);
+            }
+            if let Some(occlusion) = &mut self.occlusion {
+                occlusion.destroy(&self.device);
             }
             self.globals.destroy(&self.device);
             self.gui_uniforms.destroy(&self.device);

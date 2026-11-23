@@ -54,7 +54,8 @@ impl Renderer {
             {
                 crate::warn!("Outline blit: {e:#}");
             }
-            let wanted = self.post.is_active();
+            // Occlusion culling reads the depth buffer too.
+            let wanted = self.post.is_active() || self.occlusion.is_some();
             let (w, h) = (self.swapchain.extent.width, self.swapchain.extent.height);
             let result = if wanted != self.swapchain.depth_sampled && w > 0 {
                 self.swapchain.depth_sampled = wanted;

@@ -1,0 +1,117 @@
+#version 450
+
+// Two-phase occlusion culling of the terrain's multi-draws (`renderer/occlusion.rs`).
+// The commands hold each draw twice: phase 1 at [0, count), phase 2 at
+// [count, 2 * count).
+//
+// SELECT, before the frame: phase 1 draws what was visible last frame.
+// Otherwise, after phase 1: each draw's box is tested against the depth
+// pyramid built from phase 1. Phase 2 draws what phase 1 left out and may be
+// visible. Every section's result goes to `visible` for the next frame.
+// Only what the pyramid proves hidden is skipped, so the picture is the same.
+
+layout(local_size_x = 64) in;
+
+struct Command {
+    uint index_count;
+    uint instance_count;
+    uint first_index;
+    int vertex_offset;
+    uint first_instance;
+};
+
+layout(std430, set = 0, binding = 0) buffer Commands {
+    Command commands[];
+};
+
+// Per draw: its section's lowest corner relative to the camera's block, and
+// its visibility slot (as `uint` bits; NO_SLOT for none).
+layout(std430, set = 0, binding = 1) readonly buffer Bounds {
+    vec4 bounds[];
+};
+
+layout(std430, set = 0, binding = 2) buffer Visible {
+    uint visible[];
+};
+
+layout(set = 0, binding = 3) uniform sampler2D hiz;
+
+layout(push_constant) uniform Push {
+    mat4 view_proj;
+    vec2 screen;
+    uint count;
+    uint levels;
+} pc;
+
+const uint NO_SLOT = 0xFFFFFFFFu;
+// Blocks a section's quads may reach past it: models span -1..2 blocks, plant offsets 0.25.
+const float REACH = 2.0;
+// Boxes nearer than this to the eye are never culled. Above the near plane.
+const float CLOSE = 0.5;
+// How much farther than the pyramid a box must be, relative to its depth.
+// Covers the cutout pipeline's depth bias.
+const float DEPTH_MARGIN = 0.01;
+
+#ifndef SELECT
+// Whether every fragment the box `lo..hi` could make lies behind what the
+// pyramid holds.
+bool occluded(vec3 lo, vec3 hi) {
+    vec2 ndc_min = vec2(1e30);
+    vec2 ndc_max = vec2(-1e30);
+    float nearest = 0.0;
+    for (int i = 0; i < 8; i++) {
+        vec3 corner = vec3((i & 1) != 0 ? hi.x : lo.x, (i & 2) != 0 ? hi.y : lo.y,
+            (i & 4) != 0 ? hi.z : lo.z);
+        vec4 clip = pc.view_proj * vec4(corner, 1.0);
+        if (clip.w < CLOSE) {
+            return false;
+        }
+        vec3 ndc = clip.xyz / clip.w;
+        ndc_min = min(ndc_min, ndc.xy);
+        ndc_max = max(ndc_max, ndc.xy);
+        nearest = max(nearest, ndc.z);
+    }
+    vec2 edge = pc.screen - 1.0;
+    vec2 lo_px = clamp((ndc_min * 0.5 + 0.5) * pc.screen, vec2(0.0), edge);
+    vec2 hi_px = clamp((ndc_max * 0.5 + 0.5) * pc.screen, vec2(0.0), edge);
+    // A level whose texels (2^(level+1) pixels) are at least the box's
+    // span plus one, so its pixels fall in at most 2x2 of them.
+    float span = max(hi_px.x - lo_px.x, hi_px.y - lo_px.y) + 1.0;
+    int level = clamp(int(ceil(log2(span))) - 1, 0, int(pc.levels) - 1);
+    ivec2 size = textureSize(hiz, level);
+    ivec2 t0 = min(ivec2(floor(lo_px)) >> (level + 1), size - 1);
+    ivec2 t1 = min(ivec2(floor(hi_px)) >> (level + 1), size - 1);
+    if (any(greaterThan(t1 - t0, ivec2(2)))) {
+        return false;
+    }
+    float farthest = 1.0;
+    for (int y = t0.y; y <= t1.y; y++) {
+        for (int x = t0.x; x <= t1.x; x++) {
+            farthest = min(farthest, texelFetch(hiz, ivec2(x, y), level).r);
+        }
+    }
+    return nearest * (1.0 + DEPTH_MARGIN) < farthest;
+}
+#endif
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= pc.count) {
+        return;
+    }
+    vec4 b = bounds[i];
+    uint slot = floatBitsToUint(b.w);
+#ifdef SELECT
+    bool shown = slot == NO_SLOT || visible[slot] != 0u;
+    commands[i].instance_count = shown ? 1u : 0u;
+#else
+    if (slot == NO_SLOT) {
+        commands[pc.count + i].instance_count = 0u;
+        return;
+    }
+    bool hidden = occluded(b.xyz - REACH, b.xyz + 16.0 + REACH);
+    visible[slot] = hidden ? 0u : 1u;
+    bool drawn = commands[i].instance_count != 0u;
+    commands[pc.count + i].instance_count = !drawn && !hidden ? 1u : 0u;
+#endif
+}

@@ -191,21 +191,26 @@ impl RecipeDisplay {
         }
     }
 
-    /// The input slots as the crafting grid or the machine lays them out.
+    /// The input slots as the crafting grid (`grid_width` square) or the
+    /// machine lays them out (`fillGhostRecipe`).
     pub fn ghost_slots(&self, grid_width: usize) -> Vec<(usize, &SlotDisplay)> {
         match self {
             Self::Shapeless { ingredients, .. } => ingredients
                 .iter()
+                .take(grid_width * grid_width)
                 .enumerate()
                 .filter(|(_, s)| !s.is_empty())
                 .collect(),
             Self::Shaped {
-                width, ingredients, ..
-            } => ingredients
-                .iter()
-                .enumerate()
+                width,
+                height,
+                ingredients,
+                ..
+            } => place_recipe(grid_width, grid_width, *width, *height, ingredients.len())
+                .into_iter()
+                .zip(ingredients)
                 .filter(|(_, s)| !s.is_empty())
-                .map(|(i, s)| ((i / width) * grid_width + i % width, s))
+                .map(|((index, ..), s)| (index, s))
                 .collect(),
             Self::Furnace { ingredient, .. } => vec![(0, ingredient)],
             Self::Stonecutter { input, .. } => vec![(0, input)],
@@ -218,6 +223,32 @@ impl RecipeDisplay {
         }
     }
 
+    /// Each input of a crafting recipe on the recipe book's 3x3 mini grid
+    /// (`OverlayCraftingRecipeButton.calculateIngredientsPositions`): `(x, y)`
+    /// and what goes there; a furnace's one input in the middle.
+    pub fn mini_grid(&self) -> Vec<((usize, usize), &SlotDisplay)> {
+        let cells: Vec<((usize, usize), &SlotDisplay)> = match self {
+            Self::Shaped {
+                width,
+                height,
+                ingredients,
+                ..
+            } => place_recipe(3, 3, *width, *height, ingredients.len())
+                .into_iter()
+                .zip(ingredients)
+                .map(|((_, x, y), s)| ((x, y), s))
+                .collect(),
+            Self::Shapeless { ingredients, .. } => ingredients
+                .iter()
+                .enumerate()
+                .map(|(i, s)| ((i % 3, i / 3), s))
+                .collect(),
+            Self::Furnace { ingredient, .. } => vec![((1, 1), ingredient)],
+            _ => Vec::new(),
+        };
+        cells.into_iter().filter(|(_, s)| !s.is_empty()).collect()
+    }
+
     /// Whether the recipe needs more than `size` x `size` slots.
     pub fn fits(&self, size: usize) -> bool {
         match self {
@@ -226,6 +257,51 @@ impl RecipeDisplay {
             _ => true,
         }
     }
+}
+
+/// `PlaceRecipeHelper.placeRecipe`: `(grid index, x, y)` for each of the
+/// first `entries` cells of a `recipe_w x recipe_h` recipe, row by row, in a
+/// `grid_w x grid_h` grid. A recipe under half the grid wide or high is
+/// centred; the row skip and its index jumps are vanilla's, kept as they are.
+pub fn place_recipe(
+    grid_w: usize,
+    grid_h: usize,
+    recipe_w: usize,
+    recipe_h: usize,
+    entries: usize,
+) -> Vec<(usize, usize, usize)> {
+    let mut out = Vec::with_capacity(entries);
+    let mut index = 0;
+    let mut y = 0;
+    while y < grid_h {
+        let center_y = (recipe_h as f32) < grid_h as f32 / 2.0;
+        let start_y = (grid_h as f32 / 2.0 - recipe_h as f32 / 2.0).floor() as usize;
+        if center_y && start_y > y {
+            index += grid_w;
+            y += 1;
+        }
+        for x in 0..grid_w {
+            if out.len() == entries {
+                return out;
+            }
+            let center_x = (recipe_w as f32) < grid_w as f32 / 2.0;
+            let start_x = (grid_w as f32 / 2.0 - recipe_w as f32 / 2.0).floor() as usize;
+            let (span, add) = if center_x {
+                (start_x + recipe_w, start_x <= x && x < start_x + recipe_w)
+            } else {
+                (recipe_w, x < recipe_w)
+            };
+            if add {
+                out.push((index, x, y));
+            } else if span == x {
+                index += grid_w - x;
+                break;
+            }
+            index += 1;
+        }
+        y += 1;
+    }
+    out
 }
 
 #[cfg(test)]
@@ -247,6 +323,19 @@ mod tests {
     }
 
     #[test]
+    fn place_recipe_centres_what_is_under_half_the_grid() {
+        let indices = |w, h| -> Vec<usize> {
+            place_recipe(3, 3, w, h, w * h).iter().map(|p| p.0).collect()
+        };
+        assert_eq!(indices(1, 1), [4]);
+        assert_eq!(indices(1, 3), [1, 4, 7]);
+        assert_eq!(indices(3, 1), [3, 4, 5]);
+        assert_eq!(indices(2, 2), [0, 1, 3, 4]);
+        assert_eq!(indices(3, 3), (0..9).collect::<Vec<_>>());
+        assert_eq!(place_recipe(2, 2, 1, 2, 2).iter().map(|p| p.0).collect::<Vec<_>>(), [0, 2]);
+    }
+
+    #[test]
     fn a_shaped_recipe_keeps_its_shape_in_a_wider_grid() {
         let stick = SlotDisplay::Item(&Item::STICK);
         let display = RecipeDisplay::Shaped {
@@ -256,8 +345,11 @@ mod tests {
             result: SlotDisplay::Item(&Item::LADDER),
             station: SlotDisplay::Empty,
         };
+        // One wide: the middle column, as vanilla's `placeRecipe` centres it.
         let slots: Vec<usize> = display.ghost_slots(3).iter().map(|s| s.0).collect();
-        assert_eq!(slots, [0, 3]);
+        assert_eq!(slots, [1, 4]);
+        let slots: Vec<usize> = display.ghost_slots(2).iter().map(|s| s.0).collect();
+        assert_eq!(slots, [0, 2]);
         assert!(
             display.fits(2)
                 && !RecipeDisplay::Shapeless {
