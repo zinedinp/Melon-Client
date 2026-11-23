@@ -52,31 +52,6 @@ pub const fn section_to_block(section: i32) -> i32 {
     section << 4
 }
 
-/// Asks the CPU to start loading `value`'s cache line, for a read a few
-/// steps later. A hint only: no effect on any result.
-#[inline(always)]
-pub fn prefetch<T>(value: *const T) {
-    #[cfg(target_arch = "x86_64")]
-    // SAFETY: a prefetch never faults, whatever the address.
-    unsafe {
-        std::arch::x86_64::_mm_prefetch::<{ std::arch::x86_64::_MM_HINT_T0 }>(value.cast());
-    }
-    #[cfg(not(target_arch = "x86_64"))]
-    let _ = value;
-}
-
-/// [`prefetch`] for every cache line `value` spans.
-#[inline(always)]
-pub fn prefetch_all<T>(value: &T) {
-    const LINE: usize = 64;
-    let start = std::ptr::from_ref(value).cast::<u8>();
-    let first = start.addr() & !(LINE - 1);
-    let end = start.addr() + size_of::<T>().max(1);
-    for line in (first..end).step_by(LINE) {
-        prefetch(start.wrapping_add(line - start.addr()));
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
