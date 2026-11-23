@@ -304,16 +304,12 @@ pub struct DragonPose {
     pub flap_time: f32,
 }
 
-#[allow(clippy::too_many_arguments)]
+/// `EnderDragonModel.posesLimbs`: each leg `[leg, tip, foot]`.
 fn pose_limbs(
     pose: &mut ModelPose,
     bounce: f32,
-    front: PartId,
-    front_tip: PartId,
-    front_foot: PartId,
-    rear: PartId,
-    rear_tip: PartId,
-    rear_foot: PartId,
+    [front, front_tip, front_foot]: [PartId; 3],
+    [rear, rear_tip, rear_foot]: [PartId; 3],
 ) {
     pose[rear].pose.rotation.x = 1.0 + bounce * 0.1;
     pose[rear_tip].pose.rotation.x = 0.5 + bounce * 0.1;
@@ -379,22 +375,30 @@ pub fn setup_anim(parts: &DragonParts, pose: &mut ModelPose, dragon: DragonPose)
     pose_limbs(
         pose,
         bounce,
-        parts.left_front_leg,
-        parts.left_front_leg_tip,
-        parts.left_front_foot,
-        parts.left_hind_leg,
-        parts.left_hind_leg_tip,
-        parts.left_hind_foot,
+        [
+            parts.left_front_leg,
+            parts.left_front_leg_tip,
+            parts.left_front_foot,
+        ],
+        [
+            parts.left_hind_leg,
+            parts.left_hind_leg_tip,
+            parts.left_hind_foot,
+        ],
     );
     pose_limbs(
         pose,
         bounce,
-        parts.right_front_leg,
-        parts.right_front_leg_tip,
-        parts.right_front_foot,
-        parts.right_hind_leg,
-        parts.right_hind_leg_tip,
-        parts.right_hind_foot,
+        [
+            parts.right_front_leg,
+            parts.right_front_leg_tip,
+            parts.right_front_foot,
+        ],
+        [
+            parts.right_hind_leg,
+            parts.right_hind_leg_tip,
+            parts.right_hind_foot,
+        ],
     );
     let mut tail_x_rot = 0.0;
     yy = pose[parts.tail[0]].pose.offset.y;

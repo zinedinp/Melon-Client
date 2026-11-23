@@ -602,9 +602,19 @@ impl Font {
                 {
                     let draw_y = y + (BASELINE_ASCENT - ascent as f32);
                     if with_shadow {
-                        draw_list.push_rect(page_textures[page], [pen + glyph.shadow, draw_y + glyph.shadow, width, height], [u0, v0, u1, v1], shadow);
+                        draw_list.push_rect(
+                            page_textures[page],
+                            [pen + glyph.shadow, draw_y + glyph.shadow, width, height],
+                            [u0, v0, u1, v1],
+                            shadow,
+                        );
                     }
-                    draw_list.push_rect(page_textures[page], [pen, draw_y, width, height], [u0, v0, u1, v1], color);
+                    draw_list.push_rect(
+                        page_textures[page],
+                        [pen, draw_y, width, height],
+                        [u0, v0, u1, v1],
+                        color,
+                    );
                 }
                 pen += glyph.advance;
             } else {
@@ -656,8 +666,20 @@ impl Font {
                     let down = up + height;
                     let shear_top = 1.0 - 0.25 * up;
                     let shear_bottom = 1.0 - 0.25 * down;
-                    draw_list.push_rect_sheared(page_textures[page], [pen + glyph.shadow, draw_y + glyph.shadow, width, height], [shear_top, shear_bottom], [u0, v0, u1, v1], shadow);
-                    draw_list.push_rect_sheared(page_textures[page], [pen, draw_y, width, height], [shear_top, shear_bottom], [u0, v0, u1, v1], color);
+                    draw_list.push_rect_sheared(
+                        page_textures[page],
+                        [pen + glyph.shadow, draw_y + glyph.shadow, width, height],
+                        [shear_top, shear_bottom],
+                        [u0, v0, u1, v1],
+                        shadow,
+                    );
+                    draw_list.push_rect_sheared(
+                        page_textures[page],
+                        [pen, draw_y, width, height],
+                        [shear_top, shear_bottom],
+                        [u0, v0, u1, v1],
+                        color,
+                    );
                 }
                 pen += glyph.advance;
             } else {
@@ -695,8 +717,20 @@ impl Font {
                 } = glyph.kind
                 {
                     let draw_y = origin[1] + (BASELINE_ASCENT - ascent as f32);
-                    draw_list.push_rect_transformed(page_textures[page], transform, [pen + glyph.shadow, draw_y + glyph.shadow, width, height], [u0, v0, u1, v1], shadow);
-                    draw_list.push_rect_transformed(page_textures[page], transform, [pen, draw_y, width, height], [u0, v0, u1, v1], color);
+                    draw_list.push_rect_transformed(
+                        page_textures[page],
+                        transform,
+                        [pen + glyph.shadow, draw_y + glyph.shadow, width, height],
+                        [u0, v0, u1, v1],
+                        shadow,
+                    );
+                    draw_list.push_rect_transformed(
+                        page_textures[page],
+                        transform,
+                        [pen, draw_y, width, height],
+                        [u0, v0, u1, v1],
+                        color,
+                    );
                 }
                 pen += glyph.advance;
             } else {

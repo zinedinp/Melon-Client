@@ -722,8 +722,7 @@ fn queued_texture_uploads_land_without_waiting() {
                 command_pool,
                 queue,
                 image,
-                level,
-                layer,
+                (level, layer),
                 (w, h),
             )
         };
@@ -866,15 +865,13 @@ fn empty_mesh_blocks_are_released() {
 
 /// One level and layer of a sampled `R8G8B8A8` image, copied back to the
 /// host; leaves it in `SHADER_READ_ONLY_OPTIMAL` again.
-#[allow(clippy::too_many_arguments)]
 unsafe fn read_back(
     device: &ash::Device,
     mem_props: &vk::PhysicalDeviceMemoryProperties,
     command_pool: vk::CommandPool,
     queue: vk::Queue,
     image: vk::Image,
-    level: u32,
-    layer: u32,
+    (level, layer): (u32, u32),
     (width, height): (u32, u32),
 ) -> image::RgbaImage {
     let size = (width * height * 4) as u64;

@@ -40,10 +40,9 @@ pub(super) struct Image {
 }
 
 impl Blur {
-    #[allow(clippy::too_many_arguments)]
+    /// The physical device tells whether `format` can be blitted down to half size.
     pub(super) unsafe fn new(
-        instance: &ash::Instance,
-        physical_device: vk::PhysicalDevice,
+        (instance, physical_device): (&ash::Instance, vk::PhysicalDevice),
         device: &ash::Device,
         format: vk::Format,
         frame_pass: vk::RenderPass,

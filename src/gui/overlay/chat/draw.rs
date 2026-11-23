@@ -92,11 +92,23 @@ impl Chat {
                     [r, g, b, alpha * text_opacity],
                 );
             }
-            self.draw_line(draw_list, glyphs, &line.content, text_top, alpha * text_opacity);
+            self.draw_line(
+                draw_list,
+                glyphs,
+                &line.content,
+                text_top,
+                alpha * text_opacity,
+            );
         }
         if queue > 0 {
             let text = StyledText::plain(&lang.format("chat.queue", &[&queue.to_string()]));
-            self.draw_line(draw_list, glyphs, &text, chat_bottom + 1.0, 0.5 * text_opacity);
+            self.draw_line(
+                draw_list,
+                glyphs,
+                &text,
+                chat_bottom + 1.0,
+                0.5 * text_opacity,
+            );
         }
         if focused && !self.lines.is_empty() {
             let total = self.lines.len() as f32;

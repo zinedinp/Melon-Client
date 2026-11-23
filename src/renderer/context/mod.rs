@@ -100,8 +100,7 @@ impl Renderer {
             super::descriptor_pools::DescriptorPools::new(&device, MAX_TEXTURES)?;
         let samplers = resources::create_samplers(&device)?;
         let blur = blur::Blur::new(
-            &instance,
-            gpu.physical,
+            (&instance, gpu.physical),
             &device,
             surface_format,
             passes.clear,

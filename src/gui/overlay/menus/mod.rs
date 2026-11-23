@@ -77,7 +77,17 @@ impl MenuDraw<'_, '_> {
         at: (f32, f32),
         size: (f32, f32),
     ) {
-        sprite.draw_region(self.ui.draw_list, sprite_size, tex, [self.frame.left + at.0, self.frame.top + at.1, size.0, size.1]);
+        sprite.draw_region(
+            self.ui.draw_list,
+            sprite_size,
+            tex,
+            [
+                self.frame.left + at.0,
+                self.frame.top + at.1,
+                size.0,
+                size.1,
+            ],
+        );
     }
 
     /// Styled label, default `color` (`0xAARRGGBB`) for runs without their own.

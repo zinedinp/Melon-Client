@@ -458,7 +458,17 @@ impl Overlay for InventoryOverlay {
 
 /// The texture an [`EntityPreview`] was drawn into, over its box.
 pub fn push_entity_preview(draw_list: &mut DrawList, texture: TextureId, preview: &EntityPreview) {
-    draw_list.push_rect(texture, [preview.x0, preview.y0, preview.x1 - preview.x0, preview.y1 - preview.y0], [0.0, 0.0, 1.0, 1.0], [1.0; 4]);
+    draw_list.push_rect(
+        texture,
+        [
+            preview.x0,
+            preview.y0,
+            preview.x1 - preview.x0,
+            preview.y1 - preview.y0,
+        ],
+        [0.0, 0.0, 1.0, 1.0],
+        [1.0; 4],
+    );
 }
 
 /// A drag over slots in progress, for previewing what it leaves in each.

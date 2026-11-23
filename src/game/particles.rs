@@ -269,8 +269,7 @@ impl InWorld {
         let mut out = Vec::new();
         client::weather::rain_splashes(
             &world,
-            center,
-            i32::from(config.weather_radius),
+            (center, i32::from(config.weather_radius)),
             self.weather.rain,
             config.particles,
             &rains_at,
@@ -352,8 +351,7 @@ impl InWorld {
         };
         self.particles.meshes.draws(
             renderer,
-            &assets.root,
-            assets.atlas,
+            (&assets.root, assets.atlas),
             self.particles.engine.quads(),
             &self.level,
             &view,

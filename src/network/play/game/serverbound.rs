@@ -19,23 +19,20 @@ pub fn write_creative_slot(buf: &mut Vec<u8>, slot: i16, stack: &ItemStack) -> R
         .map_err(|e| anyhow::anyhow!("item stack: {e}"))
 }
 
-/// `ServerboundContainerClickPacket`.
-#[allow(clippy::too_many_arguments)]
+/// `ServerboundContainerClickPacket`: `click` with the stacks it `changed`.
 pub fn write_container_click(
     buf: &mut Vec<u8>,
     container: i32,
     state_id: i32,
-    slot: i16,
-    button: i8,
-    click: crate::world::inventory::ClickType,
+    click: &crate::world::inventory::Click,
     changed: &[(i16, &ItemStack)],
     carried: &ItemStack,
 ) -> Result<()> {
     write_var_int(buf, container)?;
     write_var_int(buf, state_id)?;
-    buf.write_all(&slot.to_be_bytes())?;
-    buf.write_all(&button.to_be_bytes())?;
-    write_var_int(buf, click as i32)?;
+    buf.write_all(&click.slot.to_be_bytes())?;
+    buf.write_all(&click.button.to_be_bytes())?;
+    write_var_int(buf, click.kind as i32)?;
     write_var_int(buf, changed.len() as i32)?;
     for (slot, stack) in changed {
         buf.write_all(&slot.to_be_bytes())?;

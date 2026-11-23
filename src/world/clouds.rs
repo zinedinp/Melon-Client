@@ -220,7 +220,14 @@ fn build_with(texture: &CloudTexture, frame: CloudFrame, anchored: bool) -> Vec<
     };
     let relative_bottom = (f64::from(frame.bottom_y) - frame.camera.y) as f32;
     let shift = if anchored { frame.camera.y as f32 } else { 0.0 };
-    let fancy = frame.status == CloudStatus::Fancy;
+    let cells = Cells {
+        texture,
+        cell: (cell_x, cell_z),
+        in_cell: (x_in_cell, z_in_cell),
+        bottom: relative_bottom,
+        shift,
+        fancy: frame.status == CloudStatus::Fancy,
+    };
     let mut out = Vec::new();
     for ring in 0..=2 * radius_cells {
         for rel_x in -ring..=ring {
@@ -232,52 +239,35 @@ fn build_with(texture: &CloudTexture, frame: CloudFrame, anchored: bool) -> Vec<
                 continue;
             }
             if rel_z != 0 {
-                push_cell(
-                    &mut out,
-                    texture,
-                    cell_x,
-                    cell_z,
-                    rel_x,
-                    -rel_z,
-                    x_in_cell,
-                    z_in_cell,
-                    relative_bottom,
-                    shift,
-                    fancy,
-                );
+                push_cell(&mut out, &cells, rel_x, -rel_z);
             }
-            push_cell(
-                &mut out,
-                texture,
-                cell_x,
-                cell_z,
-                rel_x,
-                rel_z,
-                x_in_cell,
-                z_in_cell,
-                relative_bottom,
-                shift,
-                fancy,
-            );
+            push_cell(&mut out, &cells, rel_x, rel_z);
         }
     }
     out
 }
 
-#[allow(clippy::too_many_arguments)]
-fn push_cell(
-    out: &mut Vec<WorldVertex>,
-    texture: &CloudTexture,
-    cell_x: i32,
-    cell_z: i32,
-    rel_x: i32,
-    rel_z: i32,
-    x_in_cell: f32,
-    z_in_cell: f32,
+/// What the cells of one cloud mesh share: the camera's cell and where in it
+/// the camera is, and the clouds' height.
+struct Cells<'a> {
+    texture: &'a CloudTexture,
+    cell: (i32, i32),
+    in_cell: (f32, f32),
     bottom: f32,
     shift: f32,
     fancy: bool,
-) {
+}
+
+/// The cell `rel_x`, `rel_z` cells from the camera's.
+fn push_cell(out: &mut Vec<WorldVertex>, cells: &Cells, rel_x: i32, rel_z: i32) {
+    let Cells {
+        texture,
+        cell: (cell_x, cell_z),
+        in_cell: (x_in_cell, z_in_cell),
+        bottom,
+        shift,
+        fancy,
+    } = *cells;
     let color = texture.cell(cell_x + rel_x, cell_z + rel_z);
     if color == 0 {
         return;

@@ -282,21 +282,16 @@ impl Session {
     }
 
     /// `ServerboundContainerClickPacket`, see [`game::write_container_click`].
-    #[allow(clippy::too_many_arguments)]
     pub fn send_container_click(
         &self,
         container: i32,
         state_id: i32,
-        slot: i16,
-        button: i8,
-        click: crate::world::inventory::ClickType,
+        click: &crate::world::inventory::Click,
         changed: &[(i16, &pumpkin_data::item_stack::ItemStack)],
         carried: &pumpkin_data::item_stack::ItemStack,
     ) {
         self.send(game::id::SB_CONTAINER_CLICK, |buf| {
-            game::write_container_click(
-                buf, container, state_id, slot, button, click, changed, carried,
-            )
+            game::write_container_click(buf, container, state_id, click, changed, carried)
         });
     }
 

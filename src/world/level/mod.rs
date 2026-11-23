@@ -294,8 +294,7 @@ impl Level {
     ) -> Vec<FinishedMesh> {
         let built = self.meshing.run(
             &self.chunks,
-            models,
-            fluids,
+            (models, fluids),
             camera,
             self.height,
             self.cardinal,

@@ -348,18 +348,20 @@ impl Hud {
     }
 
     /// Draws the HUD onto a `size` GUI screen.
-    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &self,
         draw_list: &mut DrawList,
         textures: &HudTextures,
         painter: ItemPainter,
-        inventory: &Inventory,
-        status: &PlayerStatus,
-        attack: AttackCooldown,
-        first_person: bool,
+        player: HudPlayer,
         size: (f32, f32),
     ) {
+        let HudPlayer {
+            inventory,
+            status,
+            attack,
+            first_person,
+        } = player;
         let (width, height) = size;
         if first_person && !status.game_mode.is_spectator() {
             push_crosshair(draw_list, textures.crosshair, width, height);
@@ -473,8 +475,23 @@ fn push_hotbar(
         textures
             .attack_hotbar_background
             .draw(draw_list, x, y, 18.0, 18.0);
-        textures.attack_hotbar_progress.draw_region(draw_list, [18.0, 18.0], [0.0, 18.0 - progress], [x, y + 18.0 - progress, 18.0, progress]);
+        textures.attack_hotbar_progress.draw_region(
+            draw_list,
+            [18.0, 18.0],
+            [0.0, 18.0 - progress],
+            [x, y + 18.0 - progress, 18.0, progress],
+        );
     }
+}
+
+/// What the HUD shows of the player.
+#[derive(Clone, Copy)]
+pub struct HudPlayer<'a> {
+    pub inventory: &'a Inventory,
+    pub status: &'a PlayerStatus,
+    pub attack: AttackCooldown,
+    /// The crosshair shows only in first person.
+    pub first_person: bool,
 }
 
 /// What the attack cooldown shows: `Player.getAttackStrengthScale(0)`
@@ -514,7 +531,12 @@ fn push_crosshair_cooldown(
     textures
         .attack_crosshair_background
         .draw(draw_list, x, y, 16.0, 4.0);
-    textures.attack_crosshair_progress.draw_region(draw_list, [16.0, 4.0], [0.0, 0.0], [x, y, progress, 4.0]);
+    textures.attack_crosshair_progress.draw_region(
+        draw_list,
+        [16.0, 4.0],
+        [0.0, 0.0],
+        [x, y, progress, 4.0],
+    );
     draw_list.set_blend(BlendMode::Alpha);
 }
 
@@ -533,7 +555,12 @@ fn push_jump_bar(
         .draw(draw_list, left, top, 182.0, 5.0);
     let progress = (charge * 181.0).floor() + if charge > 0.0 { 1.0 } else { 0.0 };
     if progress > 0.0 {
-        textures.jump_progress.draw_region(draw_list, [182.0, 5.0], [0.0, 0.0], [left, top, progress.min(182.0), 5.0]);
+        textures.jump_progress.draw_region(
+            draw_list,
+            [182.0, 5.0],
+            [0.0, 0.0],
+            [left, top, progress.min(182.0), 5.0],
+        );
     }
 }
 
@@ -555,7 +582,12 @@ fn push_experience(
         .floor()
         .min(182.0);
     if progress > 0.0 {
-        textures.experience_progress.draw_region(draw_list, [182.0, 5.0], [0.0, 0.0], [left, top, progress, 5.0]);
+        textures.experience_progress.draw_region(
+            draw_list,
+            [182.0, 5.0],
+            [0.0, 0.0],
+            [left, top, progress, 5.0],
+        );
     }
     if status.experience_level > 0 {
         let (font, pages) = (painter.font, painter.font_textures);

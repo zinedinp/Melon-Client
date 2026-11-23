@@ -210,7 +210,13 @@ impl GuiSprite {
     }
 
     /// `blitSprite` with a texture region: `rect` shows the `sprite_size` sprite from `tex` on.
-    pub fn draw_region(&self, list: &mut DrawList, sprite_size: [f32; 2], tex: [f32; 2], rect: [f32; 4]) {
+    pub fn draw_region(
+        &self,
+        list: &mut DrawList,
+        sprite_size: [f32; 2],
+        tex: [f32; 2],
+        rect: [f32; 4],
+    ) {
         let [x, y, w, h] = rect;
         let [sw, sh] = sprite_size;
         let [tx, ty] = tex;

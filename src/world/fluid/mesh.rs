@@ -16,11 +16,13 @@ use super::state::{FluidKind, FluidState, fluid_of};
 use super::{FluidSprites, MAX_FLUID_HEIGHT, OFFSET};
 use crate::math::angle::{self, HALF_PI};
 
-/// What the fluid mesher looks up around one block.
-struct Around<'a> {
-    neighborhood: &'a Neighborhood<'a>,
-    section: usize,
-    pos: [i32; 3],
+/// What the fluid mesher looks up around one block: the block at `pos` in
+/// section `section` of `neighborhood`.
+#[derive(Clone, Copy)]
+pub struct Around<'a> {
+    pub neighborhood: &'a Neighborhood<'a>,
+    pub section: usize,
+    pub pos: [i32; 3],
 }
 
 impl Around<'_> {
@@ -218,25 +220,19 @@ fn scaled(color: [f32; 3], shade: f32) -> [f32; 3] {
     color.map(|c| c * shade)
 }
 
-/// `FluidRenderer.tesselate` for the fluid in section `section`'s block.
-#[allow(clippy::too_many_arguments)]
+/// `FluidRenderer.tesselate` for the fluid of block `state`, shaded by
+/// `cardinal` per face.
 pub fn mesh(
-    neighborhood: &Neighborhood,
-    section: usize,
-    pos: [i32; 3],
+    around: Around,
     origin: [f32; 3],
     state: u16,
-    fluid: FluidState,
-    sprites: &FluidSprites,
-    cardinal: &[f32; 6],
+    (sprites, cardinal): (&FluidSprites, &[f32; 6]),
     water_tint: [f32; 3],
     solid: &mut Vec<Vertex>,
     translucent: &mut Vec<Vertex>,
 ) {
-    let around = Around {
-        neighborhood,
-        section,
-        pos,
+    let Some(fluid) = fluid_of(state) else {
+        return;
     };
     let kind = fluid.kind;
     let same = |f: Option<FluidState>| f.is_some_and(|f| f.kind == kind);
@@ -429,18 +425,18 @@ mod tests {
         let chunk = chunk_with(blocks);
         let neighborhood = Neighborhood::alone(&chunk);
         let water = Block::WATER.default_state.id.as_u16();
-        let fluid = fluid_of(water).unwrap();
         let mut translucent = Vec::new();
         let mut solid = Vec::new();
+        let around = Around {
+            neighborhood: &neighborhood,
+            section: 0,
+            pos: [4, 4, 4],
+        };
         mesh(
-            &neighborhood,
-            0,
-            [4, 4, 4],
+            around,
             [4.0, 4.0, 4.0],
             water,
-            fluid,
-            &sprites(),
-            &[1.0; 6],
+            (&sprites(), &[1.0; 6]),
             crate::world::fluid::WATER_TINT,
             &mut solid,
             &mut translucent,
@@ -526,18 +522,18 @@ mod tests {
         let chunk = chunk_with(&[]);
         let neighborhood = Neighborhood::alone(&chunk);
         let water = Block::WATER.default_state.id.as_u16();
-        let fluid = fluid_of(water).unwrap();
         let top_shade = |cardinal: &[f32; 6]| {
             let (mut translucent, mut solid) = (Vec::new(), Vec::new());
+            let around = Around {
+                neighborhood: &neighborhood,
+                section: 0,
+                pos: [4, 4, 4],
+            };
             mesh(
-                &neighborhood,
-                0,
-                [4, 4, 4],
+                around,
                 [4.0, 4.0, 4.0],
                 water,
-                fluid,
-                &sprites(),
-                cardinal,
+                (&sprites(), cardinal),
                 crate::world::fluid::WATER_TINT,
                 &mut solid,
                 &mut translucent,

@@ -272,7 +272,15 @@ impl PlayerTabOverlay {
             );
             if frame.show_heads {
                 let tint = [1.0; 4];
-                draw_face(draw_list, entry.skin, [x as f32, row_y as f32], 8.0, entry.hat, entry.flip, tint);
+                draw_face(
+                    draw_list,
+                    entry.skin,
+                    [x as f32, row_y as f32],
+                    8.0,
+                    entry.hat,
+                    entry.flip,
+                    tint,
+                );
                 x += 9;
             }
             let mut name_paint = paint;
@@ -294,8 +302,7 @@ impl PlayerTabOverlay {
                             entry.id,
                             value,
                             row_y,
-                            score_left,
-                            score_right,
+                            (score_left, score_right),
                         );
                     } else if let Some((text, width)) = &scores[i] {
                         let at = (score_right - width) as f32;
@@ -319,8 +326,7 @@ impl PlayerTabOverlay {
         }
     }
 
-    /// `extractTablistHearts`.
-    #[allow(clippy::too_many_arguments)]
+    /// `extractTablistHearts`, between `left` and `right`.
     fn draw_hearts(
         &mut self,
         draw_list: &mut DrawList,
@@ -328,8 +334,7 @@ impl PlayerTabOverlay {
         id: uuid::Uuid,
         score: i32,
         y: i32,
-        left: i32,
-        right: i32,
+        (left, right): (i32, i32),
     ) {
         let health = self
             .health

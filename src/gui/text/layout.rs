@@ -70,7 +70,12 @@ fn draw_glyphs(
                     for quad in [Some(quads.face), quads.hat].into_iter().flatten() {
                         if paint.shadow && shadow[3] > 0.0 {
                             let (dx, dy) = (font::SHADOW_OFFSET, font::SHADOW_OFFSET);
-                            draw_list.push_rect(quad.texture, [pen + dx, y - 1.0 + dy, 8.0, 8.0], quad.uv, shadow);
+                            draw_list.push_rect(
+                                quad.texture,
+                                [pen + dx, y - 1.0 + dy, 8.0, 8.0],
+                                quad.uv,
+                                shadow,
+                            );
                         }
                         draw_list.push_rect(quad.texture, [pen, y - 1.0, 8.0, 8.0], quad.uv, color);
                     }
@@ -106,9 +111,20 @@ fn draw_glyphs(
                 let mut glyph_at = |dx: f32, dy: f32, color: [f32; 4]| {
                     if style.italic {
                         let up = top - y;
-                        draw_list.push_rect_sheared(texture, [pen + dx, top + dy, width, height], [1.0 - 0.25 * up, 1.0 - 0.25 * (up + height)], uv, color);
+                        draw_list.push_rect_sheared(
+                            texture,
+                            [pen + dx, top + dy, width, height],
+                            [1.0 - 0.25 * up, 1.0 - 0.25 * (up + height)],
+                            uv,
+                            color,
+                        );
                     } else {
-                        draw_list.push_rect(texture, [pen + dx, top + dy, width, height], uv, color);
+                        draw_list.push_rect(
+                            texture,
+                            [pen + dx, top + dy, width, height],
+                            uv,
+                            color,
+                        );
                     }
                 };
                 let bold = if style.bold { 2 } else { 1 };

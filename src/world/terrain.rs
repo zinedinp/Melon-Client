@@ -537,20 +537,21 @@ fn fill_section(
                         layer.groups[group].push(terrain);
                     }
                 });
-                if let Some(fluid) = fluid {
+                if fluid.is_some() {
                     let origin = [x as f32, (base_y + y) as f32, z as f32];
                     let water_tint = tints
                         .color(TintKind::Water, pos)
                         .map(|c| f32::from(c) / 255.0);
-                    fluid::mesh(
+                    let around = fluid::Around {
                         neighborhood,
-                        s,
-                        [x, y, z],
+                        section: s,
+                        pos: [x, y, z],
+                    };
+                    fluid::mesh(
+                        around,
                         origin,
                         id,
-                        fluid,
-                        context.fluids,
-                        &context.cardinal,
+                        (context.fluids, &context.cardinal),
                         water_tint,
                         &mut lava.groups[SLANTED],
                         translucent,

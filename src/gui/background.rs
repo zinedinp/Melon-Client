@@ -9,7 +9,12 @@ use crate::renderer::quad::DrawList;
 pub const CLEAR_COLOR: [f32; 4] = [0.02, 0.02, 0.04, 1.0];
 
 pub fn push_gradient(draw_list: &mut DrawList, white: TextureId, width: f32, height: f32) {
-    draw_list.push_vgradient(white, [0.0, 0.0, width, height], [0.09, 0.09, 0.14, 1.0], [0.02, 0.02, 0.04, 1.0]);
+    draw_list.push_vgradient(
+        white,
+        [0.0, 0.0, width, height],
+        [0.09, 0.09, 0.14, 1.0],
+        [0.02, 0.02, 0.04, 1.0],
+    );
 }
 
 /// `Screen.extractTransparentBackground`.
@@ -19,7 +24,12 @@ pub fn push_transparent_background(
     width: f32,
     height: f32,
 ) {
-    draw_list.push_vgradient(white, [0.0, 0.0, width, height], argb(0xC010_1010), argb(0xD010_1010));
+    draw_list.push_vgradient(
+        white,
+        [0.0, 0.0, width, height],
+        argb(0xC010_1010),
+        argb(0xD010_1010),
+    );
 }
 
 /// `Screen.extractBackground` on every non-`TitleScreen` menu.
@@ -36,7 +46,12 @@ pub fn push_menu_overlay_rect(
     width: f32,
     height: f32,
 ) {
-    draw_list.push_rect(white, [x, y, width, height], [0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 0.0, 64.0 / 255.0]);
+    draw_list.push_rect(
+        white,
+        [x, y, width, height],
+        [0.0, 0.0, 1.0, 1.0],
+        [0.0, 0.0, 0.0, 64.0 / 255.0],
+    );
 }
 
 /// `menu_list_background.png`'s tile size.
@@ -53,7 +68,22 @@ pub fn push_list_background(
     width: f32,
 ) {
     let height = (bottom - top).max(0.0);
-    draw_list.push_rect(assets.list_background, [0.0, top, width, height], [0.0, 0.0, width / LIST_TILE, height / LIST_TILE], [1.0; 4]);
-    draw_list.push_rect_tiled_x(assets.header_separator, [0.0, top - 2.0, width, 2.0], SEPARATOR_TILE, [1.0; 4]);
-    draw_list.push_rect_tiled_x(assets.footer_separator, [0.0, bottom, width, 2.0], SEPARATOR_TILE, [1.0; 4]);
+    draw_list.push_rect(
+        assets.list_background,
+        [0.0, top, width, height],
+        [0.0, 0.0, width / LIST_TILE, height / LIST_TILE],
+        [1.0; 4],
+    );
+    draw_list.push_rect_tiled_x(
+        assets.header_separator,
+        [0.0, top - 2.0, width, 2.0],
+        SEPARATOR_TILE,
+        [1.0; 4],
+    );
+    draw_list.push_rect_tiled_x(
+        assets.footer_separator,
+        [0.0, bottom, width, 2.0],
+        SEPARATOR_TILE,
+        [1.0; 4],
+    );
 }

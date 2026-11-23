@@ -106,7 +106,12 @@ fn draw_plain_box(draw_list: &mut DrawList, white: TextureId, text: [f32; 4]) {
     draw_list.push_fill(white, left + w, top, 1.0, h, background);
     let side = [frame_top, frame_bottom];
     draw_list.push_vgradient(white, [left, top + 1.0, 1.0, h - 2.0], side[0], side[1]);
-    draw_list.push_vgradient(white, [left + w - 1.0, top + 1.0, 1.0, h - 2.0], side[0], side[1]);
+    draw_list.push_vgradient(
+        white,
+        [left + w - 1.0, top + 1.0, 1.0, h - 2.0],
+        side[0],
+        side[1],
+    );
     draw_list.push_fill(white, left, top, w, 1.0, frame_top);
     draw_list.push_fill(white, left, top + h - 1.0, w, 1.0, frame_bottom);
 }

@@ -317,8 +317,7 @@ impl ClientEntity {
             hits,
             landed_on,
             false,
-            GRAVITY,
-            f64::from(AIR_DRAG),
+            (GRAVITY, f64::from(AIR_DRAG)),
             false,
         );
     }

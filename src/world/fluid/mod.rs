@@ -3,7 +3,7 @@
 mod mesh;
 mod state;
 
-pub use mesh::mesh;
+pub use mesh::{Around, mesh};
 pub use state::{FluidKind, FluidState, fluid_of};
 
 /// Atlas rectangles of the fluid textures.

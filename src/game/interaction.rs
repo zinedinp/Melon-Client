@@ -897,9 +897,7 @@ impl InWorld {
         self.joined.session.send_container_click(
             container,
             menu.state_id,
-            click.slot,
-            click.button,
-            click.kind,
+            &click,
             &changed,
             self.inventory.carried(),
         );

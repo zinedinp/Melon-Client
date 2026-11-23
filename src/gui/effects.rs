@@ -109,11 +109,21 @@ impl ScreenEffects {
         }
         if let Some(color) = self.vignette.map(vignette_color).filter(|&c| darkens(c)) {
             list.set_blend(BlendMode::Vignette);
-            list.push_rect(textures.vignette, [0.0, 0.0, width, height], [0.0, 0.0, 1.0, 1.0], color);
+            list.push_rect(
+                textures.vignette,
+                [0.0, 0.0, width, height],
+                [0.0, 0.0, 1.0, 1.0],
+                color,
+            );
             list.set_blend(BlendMode::Alpha);
         }
         if self.frozen > 0.0 {
-            list.push_rect(textures.powder_snow, [0.0, 0.0, width, height], [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, self.frozen.clamp(0.0, 1.0)]);
+            list.push_rect(
+                textures.powder_snow,
+                [0.0, 0.0, width, height],
+                [0.0, 0.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, self.frozen.clamp(0.0, 1.0)],
+            );
         }
         if self.portal > 0.0
             && let Some(sprite) = self.portal_sprite
@@ -230,7 +240,12 @@ fn nausea_overlay(list: &mut DrawList, texture: TextureId, size: (f32, f32), str
     let strength = strength.clamp(0.0, 1.0);
     let [x0, y0, x1, y1] = nausea_rect(size, strength);
     list.set_blend(BlendMode::Additive);
-    list.push_rect(texture, [x0, y0, x1 - x0, y1 - y0], [0.0, 0.0, 1.0, 1.0], [0.2 * strength, 0.4 * strength, 0.2 * strength, 1.0]);
+    list.push_rect(
+        texture,
+        [x0, y0, x1 - x0, y1 - y0],
+        [0.0, 0.0, 1.0, 1.0],
+        [0.2 * strength, 0.4 * strength, 0.2 * strength, 1.0],
+    );
     list.set_blend(BlendMode::Alpha);
 }
 

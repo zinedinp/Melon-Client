@@ -8,12 +8,10 @@ use crate::settings::options::ParticleStatus;
 use crate::world::fluid::{self, FluidKind};
 use crate::world::java_random::JavaRandom;
 
-/// The rain's splashes this tick.
-#[allow(clippy::too_many_arguments)]
+/// The rain's splashes this tick, up to `radius` blocks around `camera`.
 pub fn rain_splashes(
     world: &World,
-    camera: IVec3,
-    radius: i32,
+    (camera, radius): (IVec3, i32),
     rain: f32,
     status: ParticleStatus,
     rains_at: &dyn Fn(IVec3) -> bool,

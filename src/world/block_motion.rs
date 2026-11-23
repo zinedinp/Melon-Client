@@ -89,16 +89,15 @@ pub fn bounciness(block: &Block) -> f32 {
     }
 }
 
-/// What a move that hit something leaves of the velocity.
-#[allow(clippy::too_many_arguments)]
+/// What a move that hit something leaves of the velocity, for a mover with
+/// that `gravity` and `air_drag`.
 pub fn restituted(
     current: DVec3,
     moved_y: f64,
     [x_hit, z_hit, vertical_hit]: [bool; 3],
     landed_on: Option<&Block>,
     suppress: bool,
-    gravity: f64,
-    air_drag: f64,
+    (gravity, air_drag): (f64, f64),
     living: bool,
 ) -> DVec3 {
     let mut after = current;
@@ -169,7 +168,7 @@ mod tests {
         let fall = DVec3::new(0.0, -0.5, 0.0);
         let hit = [false, false, true];
         let up = |block: &Block, suppress| {
-            restituted(fall, -0.4, hit, Some(block), suppress, 0.08, 0.98, true).y
+            restituted(fall, -0.4, hit, Some(block), suppress, (0.08, 0.98), true).y
         };
         assert!(up(&Block::SLIME_BLOCK, false) > 0.3);
         assert_eq!(up(&Block::SLIME_BLOCK, true), 0.0);

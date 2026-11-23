@@ -207,12 +207,10 @@ impl MeshQueue {
     }
 
     /// Builds the sections the Chunk Builder wants now and takes what the workers finished.
-    #[allow(clippy::too_many_arguments)]
     pub fn run(
         &mut self,
         chunks: &Chunks,
-        models: &Arc<BlockModels>,
-        fluids: FluidSprites,
+        (models, fluids): (&Arc<BlockModels>, FluidSprites),
         camera: Vec3,
         height: Height,
         cardinal: [f32; 6],
@@ -512,8 +510,7 @@ mod tests {
         let tints = crate::world::block_tint::TintSettings::plains();
         let built = queue.run(
             &chunks,
-            models,
-            fluids,
+            (models, fluids),
             Vec3::new(8.0, -40.0, 8.0),
             Height::OVERWORLD,
             [1.0; 6],
@@ -537,8 +534,7 @@ mod tests {
         let tints = crate::world::block_tint::TintSettings::plains();
         let built = queue.run(
             &chunks,
-            models,
-            fluids,
+            (models, fluids),
             Vec3::new(8.0, 100.0, 8.0),
             Height::OVERWORLD,
             [1.0; 6],
@@ -570,8 +566,7 @@ mod tests {
         let run = |queue: &mut MeshQueue, chunks: &Chunks| {
             queue.run(
                 chunks,
-                models,
-                fluids,
+                (models, fluids),
                 Vec3::new(8.0, 0.0, 8.0),
                 Height::OVERWORLD,
                 [1.0; 6],

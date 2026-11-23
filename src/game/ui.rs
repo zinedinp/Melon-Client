@@ -44,30 +44,26 @@ impl InWorld {
                     size.0,
                 );
             }
-            self.hud.draw(
-                draw_list,
-                &assets.hud,
-                painter,
-                &self.inventory,
-                &self.status,
-                crate::gui::hud::AttackCooldown {
+            let player = crate::gui::hud::HudPlayer {
+                inventory: &self.inventory,
+                status: &self.status,
+                attack: crate::gui::hud::AttackCooldown {
                     strength: self.hands.attack_strength(self.inventory.selected_stack()),
                     indicator: config.attack_indicator,
                     main_arm: config.main_hand,
                     target_ready: self.attack_target_ready(),
                 },
                 // `Hud.extractCrosshair`: the 3D one stands in for it.
-                self.camera_mode == CameraMode::FirstPerson
+                first_person: self.camera_mode == CameraMode::FirstPerson
                     && !self.debug.entries().is_enabled(
                         crate::gui::hud::debug_entries::Entry::ThreeDimensionalCrosshair,
                     ),
-                size,
-            );
+            };
+            self.hud.draw(draw_list, &assets.hud, painter, player, size);
             if self.game_mode.current.is_spectator() {
                 self.spectator_menu.draw(
                     draw_list,
-                    &assets.spectator,
-                    assets.hud.hotbar_sprites(),
+                    (&assets.spectator, assets.hud.hotbar_sprites()),
                     &|id| assets.players.for_profile(id).texture,
                     painter,
                     lang,

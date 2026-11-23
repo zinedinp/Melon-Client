@@ -58,7 +58,14 @@ impl ShadowMeshes {
             seen: false,
         });
         shadow.seen = true;
-        let vertices = shadow::quads(scene.level, feet, scene.camera, radius, strength, scene.light);
+        let vertices = shadow::quads(
+            scene.level,
+            feet,
+            scene.camera,
+            radius,
+            strength,
+            scene.light,
+        );
         if vertices != shadow.vertices {
             if let Some(old) = shadow.mesh.take() {
                 renderer.free_mesh(old);

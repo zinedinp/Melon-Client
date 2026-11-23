@@ -151,9 +151,19 @@ impl Screen for TitleScreen {
         let (width, height) = (ui.width, ui.height);
         let assets = ui.assets;
         let logo_x = (width / 2.0 - 128.0).round();
-        ui.draw_list.push_rect(assets.logo, [logo_x, 30.0, 256.0, 44.0], [0.0, 0.0, 1.0, 44.0 / 64.0], [1.0; 4]);
+        ui.draw_list.push_rect(
+            assets.logo,
+            [logo_x, 30.0, 256.0, 44.0],
+            [0.0, 0.0, 1.0, 44.0 / 64.0],
+            [1.0; 4],
+        );
         let edition_x = (width / 2.0 - 64.0).round();
-        ui.draw_list.push_rect(assets.edition, [edition_x, 67.0, 128.0, 14.0], [0.0, 0.0, 1.0, 14.0 / 16.0], [1.0; 4]);
+        ui.draw_list.push_rect(
+            assets.edition,
+            [edition_x, 67.0, 128.0, 14.0],
+            [0.0, 0.0, 1.0, 14.0 / 16.0],
+            [1.0; 4],
+        );
 
         if !self.splash_text.is_empty() {
             let text_width = ui.text_width(&self.splash_text);

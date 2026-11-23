@@ -348,8 +348,7 @@ impl PlayerState {
                 [collided_x, collided_z, vertical_hit],
                 landed_on,
                 sneaking,
-                self.effective_gravity(),
-                f64::from(air_drag),
+                (self.effective_gravity(), f64::from(air_drag)),
                 true,
             );
         }

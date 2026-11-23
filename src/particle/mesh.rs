@@ -111,8 +111,7 @@ pub fn build(
                     quad(
                         batch,
                         center,
-                        q * Vec3::X,
-                        q * Vec3::Y,
+                        (q * Vec3::X, q * Vec3::Y),
                         size,
                         p.look.uv,
                         rgba,
@@ -128,8 +127,7 @@ pub fn build(
                     quad(
                         batch,
                         center,
-                        q * Vec3::X,
-                        q * Vec3::Y,
+                        (q * Vec3::X, q * Vec3::Y),
                         size,
                         p.look.uv,
                         rgba,
@@ -148,19 +146,18 @@ pub fn build(
                     right = r * c + u * s;
                     up = u * c - r * s;
                 }
-                quad(batch, center, right, up, size, p.look.uv, rgba, light);
+                quad(batch, center, (right, up), size, p.look.uv, rgba, light);
             }
         }
     }
 }
 
-/// One quad, counter-clockwise as the camera sees it.
-#[allow(clippy::too_many_arguments)]
+/// One quad, counter-clockwise as the camera sees it: `size` along `right`
+/// and `up` from `center`.
 fn quad(
     batch: &mut Batch,
     center: Vec3,
-    right: Vec3,
-    up: Vec3,
+    (right, up): (Vec3, Vec3),
     size: f32,
     [u0, v0, u1, v1]: [f32; 4],
     rgba: [f32; 4],
@@ -192,13 +189,12 @@ pub struct ParticleMeshes {
 }
 
 impl ParticleMeshes {
-    /// Uploads this frame's quads and adds their draws to `out`.
-    #[allow(clippy::too_many_arguments)]
+    /// Uploads this frame's quads and adds their draws to `out`. Item textures
+    /// load from `assets_root`; block particles use the `blocks` atlas.
     pub fn draws(
         &mut self,
         renderer: &mut Renderer,
-        assets_root: &Path,
-        blocks: TextureId,
+        (assets_root, blocks): (&Path, TextureId),
         particles: &[Particle],
         level: &Level,
         view: &View,

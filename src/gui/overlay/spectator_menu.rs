@@ -231,12 +231,10 @@ impl SpectatorMenu {
     }
 
     /// `extractHotbar` and `extractAction`.
-    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &mut self,
         draw_list: &mut DrawList,
-        textures: &SpectatorTextures,
-        hotbar: (GuiSprite, GuiSprite),
+        (textures, hotbar): (&SpectatorTextures, (GuiSprite, GuiSprite)),
         skin_of: &dyn Fn(uuid::Uuid) -> TextureId,
         painter: ItemPainter,
         lang: &Lang,
@@ -287,7 +285,15 @@ impl SpectatorMenu {
                 }
                 None => {
                     if let Item::Player { id, .. } = &item {
-                        crate::gui::face::draw_face(draw_list, skin_of(*id), [x + 2.0, top + 2.0], 12.0, true, false, tint);
+                        crate::gui::face::draw_face(
+                            draw_list,
+                            skin_of(*id),
+                            [x + 2.0, top + 2.0],
+                            12.0,
+                            true,
+                            false,
+                            tint,
+                        );
                     }
                 }
             }

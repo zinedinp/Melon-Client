@@ -1,6 +1,6 @@
 //! Water and lava: bubbles, drips, rain, ink, geysers, the bobber's wake.
 
-use super::smoke::ash_smoke;
+use super::smoke::{AshSmoke, ash_smoke};
 use super::*;
 
 /// `BubbleColumnUp`.
@@ -198,7 +198,20 @@ pub(super) fn geyser_base(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     let at = pos + DVec3::new(off(0.5), off(0.5) + f64::from(0.2f32), off(0.5));
     let burst = impulse + 0.25 * water_blocks as f32;
     let size = 3.0 + 0.125 * water_blocks as f32;
-    let mut p = ash_smoke(kind, at, [burst; 3], aux, size, 0.0, 0, 0.0, true, rng);
+    let mut p = ash_smoke(
+        kind,
+        at,
+        aux,
+        AshSmoke {
+            dir: [burst; 3],
+            scale: size,
+            color_random: 0.0,
+            max_lifetime: 0,
+            gravity: 0.0,
+            physics: true,
+        },
+        rng,
+    );
     p.friction = 0.725;
     p.set_rgb([1.0; 3]);
     p.vel.y = p.vel.y.abs();

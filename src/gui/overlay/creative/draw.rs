@@ -5,32 +5,24 @@ use super::{
     TAB_WIDTH,
 };
 use crate::gui::hud::item_slot::{self, ItemPainter};
-use crate::gui::overlay::Overlay;
 use crate::gui::overlay::container_input::ContainerView;
-use crate::gui::overlay::inventory::{InventoryTextures, SlotDrag, draw_carried, draw_slots};
+use crate::gui::overlay::inventory::{SlotDrag, draw_carried, draw_slots};
+use crate::gui::overlay::{Overlay, OverlayDraw};
 use crate::gui::text::font::Glyphs;
 use crate::gui::text::{StyledText, colors};
 use crate::i18n::Lang;
 use crate::math::argb;
 use crate::renderer::quad::DrawList;
 use crate::world::creative_tabs::{CreativeTab, Row, TabType, tabs};
-use crate::world::inventory::Inventory;
 use pumpkin_data::item_stack::ItemStack;
 
 impl CreativeOverlay {
     /// Draws the screen over the world.
-    #[allow(clippy::too_many_arguments)]
-    pub(super) fn draw_screen(
-        &self,
-        draw_list: &mut DrawList,
-        textures: &CreativeTextures,
-        slot_textures: &InventoryTextures,
-        painter: ItemPainter,
-        inventory: &Inventory,
-        lang: &Lang,
-        size: (f32, f32),
-        player: Option<crate::renderer::TextureId>,
-    ) {
+    pub(super) fn draw_screen(&self, ui: &mut OverlayDraw) {
+        let draw_list = &mut *ui.draw_list;
+        let (textures, slot_textures) = (ui.textures.creative, ui.textures.inventory);
+        let (painter, inventory, lang) = (ui.painter, ui.inventory, ui.lang);
+        let (size, player) = (ui.size, ui.entity_preview);
         let (width, height) = size;
         let (left, top) = (self.left, self.top);
         crate::gui::background::push_transparent_background(
@@ -49,7 +41,12 @@ impl CreativeOverlay {
             "tab_inventory" => textures.inventory,
             _ => textures.items,
         };
-        draw_list.push_rect(background, [left, top, IMAGE_WIDTH, IMAGE_HEIGHT], [0.0, 0.0, IMAGE_WIDTH / 256.0, IMAGE_HEIGHT / 256.0], [1.0; 4]);
+        draw_list.push_rect(
+            background,
+            [left, top, IMAGE_WIDTH, IMAGE_HEIGHT],
+            [0.0, 0.0, IMAGE_WIDTH / 256.0, IMAGE_HEIGHT / 256.0],
+            [1.0; 4],
+        );
         if self.tab().scrollbar {
             let sprite = if self.can_scroll() {
                 textures.scroller
@@ -209,13 +206,10 @@ impl CreativeOverlay {
     }
 
     /// The borderless search box at (82, 6), white text and a blinking cursor.
-    pub(super) fn draw_search(
-        &self,
-        draw_list: &mut DrawList,
-        glyphs: Glyphs<'_>,
-    ) {
+    pub(super) fn draw_search(&self, draw_list: &mut DrawList, glyphs: Glyphs<'_>) {
         let (bx, by, width, _) = super::SEARCH_BOX;
         let (x, y) = (self.left + bx, self.top + by);
-        self.search.draw(draw_list, glyphs, (x, y), width, [1.0; 4], true);
+        self.search
+            .draw(draw_list, glyphs, (x, y), width, [1.0; 4], true);
     }
 }

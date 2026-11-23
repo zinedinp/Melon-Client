@@ -152,11 +152,19 @@ impl BossBars {
             }
             if width > 0.0 {
                 let size = [BAR_WIDTH, BAR_HEIGHT];
-                sprites.color_progress[color]
-                    .draw_region(draw_list, size, [0.0; 2], [left, y, width, BAR_HEIGHT]);
+                sprites.color_progress[color].draw_region(
+                    draw_list,
+                    size,
+                    [0.0; 2],
+                    [left, y, width, BAR_HEIGHT],
+                );
                 if let Some(n) = notch {
-                    sprites.overlay_progress[n]
-                        .draw_region(draw_list, size, [0.0; 2], [left, y, width, BAR_HEIGHT]);
+                    sprites.overlay_progress[n].draw_region(
+                        draw_list,
+                        size,
+                        [0.0; 2],
+                        [left, y, width, BAR_HEIGHT],
+                    );
                 }
             }
             let paint = TextPaint {

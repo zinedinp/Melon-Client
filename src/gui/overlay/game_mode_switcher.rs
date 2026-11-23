@@ -129,7 +129,12 @@ impl GameModeSwitcher {
     ) {
         let (w, h) = size;
         let (cx, cy) = ((w / 2.0).floor(), (h / 2.0).floor());
-        draw_list.push_rect(textures.background, [cx - 62.0, cy - 31.0 - 27.0, 125.0, 75.0], [0.0, 0.0, 125.0 / 128.0, 75.0 / 128.0], [1.0; 4]);
+        draw_list.push_rect(
+            textures.background,
+            [cx - 62.0, cy - 31.0 - 27.0, 125.0, 75.0],
+            [0.0, 0.0, 125.0 / 128.0, 75.0 / 128.0],
+            [1.0; 4],
+        );
         let paint = painter.paint(colors::WHITE);
         let centered = |draw_list: &mut DrawList, text: &StyledText, y: f32| {
             let width = text::width(painter.font, text);

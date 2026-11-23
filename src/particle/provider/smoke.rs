@@ -124,7 +124,20 @@ pub(super) fn explosion(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
 pub(super) fn smoke(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     let Cx { kind, pos, aux, .. } = *c;
     let scale = if kind == P::LargeSmoke { 2.5 } else { 1.0 };
-    let mut p = ash_smoke(kind, pos, [0.1; 3], aux, scale, 0.3, 8, -0.1, true, rng);
+    let mut p = ash_smoke(
+        kind,
+        pos,
+        aux,
+        AshSmoke {
+            dir: [0.1; 3],
+            scale,
+            color_random: 0.3,
+            max_lifetime: 8,
+            gravity: -0.1,
+            physics: true,
+        },
+        rng,
+    );
     if kind == P::WhiteSmoke {
         p.set_rgb([0.729_411_8, 0.694_117_67, 0.760_784_3]);
     }
@@ -137,13 +150,15 @@ pub(super) fn ash(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     Some(ash_smoke(
         kind,
         pos,
-        [0.1, -0.1, 0.1],
         DVec3::ZERO,
-        1.0,
-        0.5,
-        20,
-        0.1,
-        false,
+        AshSmoke {
+            dir: [0.1, -0.1, 0.1],
+            scale: 1.0,
+            color_random: 0.5,
+            max_lifetime: 20,
+            gravity: 0.1,
+            physics: false,
+        },
         rng,
     ))
 }
@@ -157,13 +172,15 @@ pub(super) fn white_ash(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     let mut p = ash_smoke(
         kind,
         pos,
-        [0.1, -0.1, 0.1],
         DVec3::new(xa, ya, za),
-        1.0,
-        0.0,
-        20,
-        0.0125,
-        false,
+        AshSmoke {
+            dir: [0.1, -0.1, 0.1],
+            scale: 1.0,
+            color_random: 0.0,
+            max_lifetime: 20,
+            gravity: 0.0125,
+            physics: false,
+        },
         rng,
     );
     p.set_rgb(rgb_of(12_235_202));
@@ -208,7 +225,20 @@ pub(super) fn soul(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
 /// `NoxiousGas`.
 pub(super) fn noxious_gas(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     let Cx { kind, pos, aux, .. } = *c;
-    let mut p = ash_smoke(kind, pos, [0.1; 3], aux, 3.0, 0.3, 5, -0.02, true, rng);
+    let mut p = ash_smoke(
+        kind,
+        pos,
+        aux,
+        AshSmoke {
+            dir: [0.1; 3],
+            scale: 3.0,
+            color_random: 0.3,
+            max_lifetime: 5,
+            gravity: -0.02,
+            physics: true,
+        },
+        rng,
+    );
     p.set_rgb([1.0; 3]);
     p.lifetime = (6.0 / (rng.next_float() * 0.5 + 0.5) as f64 * 3.0) as i32;
     p.look.translucent = true;
@@ -263,13 +293,15 @@ pub(super) fn dust_plume(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     let mut p = ash_smoke(
         kind,
         pos,
-        [0.7, 0.6, 0.7],
         aux,
-        1.0,
-        0.5,
-        7,
-        0.5,
-        false,
+        AshSmoke {
+            dir: [0.7, 0.6, 0.7],
+            scale: 1.0,
+            color_random: 0.5,
+            max_lifetime: 7,
+            gravity: 0.5,
+            physics: false,
+        },
         rng,
     );
     let shift = rng.next_float() * 0.2;
@@ -291,20 +323,34 @@ fn rising(kind: Kind, pos: DVec3, aux: DVec3, uv: [f32; 4], rng: &mut JavaRandom
     p
 }
 
+/// `BaseAshSmokeParticle`'s settings past the position and the speed.
+#[derive(Clone, Copy)]
+pub(super) struct AshSmoke {
+    /// Scales the random start speed per axis.
+    pub dir: [f32; 3],
+    pub scale: f32,
+    pub color_random: f32,
+    pub max_lifetime: i32,
+    pub gravity: f32,
+    pub physics: bool,
+}
+
 /// `BaseAshSmokeParticle`: smoke and ash, darkened at random, growing in.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn ash_smoke(
     kind: Kind,
     pos: DVec3,
-    dir: [f32; 3],
     aux: DVec3,
-    scale: f32,
-    color_random: f32,
-    max_lifetime: i32,
-    gravity: f32,
-    physics: bool,
+    look: AshSmoke,
     rng: &mut JavaRandom,
 ) -> Particle {
+    let AshSmoke {
+        dir,
+        scale,
+        color_random,
+        max_lifetime,
+        gravity,
+        physics,
+    } = look;
     let mut p = Particle::moving(kind, pos, DVec3::ZERO, rng);
     p.friction = 0.96;
     p.gravity = gravity;

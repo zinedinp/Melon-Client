@@ -44,9 +44,7 @@ impl InWorld {
         self.joined.session.send_container_click(
             0,
             self.inventory.state_id(),
-            click.slot,
-            click.button,
-            click.kind,
+            &click,
             &changed,
             self.inventory.carried(),
         );

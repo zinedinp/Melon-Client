@@ -513,16 +513,7 @@ impl Overlay for CreativeOverlay {
     }
 
     fn draw(&mut self, ui: &mut OverlayDraw) {
-        self.draw_screen(
-            ui.draw_list,
-            ui.textures.creative,
-            ui.textures.inventory,
-            ui.painter,
-            ui.inventory,
-            ui.lang,
-            ui.size,
-            ui.entity_preview,
-        );
+        self.draw_screen(ui);
     }
 
     /// `CreativeModeInventoryScreen.extractBackground`.

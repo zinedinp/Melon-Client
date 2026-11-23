@@ -1386,9 +1386,7 @@ impl MenuWorld {
         self.world.session.send_container_click(
             menu.id,
             menu.state_id,
-            click.slot,
-            click.button,
-            click.kind,
+            &click,
             &changed,
             &self.carried,
         );
