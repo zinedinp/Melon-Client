@@ -6,7 +6,8 @@
 //! Phase 2 draws the ones phase 1 left out that may be visible, and each
 //! section's result is kept for the next frame. Only sections the pyramid
 //! proves hidden are skipped, so the picture is the same as drawing all.
-//! `MELON_OCCLUSION=0` turns it off.
+//! Off unless `MELON_OCCLUSION=1`: so far its overhead (a render pass split
+//! and every draw issued twice) costs more than it saves in open terrain.
 
 use ash::vk;
 
@@ -30,9 +31,9 @@ const HIZ_PUSH_SIZE: u32 = 16;
 /// Bytes of `occlusion.comp`'s: a `mat4`, a `vec2` and two `uint`.
 const CULL_PUSH_SIZE: u32 = 80;
 
-/// Whether `MELON_OCCLUSION` leaves the culling on.
+/// Whether `MELON_OCCLUSION=1` turns the culling on.
 pub(super) fn wanted() -> bool {
-    std::env::var_os("MELON_OCCLUSION").is_none_or(|v| v != "0")
+    std::env::var_os("MELON_OCCLUSION").is_some_and(|v| v == "1")
 }
 
 /// Each section's visibility from the last frame that tested it, by slot.

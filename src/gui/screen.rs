@@ -370,4 +370,12 @@ mod tests {
         assert_eq!(scale.to_virtual((1921.0, 0.0)).0, 481.0);
         assert_eq!(scale.max_scale(), 4);
     }
+
+    #[test]
+    fn the_projection_keeps_whole_window_pixels_per_gui_pixel() {
+        let scale = GuiScale::new(0, 1921, 1081);
+        assert_eq!(scale.projection_size(), (480.25, 270.25));
+        let (w, h) = scale.projection_size();
+        assert_eq!((1921.0 / w, 1081.0 / h), (4.0, 4.0));
+    }
 }

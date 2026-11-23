@@ -980,3 +980,243 @@ unsafe fn read_back(
     device.free_memory(memory, None);
     image::RgbaImage::from_raw(width, height, bytes).expect("pixels")
 }
+
+/// a box behind a wall of depth is
+/// Odd screen sizes, so the pyramid's last rows count.
+#[test]
+fn occlusion_culls_what_the_depth_hides() {
+    use super::occlusion::Occlusion;
+
+    let _serial = serial();
+    messages().clear();
+    unsafe {
+        let gpu = Gpu::new().expect("Vulkan instance with validation");
+        let device = &gpu.device;
+        let family = gpu
+            .instance
+            .get_physical_device_queue_family_properties(gpu.physical)
+            .iter()
+            .position(|q| q.queue_flags.contains(vk::QueueFlags::GRAPHICS))
+            .expect("graphics queue") as u32;
+        let queue = device.get_device_queue(family, 0);
+        let command_pool = device
+            .create_command_pool(
+                // Each frame records the one command buffer again.
+                &vk::CommandPoolCreateInfo::default()
+                    .queue_family_index(family)
+                    .flags(vk::CommandPoolCreateFlags::RESET_COMMAND_BUFFER),
+                None,
+            )
+            .expect("command pool");
+        let mem_props = gpu
+            .instance
+            .get_physical_device_memory_properties(gpu.physical);
+        let format = find_depth_format(&gpu.instance, gpu.physical).expect("depth format");
+        let aspect = if format == vk::Format::D32_SFLOAT {
+            vk::ImageAspectFlags::DEPTH
+        } else {
+            vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
+        };
+        let extent = vk::Extent2D {
+            width: 37,
+            height: 23,
+        };
+        let depth = device
+            .create_image(
+                &vk::ImageCreateInfo::default()
+                    .image_type(vk::ImageType::TYPE_2D)
+                    .format(format)
+                    .extent(vk::Extent3D {
+                        width: extent.width,
+                        height: extent.height,
+                        depth: 1,
+                    })
+                    .mip_levels(1)
+                    .array_layers(1)
+                    .samples(vk::SampleCountFlags::TYPE_1)
+                    .tiling(vk::ImageTiling::OPTIMAL)
+                    .usage(
+                        vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT
+                            | vk::ImageUsageFlags::SAMPLED
+                            | vk::ImageUsageFlags::TRANSFER_DST,
+                    ),
+                None,
+            )
+            .expect("depth image");
+        let req = device.get_image_memory_requirements(depth);
+        let depth_memory = device
+            .allocate_memory(
+                &vk::MemoryAllocateInfo::default()
+                    .allocation_size(req.size)
+                    .memory_type_index(
+                        super::find_memory_type(
+                            &mem_props,
+                            req.memory_type_bits,
+                            vk::MemoryPropertyFlags::DEVICE_LOCAL,
+                        )
+                        .expect("memory type"),
+                    ),
+                None,
+            )
+            .expect("depth memory");
+        device
+            .bind_image_memory(depth, depth_memory, 0)
+            .expect("bind depth");
+
+        let mut occlusion = Occlusion::new(device, &mem_props, 1).expect("occlusion");
+        occlusion
+            .resize(device, &mem_props, depth, format, extent)
+            .expect("pyramid");
+
+        // Draw 0 far behind the wall, 1 in front of it, 2 never culled.
+        let wall = 60.0;
+        let bounds: [[f32; 4]; 3] = [
+            [-8.0, -8.0, -100.0, f32::from_bits(0)],
+            [-8.0, -8.0, -32.0, f32::from_bits(1)],
+            [-8.0, -8.0, -100.0, f32::from_bits(indirect::NO_SLOT)],
+        ];
+        let count = bounds.len() as u32;
+        let host = vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT;
+        let mapped = |size: u64, usage| {
+            let (buffer, memory) =
+                super::create_buffer(device, &mem_props, size, usage, host).expect("buffer");
+            let ptr = device
+                .map_memory(memory, 0, size, vk::MemoryMapFlags::empty())
+                .expect("map");
+            (buffer, memory, ptr.cast::<u32>())
+        };
+        let (commands, commands_memory, commands_ptr) = mapped(
+            u64::from(2 * count * indirect::COMMAND_SIZE),
+            vk::BufferUsageFlags::STORAGE_BUFFER | vk::BufferUsageFlags::INDIRECT_BUFFER,
+        );
+        let (bounds_buffer, bounds_memory, bounds_ptr) =
+            mapped(16 * u64::from(count), vk::BufferUsageFlags::STORAGE_BUFFER);
+        std::ptr::copy_nonoverlapping(bounds.as_ptr(), bounds_ptr.cast(), bounds.len());
+
+        let projection = super::world_projection(70.0, 37.0 / 23.0, 256.0);
+        let wall_clip = projection * glam::Vec4::new(0.0, 0.0, -wall, 1.0);
+        let wall_depth = wall_clip.z / wall_clip.w;
+        let cmd = device
+            .allocate_command_buffers(
+                &vk::CommandBufferAllocateInfo::default()
+                    .command_pool(command_pool)
+                    .level(vk::CommandBufferLevel::PRIMARY)
+                    .command_buffer_count(1),
+            )
+            .expect("cmd")[0];
+        let range = vk::ImageSubresourceRange {
+            aspect_mask: aspect,
+            base_mip_level: 0,
+            level_count: 1,
+            base_array_layer: 0,
+            layer_count: 1,
+        };
+        // One frame with the depth buffer at `depth_value`: (phase 1, phase 2)
+        // instance counts per draw.
+        let mut frame = |depth_value: f32| -> Vec<(u32, u32)> {
+            for i in 0..2 * count as usize {
+                let words = commands_ptr.add(i * 5);
+                // Six indices of a quad, drawn once.
+                std::ptr::copy_nonoverlapping([6u32, 1, 0, 0, 0].as_ptr(), words, 5);
+            }
+            occlusion
+                .prepare(device, &mem_props, 0, 3, (commands, bounds_buffer))
+                .expect("prepare");
+            device
+                .begin_command_buffer(cmd, &vk::CommandBufferBeginInfo::default())
+                .expect("begin");
+            let to = |old, new, src, dst| {
+                vk::ImageMemoryBarrier::default()
+                    .old_layout(old)
+                    .new_layout(new)
+                    .src_access_mask(src)
+                    .dst_access_mask(dst)
+                    .src_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
+                    .dst_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
+                    .image(depth)
+                    .subresource_range(range)
+            };
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::ALL_COMMANDS,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::DependencyFlags::empty(),
+                &[],
+                &[],
+                &[to(
+                    vk::ImageLayout::UNDEFINED,
+                    vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    vk::AccessFlags::empty(),
+                    vk::AccessFlags::TRANSFER_WRITE,
+                )],
+            );
+            device.cmd_clear_depth_stencil_image(
+                cmd,
+                depth,
+                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                &vk::ClearDepthStencilValue {
+                    depth: depth_value,
+                    stencil: 0,
+                },
+                &[range],
+            );
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::PipelineStageFlags::COMPUTE_SHADER,
+                vk::DependencyFlags::empty(),
+                &[],
+                &[],
+                &[to(
+                    vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    vk::ImageLayout::DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+                    vk::AccessFlags::TRANSFER_WRITE,
+                    vk::AccessFlags::SHADER_READ,
+                )],
+            );
+            occlusion.record_select(device, cmd, 0, count);
+            occlusion.record_cull(device, cmd, 0, count, &projection);
+            device.end_command_buffer(cmd).expect("end");
+            let cmds = [cmd];
+            device
+                .queue_submit(
+                    queue,
+                    &[vk::SubmitInfo::default().command_buffers(&cmds)],
+                    vk::Fence::null(),
+                )
+                .expect("submit");
+            device.queue_wait_idle(queue).expect("idle");
+            (0..count as usize)
+                .map(|i| {
+                    let instances = |at: usize| *commands_ptr.add(at * 5 + 1);
+                    (instances(i), instances(count as usize + i))
+                })
+                .collect()
+        };
+        // Nothing seen yet: phase 1 draws only the never-culled draw, phase
+        // 2 the one in front.
+        assert_eq!(frame(wall_depth), [(0, 0), (0, 1), (1, 0)]);
+        // Now the one in front comes in phase 1, and isn't drawn again.
+        assert_eq!(frame(wall_depth), [(0, 0), (1, 0), (1, 0)]);
+        // Without the wall the far one is seen as well.
+        assert_eq!(frame(0.0), [(0, 1), (1, 0), (1, 0)]);
+        assert_eq!(frame(0.0), [(1, 0), (1, 0), (1, 0)]);
+
+        device.device_wait_idle().expect("idle");
+        occlusion.destroy(device);
+        for (buffer, memory) in [(commands, commands_memory), (bounds_buffer, bounds_memory)] {
+            device.unmap_memory(memory);
+            device.destroy_buffer(buffer, None);
+            device.free_memory(memory, None);
+        }
+        device.destroy_image(depth, None);
+        device.free_memory(depth_memory, None);
+        device.destroy_command_pool(command_pool, None);
+    }
+    let messages = messages();
+    assert!(
+        messages.is_empty(),
+        "Vulkan validation:\n{}",
+        messages.join("\n")
+    );
+}

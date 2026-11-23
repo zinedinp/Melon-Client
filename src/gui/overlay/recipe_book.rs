@@ -12,6 +12,7 @@ use crate::gui::screen::TextEvent;
 use crate::gui::sprite::GuiSprite;
 use crate::gui::text::StyledText;
 use crate::gui::widgets::text_input::TextInput;
+use crate::math::angle::PI;
 use crate::math::argb;
 use crate::renderer::{Renderer, TextureId};
 use crate::world::recipes::{BookType, Category, RecipeBook, RecipeDisplay, RecipeId, Stock, Tab};
@@ -32,7 +33,31 @@ const SEARCH_TEXT: (f32, f32) = (SEARCH.0 + 4.0, SEARCH.1 + 3.0);
 /// Ticks one recipe of a button is shown before the next (`TICKS_TO_SWAP_SLOT`).
 const SWAP_TICKS: f32 = 30.0;
 
-/// TODO(book): vanilla's squeeze animation of tabs and buttons with new recipes.
+/// Ticks a tab or button with a new recipe squeezes (`animationTime = 15.0F`).
+const SQUEEZE_TICKS: f32 = 15.0;
+
+/// `1 + 0.1 sin(animationTime / 15 * PI)`, counted down from
+/// [`SQUEEZE_TICKS`] by the frame time; `None` once it is over.
+fn squeeze(started: Option<std::time::Instant>) -> Option<f32> {
+    let elapsed = started?.elapsed().as_secs_f32() * 20.0;
+    squeeze_at(elapsed)
+}
+
+fn squeeze_at(elapsed_ticks: f32) -> Option<f32> {
+    let left = SQUEEZE_TICKS - elapsed_ticks;
+    (left > 0.0).then(|| 1.0 + 0.1 * (left / SQUEEZE_TICKS * PI).sin())
+}
+
+/// `rect` scaled by `(sx, sy)` about `pivot`, as the squeeze's
+/// `translate(pivot) scale translate(-pivot)`.
+fn squeezed(
+    (x, y, w, h): (f32, f32, f32, f32),
+    (px, py): (f32, f32),
+    (sx, sy): (f32, f32),
+) -> (f32, f32, f32, f32) {
+    (px + (x - px) * sx, py + (y - py) * sy, w * sx, h * sy)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RecipeAction {
     /// `ServerboundPlaceRecipePacket`.
@@ -227,7 +252,6 @@ struct Cell {
     /// What it cycles through.
     recipes: Vec<(RecipeId, Vec<ItemStack>)>,
     craftable: bool,
-    highlight: bool,
     /// Its popup's buttons: the craftable recipes, then (not filtering)
     /// the others (`OverlayRecipeComponent.init`).
     alternatives: Vec<Alternative>,
@@ -270,10 +294,21 @@ impl PopupLayout {
 /// `OverlayRecipeButton`'s size.
 const POPUP_BUTTON: f32 = 24.0;
 
+/// `RecipeButton.allRecipesHaveSameResultDisplay`.
+fn same_result(cell: &Cell) -> bool {
+    let mut stacks = cell.recipes.iter().flat_map(|(_, stacks)| stacks);
+    let Some(first) = stacks.next() else {
+        return true;
+    };
+    stacks.all(|other| first.are_items_and_components_equal(other))
+}
+
 struct TabView {
     tab: Tab,
     icons: Vec<ItemStack>,
     visible: bool,
+    /// When it began to squeeze (`RecipeBookTabButton.startAnimation`).
+    squeeze_from: Option<std::time::Instant>,
 }
 
 pub struct RecipeBookPanel {
@@ -297,6 +332,12 @@ pub struct RecipeBookPanel {
     /// The cell whose alternatives are listed.
     popup: Option<usize>,
     shown: Vec<crate::world::item_model::KeyedStack>,
+    /// When each button of the page began to squeeze: it showed a new
+    /// recipe (`RecipeButton.init`).
+    button_squeeze: [Option<std::time::Instant>; PER_PAGE],
+    /// The book revision the tabs were last checked for new recipes at
+    /// (`updateTabs` on opening and on `recipesUpdated`); `None` while closed.
+    tabs_checked: Option<u64>,
 }
 
 impl RecipeBookPanel {
@@ -307,6 +348,7 @@ impl RecipeBookPanel {
                 tab,
                 icons,
                 visible: true,
+                squeeze_from: None,
             })
             .collect();
         Self {
@@ -326,6 +368,8 @@ impl RecipeBookPanel {
             last_placed: None,
             popup: None,
             shown: Vec::new(),
+            button_squeeze: [None; PER_PAGE],
+            tabs_checked: None,
         }
     }
 
@@ -436,6 +480,7 @@ impl RecipeBookPanel {
             }
         }
         if !self.visible {
+            self.tabs_checked = None;
             return Vec::new();
         }
         let key = (
@@ -446,21 +491,57 @@ impl RecipeBookPanel {
         );
         if self.built.as_ref() != Some(&key) {
             self.rebuild(book, &key.1, &key.3, lang);
-            self.built = Some(key);
         }
+        // Before the page marks its recipes seen, as `updateTabs` runs
+        // before `updateCollections`.
+        if self.tabs_checked != Some(key.0) {
+            self.tabs_checked = Some(key.0);
+            self.start_tab_squeezes(book, &key.1);
+        }
+        self.built = Some(key);
         let mut seen = Vec::new();
         let first = self.page * PER_PAGE;
-        for cell in self.cells.iter().skip(first).take(PER_PAGE) {
+        let now = std::time::Instant::now();
+        for (slot, cell) in self.cells.iter().skip(first).take(PER_PAGE).enumerate() {
+            let mut shown_new = false;
             for (id, _) in &cell.recipes {
                 if book.will_highlight(*id) {
                     book.remove_highlight(*id);
+                    shown_new = true;
                     if !id.is_local() {
                         seen.push(OverlayAction::Recipe(RecipeAction::Seen(id.0)));
                     }
                 }
             }
+            if shown_new {
+                self.button_squeeze[slot] = Some(now);
+            }
         }
         seen
+    }
+
+    /// `RecipeBookTabButton.startAnimation` for every shown tab but the
+    /// search: one with a new recipe of those it would list squeezes.
+    fn start_tab_squeezes(&mut self, book: &RecipeBook, stock: &Stock) {
+        let filtering = self.filtering(book);
+        let mode = self.mode;
+        let now = std::time::Instant::now();
+        for view in &mut self.tabs {
+            if !view.visible || matches!(view.tab, Tab::Search(_)) {
+                continue;
+            }
+            let new = book.collections(view.tab).any(|c| {
+                c.entries.iter().filter_map(|id| book.get(*id)).any(|e| {
+                    mode.can_display(&e.display)
+                        && (!filtering
+                            || e.requirements.as_ref().is_some_and(|r| stock.can_craft(r)))
+                        && book.will_highlight(e.id)
+                })
+            });
+            if new {
+                view.squeeze_from = Some(now);
+            }
+        }
     }
 
     fn rebuild(
@@ -540,7 +621,6 @@ impl RecipeBookPanel {
                 alternatives.extend(cannot.into_iter().map(|e| alternative(e, false)));
             }
             cells.push(Cell {
-                highlight: recipes.iter().any(|(id, _)| book.will_highlight(*id)),
                 craftable: !craftable_ids.is_empty(),
                 recipes,
                 alternatives,
@@ -868,6 +948,9 @@ impl RecipeBookPanel {
             slot += 1;
             // `RecipeBookTabButton`: a selected tab, sprite and icons, sits
             // 2 pixels to the left; it is still hit where it would be.
+            // A tab with new recipes squeezes up and down about `(x + 8, y + 12)`.
+            let scale = (1.0, squeeze(view.squeeze_from).unwrap_or(1.0));
+            let pivot = (x + 8.0, y + 12.0);
             let selected = i == self.tab;
             let x = if selected { x - 2.0 } else { x };
             let tab = if selected {
@@ -875,12 +958,18 @@ impl RecipeBookPanel {
             } else {
                 &sprites.tab
             };
-            tab.draw(ui.draw_list, x, y, TAB_W, TAB_H);
+            let (tx, ty, tw, th) = squeezed((x, y, TAB_W, TAB_H), pivot, scale);
+            tab.draw(ui.draw_list, tx, ty, tw, th);
+            // `fakeItem`: the item alone, no count.
+            let icon = |ui: &mut OverlayDraw, stack: &ItemStack, dx: f32| {
+                let (ix, iy, iw, ih) = squeezed((x + dx, y + 5.0, 16.0, 16.0), pivot, scale);
+                ui.painter.icon_rect(ui.draw_list, stack, ix, iy, iw, ih);
+            };
             match view.icons.as_slice() {
-                [only] => ui.painter.stack(ui.draw_list, only, x + 9.0, y + 5.0),
+                [only] => icon(ui, only, 9.0),
                 [a, b] => {
-                    ui.painter.stack(ui.draw_list, a, x + 3.0, y + 5.0);
-                    ui.painter.stack(ui.draw_list, b, x + 14.0, y + 5.0);
+                    icon(ui, a, 3.0);
+                    icon(ui, b, 14.0);
                 }
                 _ => {}
             }
@@ -900,19 +989,26 @@ impl RecipeBookPanel {
                 (false, false) => 2,
                 (false, true) => 3,
             };
-            sprites.slot[frame].draw(ui.draw_list, x, y, BUTTON, BUTTON);
+            // A button that showed a new recipe squeezes about `(x + 8, y + 12)`.
+            let s = squeeze(self.button_squeeze[i]).unwrap_or(1.0);
+            let pivot = (x + 8.0, y + 12.0);
+            let (bx, by, bw, bh) = squeezed((x, y, BUTTON, BUTTON), pivot, (s, s));
+            sprites.slot[frame].draw(ui.draw_list, bx, by, bw, bh);
             if let Some((_, stack)) = self.current(cell) {
-                ui.painter.stack(ui.draw_list, &stack, x + 4.0, y + 4.0);
-            }
-            if cell.highlight {
-                ui.draw_list.push_fill(
-                    ui.painter.white,
-                    x + 21.0,
-                    y + 1.0,
-                    3.0,
-                    3.0,
-                    argb(0xFFFF_FF55),
-                );
+                // `RecipeButton`: the item alone, no count. Several recipes
+                // of one result show it twice, a pixel down-right behind and
+                // a pixel up-left in front.
+                let mut offset = 4.0;
+                let icon = |ui: &mut OverlayDraw, offset: f32| {
+                    let rect = (x + offset, y + offset, 16.0, 16.0);
+                    let (ix, iy, iw, ih) = squeezed(rect, pivot, (s, s));
+                    ui.painter.icon_rect(ui.draw_list, &stack, ix, iy, iw, ih);
+                };
+                if many && same_result(cell) {
+                    icon(ui, 5.0);
+                    offset = 3.0;
+                }
+                icon(ui, offset);
             }
         }
         let pages = self.pages();
@@ -963,7 +1059,7 @@ impl RecipeBookPanel {
                     continue;
                 };
                 let (ix, iy) = (bx + 2.0 + 7.0 * *gx as f32, by + 2.0 + 7.0 * *gy as f32);
-                ui.painter.icon_sized(ui.draw_list, stack, ix, iy, 6.0);
+                ui.painter.icon_rect(ui.draw_list, stack, ix, iy, 6.0, 6.0);
             }
         }
     }
@@ -1192,5 +1288,98 @@ mod tests {
                 .press(MouseButtonKind::Left, &mut book, &layout, 7, false)
                 .is_none()
         );
+    }
+
+    #[test]
+    fn a_squeeze_swells_by_a_tenth_and_ends_after_15_ticks() {
+        assert_eq!(squeeze_at(0.0), Some(1.0 + 0.1 * PI.sin()));
+        let middle = squeeze_at(7.5).expect("running");
+        assert!((middle - 1.1).abs() < 1e-6, "{middle}");
+        assert_eq!(squeeze_at(15.0), None);
+        assert_eq!(squeeze_at(20.0), None);
+        // About the pivot: a 25 square at (10, 10), pivot (18, 22), 1.1.
+        let (x, y, w, h) = squeezed((10.0, 10.0, 25.0, 25.0), (18.0, 22.0), (1.1, 1.1));
+        assert!((x - 9.2).abs() < 1e-4 && (y - 8.8).abs() < 1e-4);
+        assert!((w - 27.5).abs() < 1e-4 && (h - 27.5).abs() < 1e-4);
+    }
+
+    #[test]
+    fn a_new_recipe_squeezes_its_tab_once_and_its_button() {
+        let lang = Lang::empty();
+        let mut book = open_book();
+        book.add_highlight(RecipeId(1));
+        let mut panel = RecipeBookPanel::new(Mode::Crafting { grid: 3 }, false);
+        panel.tick(&mut book, Stock::default(), (427.0, 240.0), &lang);
+        let squeezing: Vec<bool> = panel.tabs.iter().map(|t| t.squeeze_from.is_some()).collect();
+        assert!(!squeezing[0], "never the search tab");
+        assert!(squeezing.iter().any(|&s| s), "{squeezing:?}");
+        let slot = panel
+            .cells
+            .iter()
+            .position(|c| c.recipes.iter().any(|(id, _)| *id == RecipeId(1)))
+            .expect("the ladder's button");
+        assert!(panel.button_squeeze[slot].is_some());
+        assert_eq!(panel.button_squeeze.iter().filter(|s| s.is_some()).count(), 1);
+
+        // Seen now: the next tick starts nothing new.
+        for tab in &mut panel.tabs {
+            tab.squeeze_from = None;
+        }
+        panel.tick(&mut book, Stock::default(), (427.0, 240.0), &lang);
+        assert!(panel.tabs.iter().all(|t| t.squeeze_from.is_none()));
+    }
+
+    #[test]
+    fn the_toggle_stays_on_whole_pixels_of_an_odd_height() {
+        let (_, y) = Mode::Crafting { grid: 3 }.toggle_at(false, 241.0);
+        assert_eq!(y, 120.0 - 49.0);
+        let (x, y) = Mode::Crafting { grid: 2 }.toggle_at(true, 241.0);
+        assert_eq!((x, y), (104.0, 98.0));
+    }
+
+    #[test]
+    fn an_open_book_covers_the_menu_only_when_narrow() {
+        let mut panel = RecipeBookPanel::new(Mode::Crafting { grid: 3 }, false);
+        assert!(!panel.covers_menu(300.0), "closed");
+        panel.visible = true;
+        assert!(panel.covers_menu(378.0));
+        assert!(!panel.covers_menu(379.0));
+    }
+
+    /// A page of 20 buttons with `n` alternatives each.
+    fn panel_with_alternatives(n: usize) -> RecipeBookPanel {
+        let mut panel = RecipeBookPanel::new(Mode::Crafting { grid: 3 }, false);
+        panel.visible = true;
+        panel.size = (427.0, 240.0);
+        panel.cells = (0..PER_PAGE)
+            .map(|_| Cell {
+                recipes: Vec::new(),
+                craftable: true,
+                alternatives: (0..n)
+                    .map(|i| Alternative {
+                        id: RecipeId(i as i32),
+                        craftable: true,
+                        grid: Vec::new(),
+                    })
+                    .collect(),
+            })
+            .collect();
+        panel
+    }
+
+    #[test]
+    fn the_popup_stays_near_the_middle_of_the_book() {
+        let panel = panel_with_alternatives(3);
+        let (xo, yo) = panel.origin();
+        let popup = panel.popup_layout(4).expect("popup");
+        assert_eq!((popup.x, popup.y), (xo + 61.0, yo + 31.0), "moved two buttons left");
+        assert_eq!(popup.rect().2, 3.0 * BUTTON + 8.0);
+        assert_eq!(popup.button(0), (popup.x + 4.0, popup.y + 5.0));
+
+        let panel = panel_with_alternatives(17);
+        let popup = panel.popup_layout(19).expect("popup");
+        assert_eq!(popup.per_row, 5, "over 16: rows of five");
+        assert_eq!((popup.x, popup.y), (xo + 11.0, yo + 31.0));
+        assert_eq!(popup.rect().3, 4.0 * BUTTON + 8.0);
     }
 }
