@@ -4,7 +4,7 @@ use crate::home::{self, VERSION};
 use sha1::{Digest, Sha1};
 use std::fs;
 use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 mod binaries;
 pub mod download;
@@ -160,37 +160,55 @@ pub fn extract_jar_assets(jar: &Path, dest: &Path, log: &dyn Fn(Progress)) -> Re
     unzip_minecraft_assets(jar, dest, log)
 }
 
+/// `rel` as a path that stays inside the folder it is joined to: plain names only, no root,
+/// drive, `.` or `..`.
+fn contained(rel: &str) -> Option<&Path> {
+    let path = Path::new(rel);
+    let plain = path.components().all(|c| matches!(c, Component::Normal(_)));
+    (plain && path.components().next().is_some()).then_some(path)
+}
+
+/// Each folder is made once, and entries outside `assets/minecraft/` are skipped by name,
+/// unopened. Creating the files is what takes the time (on Windows, mostly the virus
+/// scanner's; more threads don't help, it checks one file after another).
 fn unzip_minecraft_assets(jar: &Path, dest: &Path, log: &dyn Fn(Progress)) -> Result<(), String> {
-    let file = fs::File::open(jar).map_err(|e| format!("{}: {e}", jar.display()))?;
-    let mut zip = zip::ZipArchive::new(file).map_err(|e| format!("{}: {e}", jar.display()))?;
-    let total = zip.len().max(1);
-    for i in 0..zip.len() {
-        let mut entry = zip.by_index(i).map_err(|e| format!("jar entry {i}: {e}"))?;
-        let name = entry
-            .name()
+    let bytes = fs::read(jar).map_err(|e| format!("{}: {e}", jar.display()))?;
+    let mut zip = zip::ZipArchive::new(io::Cursor::new(bytes.as_slice()))
+        .map_err(|e| format!("{}: {e}", jar.display()))?;
+    let mut jobs = Vec::new();
+    for (i, name) in zip.file_names().enumerate() {
+        let name = name
             .map_err(|e| format!("jar entry {i}: {e}"))?
             .replace('\\', "/");
         let Some(rel) = name.strip_prefix("assets/minecraft/") else {
             continue;
         };
-        if rel.is_empty() || rel.ends_with('/') {
+        if rel.ends_with('/') {
             continue;
         }
-        if rel.contains("..") {
-            continue;
+        if let Some(rel) = contained(rel) {
+            jobs.push((i, dest.join(rel)));
         }
-        let out = dest.join(rel);
-        if let Some(parent) = out.parent() {
-            fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;
-        }
-        let mut dest_file =
-            fs::File::create(&out).map_err(|e| format!("{}: {e}", out.display()))?;
-        io::copy(&mut entry, &mut dest_file).map_err(|e| format!("{}: {e}", out.display()))?;
-        if i % 200 == 0 {
+    }
+    let mut dirs: Vec<&Path> = jobs.iter().filter_map(|(_, out)| out.parent()).collect();
+    dirs.sort_unstable();
+    dirs.dedup();
+    for dir in dirs {
+        fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    }
+    let total = jobs.len().max(1);
+    for (done, (i, out)) in jobs.iter().enumerate() {
+        let mut entry = zip
+            .by_index(*i)
+            .map_err(|e| format!("jar entry {i}: {e}"))?;
+        let mut file = fs::File::create(out).map_err(|e| format!("{}: {e}", out.display()))?;
+        io::copy(&mut entry, &mut file).map_err(|e| format!("{}: {e}", out.display()))?;
+        if done % 200 == 0 {
+            let rel = out.strip_prefix(dest).unwrap_or(out);
             log(Progress {
-                done: i,
+                done,
                 total,
-                message: format!("Extracting {rel}"),
+                message: format!("Extracting {}", rel.display()),
             });
         }
     }
@@ -217,13 +235,14 @@ fn overlay_index_objects(
     };
     let mut copied = 0;
     for (name, meta) in map {
-        let Some(rel) = name.strip_prefix("minecraft/") else {
+        let Some(rel) = name.strip_prefix("minecraft/").and_then(contained) else {
             continue;
         };
         let Some(hash) = meta.get("hash").and_then(|v| v.as_str()) else {
             continue;
         };
-        if hash.len() < 2 {
+        // A SHA-1, which names the object's file: nothing else may pick a path.
+        if hash.len() != 40 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
             continue;
         }
         let src = objects.join(&hash[..2]).join(hash);
@@ -294,6 +313,56 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn only_plain_relative_paths_are_contained() {
+        for ok in [
+            "lang/en_us.json",
+            "a//b.png",
+            "foo..png",
+            "textures/block/stone.png",
+        ] {
+            assert!(contained(ok).is_some(), "{ok}");
+        }
+        for bad in ["", "/home/user/.bashrc", "../x", "a/../../x", ".."] {
+            assert!(contained(bad).is_none(), "{bad}");
+        }
+        #[cfg(windows)]
+        for bad in ["C:/Windows/x", "C:x", "//server/share/x"] {
+            assert!(contained(bad).is_none(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn a_jar_entry_with_an_absolute_path_stays_out() {
+        let dir = scratch("jar-abs");
+        let outside = dir.join("outside.txt");
+        let jar = dir.join("evil.jar");
+        {
+            let file = fs::File::create(&jar).unwrap();
+            let mut zip = zip::ZipWriter::new(file);
+            let opt = zip::write::SimpleFileOptions::default();
+            let evil = format!(
+                "assets/minecraft/{}",
+                outside.to_string_lossy().replace('\\', "/")
+            );
+            zip.start_file(evil, opt).unwrap();
+            zip.write_all(b"escaped").unwrap();
+            zip.start_file("assets/minecraft/lang/en_us.json", opt)
+                .unwrap();
+            zip.write_all(b"{}").unwrap();
+            zip.finish().unwrap();
+        }
+        let dest = dir.join("dest");
+        fs::create_dir_all(&dest).unwrap();
+        extract_jar_assets(&jar, &dest, &|_| {}).unwrap();
+        assert!(
+            !outside.exists(),
+            "an entry was written outside the destination"
+        );
+        assert!(dest.join("lang/en_us.json").is_file());
+        let _ = fs::remove_dir_all(dir);
     }
 
     #[test]
