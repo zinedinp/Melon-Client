@@ -259,7 +259,8 @@ fn load_panorama(renderer: &mut Renderer, assets: &Assets) -> Option<Panorama> {
         Ok(Some(panorama)) => Some(panorama),
         Ok(None) => {
             crate::warn!(
-                "No panorama (assets/.../title/background/panorama_0..5.png): using the gradient, see notes/Assets.md"
+                "No panorama (assets/.../title/background/panorama_0..5.png missing or the jar's 1x1 placeholders: \
+                 prepared without the asset index): using the gradient, see notes/Assets.md"
             );
             None
         }

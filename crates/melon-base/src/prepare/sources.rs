@@ -232,6 +232,23 @@ pub fn from_jar(jar: PathBuf) -> Found {
     }
 }
 
+/// `found` with the index and objects [`super::download::fetch`] keeps under
+/// `home`, when it has none of its own and that cache has one.
+pub fn with_cached_index(found: Found, home: &Path) -> Found {
+    if found.asset_index.is_some() {
+        return found;
+    }
+    let cache = crate::home::minecraft_cache(home);
+    match newest_index(&cache) {
+        Some(index) => Found {
+            asset_index: Some(index),
+            objects: cache.join("assets/objects"),
+            ..found
+        },
+        None => found,
+    }
+}
+
 fn loose(folder: &Path, jar: PathBuf, label: &str) -> Found {
     Found {
         label: label.into(),

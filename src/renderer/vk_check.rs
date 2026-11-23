@@ -291,6 +291,7 @@ fn validation_layers_accept_every_pipeline() {
             Mode::EnergySwirl,
             Mode::Scrolled,
             Mode::Text,
+            Mode::EntityTranslucent,
             Mode::TranslucentTerrain,
             Mode::Clouds,
             Mode::Weather,

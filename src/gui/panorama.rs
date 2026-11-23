@@ -41,7 +41,7 @@ impl Panorama {
         }
         let faces: [RgbaImage; 6] = faces
             .try_into()
-            .map_err(|_| anyhow::anyhow!("Panorama: unerwartete Seitenanzahl"))?;
+            .map_err(|_| anyhow::anyhow!("Panorama: unexpected number of faces"))?;
         Ok(Some(Self {
             cubemap: renderer.load_cubemap(&faces)?,
             spin_degrees: 0.0,

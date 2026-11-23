@@ -59,6 +59,43 @@ pub fn from_path(jar: &Path, assets_dir: &Path, log: &dyn Fn(Progress)) -> Resul
     extract_into(from_jar(jar.to_path_buf()), assets_dir, log)
 }
 
+/// [`from_path`] that fills in an asset index the jar has none of beside it:
+/// fetched (only what is missing) into Melon's cache under `home`, else the
+/// one already cached, else the jar alone. The jar's own panoramas are 1x1
+/// placeholders and most sounds exist only in the index.
+pub fn from_path_in(
+    home: &Path,
+    jar: &Path,
+    assets_dir: &Path,
+    log: &dyn Fn(Progress),
+) -> Result<Report, String> {
+    if !jar.is_file() {
+        return Err(format!("{} is not a file.", jar.display()));
+    }
+    let found = from_jar(jar.to_path_buf());
+    let found = if found.asset_index.is_some() {
+        found
+    } else {
+        match download::fetch(home, Some(&found), log) {
+            Ok(fetched) => fetched,
+            Err(e) => {
+                let found = sources::with_cached_index(found, home);
+                if found.asset_index.is_none() {
+                    log(Progress {
+                        done: 0,
+                        total: 3,
+                        message: format!(
+                            "No asset index ({e}): the panorama and most sounds will be missing."
+                        ),
+                    });
+                }
+                found
+            }
+        }
+    };
+    extract_into(found, assets_dir, log)
+}
+
 pub fn extract_into(
     found: Found,
     assets_dir: &Path,

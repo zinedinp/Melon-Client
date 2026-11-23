@@ -112,7 +112,7 @@ fn fetch_file(url: &str, sha1: &str, path: &Path, limit: u64) -> Result<bool, St
     }
     let bytes = get(url, limit)?;
     if !sha1_bytes(&bytes).eq_ignore_ascii_case(sha1) {
-        return Err(format!("{url}: SHA-1 stimmt nicht"));
+        return Err(format!("{url}: SHA-1 mismatch"));
     }
     store(path, &bytes)?;
     Ok(true)

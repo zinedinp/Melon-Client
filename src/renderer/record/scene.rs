@@ -631,6 +631,7 @@ impl Renderer {
             | Mode::EnergySwirl
             | Mode::Scrolled
             | Mode::Text
+            | Mode::EntityTranslucent
             | Mode::TranslucentTerrain
             | Mode::Clouds
             | Mode::Weather
