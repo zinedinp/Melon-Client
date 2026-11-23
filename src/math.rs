@@ -4,6 +4,7 @@ pub mod angle;
 pub mod bytes;
 pub mod euler;
 pub mod lanes;
+pub mod radix;
 pub mod simd;
 pub mod sin_cos;
 pub mod slices;

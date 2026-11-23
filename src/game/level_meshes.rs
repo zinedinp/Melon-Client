@@ -5,7 +5,7 @@ use std::ops::Range;
 
 use glam::{DVec3, IVec3, Vec3};
 
-use crate::math::{ChunkMap, SECTION_SIZE, section_coord};
+use crate::math::{ChunkMap, SECTION_SIZE, radix, section_coord};
 use crate::renderer::{
     ChunkDraw, MeshId, QuadMeshId, Renderer, SectionCull, TerrainMesh, TerrainQuad, WorldVertex,
 };
@@ -850,7 +850,7 @@ struct SortedDraws {
     starts: Vec<u32>,
     /// The draws' vertices, for F3.
     vertices: usize,
-    /// [`radix_sort`]'s second buffer.
+    /// [`radix::sort`]'s second buffer.
     scratch: Vec<u64>,
 }
 
@@ -884,7 +884,7 @@ impl SortedDraws {
 
     /// Appends the draws to `out` in key order and empties `self`.
     fn drain_sorted_into(&mut self, out: &mut Vec<ChunkDraw>) {
-        radix_sort(&mut self.keys, &mut self.scratch);
+        radix::sort(&mut self.keys, &mut self.scratch);
         out.reserve(self.draws.len());
         for &key in &self.keys {
             let run = (key & 0xFFFF_FFFF) as usize;
@@ -896,45 +896,6 @@ impl SortedDraws {
             out.extend_from_slice(&self.draws[start..end]);
         }
         self.clear();
-    }
-}
-
-/// Sorts [`draw_key`]s as `sort_unstable` does. Their low halves count up
-/// in the order the draws were pushed, so a stable sort by the high half
-/// alone is the same order: four passes of a byte each (`O(n)`, no
-/// compares to mispredict), the passes whose byte is the same in every
-/// key left out.
-fn radix_sort(keys: &mut Vec<u64>, scratch: &mut Vec<u64>) {
-    const SMALL: usize = 64;
-    if keys.len() <= SMALL || keys.len() > u32::MAX as usize {
-        keys.sort_unstable();
-        return;
-    }
-    debug_assert!(keys.windows(2).all(|w| (w[0] as u32) < (w[1] as u32)));
-    let mut counts = [[0u32; 256]; 4];
-    for &key in keys.iter() {
-        for (pass, count) in counts.iter_mut().enumerate() {
-            count[(key >> (32 + 8 * pass)) as usize & 0xFF] += 1;
-        }
-    }
-    scratch.clear();
-    scratch.resize(keys.len(), 0);
-    for (pass, count) in counts.iter().enumerate() {
-        if count.iter().any(|&n| n as usize == keys.len()) {
-            continue;
-        }
-        let mut at = [0u32; 256];
-        let mut sum = 0;
-        for (slot, &n) in at.iter_mut().zip(count) {
-            *slot = sum;
-            sum += n;
-        }
-        for &key in keys.iter() {
-            let digit = (key >> (32 + 8 * pass)) as usize & 0xFF;
-            scratch[at[digit] as usize] = key;
-            at[digit] += 1;
-        }
-        std::mem::swap(keys, scratch);
     }
 }
 
@@ -1093,35 +1054,6 @@ impl BlockEntityMeshes {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// The radix sort gives what a comparison sort does, near and far
-    /// keys, short lists and long.
-    #[test]
-    fn radix_sort_matches_sort_unstable() {
-        let mut state = 0x2545_F491_4F6C_DD1Du64;
-        let mut next = || {
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-            state
-        };
-        let mut scratch = Vec::new();
-        for len in [0, 1, 63, 64, 65, 500, 6000] {
-            for spread in [1u64, 16, 1 << 20, u64::MAX] {
-                let mut keys: Vec<u64> = (0..len)
-                    .map(|i| {
-                        let distance = (next() % spread) as f32;
-                        let key = draw_key(distance, i);
-                        if next() % 3 == 0 { key ^ !0 << 32 } else { key }
-                    })
-                    .collect();
-                let mut want = keys.clone();
-                want.sort_unstable();
-                radix_sort(&mut keys, &mut scratch);
-                assert_eq!(keys, want, "{len} keys spread {spread}");
-            }
-        }
-    }
 
     #[test]
     fn draw_keys_order_like_distance_then_index() {

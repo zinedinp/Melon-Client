@@ -467,7 +467,10 @@ mod tests {
                     .filter(|&k| k < TAPS)
                     .map_or(0.0, |k| filters.taps[ear][TAPS - 1 - k]);
                 let got = heard[2 * frame + ear];
-                assert!((got - want).abs() < 1e-7, "ear {ear} frame {frame}: {got} {want}");
+                assert!(
+                    (got - want).abs() < 1e-7,
+                    "ear {ear} frame {frame}: {got} {want}"
+                );
             }
         }
     }

@@ -2,7 +2,7 @@
 
 use std::ops::Range;
 
-use crate::math::section_to_block;
+use crate::math::{radix, section_to_block};
 use glam::Vec3;
 
 use crate::renderer::{TerrainQuad, WorldVertex as Vertex};
@@ -140,28 +140,34 @@ impl TranslucentMesh {
         self.vertices.len() / 4
     }
 
-    /// TODO(perf): reinvestigate. Copies every quad twice (into `keyed`,
-    /// back into `vertices`) and runs a comparison sort. Sort `u32` indices
-    /// by the keys' `f32` bits instead (radix sort, distances are never
-    /// negative), then gather once; the squared distances vectorise.
-    /// `VertexSorting.byDistance`: the quads far to near from `eye`
+    /// `VertexSorting.byDistance`: the quads far to near from `eye`, those
+    /// at one distance in the order they were (`IntArrays.mergeSort` is
+    /// stable). Sorts one `u64` per quad ([`far_first_key`], radix sort for
+    /// many) and moves each quad once, into its place.
     pub fn sort(&mut self, eye: Vec3) {
-        let (quads, _) = self.vertices.as_chunks::<4>();
-        let (mut low, mut high) = (Vec3::INFINITY, Vec3::NEG_INFINITY);
-        let mut keyed: Vec<(f32, [Vertex; 4])> = quads
-            .iter()
-            .map(|quad| {
-                let centroid = quad_centroid(quad);
-                (low, high) = (low.min(centroid), high.max(centroid));
-                (centroid.distance_squared(eye), *quad)
-            })
-            .collect();
-        keyed.sort_by(|a, b| b.0.total_cmp(&a.0));
-        self.sorted_from = eye;
-        self.centroids = Some((low, high));
-        self.vertices.clear();
-        self.vertices
-            .extend(keyed.into_iter().flat_map(|(_, quad)| quad));
+        SORTING.with_borrow_mut(
+            |Sorting {
+                 keys,
+                 scratch,
+                 vertices,
+             }| {
+                let (quads, _) = self.vertices.as_chunks::<4>();
+                let (mut low, mut high) = (Vec3::INFINITY, Vec3::NEG_INFINITY);
+                keys.clear();
+                keys.extend(quads.iter().enumerate().map(|(index, quad)| {
+                    let centroid = quad_centroid(quad);
+                    (low, high) = (low.min(centroid), high.max(centroid));
+                    far_first_key(distance_squared(eye, centroid), index)
+                }));
+                radix::sort(keys, scratch);
+                vertices.clear();
+                vertices.extend(keys.iter().flat_map(|&key| quads[key as u32 as usize]));
+                // The sorted copy becomes the mesh; the old buffer is the next sort's.
+                std::mem::swap(&mut self.vertices, vertices);
+                self.sorted_from = eye;
+                self.centroids = Some((low, high));
+            },
+        );
     }
 
     /// Whether `eye` and [`Self::sorted_from`] sit on opposite sides of any
@@ -187,9 +193,38 @@ impl TranslucentMesh {
     }
 }
 
+/// [`TranslucentMesh::sort`]'s buffers, kept per thread (the mesher's and
+/// the render thread's resorts) so a sort allocates nothing once warm.
+#[derive(Default)]
+struct Sorting {
+    keys: Vec<u64>,
+    scratch: Vec<u64>,
+    vertices: Vec<Vertex>,
+}
+
+thread_local! {
+    static SORTING: std::cell::RefCell<Sorting> = std::cell::RefCell::default();
+}
+
 /// `MeshData.decodeQuadCentroids`.
 fn quad_centroid(quad: &[Vertex; 4]) -> Vec3 {
     (Vec3::from_array(quad[0].pos) + Vec3::from_array(quad[2].pos)) * 0.5
+}
+
+/// JOML's `Vector3f.distanceSquared`, rounded as it rounds:
+/// `dx * dx + (dy * dy + dz * dz)` (its `Math.fma` is a plain multiply and
+/// add unless `joml.useMathFma` is set).
+fn distance_squared(eye: Vec3, point: Vec3) -> f32 {
+    let d = eye - point;
+    d.x * d.x + (d.y * d.y + d.z * d.z)
+}
+
+/// A quad's place in the far-to-near order, as one integer: the squared
+/// distance's bits flipped on top (a non-negative float orders like its
+/// bits, and NaN past infinity as `Floats.compare` puts it), the quad's
+/// index below, which keeps ties in order.
+fn far_first_key(distance: f32, index: usize) -> u64 {
+    u64::from(!distance.to_bits()) << 32 | index as u64
 }
 
 /// One section's terrain, ready to upload.
@@ -1294,6 +1329,83 @@ mod tests {
                 faces.camera_crossed_a_face(eye),
                 full.camera_crossed_a_face(eye)
             );
+        }
+    }
+
+    /// Quads with centroids on a coarse grid (many ties), from a seed.
+    fn grid_quads(count: usize, seed: u64) -> Vec<Vertex> {
+        let mut state = seed;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            (state % 33) as f32 / 2.0
+        };
+        (0..count)
+            .flat_map(|i| {
+                let (x, y, z) = (next(), next(), next());
+                let corner = |dx: f32, dz: f32| {
+                    let mut v = Vertex::new([x + dx, y, z + dz], [0.0; 2], [1.0; 3]);
+                    v.light = [(i % 251) as u8, (i / 251) as u8];
+                    v
+                };
+                [
+                    corner(0.0, 0.0),
+                    corner(0.0, 1.0),
+                    corner(1.0, 1.0),
+                    corner(1.0, 0.0),
+                ]
+            })
+            .collect()
+    }
+
+    /// `VertexSorting.byDistance` as vanilla runs it: JOML's distances,
+    /// then a stable merge sort far to near.
+    fn vanilla_order(vertices: &[Vertex], eye: Vec3) -> Vec<Vertex> {
+        let (quads, _) = vertices.as_chunks::<4>();
+        let keys: Vec<f32> = quads
+            .iter()
+            .map(|quad| {
+                let c = quad_centroid(quad);
+                let (dx, dy, dz) = (eye.x - c.x, eye.y - c.y, eye.z - c.z);
+                dx * dx + (dy * dy + dz * dz)
+            })
+            .collect();
+        let mut indices: Vec<usize> = (0..quads.len()).collect();
+        indices.sort_by(|&a, &b| keys[b].total_cmp(&keys[a]));
+        indices.iter().flat_map(|&i| quads[i]).collect()
+    }
+
+    /// Few quads (compare sort) and many (radix sort), ties and all.
+    #[test]
+    fn translucent_quads_sort_as_vanilla_sorts_them() {
+        for (count, seed) in [
+            (0, 1),
+            (1, 2),
+            (10, 3),
+            (64, 4),
+            (65, 5),
+            (300, 6),
+            (3000, 7),
+        ] {
+            for eye in [
+                Vec3::new(8.25, 70.5, 8.75),
+                Vec3::new(-3.1, 2.0, 40.0),
+                Vec3::ZERO,
+            ] {
+                let vertices = grid_quads(count, seed);
+                let mut mesh = TranslucentMesh {
+                    vertices: vertices.clone(),
+                    ..TranslucentMesh::default()
+                };
+                mesh.sort(eye);
+                let light = |v: &[Vertex]| v.iter().map(|v| v.light).collect::<Vec<_>>();
+                assert_eq!(
+                    light(&mesh.vertices),
+                    light(&vanilla_order(&vertices, eye)),
+                    "{count} quads from {eye}"
+                );
+            }
         }
     }
 }
