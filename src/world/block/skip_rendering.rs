@@ -82,6 +82,14 @@ pub fn half_transparent(name: &str) -> bool {
         || name.ends_with("copper_grate")
 }
 
+/// Whether [`hides`] can be true for `state` at all; `Block`'s never hides.
+#[inline]
+pub fn has_rule(state: u16) -> bool {
+    TABLE
+        .get(usize::from(state))
+        .is_some_and(|entry| entry.rule != Rule::None)
+}
+
 /// Whether `state`'s face towards `side` isn't drawn against `neighbor`.
 #[inline]
 pub fn hides(state: u16, neighbor: u16, side: Direction) -> bool {

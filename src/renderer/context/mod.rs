@@ -182,6 +182,7 @@ impl Renderer {
 
         let white = RgbaImage::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
         renderer.textures.white = renderer.load_texture(&white)?;
+        crate::info!("renderer: terrain draws {}", renderer.terrain_path().name());
         renderer.bind_gui_glint(renderer.textures.white);
 
         Ok(renderer)

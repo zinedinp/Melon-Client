@@ -22,6 +22,10 @@ pub struct Gpu {
 
 /// The GPU [`device_pick`](crate::gfx::device_pick) chooses for `surface`;
 /// `api` is the instance's `apiVersion`.
+///
+/// # Safety
+///
+/// `instance` and `surface` must be live, `surface` made from `instance`.
 pub unsafe fn pick(
     instance: &ash::Instance,
     api: ApiVersion,
@@ -45,6 +49,10 @@ pub unsafe fn pick(
 }
 
 /// The logical device with `features` on, and its one queue.
+///
+/// # Safety
+///
+/// `gpu` must come from [`pick`] on `instance`, `features` from probing it.
 pub unsafe fn create(
     instance: &ash::Instance,
     gpu: &Gpu,
@@ -61,6 +69,10 @@ pub unsafe fn create(
 
 /// `vkCreateDevice` with `features`' extensions and bits: a `pNext` chain
 /// from 1.1 on, the bare 1.0 struct below.
+///
+/// # Safety
+///
+/// `physical` must belong to `instance`, `features` must be probed on it.
 pub unsafe fn create_with(
     instance: &ash::Instance,
     physical: vk::PhysicalDevice,

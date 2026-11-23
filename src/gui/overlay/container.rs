@@ -109,7 +109,9 @@ impl ContainerOverlay {
 
     /// An open recipe book covers the menu on a screen `width` this narrow.
     fn book_covers(&self, width: f32) -> bool {
-        self.book.as_ref().is_some_and(|book| book.covers_menu(width))
+        self.book
+            .as_ref()
+            .is_some_and(|book| book.covers_menu(width))
     }
 
     /// Centres the panel, or shifts it right of an open recipe book.

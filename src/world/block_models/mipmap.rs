@@ -117,11 +117,17 @@ fn linear_lut() -> &'static [f32; 256] {
 /// pixel wide or high, as vanilla's 0/0.
 fn coverage(image: &RgbaImage, scale: f32) -> f32 {
     let (w, h) = image.dimensions();
-    let alpha = |x: u32, y: u32| (f32::from(image.get_pixel(x, y).0[3]) / 255.0 * scale).clamp(0.0, 1.0);
+    let alpha =
+        |x: u32, y: u32| (f32::from(image.get_pixel(x, y).0[3]) / 255.0 * scale).clamp(0.0, 1.0);
     let mut total = 0.0f32;
     for y in 0..h.saturating_sub(1) {
         for x in 0..w.saturating_sub(1) {
-            let (a00, a10, a01, a11) = (alpha(x, y), alpha(x + 1, y), alpha(x, y + 1), alpha(x + 1, y + 1));
+            let (a00, a10, a01, a11) = (
+                alpha(x, y),
+                alpha(x + 1, y),
+                alpha(x, y + 1),
+                alpha(x + 1, y + 1),
+            );
             let mut texel = 0.0f32;
             for sy in 0..4 {
                 let fy = (sy as f32 + 0.5) / 4.0;

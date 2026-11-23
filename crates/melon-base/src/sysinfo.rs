@@ -9,14 +9,20 @@ pub fn os() -> String {
     #[cfg(windows)]
     {
         const KEY: &str = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
-        let build: u32 = win::string(KEY, "CurrentBuild").and_then(|b| b.parse().ok()).unwrap_or(0);
+        let build: u32 = win::string(KEY, "CurrentBuild")
+            .and_then(|b| b.parse().ok())
+            .unwrap_or(0);
         // ProductName still says "Windows 10" on Windows 11.
         let mut name = win::string(KEY, "ProductName").unwrap_or_else(|| "Windows".into());
         if build >= 22000 {
             name = name.replace("Windows 10", "Windows 11");
         }
-        let release = win::string(KEY, "DisplayVersion").map(|v| format!(" {v}")).unwrap_or_default();
-        let ubr = win::dword(KEY, "UBR").map(|u| format!(".{u}")).unwrap_or_default();
+        let release = win::string(KEY, "DisplayVersion")
+            .map(|v| format!(" {v}"))
+            .unwrap_or_default();
+        let ubr = win::dword(KEY, "UBR")
+            .map(|u| format!(".{u}"))
+            .unwrap_or_default();
         format!("{name}{release} (build {build}{ubr})")
     }
     #[cfg(target_os = "linux")]
@@ -28,7 +34,9 @@ pub fn os() -> String {
                 .find_map(|l| l.strip_prefix(key)?.strip_prefix('='))
                 .map(|v| v.trim_matches('"').to_owned())
         };
-        let name = field("PRETTY_NAME").or_else(|| field("NAME")).unwrap_or_else(|| "Linux".into());
+        let name = field("PRETTY_NAME")
+            .or_else(|| field("NAME"))
+            .unwrap_or_else(|| "Linux".into());
         let kernel = std::fs::read_to_string("/proc/sys/kernel/osrelease").unwrap_or_default();
         format!("{name}, kernel {}", kernel.trim())
     }
@@ -41,15 +49,26 @@ pub fn os() -> String {
 /// The CPU's name and how many threads it runs, e.g. "AMD Ryzen 7 5800X3D, 16 threads".
 pub fn cpu() -> String {
     #[cfg(windows)]
-    let name = win::string(r"HARDWARE\DESCRIPTION\System\CentralProcessor\0", "ProcessorNameString");
+    let name = win::string(
+        r"HARDWARE\DESCRIPTION\System\CentralProcessor\0",
+        "ProcessorNameString",
+    );
     #[cfg(target_os = "linux")]
-    let name = std::fs::read_to_string("/proc/cpuinfo").ok().and_then(|info| {
-        info.lines()
-            .find_map(|l| l.strip_prefix("model name")?.split_once(':').map(|(_, v)| v.to_owned()))
-    });
+    let name = std::fs::read_to_string("/proc/cpuinfo")
+        .ok()
+        .and_then(|info| {
+            info.lines().find_map(|l| {
+                l.strip_prefix("model name")?
+                    .split_once(':')
+                    .map(|(_, v)| v.to_owned())
+            })
+        });
     #[cfg(not(any(windows, target_os = "linux")))]
     let name: Option<String> = None;
-    let name = name.map_or_else(|| std::env::consts::ARCH.to_owned(), |n| n.trim().to_owned());
+    let name = name.map_or_else(
+        || std::env::consts::ARCH.to_owned(),
+        |n| n.trim().to_owned(),
+    );
     match std::thread::available_parallelism() {
         Ok(threads) => format!("{name}, {threads} threads"),
         Err(_) => name,
@@ -61,10 +80,19 @@ pub fn memory() -> Option<String> {
     #[cfg(windows)]
     let bytes = win::total_memory();
     #[cfg(target_os = "linux")]
-    let bytes = std::fs::read_to_string("/proc/meminfo").ok().and_then(|info| {
-        let kib: u64 = info.lines().find_map(|l| l.strip_prefix("MemTotal:"))?.trim().trim_end_matches("kB").trim().parse().ok()?;
-        Some(kib * 1024)
-    });
+    let bytes = std::fs::read_to_string("/proc/meminfo")
+        .ok()
+        .and_then(|info| {
+            let kib: u64 = info
+                .lines()
+                .find_map(|l| l.strip_prefix("MemTotal:"))?
+                .trim()
+                .trim_end_matches("kB")
+                .trim()
+                .parse()
+                .ok()?;
+            Some(kib * 1024)
+        });
     #[cfg(not(any(windows, target_os = "linux")))]
     let bytes: Option<u64> = None;
     bytes.map(|b| format!("{:.1} GiB", b as f64 / (1u64 << 30) as f64))
@@ -98,7 +126,13 @@ pub fn runtimes() -> String {
         };
         #[cfg(not(target_env = "gnu"))]
         let libc = format!("libc {}", std::env::consts::ARCH);
-        let dirs = ["/usr/lib64", "/usr/lib/x86_64-linux-gnu", "/lib/x86_64-linux-gnu", "/usr/lib", "/lib64"];
+        let dirs = [
+            "/usr/lib64",
+            "/usr/lib/x86_64-linux-gnu",
+            "/lib/x86_64-linux-gnu",
+            "/usr/lib",
+            "/lib64",
+        ];
         // The real file behind the soname tells the version: libstdc++.so.6.0.33.
         let cxx = dirs
             .iter()
@@ -128,7 +162,10 @@ pub fn session() -> Option<String> {
 /// `path` with the home folder written as `~`, so a log does not carry the user's name.
 pub fn home_relative(path: &Path) -> String {
     let home = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" });
-    match home.as_deref().and_then(|home| path.strip_prefix(home).ok()) {
+    match home
+        .as_deref()
+        .and_then(|home| path.strip_prefix(home).ok())
+    {
         Some(rest) => Path::new("~").join(rest).display().to_string(),
         None => path.display().to_string(),
     }
@@ -186,12 +223,28 @@ mod win {
         // SAFETY: the first call only asks for the size; the second fills a buffer of that size.
         unsafe {
             let flags = RRF_RT_REG_SZ;
-            let probe = RegGetValueW(HKEY_LOCAL_MACHINE, key.as_ptr(), value.as_ptr(), flags, std::ptr::null_mut(), std::ptr::null_mut(), &mut len);
+            let probe = RegGetValueW(
+                HKEY_LOCAL_MACHINE,
+                key.as_ptr(),
+                value.as_ptr(),
+                flags,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                &mut len,
+            );
             if probe != 0 || len == 0 {
                 return None;
             }
             let mut buf = vec![0u16; len as usize / 2];
-            let read = RegGetValueW(HKEY_LOCAL_MACHINE, key.as_ptr(), value.as_ptr(), flags, std::ptr::null_mut(), buf.as_mut_ptr().cast(), &mut len);
+            let read = RegGetValueW(
+                HKEY_LOCAL_MACHINE,
+                key.as_ptr(),
+                value.as_ptr(),
+                flags,
+                std::ptr::null_mut(),
+                buf.as_mut_ptr().cast(),
+                &mut len,
+            );
             if read != 0 {
                 return None;
             }
@@ -206,7 +259,15 @@ mod win {
         let (mut data, mut len) = (0u32, 4u32);
         // SAFETY: `data` holds the 4 bytes a DWORD needs.
         let read = unsafe {
-            RegGetValueW(HKEY_LOCAL_MACHINE, key.as_ptr(), value.as_ptr(), RRF_RT_REG_DWORD, std::ptr::null_mut(), (&raw mut data).cast(), &mut len)
+            RegGetValueW(
+                HKEY_LOCAL_MACHINE,
+                key.as_ptr(),
+                value.as_ptr(),
+                RRF_RT_REG_DWORD,
+                std::ptr::null_mut(),
+                (&raw mut data).cast(),
+                &mut len,
+            )
         };
         (read == 0).then_some(data)
     }
@@ -236,7 +297,12 @@ mod tests {
     #[test]
     fn reads_the_machine() {
         let (os, cpu) = (os(), cpu());
-        println!("{os}\n{cpu}\n{:?}\n{}\n{:?}", memory(), runtimes(), session());
+        println!(
+            "{os}\n{cpu}\n{:?}\n{}\n{:?}",
+            memory(),
+            runtimes(),
+            session()
+        );
         assert!(!os.is_empty() && !cpu.is_empty());
         assert!(memory().is_some());
     }
@@ -245,7 +311,17 @@ mod tests {
     fn home_becomes_tilde() {
         let home = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).unwrap();
         let inside = Path::new(&home).join("melon").join("x.log");
-        assert_eq!(home_relative(&inside), Path::new("~").join("melon").join("x.log").display().to_string());
-        assert_eq!(home_relative(Path::new("/opt/x")), Path::new("/opt/x").display().to_string());
+        assert_eq!(
+            home_relative(&inside),
+            Path::new("~")
+                .join("melon")
+                .join("x.log")
+                .display()
+                .to_string()
+        );
+        assert_eq!(
+            home_relative(Path::new("/opt/x")),
+            Path::new("/opt/x").display().to_string()
+        );
     }
 }

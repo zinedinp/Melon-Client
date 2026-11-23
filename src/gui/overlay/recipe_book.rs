@@ -601,20 +601,20 @@ impl RecipeBookPanel {
             {
                 continue;
             }
-            let alternative = |e: &crate::world::recipes::book::Entry, craftable| {
-                Alternative {
-                    id: e.id,
-                    craftable,
-                    grid: e
-                        .display
-                        .mini_grid()
-                        .into_iter()
-                        .map(|(at, slot)| (at, slot.stacks()))
-                        .collect(),
-                }
+            let alternative = |e: &crate::world::recipes::book::Entry, craftable| Alternative {
+                id: e.id,
+                craftable,
+                grid: e
+                    .display
+                    .mini_grid()
+                    .into_iter()
+                    .map(|(at, slot)| (at, slot.stacks()))
+                    .collect(),
             };
-            let (can, cannot): (Vec<_>, Vec<_>) =
-                shown.iter().copied().partition(|e| craftable_ids.contains(&e.id));
+            let (can, cannot): (Vec<_>, Vec<_>) = shown
+                .iter()
+                .copied()
+                .partition(|e| craftable_ids.contains(&e.id));
             let mut alternatives: Vec<Alternative> =
                 can.into_iter().map(|e| alternative(e, true)).collect();
             if !filtering {
@@ -1037,7 +1037,8 @@ impl RecipeBookPanel {
         let Some(cell) = self.popup else {
             return;
         };
-        let (Some(layout), Some(cell_data)) = (self.popup_layout(cell), self.cells.get(cell)) else {
+        let (Some(layout), Some(cell_data)) = (self.popup_layout(cell), self.cells.get(cell))
+        else {
             return;
         };
         let (x, y, w, h) = layout.rect();
@@ -1048,7 +1049,13 @@ impl RecipeBookPanel {
         for (i, alternative) in cell_data.alternatives.iter().enumerate() {
             let (bx, by) = layout.button(i);
             let frame = 2 * usize::from(!alternative.craftable) + usize::from(hovered == Some(i));
-            sprites.overlay_button[kind][frame].draw(ui.draw_list, bx, by, POPUP_BUTTON, POPUP_BUTTON);
+            sprites.overlay_button[kind][frame].draw(
+                ui.draw_list,
+                bx,
+                by,
+                POPUP_BUTTON,
+                POPUP_BUTTON,
+            );
             // Each input 0.375 of an item (6 pixels), on a 7 pixel pitch
             // from 2 pixels in: `translate(+2 + 3 + 7n)`, `scale`, `translate(-8)`.
             for ((gx, gy), stacks) in &alternative.grid {
@@ -1305,7 +1312,11 @@ mod tests {
         book.add_highlight(RecipeId(1));
         let mut panel = RecipeBookPanel::new(Mode::Crafting { grid: 3 }, false);
         panel.tick(&mut book, Stock::default(), (427.0, 240.0), &lang);
-        let squeezing: Vec<bool> = panel.tabs.iter().map(|t| t.squeeze_from.is_some()).collect();
+        let squeezing: Vec<bool> = panel
+            .tabs
+            .iter()
+            .map(|t| t.squeeze_from.is_some())
+            .collect();
         assert!(!squeezing[0], "never the search tab");
         assert!(squeezing.iter().any(|&s| s), "{squeezing:?}");
         let slot = panel
@@ -1314,7 +1325,10 @@ mod tests {
             .position(|c| c.recipes.iter().any(|(id, _)| *id == RecipeId(1)))
             .expect("the ladder's button");
         assert!(panel.button_squeeze[slot].is_some());
-        assert_eq!(panel.button_squeeze.iter().filter(|s| s.is_some()).count(), 1);
+        assert_eq!(
+            panel.button_squeeze.iter().filter(|s| s.is_some()).count(),
+            1
+        );
 
         // Seen now: the next tick starts nothing new.
         for tab in &mut panel.tabs {
@@ -1367,7 +1381,11 @@ mod tests {
         let panel = panel_with_alternatives(3);
         let (xo, yo) = panel.origin();
         let popup = panel.popup_layout(4).expect("popup");
-        assert_eq!((popup.x, popup.y), (xo + 61.0, yo + 31.0), "moved two buttons left");
+        assert_eq!(
+            (popup.x, popup.y),
+            (xo + 61.0, yo + 31.0),
+            "moved two buttons left"
+        );
         assert_eq!(popup.rect().2, 3.0 * BUTTON + 8.0);
         assert_eq!(popup.button(0), (popup.x + 4.0, popup.y + 5.0));
 

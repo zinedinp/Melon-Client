@@ -1647,7 +1647,10 @@ fn a_published_world_takes_a_lan_guest_and_sends_it_off() {
         {
             break server;
         }
-        assert!(std::time::Instant::now() < deadline, "the LAN broadcast was not heard");
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the LAN broadcast was not heard"
+        );
         std::thread::sleep(std::time::Duration::from_millis(100));
     };
     assert!(heard.motd.starts_with("Host - "), "{}", heard.motd);

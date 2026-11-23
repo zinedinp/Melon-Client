@@ -86,7 +86,8 @@ impl List {
     /// Drops the worlds not heard within [`EXPIRY`].
     fn expire(&mut self, now: Instant) {
         let before = self.servers.len();
-        self.servers.retain(|(_, heard)| now.duration_since(*heard) < EXPIRY);
+        self.servers
+            .retain(|(_, heard)| now.duration_since(*heard) < EXPIRY);
         self.dirty |= self.servers.len() != before;
     }
 }
@@ -127,8 +128,12 @@ impl LanDetector {
     /// `takeDirtyServers`: every server heard, if one came or went since.
     pub fn take_dirty(&self) -> Option<Vec<LanServer>> {
         let mut list = self.list.lock().unwrap_or_else(PoisonError::into_inner);
-        std::mem::take(&mut list.dirty)
-            .then(|| list.servers.iter().map(|(server, _)| server.clone()).collect())
+        std::mem::take(&mut list.dirty).then(|| {
+            list.servers
+                .iter()
+                .map(|(server, _)| server.clone())
+                .collect()
+        })
     }
 }
 
@@ -196,7 +201,10 @@ mod tests {
     }
 
     fn addresses(list: &List) -> Vec<&str> {
-        list.servers.iter().map(|(s, _)| s.address.as_str()).collect()
+        list.servers
+            .iter()
+            .map(|(s, _)| s.address.as_str())
+            .collect()
     }
 
     #[test]

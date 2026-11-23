@@ -7,6 +7,10 @@ use std::ffi::CStr;
 
 /// `vkGetPhysicalDeviceProperties` mapped onto the fields blaze3d's `GpuDevice` reports;
 /// `api` is the instance's `apiVersion`.
+///
+/// # Safety
+///
+/// `physical_device` must belong to `instance`, made with `api`.
 pub unsafe fn read_device_info(
     instance: &ash::Instance,
     physical_device: vk::PhysicalDevice,
@@ -87,7 +91,9 @@ unsafe fn driver_properties(
                 .enumerate_device_extension_properties(physical_device)
                 .unwrap_or_default()
                 .iter()
-                .any(|e| CStr::from_ptr(e.extension_name.as_ptr()) == ash::khr::driver_properties::NAME)
+                .any(|e| {
+                    CStr::from_ptr(e.extension_name.as_ptr()) == ash::khr::driver_properties::NAME
+                })
 }
 
 #[cfg(test)]

@@ -4,7 +4,7 @@
 //! allows (core version, then extension) and logs it; nothing here is
 //! needed for Vulkan 1.0, every feature only enables a faster path beside
 //! the 1.0 one. Paths that differ in more than an entry point live in their
-//! own files (the terrain's in `renderer/record/terrain.rs`).
+//! own files (the terrain's in `renderer/record/scene/terrain.rs`).
 
 use std::ffi::CStr;
 
@@ -104,6 +104,10 @@ impl Features {
 
 /// Reads which of `wanted` the device has, by the newest route it allows,
 /// and logs the result. `api` is the instance's `apiVersion`.
+///
+/// # Safety
+///
+/// `physical` must belong to `instance`, made with `api`.
 pub unsafe fn probe(
     instance: &ash::Instance,
     physical: vk::PhysicalDevice,
@@ -123,7 +127,9 @@ pub unsafe fn probe(
     let offered = instance
         .enumerate_device_extension_properties(physical)
         .unwrap_or_default();
-    let device_api = instance.get_physical_device_properties(physical).api_version;
+    let device_api = instance
+        .get_physical_device_properties(physical)
+        .api_version;
     let offer = vulkan::Offer::new(
         api,
         ApiVersion::from_raw(device_api),

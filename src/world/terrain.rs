@@ -78,11 +78,6 @@ impl<'a> Neighborhood<'a> {
         Some(section.get(Section::index(lx as usize, ly as usize, lz as usize)))
     }
 
-    /// Whether the block there hides the faces against it.
-    fn solid_at(&self, s: usize, x: i32, y: i32, z: i32) -> bool {
-        self.block(s, x, y, z).is_some_and(state_flags::is_solid)
-    }
-
     /// Block and sky light at section-relative `(x, y, z)` of section `s`.
     pub fn light(&self, s: usize, x: i32, y: i32, z: i32) -> (u8, u8) {
         let (cx, cz) = (x.div_euclid(16), z.div_euclid(16));
@@ -400,10 +395,15 @@ pub fn section_visibility(chunk: &Chunk) -> Vec<VisibilitySet> {
             if is_empty(section) {
                 return VisibilitySet::ALL;
             }
-            let [solid] = section.flag_rows(|id| u8::from(state_flags::is_solid(id)));
-            visgraph::compute_rows(&solid)
+            visgraph::compute_rows(&solid_rows(section))
         })
         .collect()
+}
+
+/// `section`'s solid blocks as rows of x (index `y * 16 + z`, bit `x`).
+fn solid_rows(section: &Section) -> [u16; 256] {
+    let [solid] = section.flag_rows(|id| u8::from(state_flags::is_solid(id)));
+    solid
 }
 
 /// All air (state 0): nothing to draw, nothing to stop sight.
@@ -487,17 +487,20 @@ fn fill_section(
                     && center.emission() == 0
                     && context.models.smooth_lighting(id);
                 let opaque_leaves = !context.cutout_leaves && state_flags::is_leaves(id);
+                // Only solid neighbours hide the faces of most blocks: no lookup then.
+                let rule = opaque_leaves || skip_rendering::has_rule(id);
                 context.models.quads_at(id, pos, |quads| {
                     for quad in quads {
                         let hidden = quad.cullface.is_some_and(|side| {
                             let [dx, dy, dz] = side.step();
                             solid.at(x + dx, y + dy, z + dz)
-                                || neighborhood.block(s, x + dx, y + dy, z + dz).is_some_and(
-                                    |next| {
-                                        skip_rendering::hides(id, next, side)
-                                            || opaque_leaves && state_flags::is_leaves(next)
-                                    },
-                                )
+                                || rule
+                                    && neighborhood.block(s, x + dx, y + dy, z + dz).is_some_and(
+                                        |next| {
+                                            skip_rendering::hides(id, next, side)
+                                                || opaque_leaves && state_flags::is_leaves(next)
+                                        },
+                                    )
                         });
                         if hidden {
                             continue;
@@ -562,32 +565,41 @@ fn fill_section(
     }
 }
 
-/// Which blocks of a section and the one-block shell around it hide the faces against them.
+/// Which blocks of a section and the six faces of blocks around it hide the faces against them.
 struct SolidCache {
-    /// Indexed `(y + 1) * 18 + (z + 1)` for `y, z` in `-1..=16`; bit `x + 1`
+    /// Indexed `(y + 1) * 18 + (z + 1)` for `y, z` in `-1..=16`; bit `x + 1`.
+    /// Only one coordinate is ever outside `0..16`: edges and corners stay clear.
     rows: [u32; PADDED * PADDED],
 }
 
 const PADDED: usize = 18;
 
 impl SolidCache {
-    /// `inside`.
+    /// `inside`, and the neighbouring sections' layers against it.
     fn new(neighborhood: &Neighborhood, s: usize, inside: &[u16; 256]) -> Self {
+        let beside = |dx: i32, dy: i32, dz: i32| {
+            neighborhood.chunks[((dx + 1) + (dz + 1) * 3) as usize]
+                .and_then(|chunk| chunk.sections.get(usize::try_from(s as i32 + dy).ok()?))
+                .map_or([0; 256], solid_rows)
+        };
+        let [west, east] = [beside(-1, 0, 0), beside(1, 0, 0)];
+        let [north, south] = [beside(0, 0, -1), beside(0, 0, 1)];
+        let [below, above] = [beside(0, -1, 0), beside(0, 1, 0)];
         let mut rows = [0u32; PADDED * PADDED];
-        for y in -1..=16i32 {
-            for z in -1..=16i32 {
-                let inside_yz = (0..16).contains(&y) && (0..16).contains(&z);
-                let row = if inside_yz {
-                    u32::from(inside[(y * 16 + z) as usize]) << 1
-                        | u32::from(neighborhood.solid_at(s, -1, y, z))
-                        | u32::from(neighborhood.solid_at(s, 16, y, z)) << 17
-                } else {
-                    (-1..=16i32).fold(0, |row, x| {
-                        row | u32::from(neighborhood.solid_at(s, x, y, z)) << (x + 1)
-                    })
-                };
-                rows[Self::row(y, z)] = row;
+        for y in 0..16 {
+            for z in 0..16 {
+                let i = (y * 16 + z) as usize;
+                rows[Self::row(y, z)] = u32::from(inside[i]) << 1
+                    | u32::from(west[i] >> 15)
+                    | u32::from(east[i] & 1) << 17;
             }
+        }
+        for i in 0..16 {
+            let u = i as usize;
+            rows[Self::row(-1, i)] = u32::from(below[15 * 16 + u]) << 1;
+            rows[Self::row(16, i)] = u32::from(above[u]) << 1;
+            rows[Self::row(i, -1)] = u32::from(north[u * 16 + 15]) << 1;
+            rows[Self::row(i, 16)] = u32::from(south[u * 16]) << 1;
         }
         Self { rows }
     }
@@ -713,6 +725,54 @@ mod tests {
             sections[y / 16].set(Section::index(x, y % 16, z), id);
         }
         Chunk::new(0, 0, sections).with_light(light)
+    }
+
+    #[test]
+    fn the_solid_cache_matches_the_blocks_around_the_section() {
+        let glass = pumpkin_data::Block::GLASS.default_state.id.as_u16();
+        let mut seed = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = move || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        let chunks: Vec<Chunk> = (0..9)
+            .map(|_| {
+                let blocks: Vec<_> = (0..32 * 256)
+                    .filter_map(|i| {
+                        let pick = next() % 3;
+                        (pick != 0).then(|| {
+                            let id = if pick == 1 { STONE } else { glass };
+                            (i % 16, i / 256, i / 16 % 16, id)
+                        })
+                    })
+                    .collect();
+                chunk_with(&blocks)
+            })
+            .collect();
+        let mut around = std::array::from_fn(|i| Some(&chunks[i]));
+        around[2] = None;
+        let neighborhood = Neighborhood::with_chunks(around, None);
+        for s in 0..2 {
+            let cache = SolidCache::new(
+                &neighborhood,
+                s,
+                &solid_rows(&neighborhood.center().sections[s]),
+            );
+            for a in -1..=16 {
+                for b in 0..16 {
+                    for c in 0..16 {
+                        for [x, y, z] in [[a, b, c], [b, a, c], [b, c, a]] {
+                            let expected = neighborhood
+                                .block(s, x, y, z)
+                                .is_some_and(state_flags::is_solid);
+                            assert_eq!(cache.at(x, y, z), expected, "s{s} {x} {y} {z}");
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]

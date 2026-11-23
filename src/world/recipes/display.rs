@@ -325,14 +325,23 @@ mod tests {
     #[test]
     fn place_recipe_centres_what_is_under_half_the_grid() {
         let indices = |w, h| -> Vec<usize> {
-            place_recipe(3, 3, w, h, w * h).iter().map(|p| p.0).collect()
+            place_recipe(3, 3, w, h, w * h)
+                .iter()
+                .map(|p| p.0)
+                .collect()
         };
         assert_eq!(indices(1, 1), [4]);
         assert_eq!(indices(1, 3), [1, 4, 7]);
         assert_eq!(indices(3, 1), [3, 4, 5]);
         assert_eq!(indices(2, 2), [0, 1, 3, 4]);
         assert_eq!(indices(3, 3), (0..9).collect::<Vec<_>>());
-        assert_eq!(place_recipe(2, 2, 1, 2, 2).iter().map(|p| p.0).collect::<Vec<_>>(), [0, 2]);
+        assert_eq!(
+            place_recipe(2, 2, 1, 2, 2)
+                .iter()
+                .map(|p| p.0)
+                .collect::<Vec<_>>(),
+            [0, 2]
+        );
     }
 
     #[test]

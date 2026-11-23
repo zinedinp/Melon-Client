@@ -203,7 +203,12 @@ impl Renderer2d {
     /// The Vulkan loader's version, e.g. "1.4.304".
     pub fn loader_version(&self) -> String {
         let v = self.loader_version;
-        format!("{}.{}.{}", vk::api_version_major(v), vk::api_version_minor(v), vk::api_version_patch(v))
+        format!(
+            "{}.{}.{}",
+            vk::api_version_major(v),
+            vk::api_version_minor(v),
+            vk::api_version_patch(v)
+        )
     }
 
     /// A 1x1 white texture, for untextured quads.

@@ -6,9 +6,8 @@ mod terrain;
 use crate::renderer::Blending;
 use crate::renderer::pipeline::world::{DrawLight, FogInput, Mode};
 use crate::renderer::{
-    ChunkDraw, LineStyle, MeshId, QuadMeshId, RenderLayer, Renderer, SceneFrame, Sky, SkyKind,
-    TerrainMesh, TextureId, WeatherDraw, WorldDraw, WorldVertex, globals, mesh_arena, pipeline,
-    world_projection,
+    LineStyle, MeshId, RenderLayer, Renderer, SceneFrame, Sky, SkyKind, TextureId, WeatherDraw,
+    WorldDraw, WorldVertex, globals, mesh_arena, pipeline, world_projection,
 };
 use ash::vk;
 use glam::{Mat4, Vec3};
@@ -777,5 +776,3 @@ impl Renderer {
         }
     }
 }
-
-use super::super::indirect::{Pass, Phase, Run, corner_offset, quad_draws};

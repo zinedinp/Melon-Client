@@ -2,7 +2,7 @@
 //!
 //! Vulkan 1.0 is the floor: every path has a 1.0 way, and a newer version or
 //! an extension only adds a faster one beside it (see [`super::features`]
-//! for the choice, `renderer/record/terrain.rs` for an example ladder). The
+//! for the choice, `renderer/record/scene/terrain.rs` for an example ladder). The
 //! instance asks for the newest version the loader and numerobis's tables
 //! both know; each device then works at the lower of that and its own.
 //!
