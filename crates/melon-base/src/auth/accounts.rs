@@ -457,6 +457,7 @@ mod tests {
             access_token: "token".to_owned(),
             refresh_token: None,
             in_keyring: false,
+            expires_at: None,
         })
     }
 

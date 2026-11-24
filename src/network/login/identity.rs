@@ -21,7 +21,15 @@ impl Identity {
     /// The account the launcher selected (`accounts.json` in the game folder). Skins come from
     /// its service from now on.
     pub fn saved(game_dir: &std::path::Path) -> Self {
-        let account = crate::auth::load_or_refresh(game_dir);
+        Self::of(crate::auth::load_or_refresh(game_dir))
+    }
+
+    /// [`Self::saved`] as stored, its session not refreshed: no service is asked.
+    pub fn stored(game_dir: &std::path::Path) -> Self {
+        Self::of(crate::auth::load_selected(game_dir))
+    }
+
+    fn of(account: Option<Account>) -> Self {
         skin::set_source(match account.as_ref().and_then(Account::provider) {
             Some(provider) => SkinSource::of(provider),
             None => SkinSource::mojang(),

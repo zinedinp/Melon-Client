@@ -22,7 +22,7 @@ use winit::window::{Window, WindowId};
 use crate::assets::Assets;
 use crate::audio::AudioEngine;
 use crate::game::InWorld;
-use crate::game::world_resources::WorldResources;
+use crate::game::world_resources::{PendingBake, WorldResources};
 use crate::gui::assets::GuiAssets;
 use crate::gui::panorama::Panorama;
 use crate::gui::screen::{GuiScale, ScreenAction, ScreenContext};
@@ -120,6 +120,8 @@ struct RunningState {
     background: Option<Panorama>,
     /// Uploaded on the first join and kept, since the renderer can't free all of it.
     world_resources: Option<WorldResources>,
+    /// Their CPU half, made ahead while no world has them yet.
+    pending_bake: Option<PendingBake>,
     world: Option<InWorld>,
     /// What outlives the worlds, as vanilla's `Camera` and `Hud` do.
     lasting: crate::game::Lasting,
@@ -202,6 +204,8 @@ impl App {
         );
         audio.set_volumes(&config.sound_volumes);
         let background = load_panorama(&mut renderer, &assets);
+        let pending_bake =
+            PendingBake::start(assets.root().to_path_buf(), renderer.max_texture_side());
 
         let mut state = RunningState {
             renderer,
@@ -218,6 +222,7 @@ impl App {
             screens: ScreenStack::default(),
             background,
             world_resources: None,
+            pending_bake,
             world: None,
             lasting: Default::default(),
             game_paused: false,
@@ -428,7 +433,8 @@ impl RunningState {
 
     fn enter_world(&mut self, joined: Joined) {
         if self.world_resources.is_none() {
-            match WorldResources::load(&mut self.renderer, &self.env.assets) {
+            let baked = self.pending_bake.take().and_then(PendingBake::finish);
+            match WorldResources::load(&mut self.renderer, &self.env.assets, baked) {
                 Ok(loaded) => self.world_resources = Some(loaded),
                 Err(e) => {
                     self.show_failure(format!("{e:#}"));

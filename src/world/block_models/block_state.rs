@@ -31,6 +31,20 @@ pub(super) enum BlockState {
     Multipart(Vec<(Value, Options)>),
 }
 
+impl BlockState {
+    /// Every model it names, whichever state shows it.
+    pub(super) fn models(&self) -> impl Iterator<Item = &str> {
+        let options: Vec<&Options> = match self {
+            Self::Variants(entries) => entries.iter().map(|(_, options)| options).collect(),
+            Self::Multipart(parts) => parts.iter().map(|(_, options)| options).collect(),
+        };
+        options
+            .into_iter()
+            .flatten()
+            .map(|(_, model_ref)| model_ref.model.as_str())
+    }
+}
+
 pub(super) fn parse_block_state(assets_root: &Path, block: &str) -> Option<BlockState> {
     let name = block.trim_start_matches("minecraft:");
     let json = crate::assets::json_resource(assets_root, "blockstates", name)?;

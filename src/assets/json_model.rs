@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
 use crate::math::angle::{self, Rotation};
 use glam::{Mat3, Vec2, Vec3};
@@ -35,6 +36,13 @@ pub struct Model {
 
 impl Model {
     pub fn resolve(assets_root: &Path, id: &str) -> Option<Self> {
+        Self::resolve_with(id, &|id| {
+            super::json_resource(assets_root, "models", id).map(Arc::new)
+        })
+    }
+
+    /// [`Self::resolve`], each `models/<id>.json` read through `load`.
+    pub fn resolve_with(id: &str, load: &dyn Fn(&str) -> Option<Arc<Value>>) -> Option<Self> {
         let mut model = Self {
             textures: HashMap::new(),
             elements: Vec::new(),
@@ -59,9 +67,9 @@ impl Model {
             if path == "builtin/entity" {
                 break;
             }
-            let json = super::json_resource(assets_root, "models", &id).or_else(|| {
+            let json = load(&id).or_else(|| {
                 if !id.contains(':') {
-                    super::json_resource(assets_root, "models", &format!("{namespace}:{path}"))
+                    load(&format!("{namespace}:{path}"))
                 } else {
                     None
                 }

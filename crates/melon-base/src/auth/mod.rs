@@ -222,6 +222,9 @@ fn finish_microsoft_login(
         access_token: session.access_token,
         refresh_token: ms_token.refresh_token,
         in_keyring: false,
+        expires_at: session
+            .expires_in
+            .map(|secs| unix_now().saturating_add(secs)),
     };
     let mut accounts = Accounts::load(game_dir);
     accounts.store(Account::Microsoft(stored.clone()), add);
@@ -245,6 +248,7 @@ fn restore_session(client_id: Option<&str>, game_dir: &Path) -> anyhow::Result<S
     }
     let session = minecraft::MinecraftSession {
         access_token: account.access_token,
+        expires_in: None,
     };
     let profile = minecraft::fetch_profile(&session)?;
     Ok(profile.name)
@@ -297,11 +301,40 @@ pub struct StoredAccount {
     /// The tokens are in the system keyring, not in `accounts.json`.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub in_keyring: bool,
+    /// When the Minecraft token runs out, in Unix seconds; unknown for
+    /// tokens stored before this was kept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<u64>,
 }
 
-/// The account Play starts as, refreshing its session when it ran out.
+/// Seconds a Microsoft session must still have left to be used without a refresh.
+const REFRESH_MARGIN_SECS: u64 = 60 * 60;
+
+impl StoredAccount {
+    /// Whether the Minecraft token is good for at least [`REFRESH_MARGIN_SECS`] more.
+    fn fresh_at(&self, now: u64) -> bool {
+        !self.access_token.is_empty()
+            && self
+                .expires_at
+                .is_some_and(|at| at > now.saturating_add(REFRESH_MARGIN_SECS))
+    }
+}
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
+
+/// The selected account as stored, without asking any service.
+pub fn load_selected(game_dir: &Path) -> Option<Account> {
+    Accounts::load(game_dir).selected().cloned()
+}
+
+/// The account Play starts as, refreshing its session when it runs out
+/// within the hour or when its end is unknown.
 pub fn load_or_refresh(game_dir: &Path) -> Option<Account> {
-    let selected = Accounts::load(game_dir).selected()?.clone();
+    let selected = load_selected(game_dir)?;
     if let Account::Alternative(account) = &selected {
         return match refresh_alt(account, game_dir) {
             Ok(fresh) => Some(Account::Alternative(fresh)),
@@ -314,6 +347,9 @@ pub fn load_or_refresh(game_dir: &Path) -> Option<Account> {
     let Account::Microsoft(account) = &selected else {
         return Some(selected);
     };
+    if account.fresh_at(unix_now()) {
+        return Some(selected);
+    }
     let client_id = microsoft_client_id(game_dir);
     let (Some(refresh), Some(client_id)) = (account.refresh_token.clone(), client_id) else {
         return Some(selected);
@@ -339,6 +375,27 @@ fn legacy_account(game_dir: &Path) -> Option<StoredAccount> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_session_is_refreshed_within_the_hour_before_it_ends() {
+        let account = |token: &str, expires_at| StoredAccount {
+            username: "Steve".into(),
+            uuid: "abc".into(),
+            access_token: token.into(),
+            refresh_token: Some("refresh".into()),
+            in_keyring: false,
+            expires_at,
+        };
+        let now = 1_000_000;
+        assert!(account("tok", Some(now + 2 * REFRESH_MARGIN_SECS)).fresh_at(now));
+        assert!(!account("tok", Some(now + REFRESH_MARGIN_SECS)).fresh_at(now));
+        assert!(!account("tok", Some(now - 1)).fresh_at(now));
+        assert!(
+            !account("tok", None).fresh_at(now),
+            "an unknown end is refreshed"
+        );
+        assert!(!account("", Some(now + 2 * REFRESH_MARGIN_SECS)).fresh_at(now));
+    }
 
     #[test]
     fn old_account_json_loads_without_a_refresh_token() {

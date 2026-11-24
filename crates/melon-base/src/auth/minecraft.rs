@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 pub struct MinecraftSession {
     pub access_token: String,
+    /// Seconds the token is good for, as the login told.
+    pub expires_in: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -16,6 +18,8 @@ struct LoginRequest {
 #[derive(Deserialize)]
 struct LoginResponse {
     access_token: String,
+    #[serde(default)]
+    expires_in: Option<u64>,
 }
 
 /// `loginMinecraftWithXBox`.
@@ -30,6 +34,7 @@ pub fn login_with_xbox(xbox: &XboxLiveToken) -> anyhow::Result<MinecraftSession>
     )?;
     Ok(MinecraftSession {
         access_token: parsed.access_token,
+        expires_in: parsed.expires_in,
     })
 }
 

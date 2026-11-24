@@ -1,6 +1,6 @@
 //! Every block state's model, baked once into quads the mesher copies.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -436,6 +436,7 @@ impl BlockModels {
             .copied()
             .max()
             .unwrap_or(BlockStateId::COUNT.saturating_sub(1));
+        baker.prefetch(blocks_in_order(last));
         let pending: Vec<StateModel<PendingQuad>> = (0..=last).map(|id| baker.state(id)).collect();
         let particle: Vec<u16> = (0..=last)
             .map(|id| {
@@ -537,6 +538,49 @@ impl BlockModels {
             },
             atlas,
         )
+    }
+}
+
+/// Every block with a state up to `last`, in the order of their first state.
+fn blocks_in_order(last: u16) -> Vec<&'static str> {
+    let mut seen = HashSet::new();
+    (0..=last)
+        .filter_map(BlockStateId::new)
+        .map(|state| Block::from_state_id(state).name)
+        .filter(|name| seen.insert(*name))
+        .collect()
+}
+
+/// `id`'s model with its parents' folded in, and its elements' quads.
+fn resolve_model(assets_root: &Path, id: &str) -> Option<Arc<ResolvedModel>> {
+    with_quads(Model::resolve(assets_root, id)?)
+}
+
+fn with_quads(model: Model) -> Option<Arc<ResolvedModel>> {
+    let quads = model.elements.iter().flat_map(element_quads).collect();
+    Some(Arc::new((model, quads)))
+}
+
+/// Model files read once and shared by the threads resolving models:
+/// hundreds of models have the same parents (`block/block`, `block/cube`).
+struct ModelFiles<'a> {
+    assets_root: &'a Path,
+    read: std::sync::Mutex<HashMap<String, Option<Arc<serde_json::Value>>>>,
+}
+
+impl ModelFiles<'_> {
+    fn load(&self, id: &str) -> Option<Arc<serde_json::Value>> {
+        let read = || {
+            self.read
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+        };
+        if let Some(json) = read().get(id) {
+            return json.clone();
+        }
+        let json = crate::assets::json_resource(self.assets_root, "models", id).map(Arc::new);
+        read().insert(id.to_owned(), json.clone());
+        json
     }
 }
 
@@ -648,6 +692,58 @@ impl<'a> Baker<'a> {
         }
     }
 
+    /// Reads on every core what the state loop reads from files: each of
+    /// `blocks`' blockstate, every model they name and whether each texture
+    /// of those exists. The loop then finds them cached, and hands out the
+    /// texture indices in the order it would without.
+    fn prefetch(&mut self, blocks: Vec<&'static str>) {
+        let assets_root = self.assets_root;
+        let parsed = atlas::parallel_map(blocks, |block| {
+            (block, parse_block_state(assets_root, block))
+        });
+        let mut models = Vec::new();
+        let mut seen = HashSet::new();
+        for (block, parsed) in parsed {
+            if crate::probe::enabled() {
+                probe_block_state(assets_root, block, parsed.as_ref());
+            }
+            for model in parsed.iter().flat_map(BlockState::models) {
+                if !seen.contains(model) {
+                    seen.insert(model.to_owned());
+                    models.push(model.to_owned());
+                }
+            }
+            self.states.insert(block, parsed);
+        }
+        let files = ModelFiles {
+            assets_root,
+            read: std::sync::Mutex::default(),
+        };
+        let resolved = atlas::parallel_map(models, |id| {
+            let model = Model::resolve_with(&id, &|file| files.load(file)).and_then(with_quads);
+            (id, model)
+        });
+        let mut textures = Vec::new();
+        let mut seen = HashSet::new();
+        for (id, resolved) in resolved {
+            if let Some(resolved) = &resolved {
+                let (model, quads) = &**resolved;
+                let named = quads.iter().filter_map(|quad| model.texture(&quad.texture));
+                for texture in named.chain(model.texture("particle")) {
+                    if seen.insert(texture.clone()) {
+                        textures.push(texture);
+                    }
+                }
+            }
+            self.models.insert(id, resolved);
+        }
+        let existing = atlas::parallel_map(textures, |id| {
+            let exists = crate::assets::resource_exists(assets_root, "textures", &id, "png");
+            (id, exists)
+        });
+        self.existing_textures.extend(existing);
+    }
+
     fn state(&mut self, id: u16) -> StateModel<PendingQuad> {
         let Some(state) = BlockStateId::new(id) else {
             return StateModel::Fixed(Arc::from([]));
@@ -723,11 +819,7 @@ impl<'a> Baker<'a> {
         let resolved = self
             .models
             .entry(model_ref.model.clone())
-            .or_insert_with(|| {
-                let model = Model::resolve(assets_root, &model_ref.model)?;
-                let quads = model.elements.iter().flat_map(element_quads).collect();
-                Some(Arc::new((model, quads)))
-            })
+            .or_insert_with(|| resolve_model(assets_root, &model_ref.model))
             .clone()?;
         let texture_id = resolved.0.texture("particle")?;
         if !self.texture_exists(&texture_id) {
@@ -797,11 +889,7 @@ impl<'a> Baker<'a> {
         let Some(resolved) = self
             .models
             .entry(model_ref.model.clone())
-            .or_insert_with(|| {
-                let model = Model::resolve(assets_root, &model_ref.model)?;
-                let quads = model.elements.iter().flat_map(element_quads).collect();
-                Some(Arc::new((model, quads)))
-            })
+            .or_insert_with(|| resolve_model(assets_root, &model_ref.model))
             .clone()
         else {
             if crate::probe::enabled() {

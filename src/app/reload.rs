@@ -133,6 +133,13 @@ impl RunningState {
             }
         }
 
+        if self.world_resources.is_none() {
+            // Baked ahead again, from the packs active now.
+            self.pending_bake = super::PendingBake::start(
+                self.env.assets.root().to_path_buf(),
+                self.renderer.max_texture_side(),
+            );
+        }
         if let Some(world) = &mut self.world {
             world.set_chat_settings(&self.env.config.chat, &self.env.gui_assets.font);
         }

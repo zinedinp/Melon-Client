@@ -15,7 +15,7 @@ use crate::gui::overlay::inventory::InventoryTextures;
 use crate::gui::overlay::spectator_menu::SpectatorTextures;
 use crate::renderer::{MeshId, Renderer, TextureId};
 use crate::world::block_entity;
-use crate::world::block_models::{BlockModels, ExtraTexture, mipmap};
+use crate::world::block_models::{BakedAtlas, BlockModels, ExtraTexture, SpriteSheet, mipmap};
 use crate::world::clouds::CloudTexture;
 use crate::world::colormap::ColorMaps;
 use crate::world::fluid::FluidSprites;
@@ -68,6 +68,92 @@ pub struct WorldResources {
     /// What [`Self::load`] uploaded, freed or reused by a reload.
     textures: Vec<TextureId>,
     meshes: Vec<MeshId>,
+}
+
+/// What [`WorldResources`] reads without the GPU: every block state's
+/// baked model, both atlases' pixels, the particle sprites and the colour
+/// maps.
+pub struct Baked {
+    models: BlockModels,
+    atlas: BakedAtlas,
+    items: SpriteSheet,
+    particle_sprites: crate::particle::animation::SpriteSets,
+    fluids: FluidSprites,
+    colormaps: ColorMaps,
+}
+
+impl Baked {
+    /// From the active packs over `assets_root`, atlases at most `max_side` wide.
+    pub fn new(assets_root: &std::path::Path, max_side: u32) -> Self {
+        let mut extras: Vec<ExtraTexture> = FluidSprites::TEXTURES
+            .iter()
+            .map(|id| ExtraTexture {
+                id: (*id).to_owned(),
+                image: None,
+            })
+            .collect();
+        extras.extend(block_entity::atlas_textures(assets_root));
+        extras.extend(
+            crate::particle::animation::SpriteSets::texture_ids(assets_root)
+                .into_iter()
+                .map(|id| ExtraTexture { id, image: None }),
+        );
+        let (models, atlas) = BlockModels::bake(assets_root, extras, max_side);
+        let sprite = |id: &str| models.sprite(id).unwrap_or([0.0; 4]);
+        let fluids = FluidSprites {
+            water_still: sprite(FluidSprites::TEXTURES[0]),
+            water_flow: sprite(FluidSprites::TEXTURES[1]),
+            water_overlay: sprite(FluidSprites::TEXTURES[2]),
+            lava_still: sprite(FluidSprites::TEXTURES[3]),
+            lava_flow: sprite(FluidSprites::TEXTURES[4]),
+        };
+        let particle_sprites = crate::particle::animation::SpriteSets::load(
+            assets_root,
+            |id| models.sprite(id),
+            sprite("minecraft:particle/generic_0"),
+        );
+        let items = crate::world::block_models::pack_sprites(
+            assets_root,
+            crate::world::item_atlas::texture_ids(assets_root),
+            max_side,
+        );
+        Self {
+            models,
+            atlas,
+            items,
+            particle_sprites,
+            fluids,
+            colormaps: ColorMaps::load(assets_root),
+        }
+    }
+}
+
+/// A [`Baked`] made on a thread of its own, started with the menu, so
+/// that joining a world only uploads it.
+pub struct PendingBake(std::thread::JoinHandle<Baked>);
+
+impl PendingBake {
+    /// Starts it from the packs active now; `None` without a thread.
+    pub fn start(assets_root: std::path::PathBuf, max_side: u32) -> Option<Self> {
+        let started = std::thread::Builder::new()
+            .name("bake".to_owned())
+            .spawn(move || {
+                crate::platform::lower_thread_priority();
+                Baked::new(&assets_root, max_side)
+            });
+        match started {
+            Ok(thread) => Some(Self(thread)),
+            Err(e) => {
+                crate::warn!("Block models not baked ahead: {e}");
+                None
+            }
+        }
+    }
+
+    /// Waits for it; `None` if it panicked, to be baked again in place.
+    pub fn finish(self) -> Option<Baked> {
+        self.0.join().ok()
+    }
 }
 
 /// `environment/celestial/moon/*`, by moon phase.
@@ -170,9 +256,14 @@ impl GlintTextures {
 }
 
 impl WorldResources {
-    pub fn load(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
+    /// Uploads `baked`, or what it would hold, baked now.
+    pub fn load(
+        renderer: &mut Renderer,
+        assets: &Assets,
+        baked: Option<Baked>,
+    ) -> anyhow::Result<Self> {
         renderer.track_textures();
-        let result = Self::build(renderer, assets);
+        let result = Self::build(renderer, assets, baked);
         let (textures, meshes) = renderer.take_tracked();
         match result {
             Ok(mut loaded) => {
@@ -198,7 +289,7 @@ impl WorldResources {
     ) -> Result<Self, Box<(Self, anyhow::Error)>> {
         renderer.begin_texture_reuse(self.textures.clone());
         renderer.track_textures();
-        let result = Self::build(renderer, assets);
+        let result = Self::build(renderer, assets, None);
         let (textures, meshes) = renderer.take_tracked();
         match result {
             Ok(mut loaded) => {
@@ -238,44 +329,24 @@ impl WorldResources {
         renderer.compact_textures();
     }
 
-    fn build(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
+    fn build(
+        renderer: &mut Renderer,
+        assets: &Assets,
+        baked: Option<Baked>,
+    ) -> anyhow::Result<Self> {
         let players = PlayerModels::load(renderer, assets)?;
         let mobs = MobModels::load(renderer, assets)?;
-        let mut extras: Vec<ExtraTexture> = FluidSprites::TEXTURES
-            .iter()
-            .map(|id| ExtraTexture {
-                id: (*id).to_owned(),
-                image: None,
-            })
-            .collect();
-        extras.extend(block_entity::atlas_textures(assets.root()));
-        extras.extend(
-            crate::particle::animation::SpriteSets::texture_ids(assets.root())
-                .into_iter()
-                .map(|id| ExtraTexture { id, image: None }),
-        );
-        let (models, atlas) = BlockModels::bake(assets.root(), extras, renderer.max_texture_side());
+        let Baked {
+            models,
+            atlas,
+            items,
+            particle_sprites,
+            fluids,
+            colormaps,
+        } = baked.unwrap_or_else(|| Baked::new(assets.root(), renderer.max_texture_side()));
         renderer.set_quad_table(models.quad_corners())?;
-        let sprite = |id: &str| models.sprite(id).unwrap_or([0.0; 4]);
-        let fluids = FluidSprites {
-            water_still: sprite(FluidSprites::TEXTURES[0]),
-            water_flow: sprite(FluidSprites::TEXTURES[1]),
-            water_overlay: sprite(FluidSprites::TEXTURES[2]),
-            lava_still: sprite(FluidSprites::TEXTURES[3]),
-            lava_flow: sprite(FluidSprites::TEXTURES[4]),
-        };
-        let particle_sprites = crate::particle::animation::SpriteSets::load(
-            assets.root(),
-            |id| models.sprite(id),
-            sprite("minecraft:particle/generic_0"),
-        );
         let models = std::sync::Arc::new(models);
         let block_atlas = renderer.load_texture_mipmapped(&atlas.image, &atlas.mips)?;
-        let items = crate::world::block_models::pack_sprites(
-            assets.root(),
-            crate::world::item_atlas::texture_ids(assets.root()),
-            renderer.max_texture_side(),
-        );
         let item_atlas = renderer.load_texture(&items.image)?;
         let item_sprites = std::sync::Arc::new(items.sprites);
         let item_sheet = crate::gui::hud::item_icon::ItemSheet {
@@ -299,7 +370,7 @@ impl WorldResources {
             item_atlas,
             item_animator: items.animator,
             models,
-            colormaps: std::sync::Arc::new(ColorMaps::load(assets.root())),
+            colormaps: std::sync::Arc::new(colormaps),
             players,
             mobs,
             hud: HudTextures::load(renderer, assets)?,

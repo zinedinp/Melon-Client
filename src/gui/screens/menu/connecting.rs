@@ -36,7 +36,9 @@ pub struct ConnectingScreen {
 
 impl ConnectingScreen {
     pub fn new(target: Target, ctx: &ScreenContext) -> Self {
-        let identity = Identity::saved(ctx.account_dir);
+        // Refreshed on the join's thread; the name and UUID stay the same.
+        let identity = Identity::stored(ctx.account_dir);
+        let account_dir = ctx.account_dir.to_path_buf();
         if let Target::Server(address) = &target {
             crate::instances::save_last_server(ctx.game_dir, address);
         }
@@ -62,6 +64,7 @@ impl ConnectingScreen {
         thread::Builder::new()
             .name("join".to_owned())
             .spawn(move || {
+                let identity = Identity::saved(&account_dir);
                 let _ = tx.send(join::join(target, &identity, &client, simulation_distance));
             })
             .expect("spawning the join thread should not fail");
