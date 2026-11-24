@@ -282,6 +282,66 @@ fn main() -> anyhow::Result<()> {
         flat_times.push(t.elapsed());
     }
     stats("mesh_chunk (flat light)", &mut flat_times);
+
+    // Tints alone: one sampler per section, one lookup per tinted quad.
+    let mut tinted = Vec::new();
+    for (&key, chunk) in &chunks {
+        let mut n = Neighborhood::alone(chunk);
+        for dz in -1..=1 {
+            for dx in -1..=1 {
+                if (dx, dz) != (0, 0) {
+                    n.chunks[((dx + 1) + (dz + 1) * 3) as usize] =
+                        chunks.get(&(key.0 + dx, key.1 + dz));
+                }
+            }
+        }
+        let mut by_section = Vec::new();
+        for (s, section) in chunk.sections.iter().enumerate() {
+            let mut lookups = Vec::new();
+            for i in 0..4096usize {
+                let id = section.get(i);
+                let (x, y, z) = ((i & 15) as i32, (i >> 8) as i32, ((i >> 4) & 15) as i32);
+                let pos = [chunk.x * 16 + x, -64 + s as i32 * 16 + y, chunk.z * 16 + z];
+                models.quads_at(id, pos, |quads| {
+                    for quad in quads {
+                        if quad.tint != melon::world::block_tint::TintKind::None {
+                            lookups.push((quad.tint, pos));
+                        }
+                    }
+                });
+            }
+            if !lookups.is_empty() {
+                by_section.push(lookups);
+            }
+        }
+        tinted.push((n, by_section));
+    }
+    let quads: usize = tinted.iter().flat_map(|c| &c.1).map(Vec::len).sum();
+    for blend in [0u8, 2, 7] {
+        let settings = TintSettings::new(
+            &session.info.biomes,
+            melon::world::colormap::ColorMaps::cached(),
+            blend,
+            std::env::var_os("MELON_PERF_NO_ZOOM")
+                .is_none()
+                .then_some(session.info.hashed_seed),
+        );
+        let mut tint_times = Vec::new();
+        for (n, by_section) in &tinted {
+            let t = Instant::now();
+            for lookups in by_section {
+                let mut sampler = settings.sampler(|qx, qy, qz| n.biome_at(qx * 4, qy * 4, qz * 4));
+                for &(kind, pos) in lookups {
+                    std::hint::black_box(sampler.color(kind, pos));
+                }
+            }
+            tint_times.push(t.elapsed());
+        }
+        stats(
+            &format!("tints per chunk (blend {blend}, {quads} quads)"),
+            &mut tint_times,
+        );
+    }
     println!(
         "vertices: solid={solid_v} cutout={cutout_v} translucent={trans_v} max/chunk={max_v} gpu={:.1} MiB",
         gpu_bytes as f64 / (1024.0 * 1024.0)

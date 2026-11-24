@@ -15,7 +15,7 @@ ash = "0.38.0"
 ash-window = "0.13.0"
 image = { version = "0.25.10", default-features = false, features = ["png"] }
 # The GPU's vendor and architecture from its PCI ids, for vendor paths at run time.
-numerobis = { version = "0.4.3-beta", default-features = false }
+numerobis = { version = "0.5.0", default-features = false, features = ["vulkan"] }
 open = "5.4.5"
 raw-window-handle = "0.6.2"
 serde = { version = "1.0.229", features = ["derive"] }

@@ -386,13 +386,15 @@ static PLAINS_TINTS: std::sync::OnceLock<TintSettings> = std::sync::OnceLock::ne
 /// (2026-11-15, 290 chunks, Ryzen 9800X3D): `mesh_chunk` 0.89 ms a chunk,
 /// about 7200 quads; 0.70 ms with flat light. Filling the `LightCache`
 /// (both modes) is ~12 µs a section, ~145 µs a chunk. Decoding and the
-/// flag rows are 0.2 µs a section now, the visibility graph ~1%. Still to
-/// split up, with a profiler: in `fill_section`'s quad loop `tints.color`
-/// per quad, `quads_at`'s closure. Here, `LayerBuilder::finish` copies
-/// every quad once more and the translucent vertices are cloned out of the
+/// flag rows are 0.2 µs a section now, the visibility graph ~1%, the tints
+/// ~2.5% at blend 2 (7-9% at 7, nearly all biome lookups of the margin
+/// columns). Still to split up, with a profiler: in `fill_section`'s quad
+/// loop `quads_at`'s closure. Here, `LayerBuilder::finish` copies every
+/// quad once more and the translucent vertices are cloned out of the
 /// builder. Not worth it (2026-11-24): SIMD face masks (finding the faces
 /// is negligible), the solid rows cached per `Section` for the neighbours
-/// (1-2 %, ~512 B a section). Meshes section `s` of `neighborhood`'s
+/// (1-2 %, ~512 B a section), a box filter for the biome blend (the sums
+/// are <0.2 %; layers use ~10 of 256 cells). Meshes section `s` of `neighborhood`'s
 /// centre chunk. (AVX512 not tested)
 pub fn mesh_section(neighborhood: &Neighborhood, s: usize, context: &MeshContext) -> SectionMesh {
     let empty = || SectionMesh {
