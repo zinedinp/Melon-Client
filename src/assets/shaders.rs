@@ -56,6 +56,7 @@ pub fn compile(
     defines: &[&str],
     interface: &Interface,
 ) -> anyhow::Result<Vec<u32>> {
+    let _tt = std::time::Instant::now();
     let compiler = shaderc::Compiler::new()?;
     let mut options = shaderc::CompileOptions::new()?;
     // SPIR-V 1.0: every Vulkan version from 1.0 on takes it.
@@ -81,6 +82,7 @@ pub fn compile(
         .map_err(|e| anyhow::anyhow!("{file}: {e}"))?;
     let mut words = artifact.as_binary().to_vec();
     rebind(&mut words, stage, interface).map_err(|e| anyhow::anyhow!("{file}: {e}"))?;
+    melon_base::tt::add(&melon_base::tt::SHADER, _tt);
     Ok(words)
 }
 

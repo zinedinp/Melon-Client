@@ -84,12 +84,14 @@ pub unsafe fn record(
     if total == 0 {
         return Ok(());
     }
+    let _tt = std::time::Instant::now();
     staging.ensure(device, mem_props, total, 64 * 1024)?;
     let Some(mapped) = staging.mapped else {
         return Ok(());
     };
     let offset = record_inits(device, cmd, staging.buffer, mapped, 0, inits);
     record_updates(device, cmd, staging.buffer, mapped, offset, updates);
+    crate::tt::add(&crate::tt::TEXSUB, _tt);
     Ok(())
 }
 
@@ -111,6 +113,7 @@ pub unsafe fn submit_now(
     if total == 0 {
         return Ok(());
     }
+    let _tt2 = std::time::Instant::now();
     let mut staging = Staging::default();
     let mut cmd = vk::CommandBuffer::null();
     let mut fence = vk::Fence::null();
@@ -140,6 +143,7 @@ pub unsafe fn submit_now(
             fence,
         )?;
         device.wait_for_fences(&[fence], true, u64::MAX)?;
+        crate::tt::add(&crate::tt::TEXSUB, _tt2);
         Ok(())
     })();
     if fence != vk::Fence::null() {

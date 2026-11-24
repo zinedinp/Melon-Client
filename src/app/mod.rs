@@ -164,12 +164,18 @@ impl App {
             attributes =
                 attributes.with_fullscreen(Some(winit::window::Fullscreen::Borderless(largest)));
         }
+        melon_base::tt::mark("init");
         let window = crate::platform::create_centered_window(event_loop, attributes)?;
+        melon_base::tt::mark("window");
 
         let mut renderer = Renderer::new(&window, options.validation)?;
+        melon_base::tt::mark("renderer");
         reload::activate_packs(&assets, &config);
+        melon_base::tt::mark("packs");
         reload::apply_gui_shaders(&mut renderer, &assets);
+        melon_base::tt::mark("gui shaders");
         reload::apply_post_chains(&mut renderer, &assets);
+        melon_base::tt::mark("post chains");
         renderer.track_textures();
         let gui_assets = match GuiAssets::load(&mut renderer, &assets) {
             Ok(gui_assets) => gui_assets,
@@ -192,6 +198,7 @@ impl App {
             }
         };
         let (gui_textures, _) = renderer.take_tracked();
+        melon_base::tt::mark("gui assets");
         let lang = Lang::load(&assets, config.lang);
         let splashes = crate::gui::text::splash::load_splashes(&assets);
         let audio = AudioEngine::init(
@@ -201,7 +208,9 @@ impl App {
             config.directional_audio,
         );
         audio.set_volumes(&config.sound_volumes);
+        melon_base::tt::mark("audio+lang");
         let background = load_panorama(&mut renderer, &assets);
+        melon_base::tt::mark("panorama");
 
         let mut state = RunningState {
             renderer,
@@ -427,9 +436,13 @@ impl RunningState {
     }
 
     fn enter_world(&mut self, joined: Joined) {
+        melon_base::tt::mark("enter_world");
         if self.world_resources.is_none() {
             match WorldResources::load(&mut self.renderer, &self.env.assets) {
-                Ok(loaded) => self.world_resources = Some(loaded),
+                Ok(loaded) => {
+                    self.world_resources = Some(loaded);
+                    melon_base::tt::mark("world resources");
+                }
                 Err(e) => {
                     self.show_failure(format!("{e:#}"));
                     return;

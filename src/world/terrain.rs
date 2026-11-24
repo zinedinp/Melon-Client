@@ -387,12 +387,13 @@ static PLAINS_TINTS: std::sync::OnceLock<TintSettings> = std::sync::OnceLock::ne
 /// about 7200 quads; 0.70 ms with flat light. Filling the `LightCache`
 /// (both modes) is ~12 µs a section, ~145 µs a chunk. Decoding and the
 /// flag rows are 0.2 µs a section now, the visibility graph ~1%. Still to
-/// split up, with a profiler: in `fill_section`'s quad loop the cullface
-/// test (`neighborhood.block` + `skip_rendering::hides` when the solid
-/// cache says no), `tints.color` per quad, `quads_at`'s closure. Here,
-/// `LayerBuilder::finish` copies every quad once more and the translucent
-/// vertices are cloned out of the builder. Meshes section `s` of
-/// `neighborhood`'s centre chunk.
+/// split up, with a profiler: in `fill_section`'s quad loop `tints.color`
+/// per quad, `quads_at`'s closure. Here, `LayerBuilder::finish` copies
+/// every quad once more and the translucent vertices are cloned out of the
+/// builder. Not worth it (2026-11-24): SIMD face masks (finding the faces
+/// is negligible), the solid rows cached per `Section` for the neighbours
+/// (1-2 %, ~512 B a section). Meshes section `s` of `neighborhood`'s
+/// centre chunk. (AVX512 not tested)
 pub fn mesh_section(neighborhood: &Neighborhood, s: usize, context: &MeshContext) -> SectionMesh {
     let empty = || SectionMesh {
         base_y: context.min_y,

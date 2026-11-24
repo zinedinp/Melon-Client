@@ -7,6 +7,7 @@ use melon::network;
 use melon::settings::options::Config;
 
 fn main() -> anyhow::Result<()> {
+    melon_base::tt::mark("main");
     melon::platform::drop_cargo_stack();
     // The frame is drawn here: ahead of the meshers and the server's generation.
     melon::platform::raise_frame_thread_priority();
@@ -45,6 +46,7 @@ fn run_game(command: cli::Command) -> anyhow::Result<()> {
     {
         config.lang = language;
     }
+    melon_base::tt::mark("app::run");
     app::run(options, assets, config)
 }
 
