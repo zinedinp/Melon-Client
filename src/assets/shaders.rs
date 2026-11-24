@@ -47,6 +47,12 @@ pub struct Interface<'a> {
     pub resources: &'a [(&'a str, u32, u32)],
 }
 
+thread_local! {
+    /// Kept for the thread: glslang builds its built-in symbol tables once
+    /// per compiler, about 30 ms that every shader paid with its own.
+    static COMPILER: Option<shaderc::Compiler> = shaderc::Compiler::new().ok();
+}
+
 /// `source` (named `name` in messages) compiled for `stage` with `defines`
 pub fn compile(
     assets_root: &Path,
@@ -56,7 +62,39 @@ pub fn compile(
     defines: &[&str],
     interface: &Interface,
 ) -> anyhow::Result<Vec<u32>> {
-    let compiler = shaderc::Compiler::new()?;
+    COMPILER.with(|compiler| {
+        let compiler = compiler
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("shaderc: no compiler"))?;
+        let shader = Shader {
+            name,
+            stage,
+            source,
+            defines,
+        };
+        compile_with(compiler, assets_root, &shader, interface)
+    })
+}
+
+/// One shader to compile.
+struct Shader<'a> {
+    name: &'a str,
+    stage: Stage,
+    source: &'a str,
+    defines: &'a [&'a str],
+}
+
+fn compile_with(
+    compiler: &shaderc::Compiler,
+    assets_root: &Path,
+    &Shader {
+        name,
+        stage,
+        source,
+        defines,
+    }: &Shader,
+    interface: &Interface,
+) -> anyhow::Result<Vec<u32>> {
     let mut options = shaderc::CompileOptions::new()?;
     // SPIR-V 1.0: every Vulkan version from 1.0 on takes it.
     options.set_target_env(
@@ -297,6 +335,38 @@ mod tests {
             &[],
             &INTERFACE,
         )
+    }
+
+    #[test]
+    fn the_kept_compiler_compiles_what_a_fresh_one_does() {
+        let shaders = [
+            (
+                "#version 330
+                layout(location = 5) in vec3 Position;
+                void main() { gl_Position = vec4(Position, 1.0); }",
+                Stage::Vertex,
+            ),
+            (
+                "#version 330
+                uniform sampler2D Sampler0;
+                layout(location = 0) out vec4 fragColor;
+                void main() { fragColor = texture(Sampler0, vec2(0.5)); }",
+                Stage::Fragment,
+            ),
+        ];
+        // Twice over, so the second round runs on a compiler used before.
+        for (source, stage) in shaders.into_iter().chain(shaders) {
+            let fresh = shaderc::Compiler::new().expect("shaderc");
+            let shader = Shader {
+                name: "test",
+                stage,
+                source,
+                defines: &[],
+            };
+            let expected = compile_with(&fresh, Path::new("/nonexistent"), &shader, &INTERFACE)
+                .expect("compiles");
+            assert_eq!(compile_source(source, stage).expect("compiles"), expected);
+        }
     }
 
     #[test]
