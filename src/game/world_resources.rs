@@ -15,7 +15,7 @@ use crate::gui::overlay::inventory::InventoryTextures;
 use crate::gui::overlay::spectator_menu::SpectatorTextures;
 use crate::renderer::{MeshId, Renderer, TextureId};
 use crate::world::block_entity;
-use crate::world::block_models::{BakedAtlas, BlockModels, ExtraTexture, SpriteSheet, mipmap};
+use crate::world::block_models::{BakedAtlas, BlockModels, ExtraTexture, SpriteSheet};
 use crate::world::clouds::CloudTexture;
 use crate::world::colormap::ColorMaps;
 use crate::world::fluid::FluidSprites;
@@ -415,30 +415,15 @@ impl WorldResources {
 
     /// Runs `ticks` client ticks of the atlas animations and uploads the changed frames.
     pub fn animate(&mut self, renderer: &mut Renderer, ticks: u32) {
-        let mut latest = std::collections::HashMap::new();
-        for _ in 0..ticks {
-            for (x, y, image) in self.animator.tick() {
-                latest.insert((x, y), image);
+        for (x, y, levels) in self.animator.advance(ticks) {
+            for (level, image) in (0..).zip(levels) {
+                renderer.update_texture(self.atlas, level, x >> level, y >> level, image);
             }
         }
-        for ((x, y), mut image) in latest {
-            let holes = image.pixels().any(|p| p.0[3] == 0);
-            if holes {
-                mipmap::solidify(&mut image);
+        for (x, y, levels) in self.item_animator.advance(ticks) {
+            if let Some(image) = levels.into_iter().next() {
+                renderer.update_texture(self.item_atlas, 0, x, y, image);
             }
-            for (level, mip) in (1..).zip(mipmap::chain(&image, holes)) {
-                renderer.update_texture(self.atlas, level, x >> level, y >> level, mip);
-            }
-            renderer.update_texture(self.atlas, 0, x, y, image);
-        }
-        let mut latest = std::collections::HashMap::new();
-        for _ in 0..ticks {
-            for (x, y, image) in self.item_animator.tick() {
-                latest.insert((x, y), image);
-            }
-        }
-        for ((x, y), image) in latest {
-            renderer.update_texture(self.item_atlas, 0, x, y, image);
         }
     }
 

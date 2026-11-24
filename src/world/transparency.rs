@@ -231,6 +231,7 @@ mod tests {
     fn an_animation_counts_every_frame() {
         let opaque = RgbaImage::from_pixel(4, 1, Rgba([9, 9, 9, 255]));
         let frames = Frames {
+            strip: RgbaImage::new(4, 2),
             images: vec![opaque, strip()],
             schedule: vec![(0, 5), (1, 5)],
             interpolate: false,

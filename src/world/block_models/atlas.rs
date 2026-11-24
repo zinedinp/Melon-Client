@@ -41,6 +41,8 @@ const MAX_SIDE: u32 = 16384;
 struct Sprite {
     image: RgbaImage,
     frames: Option<Frames>,
+    /// An animation's levels per frame ([`Frames::mipmapped`]), once fitted.
+    levels: Vec<Vec<RgbaImage>>,
 }
 
 /// Packs the textures into one atlas no wider or taller than `max_side`
@@ -60,12 +62,17 @@ pub(super) fn pack_atlas(
         })
         .collect();
     fit(&mut sprites, max_side);
-    // `generateMipLevels`: a cutout sprite's clear pixels take their neighbours' colour.
-    for sprite in &mut sprites {
-        if has_holes(&sprite.image) {
+    // `generateMipLevels`: a cutout sprite's clear pixels take their
+    // neighbours' colour; an animation is mipmapped as its whole strip.
+    let sprites: Vec<Sprite> = parallel_map(sprites, |mut sprite| {
+        if let Some(frames) = &sprite.frames {
+            sprite.levels = frames.mipmapped();
+            sprite.image = sprite.levels[frames.first_index()][0].clone();
+        } else if has_holes(&sprite.image) {
             mipmap::solidify(&mut sprite.image);
         }
-    }
+        sprite
+    });
 
     let mut unique: Vec<usize> = Vec::new();
     let mut slot_of = vec![0usize; sprites.len()];
@@ -98,8 +105,11 @@ pub(super) fn pack_atlas(
     let (width, height, places) = pack(&cells, max_side);
 
     let chains: Vec<Vec<RgbaImage>> = parallel_map(unique.clone(), |i| {
-        let image = &sprites[i].image;
-        mipmap::chain(image, has_holes(image))
+        let sprite = &sprites[i];
+        match &sprite.frames {
+            Some(frames) => sprite.levels[frames.first_index()][1..].to_vec(),
+            None => mipmap::chain(&sprite.image, has_holes(&sprite.image)),
+        }
     });
 
     let mut atlas = RgbaImage::new(width, height);
@@ -133,7 +143,7 @@ pub(super) fn pack_atlas(
             .zip(&slot_of)
             .filter_map(|(sprite, &slot)| {
                 let (x, y) = places[slot];
-                Some(SpriteAnimation::new(x, y, sprite.frames?))
+                Some(SpriteAnimation::new(x, y, sprite.frames?, sprite.levels))
             })
             .collect(),
     };
@@ -158,12 +168,14 @@ fn load(assets_root: &Path, id: String, image: Option<RgbaImage>) -> Sprite {
         return Sprite {
             image,
             frames: None,
+            levels: Vec::new(),
         };
     }
     if let Some(frames) = texture_animation::load_frames(assets_root, &id) {
         return Sprite {
             image: frames.first().clone(),
             frames: Some(frames),
+            levels: Vec::new(),
         };
     }
     let image = crate::assets::texture_image(assets_root, &id).map(|image| {
@@ -177,6 +189,7 @@ fn load(assets_root: &Path, id: String, image: Option<RgbaImage>) -> Sprite {
     Sprite {
         image: image.unwrap_or_else(crate::assets::missing_texture),
         frames: None,
+        levels: Vec::new(),
     }
 }
 
@@ -209,6 +222,7 @@ fn fit(sprites: &mut [Sprite], max_side: u32) {
         while sprite.image.width().max(sprite.image.height()) > cap {
             sprite.image = mipmap::halve(&sprite.image);
             if let Some(frames) = &mut sprite.frames {
+                frames.strip = mipmap::halve(&frames.strip);
                 for frame in &mut frames.images {
                     *frame = mipmap::halve(frame);
                 }
@@ -420,6 +434,7 @@ mod tests {
             .map(|_| Sprite {
                 image: RgbaImage::new(512, 512),
                 frames: None,
+                levels: Vec::new(),
             })
             .collect();
         fit(&mut sprites, 1024);

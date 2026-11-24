@@ -5,8 +5,12 @@ use std::path::Path;
 use image::RgbaImage;
 use serde_json::Value;
 
+use crate::world::block_models::mipmap;
+
 /// An animated texture's frames and schedule (`(frame, ticks)` in play order).
 pub struct Frames {
+    /// The whole image the frames are cut from.
+    pub strip: RgbaImage,
     pub images: Vec<RgbaImage>,
     pub schedule: Vec<(usize, u32)>,
     pub interpolate: bool,
@@ -15,7 +19,39 @@ pub struct Frames {
 impl Frames {
     /// The frame shown first, as packed into the atlas.
     pub fn first(&self) -> &RgbaImage {
-        &self.images[self.schedule.first().map_or(0, |&(f, _)| f)]
+        &self.images[self.first_index()]
+    }
+
+    /// The index of the frame shown first.
+    pub fn first_index(&self) -> usize {
+        self.schedule.first().map_or(0, |&(f, _)| f)
+    }
+
+    /// Every frame's levels 0 to [`mipmap::LEVELS`], cut from the whole
+    /// strip's (`SpriteContents.byMipLevel`): solidified, and with holes
+    /// scaled to the strip's coverage.
+    pub fn mipmapped(&self) -> Vec<Vec<RgbaImage>> {
+        let mut strip = self.strip.clone();
+        let holes = strip.pixels().any(|p| p.0[3] == 0);
+        if holes {
+            mipmap::solidify(&mut strip);
+        }
+        let chain = mipmap::chain(&strip, holes);
+        let (width, height) = self.images[0].dimensions();
+        let per_row = (strip.width() / width).max(1);
+        (0..self.images.len() as u32)
+            .map(|i| {
+                let (x, y) = ((i % per_row) * width, (i / per_row) * height);
+                std::iter::once(&strip)
+                    .chain(&chain)
+                    .enumerate()
+                    .map(|(level, image)| {
+                        let (w, h) = ((width >> level).max(1), (height >> level).max(1));
+                        image::imageops::crop_imm(image, x >> level, y >> level, w, h).to_image()
+                    })
+                    .collect()
+            })
+            .collect()
     }
 
     /// Ticks until the schedule starts over.
@@ -93,7 +129,8 @@ pub struct SpriteAnimation {
     /// Top-left corner in the atlas, pixels.
     pub x: u32,
     pub y: u32,
-    frames: Vec<RgbaImage>,
+    /// Per frame, its levels from 0 on ([`Frames::mipmapped`]).
+    levels: Vec<Vec<RgbaImage>>,
     /// `(frame, ticks)` in play order (`AnimationMetadataSection.frames`).
     schedule: Vec<(usize, u32)>,
     interpolate: bool,
@@ -124,6 +161,7 @@ pub fn frames_of(strip: &RgbaImage, animation: &Value) -> Option<Frames> {
     }
     let interpolate = animation["interpolate"].as_bool().unwrap_or(false);
     Some(Frames {
+        strip: strip.clone(),
         images: frames,
         schedule,
         interpolate,
@@ -166,11 +204,12 @@ pub fn schedule(animation: &Value, count: usize) -> Vec<(usize, u32)> {
 }
 
 impl SpriteAnimation {
-    pub fn new(x: u32, y: u32, frames: Frames) -> Self {
+    /// `frames` placed at `(x, y)`, with `levels` from [`Frames::mipmapped`].
+    pub fn new(x: u32, y: u32, frames: Frames, levels: Vec<Vec<RgbaImage>>) -> Self {
         Self {
             x,
             y,
-            frames: frames.images,
+            levels,
             schedule: frames.schedule,
             interpolate: frames.interpolate,
             step: 0,
@@ -178,33 +217,43 @@ impl SpriteAnimation {
         }
     }
 
-    /// `AnimatedTexture.tick`: one client tick on.
-    fn tick(&mut self) -> Option<RgbaImage> {
+    /// `AnimationState.tick`: one client tick on; whether the sprite has to
+    /// be drawn again (`needsToDraw`).
+    fn tick(&mut self) -> bool {
         if self.schedule.is_empty() {
-            return None;
+            return false;
         }
         self.sub_tick += 1;
         let (frame, time) = self.schedule[self.step];
+        let mut changed = false;
         if self.sub_tick >= time {
             self.sub_tick = 0;
             self.step = (self.step + 1) % self.schedule.len();
-            let (next, _) = self.schedule[self.step];
-            return (next != frame || self.interpolate).then(|| self.frames[next].clone());
+            changed = self.schedule[self.step].0 != frame;
         }
+        self.interpolate || changed
+    }
+
+    /// `drawToAtlas`: the levels showing now. Interpolated frames blend into
+    /// the next one by the frame's progress in thousandths, rounded to the
+    /// nearest byte as the GPU's `mix` writes it.
+    fn shown(&self) -> Vec<RgbaImage> {
+        let (frame, time) = self.schedule[self.step];
+        let current = &self.levels[frame];
         if !self.interpolate {
-            return None;
+            return current.clone();
         }
-        let (next, _) = self.schedule[(self.step + 1) % self.schedule.len()];
-        let ratio = self.sub_tick as f32 / time as f32;
-        let (a, b) = (&self.frames[frame], &self.frames[next]);
-        let mut out = a.clone();
-        for (pixel, (pa, pb)) in out.pixels_mut().zip(a.pixels().zip(b.pixels())) {
-            for c in 0..4 {
-                pixel.0[c] =
-                    (f32::from(pa.0[c]) * (1.0 - ratio) + f32::from(pb.0[c]) * ratio) as u8;
-            }
-        }
-        Some(out)
+        let next = &self.levels[self.schedule[(self.step + 1) % self.schedule.len()].0];
+        let progress = (self.sub_tick as f32 / time as f32 * 1000.0) as u16;
+        current
+            .iter()
+            .zip(next)
+            .map(|(a, b)| {
+                let mut out = a.clone();
+                crate::math::slices::lerp_u8(a.as_raw(), b.as_raw(), progress, 1000, &mut out);
+                out
+            })
+            .collect()
     }
 }
 
@@ -215,11 +264,14 @@ pub struct TextureAnimator {
 }
 
 impl TextureAnimator {
-    /// One client tick: `(x, y, image)` for every sprite region to rewrite.
-    pub fn tick(&mut self) -> Vec<(u32, u32, RgbaImage)> {
+    /// `ticks` client ticks on: `(x, y, levels)` for every sprite to draw again.
+    pub fn advance(&mut self, ticks: u32) -> Vec<(u32, u32, Vec<RgbaImage>)> {
         self.sprites
             .iter_mut()
-            .filter_map(|sprite| Some((sprite.x, sprite.y, sprite.tick()?)))
+            .filter_map(|sprite| {
+                let draw = (0..ticks).fold(false, |draw, _| sprite.tick() | draw);
+                draw.then(|| (sprite.x, sprite.y, sprite.shown()))
+            })
             .collect()
     }
 }
@@ -232,33 +284,74 @@ mod tests {
         RgbaImage::from_pixel(2, 2, image::Rgba([value, value, value, 255]))
     }
 
+    /// A sprite at the origin showing `values` as 2x2 frames, level 0 only.
+    fn sprite(values: &[u8], schedule: Vec<(usize, u32)>, interpolate: bool) -> SpriteAnimation {
+        let images: Vec<RgbaImage> = values.iter().map(|&v| frame(v)).collect();
+        let levels = images.iter().map(|f| vec![f.clone()]).collect();
+        let frames = Frames {
+            strip: RgbaImage::new(2, 2 * values.len() as u32),
+            images,
+            schedule,
+            interpolate,
+        };
+        SpriteAnimation::new(0, 0, frames, levels)
+    }
+
+    /// The red of the first pixel drawn after `ticks` more ticks, if any is.
+    fn red(animator: &mut TextureAnimator, ticks: u32) -> Option<u8> {
+        let mut drawn = animator.advance(ticks);
+        drawn
+            .pop()
+            .map(|(_, _, levels)| levels[0].get_pixel(0, 0).0[0])
+    }
+
     #[test]
     fn steps_through_the_schedule_and_blends() {
-        let mut held = SpriteAnimation::new(
-            0,
-            0,
-            Frames {
-                images: vec![frame(0), frame(100)],
-                schedule: vec![(0, 2), (1, 2)],
-                interpolate: false,
-            },
-        );
-        assert!(held.tick().is_none());
-        assert_eq!(held.tick().unwrap().get_pixel(0, 0).0[0], 100);
-        assert!(held.tick().is_none());
-        assert_eq!(held.tick().unwrap().get_pixel(0, 0).0[0], 0);
+        let mut held = TextureAnimator {
+            sprites: vec![sprite(&[0, 100], vec![(0, 2), (1, 2)], false)],
+        };
+        assert_eq!(red(&mut held, 1), None);
+        assert_eq!(red(&mut held, 1), Some(100));
+        assert_eq!(red(&mut held, 1), None);
+        assert_eq!(red(&mut held, 1), Some(0));
+        assert_eq!(red(&mut held, 4), Some(0));
 
-        let mut blended = SpriteAnimation::new(
-            0,
-            0,
-            Frames {
-                images: vec![frame(0), frame(100)],
-                schedule: vec![(0, 4), (1, 4)],
-                interpolate: true,
-            },
-        );
-        assert_eq!(blended.tick().unwrap().get_pixel(0, 0).0[0], 25);
-        assert_eq!(blended.tick().unwrap().get_pixel(0, 0).0[0], 50);
+        let mut blended = TextureAnimator {
+            sprites: vec![sprite(&[0, 100], vec![(0, 4), (1, 4)], true)],
+        };
+        assert_eq!(red(&mut blended, 1), Some(25));
+        assert_eq!(red(&mut blended, 1), Some(50));
+        assert_eq!(red(&mut blended, 2), Some(100));
+    }
+
+    /// A third of the way from 0 to 255 is 84.9: rounded, not cut off.
+    #[test]
+    fn blends_round_to_the_nearest_byte() {
+        let mut blended = TextureAnimator {
+            sprites: vec![sprite(&[0, 255], vec![(0, 3), (1, 3)], true)],
+        };
+        assert_eq!(red(&mut blended, 1), Some(85));
+    }
+
+    /// Every frame is cut from the strip's levels, each level half the last.
+    #[test]
+    fn frames_are_cut_from_the_strips_levels() {
+        let strip =
+            RgbaImage::from_fn(16, 64, |_, y| image::Rgba([(y / 16 * 60) as u8, 0, 0, 255]));
+        let frames = frames_of(&strip, &serde_json::json!({})).expect("four frames");
+        let levels = frames.mipmapped();
+        assert_eq!(levels.len(), 4);
+        for (i, frame) in levels.iter().enumerate() {
+            assert_eq!(frame.len(), 1 + mipmap::LEVELS as usize);
+            for (level, image) in frame.iter().enumerate() {
+                assert_eq!(image.dimensions(), (16 >> level, 16 >> level));
+                assert_eq!(
+                    image.get_pixel(0, 0).0,
+                    [(i * 60) as u8, 0, 0, 255],
+                    "frame {i} level {level}"
+                );
+            }
+        }
     }
 
     #[test]
