@@ -1,13 +1,26 @@
 //! [`crate::world::nibble_decode`]'s loop under SSSE3, AVX2 and AVX-512
 //! VBMI: one `target_feature` body each.
 
+use miraculix::x86::bundles::V4Vbmi;
+use miraculix::x86::ops::avx::avx2::Avx2;
+use miraculix::x86::ops::sse::ssse3::Ssse3;
+
 use crate::math::x86::bytes::{Avx2Bytes, Ssse3Bytes, VbmiBytes};
 use crate::world::chunk::LIGHT_NIBBLES;
 use crate::world::nibble_decode::unpack_with;
 use crate::world::section::BLOCKS_PER_SECTION;
 
+pub fn unpack_ssse3(
+    b: Ssse3Bytes,
+    packed: &[u8; LIGHT_NIBBLES],
+    out: &mut [u8; BLOCKS_PER_SECTION],
+) {
+    unpack_ssse3_body(b.proof(), b, packed, out);
+}
+
 miraculix::ssse3_fn! {
-    pub fn unpack_ssse3(
+    fn unpack_ssse3_body(
+        _proof: Ssse3,
         b: Ssse3Bytes,
         packed: &[u8; LIGHT_NIBBLES],
         out: &mut [u8; BLOCKS_PER_SECTION],
@@ -16,8 +29,13 @@ miraculix::ssse3_fn! {
     }
 }
 
+pub fn unpack_avx2(b: Avx2Bytes, packed: &[u8; LIGHT_NIBBLES], out: &mut [u8; BLOCKS_PER_SECTION]) {
+    unpack_avx2_body(b.proof(), b, packed, out);
+}
+
 miraculix::avx2_fn! {
-    pub fn unpack_avx2(
+    fn unpack_avx2_body(
+        _proof: Avx2,
         b: Avx2Bytes,
         packed: &[u8; LIGHT_NIBBLES],
         out: &mut [u8; BLOCKS_PER_SECTION],
@@ -26,8 +44,13 @@ miraculix::avx2_fn! {
     }
 }
 
+pub fn unpack_vbmi(b: VbmiBytes, packed: &[u8; LIGHT_NIBBLES], out: &mut [u8; BLOCKS_PER_SECTION]) {
+    unpack_vbmi_body(b.proof(), b, packed, out);
+}
+
 miraculix::avx512_v4_vbmi_fn! {
-    pub fn unpack_vbmi(
+    fn unpack_vbmi_body(
+        _proof: V4Vbmi,
         b: VbmiBytes,
         packed: &[u8; LIGHT_NIBBLES],
         out: &mut [u8; BLOCKS_PER_SECTION],

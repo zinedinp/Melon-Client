@@ -138,6 +138,9 @@ fn log_bar(memory: Option<&Memory>, gpu: numerobis::pci::Gpu) {
             "pci: resizable BAR is on, but the driver lets the CPU map less \
              of the VRAM; meshes go through staging"
         ),
-        ResizableBar::NotCapable | ResizableBar::Unknown | ResizableBar::Hidden => {}
+        ResizableBar::NotCapable
+        | ResizableBar::Unknown
+        | ResizableBar::Hidden
+        | ResizableBar::Integrated => {}
     }
 }

@@ -154,6 +154,12 @@ impl AvxLanes {
             avx: Avx::from_features(features)?,
         })
     }
+
+    /// The token that proves this tier's features to a `*_fn!` kernel.
+    #[inline(always)]
+    pub fn proof(self) -> Avx {
+        self.avx
+    }
 }
 
 impl Lanes for AvxLanes {
@@ -266,6 +272,12 @@ impl Avx512Lanes {
             avx: Avx::from_features(features)?,
             avx512: Avx512f::from_features(features)?,
         })
+    }
+
+    /// The token that proves this tier's features to a `*_fn!` kernel.
+    #[inline(always)]
+    pub fn proof(self) -> Avx512f {
+        self.avx512
     }
 }
 

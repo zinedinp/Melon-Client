@@ -128,6 +128,12 @@ impl Ssse3Bytes {
         })
     }
 
+    /// The token that proves this tier's features to a `*_fn!` kernel.
+    #[inline(always)]
+    pub fn proof(self) -> Ssse3 {
+        self.ssse3
+    }
+
     #[inline(always)]
     fn shuffle(self, table: [u8; 16], index: [u8; 16]) -> [u8; 16] {
         unsigned(self.ssse3.shuffle_i8x16(signed(table), signed(index)))
@@ -241,6 +247,12 @@ impl Avx2Bytes {
         })
     }
 
+    /// The token that proves this tier's features to a `*_fn!` kernel.
+    #[inline(always)]
+    pub fn proof(self) -> Avx2 {
+        self.avx2
+    }
+
     #[inline(always)]
     fn shuffle(self, table: [u8; 32], index: [u8; 32]) -> [u8; 32] {
         unsigned(self.avx2.shuffle_i8x32(signed(table), signed(index)))
@@ -346,6 +358,12 @@ pub struct VbmiBytes(V4Vbmi);
 impl VbmiBytes {
     pub fn new(features: FeatureSet) -> Option<Self> {
         V4Vbmi::from_features(features).map(Self)
+    }
+
+    /// The token that proves this tier's features to a `*_fn!` kernel.
+    #[inline(always)]
+    pub fn proof(self) -> V4Vbmi {
+        self.0
     }
 
     /// Lanes of `mask` set: `value`, else `0`.

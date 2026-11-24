@@ -25,11 +25,14 @@ fn lanes(row: &[f32; LANES], at: usize) -> [f32; 8] {
     std::array::from_fn(|i| row[at + i])
 }
 
+/// [`SectionCull::column`] from its column parts: `least` per plane,
+/// `fog_room` the squared distance left to the fog's end.
+pub fn column(t: CullAvx, cull: &SectionCull, least: &[f32; 6], fog_room: Option<f32>) -> u32 {
+    column_avx(t.0, cull, least, fog_room)
+}
+
 miraculix::avx_fn! {
-    /// [`SectionCull::column`] from its column parts: `least` per plane,
-    /// `fog_room` the squared distance left to the fog's end.
-    pub fn column(t: CullAvx, cull: &SectionCull, least: &[f32; 6], fog_room: Option<f32>) -> u32 {
-        let avx = t.0;
+    fn column_avx(avx: Avx, cull: &SectionCull, least: &[f32; 6], fog_room: Option<f32>) -> u32 {
         let mut mask = 0u32;
         for at in (0..LANES).step_by(8) {
             let mut lit = [f32::from_bits(!0); 8];

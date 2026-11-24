@@ -68,9 +68,9 @@ regex = { version = "1.13.2", default-features = false, features = ["std", "perf
 # system's shaderc library, from the same install `glslc` comes from.
 shaderc = "0.10.1"
 zip = { version = "9.8.1", default-features = false, features = ["deflate-flate2"] }
-miraculix = "0.6.5-beta"
+miraculix = "0.7.0"
 # The GPU's vendor and architecture, for vendor paths (see melon-base).
-numerobis = { version = "0.5.0", default-features = false, features = ["vulkan"] }
+numerobis = { version = "0.5.4", default-features = false, features = ["vulkan"] }
 
 [target.'cfg(windows)'.dependencies]
 # SRV records through the system resolver.
