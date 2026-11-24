@@ -61,6 +61,7 @@ impl Renderer {
             &self.textures.pending_inits,
             &self.textures.pending_updates,
         )?;
+        self.residency.refresh(&self.instance, self.physical_device);
         for arena in [
             &mut self.meshes,
             &mut self.quad_meshes,

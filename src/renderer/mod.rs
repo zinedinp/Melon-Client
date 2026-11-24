@@ -24,6 +24,7 @@ mod vk_check;
 
 pub use gpu_timer::PassStats;
 pub use melon_base::gfx::quad;
+use melon_base::gfx::residency::Residency;
 pub use melon_base::gfx::{DeviceInfo, TextureId};
 use melon_base::gfx::{descriptor_pools, gui_uniforms, staging, texture, texture_update, vk_util};
 pub use mesh_arena::quad_index_list;
@@ -85,6 +86,8 @@ pub struct Renderer {
     surface: vk::SurfaceKHR,
     physical_device: vk::PhysicalDevice,
     mem_props: vk::PhysicalDeviceMemoryProperties,
+    /// Where mesh blocks go, and the VRAM budget.
+    residency: Residency,
     device: ash::Device,
     queue: vk::Queue,
     passes: context::RenderPasses,

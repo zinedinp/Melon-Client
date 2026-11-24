@@ -3,7 +3,7 @@
 
 mod pipelines;
 
-use melon_base::gfx::{device, features, instance};
+use melon_base::gfx::{device, features, instance, residency};
 pub(super) use pipelines::RenderPasses;
 mod resources;
 
@@ -24,6 +24,7 @@ impl Renderer {
         window: &winit::window::Window,
         enable_validation: bool,
     ) -> anyhow::Result<Self> {
+        residency::warm_up();
         let entry = ash::Entry::load()?;
         let display = window.display_handle()?.as_raw();
         let instance::Instance {
@@ -39,6 +40,7 @@ impl Renderer {
         let features = features::probe(&instance, gpu.physical, api, features::GAME);
         let (device, queue) = device::create(&instance, &gpu, &features)?;
         let mem_props = gpu.mem_props;
+        let residency = residency::Residency::new(&features, gpu.info.gpu);
 
         let depth_format = find_depth_format(&instance, gpu.physical)?;
         let surface_format = choose_surface_format(&surface_loader, gpu.physical, surface)?.format;
@@ -153,6 +155,7 @@ impl Renderer {
             surface,
             physical_device: gpu.physical,
             mem_props,
+            residency,
             device,
             queue,
             passes,

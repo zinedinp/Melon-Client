@@ -59,6 +59,14 @@ pub const DEVICE_OR_HOST: [vk::MemoryPropertyFlags; 2] = [
     ),
 ];
 
+/// Memory for meshes when the CPU maps all of VRAM: VRAM it maps, so
+/// uploads write there directly, else as [`DEVICE_OR_HOST`].
+pub const MAPPED_VRAM_FIRST: [vk::MemoryPropertyFlags; 3] =
+    [MAPPED_FOR_GPU[0], DEVICE_OR_HOST[0], DEVICE_OR_HOST[1]];
+
+/// Memory for meshes past the VRAM budget: host memory, else VRAM.
+pub const HOST_FIRST: [vk::MemoryPropertyFlags; 2] = [DEVICE_OR_HOST[1], DEVICE_OR_HOST[0]];
+
 /// Memory for buffers the GPU writes and the CPU reads back: cached, as
 /// reading uncached (write-combined) memory costs the CPU many times more.
 pub const READBACK: [vk::MemoryPropertyFlags; 2] = [
@@ -102,6 +110,22 @@ pub unsafe fn create_buffer_in(
     usage: vk::BufferUsageFlags,
     choices: &[vk::MemoryPropertyFlags],
 ) -> anyhow::Result<(vk::Buffer, vk::DeviceMemory)> {
+    create_buffer_placed(device, mem_props, size, usage, choices)
+        .map(|(buffer, memory, _)| (buffer, memory))
+}
+
+/// [`create_buffer_in`], and the flags of the memory type it took.
+///
+/// # Safety
+///
+/// `device` must be live, `mem_props` its physical device's.
+pub unsafe fn create_buffer_placed(
+    device: &ash::Device,
+    mem_props: &vk::PhysicalDeviceMemoryProperties,
+    size: u64,
+    usage: vk::BufferUsageFlags,
+    choices: &[vk::MemoryPropertyFlags],
+) -> anyhow::Result<(vk::Buffer, vk::DeviceMemory, vk::MemoryPropertyFlags)> {
     let buffer = device.create_buffer(
         &vk::BufferCreateInfo::default()
             .size(size)
@@ -131,7 +155,8 @@ pub unsafe fn create_buffer_in(
                     if out_of_memory {
                         note_memory_fallback(flags);
                     }
-                    return Ok((buffer, memory));
+                    let taken = mem_props.memory_types[index as usize].property_flags;
+                    return Ok((buffer, memory, taken));
                 }
                 Err(e) => {
                     out_of_memory |= matches!(

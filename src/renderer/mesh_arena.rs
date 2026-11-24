@@ -1,10 +1,19 @@
 //! Where terrain and entity meshes live on the GPU.
+//!
+//! A block the CPU can map (VRAM with resizable BAR, unified memory, host
+//! memory) is mapped for its life and uploads are written into it directly;
+//! into any other block they are copied from a staging buffer at the start
+//! of the next frame. Either way a mesh only goes where no frame in flight
+//! reads, so the write needs no wait.
+
+use std::ptr::NonNull;
 
 use ash::vk;
+use melon_base::gfx::residency::Residency;
 
 use super::create_buffer;
 use super::staging::Staging;
-use super::vk_util::{DEVICE_OR_HOST, create_buffer_in};
+use super::vk_util::create_buffer_placed;
 
 /// Bytes per arena block.
 const BLOCK_BYTES: u64 = 64 << 20;
@@ -117,6 +126,8 @@ pub enum Kind {
 struct Block {
     buffer: vk::Buffer,
     memory: vk::DeviceMemory,
+    /// The whole block, where its memory is host visible and coherent.
+    mapped: Option<NonNull<u8>>,
     capacity: u32,
     free: FreeList,
 }
@@ -253,6 +264,15 @@ impl MeshArena {
         (block.buffer, slot.offset)
     }
 
+    /// Whether the slot's block is mapped, so uploads into it are written
+    /// directly.
+    #[cfg(test)]
+    pub(super) fn written_directly(&self, slot: Slot) -> bool {
+        self.blocks[slot.block as usize]
+            .as_ref()
+            .is_some_and(|block| block.mapped.is_some())
+    }
+
     /// Bytes of a block of the usual size.
     #[cfg(test)]
     pub(super) fn block_bytes(&self) -> u64 {
@@ -294,11 +314,14 @@ impl MeshArena {
         self.pending_bytes.extend_from_slice(bytes);
     }
 
-    /// Places `elements` in a block and queues their upload; returns the mesh's id.
+    /// Places `elements` in a block and writes them there, or queues their
+    /// upload; returns the mesh's id. A new block goes where `residency`
+    /// says, and counts against its VRAM room.
     pub unsafe fn upload<T: Copy>(
         &mut self,
         device: &ash::Device,
         mem_props: &vk::PhysicalDeviceMemoryProperties,
+        residency: &mut Residency,
         elements: &[T],
     ) -> anyhow::Result<usize> {
         debug_assert_eq!(std::mem::size_of::<T>() as u64, self.element_size);
@@ -322,18 +345,33 @@ impl MeshArena {
                 Some(found) => found,
                 None => {
                     let capacity = count.max(self.block_elements);
-                    let (buffer, memory) = create_buffer_in(
+                    let size = u64::from(capacity) * self.element_size;
+                    let (buffer, memory, flags) = create_buffer_placed(
                         device,
                         mem_props,
-                        u64::from(capacity) * self.element_size,
-                        self.usage | vk::BufferUsageFlags::TRANSFER_DST,
-                        &DEVICE_OR_HOST,
+                        size,
+                        // `TRANSFER_SRC` so a block can be read back.
+                        self.usage
+                            | vk::BufferUsageFlags::TRANSFER_DST
+                            | vk::BufferUsageFlags::TRANSFER_SRC,
+                        residency.mesh_memory(size),
                     )?;
+                    residency.allocated(size, flags);
+                    // A block that fails to map takes copies from staging.
+                    let mapped = flags
+                        .contains(
+                            vk::MemoryPropertyFlags::HOST_VISIBLE
+                                | vk::MemoryPropertyFlags::HOST_COHERENT,
+                        )
+                        .then(|| device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty()))
+                        .and_then(Result::ok)
+                        .and_then(|at| NonNull::new(at.cast::<u8>()));
                     let mut free = FreeList::new(capacity);
                     let offset = free.alloc(count).expect("a new block fits its mesh");
                     let block = Some(Block {
                         buffer,
                         memory,
+                        mapped,
                         capacity,
                         free,
                     });
@@ -351,18 +389,21 @@ impl MeshArena {
                 }
             };
             let block = u32::try_from(block)?;
-            let dst = self
-                .location(Slot {
-                    block,
-                    offset,
-                    count,
-                })
-                .0;
-            self.queue_copy(
-                dst,
-                u64::from(offset) * self.element_size,
-                as_bytes(elements),
-            );
+            let (dst, mapped) = self.blocks[block as usize]
+                .as_ref()
+                .map(|block| (block.buffer, block.mapped))
+                .expect("a mesh's block is kept");
+            let at = u64::from(offset) * self.element_size;
+            let bytes = as_bytes(elements);
+            match mapped {
+                // Sequential, as the memory is write-combined.
+                Some(base) => std::ptr::copy_nonoverlapping(
+                    bytes.as_ptr(),
+                    base.as_ptr().add(at as usize),
+                    bytes.len(),
+                ),
+                None => self.queue_copy(dst, at, bytes),
+            }
             Slot {
                 block,
                 offset,

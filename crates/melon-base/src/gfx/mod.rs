@@ -21,6 +21,7 @@ pub mod instance;
 pub mod pipeline;
 pub mod quad;
 mod renderer2d;
+pub mod residency;
 pub mod staging;
 pub mod texture;
 pub mod texture_update;

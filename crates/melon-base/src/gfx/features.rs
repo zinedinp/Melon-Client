@@ -9,7 +9,7 @@
 use std::ffi::CStr;
 
 use ash::vk;
-use numerobis::vulkan::{self, ApiVersion, Capability as Cap, Plan, Probe, Route};
+use numerobis::vulkan::{self, ApiVersion, Capability as Cap, Memory, Plan, Probe, Route};
 
 /// Everything the game renderer turns on when it can.
 pub const GAME: &[Cap] = &[
@@ -92,6 +92,12 @@ impl Features {
         self.plan.has(Cap::FifoLatestReady)
     }
 
+    /// The heaps and types, with the budget when the device offers
+    /// `VK_EXT_memory_budget`.
+    pub fn memory(&self) -> Option<&Memory> {
+        self.plan.memory()
+    }
+
     /// The device extensions to enable: `VK_KHR_swapchain`, then the plan's.
     pub fn extensions(&self) -> Vec<&'static CStr> {
         let swapchain = ash::khr::swapchain::NAME;
@@ -157,6 +163,17 @@ pub unsafe fn probe(
             stages: subgroup.supported_stages.as_raw(),
             operations: subgroup.supported_operations.as_raw(),
         });
+    }
+    if at_1_0 {
+        *probe
+            .memory_properties()
+            .cast::<vk::PhysicalDeviceMemoryProperties>() =
+            instance.get_physical_device_memory_properties(physical);
+    } else {
+        let memory2 = &mut *probe
+            .memory_properties2()
+            .cast::<vk::PhysicalDeviceMemoryProperties2>();
+        instance.get_physical_device_memory_properties2(physical, memory2);
     }
     let plan = probe.plan();
     crate::info!("vulkan: {plan}");

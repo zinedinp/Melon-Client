@@ -794,6 +794,7 @@ fn empty_mesh_blocks_are_released() {
     use super::TerrainQuad;
     use super::mesh_arena::{Kind, MeshArena};
     use super::quad_table::{QuadSets, create_layout};
+    use melon_base::gfx::residency::Residency;
 
     let _serial = serial();
     messages().clear();
@@ -803,6 +804,7 @@ fn empty_mesh_blocks_are_released() {
         let mem_props = gpu
             .instance
             .get_physical_device_memory_properties(gpu.physical);
+        let mut residency = Residency::without_budget(true);
         let mut arena =
             MeshArena::new::<TerrainQuad>(device, &mem_props, 2, Kind::Quads).expect("arena");
         let layout = create_layout(device).expect("quad set layout");
@@ -810,9 +812,9 @@ fn empty_mesh_blocks_are_released() {
         let block_bytes = arena.block_bytes();
         let per_block = (block_bytes / std::mem::size_of::<TerrainQuad>() as u64) as usize;
         let quads = vec![TerrainQuad([0; 5]); per_block + 4];
-        let upload = |arena: &mut MeshArena, n: usize| {
+        let mut upload = |arena: &mut MeshArena, n: usize| {
             arena
-                .upload(device, &mem_props, &quads[..n])
+                .upload(device, &mem_props, &mut residency, &quads[..n])
                 .expect("mesh upload")
         };
         let buffer = |arena: &MeshArena, id: usize| arena.location(arena.slot(id).unwrap()).0;
@@ -858,6 +860,150 @@ fn empty_mesh_blocks_are_released() {
         sets.destroy(device);
         device.destroy_descriptor_set_layout(layout, None);
         arena.destroy(device);
+    }
+    let messages = messages();
+    assert!(
+        messages.is_empty(),
+        "Vulkan validation:\n{}",
+        messages.join("\n")
+    );
+}
+
+/// A mesh written straight into a mapped block and one copied there from
+/// staging both read back from the GPU as uploaded; the written one goes to
+/// VRAM the CPU maps where the device has it.
+#[test]
+fn written_and_copied_meshes_land() {
+    use super::TerrainQuad;
+    use super::mesh_arena::{Kind, MeshArena, as_bytes};
+    use melon_base::gfx::residency::Residency;
+
+    let _serial = serial();
+    messages().clear();
+    unsafe {
+        let gpu = Gpu::new().expect("Vulkan instance with validation");
+        let device = &gpu.device;
+        let family = gpu
+            .instance
+            .get_physical_device_queue_family_properties(gpu.physical)
+            .iter()
+            .position(|q| q.queue_flags.contains(vk::QueueFlags::GRAPHICS))
+            .expect("graphics queue") as u32;
+        let queue = device.get_device_queue(family, 0);
+        let command_pool = device
+            .create_command_pool(
+                &vk::CommandPoolCreateInfo::default().queue_family_index(family),
+                None,
+            )
+            .expect("command pool");
+        let mem_props = gpu
+            .instance
+            .get_physical_device_memory_properties(gpu.physical);
+        let mapped_vram = mem_props.memory_types[..mem_props.memory_type_count as usize]
+            .iter()
+            .any(|t| t.property_flags.contains(super::vk_util::MAPPED_FOR_GPU[0]));
+        let quads: Vec<TerrainQuad> = (0..1000u32)
+            .map(|i| TerrainQuad([i, i * 3, i ^ 0xABCD, 7, !i]))
+            .collect();
+        let size = std::mem::size_of_val(quads.as_slice()) as u64;
+        for direct in [true, false] {
+            let mut residency = Residency::without_budget(direct);
+            let mut arena =
+                MeshArena::new::<TerrainQuad>(device, &mem_props, 1, Kind::Quads).expect("arena");
+            // Not at the block's start, so the offset counts.
+            arena
+                .upload(device, &mem_props, &mut residency, &quads[..3])
+                .expect("upload");
+            let id = arena
+                .upload(device, &mem_props, &mut residency, &quads)
+                .expect("upload");
+            let slot = arena.slot(id).expect("a mesh");
+            assert_eq!(
+                arena.written_directly(slot),
+                direct && mapped_vram,
+                "direct {direct}"
+            );
+            let (block, first) = arena.location(slot);
+            let (readback, memory) = super::create_buffer(
+                device,
+                &mem_props,
+                size,
+                vk::BufferUsageFlags::TRANSFER_DST,
+                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+            )
+            .expect("readback buffer");
+            let cmd = device
+                .allocate_command_buffers(
+                    &vk::CommandBufferAllocateInfo::default()
+                        .command_pool(command_pool)
+                        .level(vk::CommandBufferLevel::PRIMARY)
+                        .command_buffer_count(1),
+                )
+                .expect("cmd")[0];
+            device
+                .begin_command_buffer(cmd, &vk::CommandBufferBeginInfo::default())
+                .expect("begin");
+            arena.prepare(device, &mem_props, 0).expect("staging");
+            arena.record(device, &mem_props, cmd, 0, 0).expect("record");
+            let barrier = |src, dst| {
+                [vk::MemoryBarrier::default()
+                    .src_access_mask(src)
+                    .dst_access_mask(dst)]
+            };
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::DependencyFlags::empty(),
+                &barrier(
+                    vk::AccessFlags::TRANSFER_WRITE,
+                    vk::AccessFlags::TRANSFER_READ,
+                ),
+                &[],
+                &[],
+            );
+            device.cmd_copy_buffer(
+                cmd,
+                block,
+                readback,
+                &[vk::BufferCopy {
+                    src_offset: u64::from(first) * std::mem::size_of::<TerrainQuad>() as u64,
+                    dst_offset: 0,
+                    size,
+                }],
+            );
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::PipelineStageFlags::HOST,
+                vk::DependencyFlags::empty(),
+                &barrier(vk::AccessFlags::TRANSFER_WRITE, vk::AccessFlags::HOST_READ),
+                &[],
+                &[],
+            );
+            device.end_command_buffer(cmd).expect("end");
+            let cmds = [cmd];
+            device
+                .queue_submit(
+                    queue,
+                    &[vk::SubmitInfo::default().command_buffers(&cmds)],
+                    vk::Fence::null(),
+                )
+                .expect("submit");
+            device.queue_wait_idle(queue).expect("idle");
+            arena.submitted();
+            let mapped = device
+                .map_memory(memory, 0, size, vk::MemoryMapFlags::empty())
+                .expect("map") as *const u8;
+            let landed = std::slice::from_raw_parts(mapped, size as usize).to_vec();
+            device.unmap_memory(memory);
+            assert!(landed == as_bytes(&quads), "direct {direct}: mesh differs");
+            device.free_command_buffers(command_pool, &cmds);
+            device.destroy_buffer(readback, None);
+            device.free_memory(memory, None);
+            arena.destroy(device);
+        }
+        device.destroy_command_pool(command_pool, None);
     }
     let messages = messages();
     assert!(

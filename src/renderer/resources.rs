@@ -300,7 +300,7 @@ impl Renderer {
     pub fn upload_mesh(&mut self, vertices: &[WorldVertex]) -> anyhow::Result<MeshId> {
         let id = unsafe {
             self.meshes
-                .upload(&self.device, &self.mem_props, vertices)?
+                .upload(&self.device, &self.mem_props, &mut self.residency, vertices)?
         };
         if let Some(tracked) = &mut self.tracked_meshes {
             tracked.push(MeshId(id));
@@ -316,9 +316,12 @@ impl Renderer {
     /// Uploads a chunk's block faces; drawn like [`upload_mesh`](Self::upload_mesh)'s.
     pub fn upload_quads(&mut self, quads: &[TerrainQuad]) -> anyhow::Result<QuadMeshId> {
         let id = unsafe {
-            let id = self
-                .quad_meshes
-                .upload(&self.device, &self.mem_props, quads)?;
+            let id = self.quad_meshes.upload(
+                &self.device,
+                &self.mem_props,
+                &mut self.residency,
+                quads,
+            )?;
             if let Err(e) = self.quad_sets.sync(
                 &self.device,
                 self.pipelines.layouts.table,
@@ -341,7 +344,7 @@ impl Renderer {
     pub fn upload_indices(&mut self, list: &[u32]) -> anyhow::Result<IndexMeshId> {
         let id = unsafe {
             self.index_lists
-                .upload(&self.device, &self.mem_props, list)?
+                .upload(&self.device, &self.mem_props, &mut self.residency, list)?
         };
         Ok(IndexMeshId(id))
     }
@@ -349,6 +352,13 @@ impl Renderer {
     /// Frees an index list from [`upload_indices`](Self::upload_indices).
     pub fn free_indices(&mut self, list: IndexMeshId) {
         self.index_lists.free(list.0, self.frames.number);
+    }
+
+    /// VRAM this process may still allocate, as of the last budget read
+    /// (at most a second old) less the mesh blocks allocated since; `None`
+    /// without `VK_EXT_memory_budget`.
+    pub fn available_vram(&self) -> Option<u64> {
+        self.residency.available_vram()
     }
 
     /// Bytes of mesh memory allocated and in use.
