@@ -15,11 +15,19 @@ pub fn sliding_dot(signal: &[f32], taps: &[f32], out: &mut [f32]) {
     miraculix::aarch64::reduce::sliding_dot_f32(signal, taps, out);
     #[cfg(target_arch = "riscv64")]
     miraculix::riscv::auto::sliding_dot_f32(signal, taps, out);
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "riscv64")))]
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "riscv64"
+    )))]
     {
         assert!(out.is_empty() || signal.len() + 1 >= out.len() + taps.len());
         for (i, o) in out.iter_mut().enumerate() {
-            *o = signal[i..][..taps.len()].iter().zip(taps).map(|(x, t)| x * t).sum();
+            *o = signal[i..][..taps.len()]
+                .iter()
+                .zip(taps)
+                .map(|(x, t)| x * t)
+                .sum();
         }
     }
 }
@@ -36,7 +44,11 @@ pub fn fmadd(a: &[f32], b: &[f32], c: &[f32], out: &mut [f32]) {
     miraculix::aarch64::auto_up::fmadd_f32(a, b, c, out);
     #[cfg(target_arch = "riscv64")]
     miraculix::riscv::auto::fmadd_f32(a, b, c, out);
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "riscv64")))]
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "riscv64"
+    )))]
     {
         assert!(a.len() == b.len() && b.len() == c.len() && c.len() == out.len());
         for (((&x, &y), &z), o) in a.iter().zip(b).zip(c).zip(out) {
@@ -57,7 +69,11 @@ pub fn sub(a: &[f32], b: &[f32], out: &mut [f32]) {
     miraculix::aarch64::auto_up::sub_f32(a, b, out);
     #[cfg(target_arch = "riscv64")]
     miraculix::riscv::auto::sub_f32(a, b, out);
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "riscv64")))]
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "riscv64"
+    )))]
     {
         assert!(a.len() == b.len() && b.len() == out.len());
         for ((&x, &y), o) in a.iter().zip(b).zip(out) {
