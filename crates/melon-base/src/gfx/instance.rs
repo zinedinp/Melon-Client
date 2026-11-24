@@ -1,6 +1,6 @@
 //! The Vulkan instance, its debug messenger and the window's surface.
 
-use std::ffi::CStr;
+use std::ffi::{CStr, c_char};
 
 use ash::vk;
 use numerobis::vulkan::ApiVersion;
@@ -31,7 +31,7 @@ pub unsafe fn create(
     enable_validation: bool,
 ) -> anyhow::Result<Instance> {
     let mut extension_names = ash_window::enumerate_required_extensions(display)?.to_vec();
-    let mut layer_names: Vec<*const i8> = Vec::new();
+    let mut layer_names: Vec<*const c_char> = Vec::new();
     let validation_layer = c"VK_LAYER_KHRONOS_validation";
     let validation_available = entry
         .enumerate_instance_layer_properties()?
@@ -41,12 +41,22 @@ pub unsafe fn create(
     if enable_validation && !validation_available {
         crate::warn!("vulkan: VK_LAYER_KHRONOS_validation not found, going on without validation");
     }
+    let available = entry.enumerate_instance_extension_properties(None)?;
+    let offers = |name: &CStr| {
+        available
+            .iter()
+            .any(|e| CStr::from_ptr(e.extension_name.as_ptr()) == name)
+    };
     // Debug utils also name the passes for GPU profilers (Nsight Graphics,
     // RenderDoc), so they are on whenever the driver offers them.
-    let debug_utils = entry
-        .enumerate_instance_extension_properties(None)?
-        .iter()
-        .any(|e| CStr::from_ptr(e.extension_name.as_ptr()) == ash::ext::debug_utils::NAME);
+    let debug_utils = offers(ash::ext::debug_utils::NAME);
+    // Without it a loader from 1.3.216 on hides MoltenVK. Apple only, so a
+    // layered driver (Dozen) never competes with a native one elsewhere.
+    let portability =
+        cfg!(target_vendor = "apple") && offers(ash::khr::portability_enumeration::NAME);
+    if portability {
+        extension_names.push(ash::khr::portability_enumeration::NAME.as_ptr());
+    }
     if use_validation {
         layer_names.push(validation_layer.as_ptr());
     }
@@ -63,7 +73,13 @@ pub unsafe fn create(
         .engine_name(app_name)
         .engine_version(0)
         .api_version(api.raw());
+    let flags = if portability {
+        vk::InstanceCreateFlags::ENUMERATE_PORTABILITY_KHR
+    } else {
+        vk::InstanceCreateFlags::empty()
+    };
     let instance_info = vk::InstanceCreateInfo::default()
+        .flags(flags)
         .application_info(&app_info)
         .enabled_layer_names(&layer_names)
         .enabled_extension_names(&extension_names);

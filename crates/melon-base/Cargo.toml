@@ -25,3 +25,11 @@ ureq = { version = "3.5.2", default-features = false, features = ["rustls", "jso
 uuid = { version = "1.29.3", features = ["v3", "v4", "v5"] }
 winit = "0.30.13"
 zip = { version = "9.8.1", default-features = false, features = ["deflate-flate2"] }
+
+[target.'cfg(windows)'.dependencies]
+# The Credential Manager keeps the account tokens.
+windows-sys = { version = "0.61.2", features = ["Win32_Security_Credentials"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# The login Keychain keeps the account tokens.
+security-framework = "3.7.0"

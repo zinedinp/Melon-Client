@@ -1,11 +1,15 @@
 //! Vanilla `ServerNameResolver`: a server address to socket addresses.
 
-use std::net::{IpAddr, SocketAddr, ToSocketAddrs, UdpSocket};
+#[cfg(not(windows))]
+use std::net::UdpSocket;
+use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
+#[cfg(not(windows))]
 use std::time::Duration;
 
 use crate::network::status::CannotResolve;
 
 const DEFAULT_PORT: u16 = 25565;
+#[cfg(not(windows))]
 const DNS_TIMEOUT: Duration = Duration::from_secs(2);
 const TYPE_SRV: u16 = 33;
 
@@ -50,9 +54,73 @@ pub fn resolve(host: &str, port: u16) -> Result<Resolved, CannotResolve> {
     })
 }
 
-/// The target and port of `_minecraft._tcp.<host>`, if there is a record.
+/// The target and port of `_minecraft._tcp.<host>`, if there is a record: the lowest priority,
+/// through the system resolver (its cache, hosts file and DNS-over-HTTPS settings).
+#[cfg(windows)]
 fn lookup_srv(host: &str) -> Option<(String, u16)> {
-    let query = srv_query(&format!("_minecraft._tcp.{host}"))?;
+    use windows_sys::Win32::NetworkManagement::Dns::{
+        DNS_QUERY_STANDARD, DNS_RECORDW, DnsFree, DnsFreeRecordList, DnsQuery_W,
+    };
+
+    let name: Vec<u16> = format!("_minecraft._tcp.{host}")
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut records: *mut DNS_RECORDW = std::ptr::null_mut();
+    // SAFETY: `name` is NUL-terminated; `DnsQuery_W` fills a `DNS_RECORDW` list (the binding
+    // names the A type), freed below with `DnsFree`.
+    let status = unsafe {
+        DnsQuery_W(
+            name.as_ptr(),
+            TYPE_SRV,
+            DNS_QUERY_STANDARD,
+            std::ptr::null_mut(),
+            (&raw mut records).cast(),
+            std::ptr::null_mut(),
+        )
+    };
+    if status != 0 {
+        return None;
+    }
+    let mut best: Option<(u16, String, u16)> = None;
+    let mut at = records;
+    while !at.is_null() {
+        // SAFETY: `at` is a record of the list, which lives until `DnsFree`; an SRV record's data
+        // is the `SRV` member, its target a NUL-terminated wide string.
+        let (next, found) = unsafe {
+            let record = &*at;
+            let found = (record.wType == TYPE_SRV).then(|| {
+                let srv = record.Data.SRV;
+                let target = if srv.pNameTarget.is_null() {
+                    String::new()
+                } else {
+                    let length = (0..).take_while(|&i| *srv.pNameTarget.add(i) != 0).count();
+                    String::from_utf16_lossy(std::slice::from_raw_parts(srv.pNameTarget, length))
+                };
+                (srv.wPriority, target, srv.wPort)
+            });
+            (record.pNext, found)
+        };
+        if let Some(record) = found
+            && best.as_ref().is_none_or(|(p, ..)| record.0 < *p)
+        {
+            best = Some(record);
+        }
+        at = next;
+    }
+    if !records.is_null() {
+        // SAFETY: the list came from `DnsQuery_W` and is not touched again.
+        unsafe { DnsFree(records.cast_const().cast(), DnsFreeRecordList) };
+    }
+    best.map(|(_, target, port)| (target.trim_end_matches('.').to_owned(), port))
+        .filter(|(target, _)| !target.is_empty())
+}
+
+/// The target and port of `_minecraft._tcp.<host>`, if there is a record.
+#[cfg(not(windows))]
+fn lookup_srv(host: &str) -> Option<(String, u16)> {
+    let id = rand::random::<u16>();
+    let query = srv_query(&format!("_minecraft._tcp.{host}"), id)?;
     for server in nameservers() {
         let Ok(socket) = UdpSocket::bind(if server.is_ipv4() {
             "0.0.0.0:0"
@@ -69,7 +137,7 @@ fn lookup_srv(host: &str) -> Option<(String, u16)> {
         let Ok((len, from)) = socket.recv_from(&mut answer) else {
             continue;
         };
-        if from.ip() == server.ip() {
+        if from.ip() == server.ip() && answer[..len].starts_with(&id.to_be_bytes()) {
             return parse_srv(&answer[..len]);
         }
     }
@@ -77,6 +145,7 @@ fn lookup_srv(host: &str) -> Option<(String, u16)> {
 }
 
 /// `/etc/resolv.conf`'s `nameserver` lines.
+#[cfg(not(windows))]
 fn nameservers() -> Vec<SocketAddr> {
     let Ok(conf) = std::fs::read_to_string("/etc/resolv.conf") else {
         return Vec::new();
@@ -88,9 +157,11 @@ fn nameservers() -> Vec<SocketAddr> {
         .collect()
 }
 
-/// A recursive query for `name`'s SRV record.
-fn srv_query(name: &str) -> Option<Vec<u8>> {
-    let mut query = vec![0x4D, 0x4C, 0x01, 0x00, 0, 1, 0, 0, 0, 0, 0, 0];
+/// A recursive query for `name`'s SRV record, with transaction `id`.
+#[cfg(any(not(windows), test))]
+fn srv_query(name: &str, id: u16) -> Option<Vec<u8>> {
+    let [hi, lo] = id.to_be_bytes();
+    let mut query = vec![hi, lo, 0x01, 0x00, 0, 1, 0, 0, 0, 0, 0, 0];
     for label in name.trim_end_matches('.').split('.') {
         if label.is_empty() || label.len() > 63 {
             return None;
@@ -105,6 +176,7 @@ fn srv_query(name: &str) -> Option<Vec<u8>> {
 }
 
 /// The best SRV answer (lowest priority) of a DNS response.
+#[cfg(any(not(windows), test))]
 fn parse_srv(message: &[u8]) -> Option<(String, u16)> {
     let u16_at = |at: usize| {
         Some(u16::from_be_bytes([
@@ -139,6 +211,7 @@ fn parse_srv(message: &[u8]) -> Option<(String, u16)> {
 }
 
 /// The offset after the name starting at `at` (a pointer ends it).
+#[cfg(any(not(windows), test))]
 fn skip_name(message: &[u8], mut at: usize) -> Option<usize> {
     loop {
         let length = *message.get(at)?;
@@ -151,6 +224,7 @@ fn skip_name(message: &[u8], mut at: usize) -> Option<usize> {
 }
 
 /// A name, following compression pointers (at most a few, so a loop in a reply ends).
+#[cfg(any(not(windows), test))]
 fn read_name(message: &[u8], mut at: usize) -> Option<String> {
     let mut name = String::new();
     for _ in 0..64 {
@@ -218,11 +292,21 @@ mod tests {
         assert_eq!(parse_srv(&response()[..20]), None);
     }
 
+    /// `hypixel.net` names `mc.hypixel.net` in its SRV record.
+    #[test]
+    #[ignore = "needs the network"]
+    fn a_public_srv_record_redirects() {
+        let resolved = resolve("hypixel.net", DEFAULT_PORT).unwrap();
+        assert_eq!(resolved.host, "mc.hypixel.net");
+        assert!(!resolved.addrs.is_empty());
+    }
+
     #[test]
     fn the_query_names_the_srv_record() {
-        let query = srv_query("_minecraft._tcp.example.org").unwrap();
+        let query = srv_query("_minecraft._tcp.example.org", 0xBEEF).unwrap();
+        assert_eq!(query[..2], [0xBE, 0xEF]);
         assert_eq!(&query[12..23], b"\x0a_minecraft");
         assert_eq!(query[query.len() - 4..], [0, 33, 0, 1]);
-        assert!(srv_query("a..b").is_none());
+        assert!(srv_query("a..b", 0).is_none());
     }
 }

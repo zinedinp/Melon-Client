@@ -96,28 +96,26 @@ impl SectionCull {
         self.column_scalar(&least, fog_room)
     }
 
-    /// [`Self::column`] a section at a time.
+    /// [`Self::column`] without AVX: one all-ones or zero word per section, ANDed plane by
+    /// plane, so LLVM compiles each pass to SSE2 or NEON compares.
     pub(crate) fn column_scalar(&self, least: &[f32; 6], fog_room: Option<f32>) -> u32 {
-        let mut mask = 0;
-        for y in 0..LANES {
-            let framed = self.planes.as_ref().is_none_or(|planes| {
-                planes
-                    .iter()
-                    .zip(least)
-                    .all(|(row, &least)| row.0[y] >= least)
-            });
-            // Not nearer than the fog's end, NaN included: as the AVX body's `cmplt`.
-            let fogged = match (&self.fog, fog_room) {
-                (Some((near, _)), Some(room)) => {
-                    near.0[y].partial_cmp(&room) != Some(std::cmp::Ordering::Less)
+        let mut keep = [u32::MAX; LANES];
+        if let Some(planes) = &self.planes {
+            for (row, &least) in planes.iter().zip(least) {
+                for (keep, &y_part) in keep.iter_mut().zip(&row.0) {
+                    *keep &= u32::from(y_part >= least).wrapping_neg();
                 }
-                _ => false,
-            };
-            if framed && !fogged {
-                mask |= 1 << y;
             }
         }
-        mask
+        // Nearer than the fog's end, NaN not: as the AVX body's `cmplt`.
+        if let (Some((near, _)), Some(room)) = (&self.fog, fog_room) {
+            for (keep, &near) in keep.iter_mut().zip(&near.0) {
+                *keep &= u32::from(near < room).wrapping_neg();
+            }
+        }
+        keep.iter()
+            .enumerate()
+            .fold(0, |mask, (y, &keep)| mask | (keep & 1) << y)
     }
 }
 
@@ -221,6 +219,57 @@ mod tests {
             closest = closest.min((near - end).abs());
         }
         closest
+    }
+
+    /// Times the column test's bodies over a render distance 32 view.
+    /// `cargo test --profile fast --lib column_cull_speed -- --ignored --nocapture`.
+    #[test]
+    #[ignore = "timing"]
+    fn column_cull_speed() {
+        let projection = crate::renderer::world_projection(70.0, 16.0 / 9.0, 512.0);
+        let culler = Culler::new(
+            Frustum::from_view_projection(projection * Mat4::from_rotation_y(0.7)),
+            None,
+            DVec3::new(10.3, 70.2, -5.9),
+            (-64, 24),
+            CullSettings::default(),
+        )
+        .with_fog(512.0);
+        let cull = culler.section_cull();
+        let parts: Vec<_> = (-32..=32)
+            .flat_map(|x| (-32..=32).map(move |z| (x, z)))
+            .map(|(x, z)| {
+                let cx = (x * 16 - 10) as f32 - 0.3 + HALF;
+                let cz = (z * 16 + 6) as f32 - 0.1 + HALF;
+                let least = cull.across.map(|(nx, nz)| -(nx * cx + nz * cz));
+                let room = cull
+                    .fog
+                    .as_ref()
+                    .map(|(_, end)| end - nearest(cx).powi(2) - nearest(cz).powi(2));
+                (x, z, least, room)
+            })
+            .collect();
+        type Body<'a> = Box<dyn Fn(&(i32, i32, [f32; 6], Option<f32>)) -> u32 + 'a>;
+        let bodies: [(&str, Body); 2] = [
+            ("column (dispatch)", Box::new(|p| cull.column((p.0, p.1)))),
+            ("scalar, masks", Box::new(|p| cull.column_scalar(&p.2, p.3))),
+        ];
+        for (name, body) in &bodies {
+            let mut best = std::time::Duration::MAX;
+            let mut sum = 0u32;
+            for _ in 0..200 {
+                let t = std::time::Instant::now();
+                for p in &parts {
+                    sum = sum.wrapping_add(std::hint::black_box(body(std::hint::black_box(p))));
+                }
+                best = best.min(t.elapsed());
+            }
+            println!(
+                "{name:<20} {:>8.1} µs per frame ({} columns), {sum}",
+                best.as_secs_f64() * 1e6,
+                parts.len()
+            );
+        }
     }
 
     /// The scalar way gives what the vector one does, bit for bit.

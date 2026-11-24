@@ -72,6 +72,10 @@ miraculix = "0.6.5-beta"
 # The GPU's vendor and architecture, for vendor paths (see melon-base).
 numerobis = { version = "0.5.0", default-features = false, features = ["vulkan"] }
 
+[target.'cfg(windows)'.dependencies]
+# SRV records through the system resolver.
+windows-sys = { version = "0.61.2", features = ["Win32_NetworkManagement_Dns"] }
+
 
 [profile.dev]
 opt-level = 1

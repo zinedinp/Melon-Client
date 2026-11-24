@@ -7,7 +7,7 @@ pub mod server;
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, LazyLock, RwLock};
 
 use archive::ZipPack;
 pub use meta::{Compatibility, PackMeta};
@@ -346,6 +346,8 @@ impl ResourceStack {
 }
 
 static ACTIVE: RwLock<Option<Arc<ResourceStack>>> = RwLock::new(None);
+/// Before any [`activate`]: one stack, so caches keyed by the stack (sprite aliases) keep hitting.
+static NONE_ACTIVE: LazyLock<Arc<ResourceStack>> = LazyLock::new(Arc::default);
 
 /// The packs every resource is read through.
 pub fn active() -> Arc<ResourceStack> {
@@ -353,7 +355,7 @@ pub fn active() -> Arc<ResourceStack> {
         .read()
         .unwrap_or_else(|e| e.into_inner())
         .clone()
-        .unwrap_or_default()
+        .unwrap_or_else(|| NONE_ACTIVE.clone())
 }
 
 /// Reads through `stack` from now on.
