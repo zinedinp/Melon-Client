@@ -70,7 +70,8 @@ pub unsafe fn read_device_info(
             gpu.vendor,
             props.driver_version,
             numerobis::pci::DriverOs::host(),
-        ),
+        )
+        .to_string(),
         gpu,
     }
 }
@@ -84,7 +85,7 @@ unsafe fn driver_properties(
     api: ApiVersion,
 ) -> bool {
     let device = instance.get_physical_device_properties(physical_device);
-    let api = api.min(ApiVersion::from_raw(device.api_version));
+    let api = api.min(super::api::device_version(device.api_version));
     api >= ApiVersion::V1_2
         || api >= ApiVersion::V1_1
             && instance

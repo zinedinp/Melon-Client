@@ -9,26 +9,26 @@
 use std::ffi::CStr;
 
 use ash::vk;
-use numerobis::vulkan::{self, ApiVersion, Op, Plan, Probe, Route};
+use numerobis::vulkan::{self, ApiVersion, Capability as Cap, Plan, Probe, Route};
 
 /// Everything the game renderer turns on when it can.
-pub const GAME: &[Op] = &[
+pub const GAME: &[Cap] = &[
     // Indirect terrain draws; `MELON_NO_MULTIDRAW` turns them off. The
     // shaders read the draw's `firstInstance` as `gl_InstanceIndex`, so no
     // `shaderDrawParameters`.
-    Op::MultiDrawIndirect,
+    Cap::MultiDrawIndirect,
     // Draw counts the GPU writes, for the terrain's occlusion culling.
-    Op::DrawIndirectCount,
+    Cap::DrawIndirectCount,
     // How much each pass shades, for the benchmark.
-    Op::PipelineStatistics,
+    Cap::PipelineStatistics,
     // A read past a buffer's end gives zeros instead of a GPU page fault
     // that loses the device (Xid 13 on NVIDIA); `MELON_NO_ROBUST_BUFFERS`
     // turns it off.
-    Op::RobustBufferAccess,
+    Cap::RobustBufferAccess,
     // When another program fills the VRAM, the driver moves allocations to
     // system memory instead of failing them (as DXVK and vkd3d ask too).
-    Op::PageableDeviceLocalMemory,
-    Op::FifoLatestReady,
+    Cap::PageableDeviceLocalMemory,
+    Cap::FifoLatestReady,
 ];
 
 /// Where `vkCmdDrawIndexedIndirectCount` comes from.
@@ -72,12 +72,12 @@ pub struct Features {
 impl Features {
     /// `multiDrawIndirect` and `drawIndirectFirstInstance`.
     pub fn multi_draw(&self) -> bool {
-        self.plan.has(Op::MultiDrawIndirect)
+        self.plan.has(Cap::MultiDrawIndirect)
     }
 
     /// With [`multi_draw`](Self::multi_draw) only.
     pub fn draw_count(&self) -> Option<DrawCount> {
-        match self.plan.route(Op::DrawIndirectCount)? {
+        match self.plan.route(Cap::DrawIndirectCount)? {
             _ if !self.multi_draw() => None,
             Route::Core { .. } => Some(DrawCount::Core),
             _ => Some(DrawCount::Khr),
@@ -85,11 +85,11 @@ impl Features {
     }
 
     pub fn statistics(&self) -> bool {
-        self.plan.has(Op::PipelineStatistics)
+        self.plan.has(Cap::PipelineStatistics)
     }
 
     pub fn latest_ready(&self) -> bool {
-        self.plan.has(Op::FifoLatestReady)
+        self.plan.has(Cap::FifoLatestReady)
     }
 
     /// The device extensions to enable: `VK_KHR_swapchain`, then the plan's.
@@ -112,15 +112,15 @@ pub unsafe fn probe(
     instance: &ash::Instance,
     physical: vk::PhysicalDevice,
     api: ApiVersion,
-    wanted: &[Op],
+    wanted: &[Cap],
 ) -> Features {
     let off = |name: &str| std::env::var_os(name).is_some();
-    let wanted: Vec<Op> = wanted
+    let wanted: Vec<Cap> = wanted
         .iter()
         .copied()
         .filter(|op| match op {
-            Op::MultiDrawIndirect | Op::DrawIndirectCount => !off("MELON_NO_MULTIDRAW"),
-            Op::RobustBufferAccess => !off("MELON_NO_ROBUST_BUFFERS"),
+            Cap::MultiDrawIndirect | Cap::DrawIndirectCount => !off("MELON_NO_MULTIDRAW"),
+            Cap::RobustBufferAccess => !off("MELON_NO_ROBUST_BUFFERS"),
             _ => true,
         })
         .collect();
@@ -132,7 +132,7 @@ pub unsafe fn probe(
         .api_version;
     let offer = vulkan::Offer::new(
         api,
-        ApiVersion::from_raw(device_api),
+        super::api::device_version(device_api),
         offered
             .iter()
             .map(|e| CStr::from_ptr(e.extension_name.as_ptr())),

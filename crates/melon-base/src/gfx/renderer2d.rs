@@ -103,8 +103,8 @@ impl Renderer2d {
             gpu.physical,
             api,
             &[
-                numerobis::vulkan::Op::RobustBufferAccess,
-                numerobis::vulkan::Op::PageableDeviceLocalMemory,
+                numerobis::vulkan::Capability::RobustBufferAccess,
+                numerobis::vulkan::Capability::PageableDeviceLocalMemory,
             ],
         );
         let (device, queue) = device::create(&instance, &gpu, &features)?;

@@ -16,9 +16,14 @@ pub fn instance_version(entry: &ash::Entry) -> ApiVersion {
     let loader = unsafe { entry.try_enumerate_instance_version() }
         .ok()
         .flatten()
-        .map(ApiVersion::from_raw);
+        .and_then(ApiVersion::from_raw);
     let wanted = cap().map_or(ApiVersion::NEWEST, |cap| cap.min(ApiVersion::NEWEST));
     app_version(loader, wanted)
+}
+
+/// A device's `apiVersion`; another variant (Vulkan SC) counts as the 1.0 floor.
+pub fn device_version(raw: u32) -> ApiVersion {
+    ApiVersion::from_raw(raw).unwrap_or(ApiVersion::V1_0)
 }
 
 /// The version `MELON_VULKAN` names, if it names one.
