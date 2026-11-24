@@ -4,6 +4,7 @@
 //! places its model its own way ([`root`]); the few parts that move are
 //! turned by [`setup_anim`].
 
+use super::rounded;
 use glam::{Mat3, Mat4, Quat, Vec3};
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
@@ -102,7 +103,6 @@ pub fn llama_spit() -> LayerDefinition {
 }
 
 /// `WindChargeModel.createBodyLayer`: a core in two whirls of wind.
-#[allow(clippy::approx_constant)]
 pub fn wind_charge() -> LayerDefinition {
     let mut root = PartDefinition::root();
     let bone = root.add_or_replace_child("bone", vec![], Pose::ZERO);
@@ -112,7 +112,7 @@ pub fn wind_charge() -> LayerDefinition {
             Cube::new((15.0, 20.0), (-4.0, -1.0, -4.0), (8.0, 2.0, 8.0)),
             Cube::new((0.0, 9.0), (-3.0, -2.0, -3.0), (6.0, 4.0, 6.0)),
         ],
-        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, -0.7854, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, -rounded::PI_4, 0.0)),
     );
     bone.add_or_replace_child(
         "wind_charge",

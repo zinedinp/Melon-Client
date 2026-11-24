@@ -675,7 +675,7 @@ mod tests {
     #[test]
     fn click_sound_decodes() {
         let bytes = crate::assets::sound(&crate::assets::default_root(), "random/click_stereo")
-            .expect("assets/minecraft/sounds/random/click_stereo.ogg nicht lesbar");
+            .expect("assets/minecraft/sounds/random/click_stereo.ogg unreadable");
         let mut decoder = Decoder::new(std::io::Cursor::new(bytes))
             .expect("Decoder::new sollte click_stereo.ogg dekodieren");
         assert_eq!(

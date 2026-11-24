@@ -12,7 +12,7 @@ use crate::particle::client::{self, entity as own};
 use crate::particle::mesh::{ParticleMeshes, View};
 use crate::particle::server::{LevelParticles, entity_event, level_event};
 use crate::particle::{EntityBox, Kind, ParticleEngine, Spawn, World};
-use crate::renderer::{EntityDraw, Renderer};
+use crate::renderer::{ParticleDraw, Renderer};
 use crate::world::entity::tracker::Entities;
 use crate::world::inventory::Inventory;
 use crate::world::player::PlayerState;
@@ -328,7 +328,7 @@ impl InWorld {
         camera: &Camera,
         frustum: &crate::world::culling::frustum::Frustum,
         partial: f32,
-        out: &mut Vec<EntityDraw>,
+        out: &mut Vec<ParticleDraw>,
     ) {
         self.particles
             .engine

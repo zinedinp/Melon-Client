@@ -40,10 +40,13 @@ pub struct Multiline {
 
 impl Multiline {
     /// `TextInputHandler`: the box's height, the given one or enough for
-    /// `max_lines` (4 without), at most 512.
+    /// `max_lines` (4 without), at most 512. Java's `int` wraps for huge
+    /// counts; the negative heights that gives are 0 here.
     pub fn box_height(self) -> u32 {
-        self.height
-            .unwrap_or_else(|| (9 * self.max_lines.unwrap_or(4) + 8).min(512))
+        self.height.unwrap_or_else(|| {
+            let lines = self.max_lines.unwrap_or(4) as i32;
+            9i32.wrapping_mul(lines).wrapping_add(8).clamp(0, 512) as u32
+        })
     }
 }
 
@@ -247,5 +250,6 @@ mod tests {
         assert_eq!(lines(Some(2), None), 26);
         assert_eq!(lines(Some(100), None), 512);
         assert_eq!(lines(Some(2), Some(100)), 100);
+        assert_eq!(lines(Some(477_218_589), None), 13, "wraps like Java");
     }
 }

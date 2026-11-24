@@ -3,12 +3,13 @@
 use ash::vk;
 
 use super::{Pass, PipelineDesc};
-use crate::renderer::{TerrainQuad, WorldVertex as Vertex};
+use crate::renderer::{ParticleQuad, TerrainQuad, WorldVertex as Vertex};
 use crate::world::lightmap::LightmapParams;
 
 const VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/world.vert.spv"));
 const WEATHER_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/weather.vert.spv"));
 const LINES_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/lines.vert.spv"));
+const PARTICLE_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/particle.vert.spv"));
 const TERRAIN_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/terrain.vert.spv"));
 const TERRAIN_INDIRECT_VERT_SPV: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/terrain_indirect.vert.spv"));
@@ -211,6 +212,8 @@ pub enum Geometry {
     Vertices,
     /// [`TerrainQuad`]s, read from the mesh buffer (set 4) by the terrain shader.
     Quads { indirect: bool },
+    /// [`ParticleQuad`]s, one per instance of the shared index buffer's first quad.
+    Particles,
 }
 
 /// The descriptor sets after the texture's that every world pipeline binds.
@@ -450,6 +453,25 @@ pub unsafe fn create(
         (vk::Format::R32G32B32_SFLOAT, second),
         (vk::Format::R32G32_SFLOAT, second + vertex_attributes[1].1),
     ];
+    let axes = std::mem::offset_of!(ParticleQuad, axes) as u32;
+    let particle_quads = [
+        (vk::Format::R32G32B32_SFLOAT, 0),
+        // `right` and `up`'s x, then `up`'s y and z.
+        (vk::Format::R16G16B16A16_SFLOAT, axes),
+        (vk::Format::R16G16_SFLOAT, axes + 8),
+        (
+            vk::Format::R16G16B16A16_UNORM,
+            std::mem::offset_of!(ParticleQuad, uv) as u32,
+        ),
+        (
+            vk::Format::R8G8B8A8_UNORM,
+            std::mem::offset_of!(ParticleQuad, color) as u32,
+        ),
+        (
+            vk::Format::R8G8_UINT,
+            std::mem::offset_of!(ParticleQuad, light) as u32,
+        ),
+    ];
     let (vert, vertex_stride, attributes): (_, _, &[_]) = match geometry {
         Geometry::Vertices => (
             if mode == Mode::SkyDisc {
@@ -479,12 +501,24 @@ pub unsafe fn create(
             std::mem::size_of::<TerrainQuad>(),
             &[],
         ),
+        Geometry::Particles => (PARTICLE_VERT_SPV, 0, &[]),
+    };
+    let instance = match geometry {
+        Geometry::Vertices if mode == Mode::Weather => Some((
+            2 * std::mem::size_of::<Vertex>() as u32,
+            &weather_pieces[..],
+        )),
+        Geometry::Particles => Some((
+            std::mem::size_of::<ParticleQuad>() as u32,
+            &particle_quads[..],
+        )),
+        Geometry::Vertices | Geometry::Quads { .. } => None,
     };
     let quad_sets = [layouts.table, layouts.draws, layouts.globals, layouts.table];
     let glint_sets = [descriptor_set_layout, layouts.draws, layouts.globals];
     let extra_sets: &[vk::DescriptorSetLayout] = match (mode, geometry) {
         (Mode::Glint, Geometry::Vertices) => &glint_sets,
-        (_, Geometry::Vertices) => &layouts.sets(),
+        (_, Geometry::Vertices | Geometry::Particles) => &layouts.sets(),
         (_, Geometry::Quads { .. }) => &quad_sets,
     };
     PipelineDesc {
@@ -506,10 +540,7 @@ pub unsafe fn create(
         push_stages: PUSH_STAGES,
         vertex_stride: vertex_stride as u32,
         attributes,
-        instance: (mode == Mode::Weather && matches!(geometry, Geometry::Vertices)).then_some((
-            2 * std::mem::size_of::<Vertex>() as u32,
-            &weather_pieces[..],
-        )),
+        instance,
         // `weather.vert` leaves the template's colour unread.
         used_locations: (mode == Mode::Weather).then_some(&[0, 1, 3][..]),
         cull,

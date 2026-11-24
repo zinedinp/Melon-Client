@@ -126,7 +126,7 @@ pub fn missing_texture() -> image::RgbaImage {
 pub fn decode_png(bytes: &[u8]) -> Option<image::RgbaImage> {
     image::load_from_memory_with_format(bytes, image::ImageFormat::Png)
         .ok()
-        .map(|i| i.to_rgba8())
+        .map(image::DynamicImage::into_rgba8)
         .or_else(|| decode_png_ignoring_checksums(bytes))
 }
 
@@ -285,7 +285,7 @@ impl Assets {
         let bytes = packs::active()
             .find(&self.root, namespace, &format!("textures/{path}"))
             .map(|(bytes, _)| bytes)
-            .ok_or_else(|| anyhow::anyhow!("Textur fehlt: {identifier}"))?;
+            .ok_or_else(|| anyhow::anyhow!("texture missing: {identifier}"))?;
         decode_png(&bytes).ok_or_else(|| anyhow::anyhow!("Textur kaputt: {identifier}"))
     }
 

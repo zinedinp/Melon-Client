@@ -13,7 +13,8 @@ use crate::world::biome::Biomes;
 use crate::world::dimension::DimensionTypes;
 use crate::world::game_mode::GameMode;
 use anyhow::{Context, Result, bail};
-use pumpkin_data::packet::clientbound::config;
+use pumpkin_data::packet::clientbound::{config, login as login_cb};
+use pumpkin_data::packet::serverbound::{config as config_sb, login as login_sb};
 use std::io::Write;
 use std::net::{Shutdown, TcpStream};
 use std::sync::{Arc, Mutex};
@@ -267,6 +268,24 @@ pub(crate) fn login(conn: &mut Connection, identity: &Identity) -> Result<()> {
                 conn.enable_compression(r.var_int()?);
             }
             id::CB_LOGIN_SUCCESS => break,
+            // `handleCustomQuery`: no mod understands it.
+            pid if pid == login_cb::CUSTOM_QUERY.0 => {
+                let transaction = r.var_int()?;
+                conn.write_packet(login_sb::CUSTOM_QUERY_ANSWER.0, |buf| {
+                    varint::write_var_int(buf, transaction)?;
+                    buf.write_all(&[0])?;
+                    Ok(())
+                })?;
+            }
+            // `handleRequestCookie`: Melon keeps no cookies.
+            pid if pid == login_cb::COOKIE_REQUEST.0 => {
+                let key = r.string()?;
+                conn.write_packet(login_sb::COOKIE_RESPONSE.0, |buf| {
+                    packet::write_string(buf, &key)?;
+                    buf.write_all(&[0])?;
+                    Ok(())
+                })?;
+            }
             other => bail!("unexpected packet {other} while logging in"),
         }
     }
@@ -401,6 +420,15 @@ pub(crate) fn configure_loop(
                     "{}",
                     Reader::new(&body).component_text().unwrap_or_default()
                 );
+            }
+            // `handleRequestCookie`: Melon keeps no cookies.
+            pid if pid == config::COOKIE_REQUEST.0 => {
+                let key = Reader::new(&body).string()?;
+                lock(writer).write_packet(config_sb::COOKIE_RESPONSE.0, |buf| {
+                    packet::write_string(buf, &key)?;
+                    buf.write_all(&[0])?;
+                    Ok(())
+                })?;
             }
             id::CB_CONFIG_CODE_OF_CONDUCT => {
                 lock(writer).write_packet(id::SB_CONFIG_ACCEPT_CODE_OF_CONDUCT, |_| Ok(()))?;

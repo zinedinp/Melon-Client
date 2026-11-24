@@ -20,7 +20,7 @@ pub struct TextPaint<'a> {
     pub obfuscation_seed: u64,
 }
 
-/// `Font.width` of styled text: bold glyphs are a pixel wider.
+/// `Font.width` of styled text: bold glyphs are wider by their bold offset.
 pub fn width(font: &Font, text: &StyledText) -> f32 {
     text.spans
         .iter()
@@ -28,7 +28,7 @@ pub fn width(font: &Font, text: &StyledText) -> f32 {
             let face = span.style.font.as_deref();
             span.text
                 .chars()
-                .map(|c| font.advance_in(face, c) + if span.style.bold { 1.0 } else { 0.0 })
+                .map(|c| font.styled_advance_in(face, c, span.style.bold))
                 .sum::<f32>()
         })
         .sum()
@@ -179,7 +179,7 @@ pub fn wrap(font: &Font, text: &StyledText, max_width: f32) -> Vec<StyledText> {
         .collect();
     let advance = |&(c, i): &(char, usize)| {
         let style = &text.spans[i].style;
-        font.advance_in(style.font.as_deref(), c) + if style.bold { 1.0 } else { 0.0 }
+        font.styled_advance_in(style.font.as_deref(), c, style.bold)
     };
     let mut lines = Vec::new();
     let mut start = 0;
@@ -239,7 +239,7 @@ pub fn style_at<'a>(font: &Font, text: &'a StyledText, x: f32) -> Option<&'a Tex
     for span in &text.spans {
         let face = span.style.font.as_deref();
         for c in span.text.chars() {
-            pen += font.advance_in(face, c) + if span.style.bold { 1.0 } else { 0.0 };
+            pen += font.styled_advance_in(face, c, span.style.bold);
             if x < pen {
                 return Some(&span.style);
             }

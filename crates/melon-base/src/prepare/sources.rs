@@ -55,6 +55,39 @@ fn beside_melon(home: &Path) -> Vec<Found> {
     out
 }
 
+/// Where launchers keep their instances on this OS besides the XDG places.
+#[cfg(target_os = "macos")]
+fn platform_roots(home: &Path) -> Vec<(&'static str, PathBuf)> {
+    let support = home.join("Library/Application Support");
+    vec![
+        ("the official launcher", support.join("minecraft")),
+        ("Prism Launcher", support.join("PrismLauncher")),
+        ("Modrinth App", support.join("ModrinthApp")),
+        ("XMCL", support.join("xmcl")),
+    ]
+}
+
+/// Where launchers keep their instances on this OS besides the XDG places.
+#[cfg(windows)]
+fn platform_roots(_home: &Path) -> Vec<(&'static str, PathBuf)> {
+    let Some(appdata) = std::env::var_os("APPDATA").map(PathBuf::from) else {
+        return Vec::new();
+    };
+    vec![
+        ("the official launcher", appdata.join(".minecraft")),
+        ("Prism Launcher", appdata.join("PrismLauncher")),
+        ("Modrinth App", appdata.join("ModrinthApp")),
+        ("XMCL", appdata.join(".minecraftx")),
+        ("XMCL", appdata.join("xmcl")),
+    ]
+}
+
+/// Where launchers keep their instances on this OS besides the XDG places.
+#[cfg(not(any(target_os = "macos", windows)))]
+fn platform_roots(_home: &Path) -> Vec<(&'static str, PathBuf)> {
+    Vec::new()
+}
+
 fn known_installs() -> Vec<Found> {
     let home = std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
@@ -68,7 +101,6 @@ fn known_installs() -> Vec<Found> {
     let config = std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| home.join(".config"));
-    #[allow(unused_mut)]
     let mut roots: Vec<(&str, PathBuf)> = vec![
         ("the official launcher", home.join(".minecraft")),
         (
@@ -92,28 +124,7 @@ fn known_installs() -> Vec<Found> {
         ("XMCL", data.join("xmcl")),
         ("XMCL", config.join("xmcl")),
     ];
-    #[cfg(target_os = "macos")]
-    {
-        let support = home.join("Library/Application Support");
-        roots.extend([
-            ("the official launcher", support.join("minecraft")),
-            ("Prism Launcher", support.join("PrismLauncher")),
-            ("Modrinth App", support.join("ModrinthApp")),
-            ("XMCL", support.join("xmcl")),
-        ]);
-    }
-    #[cfg(windows)]
-    {
-        if let Some(appdata) = std::env::var_os("APPDATA").map(PathBuf::from) {
-            roots.extend([
-                ("the official launcher", appdata.join(".minecraft")),
-                ("Prism Launcher", appdata.join("PrismLauncher")),
-                ("Modrinth App", appdata.join("ModrinthApp")),
-                ("XMCL", appdata.join(".minecraftx")),
-                ("XMCL", appdata.join("xmcl")),
-            ]);
-        }
-    }
+    roots.extend(platform_roots(&home));
     let mut out = Vec::new();
     for (label, root) in roots {
         out.extend(scan_root(&root, label));

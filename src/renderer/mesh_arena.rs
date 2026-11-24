@@ -119,6 +119,8 @@ pub enum Kind {
     Vertices,
     /// Terrain quads, read by the shader as a storage buffer.
     Quads,
+    /// Read as vertex input per instance.
+    Instances,
     /// Index lists of sorted vertex meshes ([`quad_index_list`]).
     Indices,
 }
@@ -207,7 +209,7 @@ impl MeshArena {
             staging: (0..frames_in_flight).map(|_| Staging::default()).collect(),
             index: None,
             usage: match kind {
-                Kind::Vertices => vk::BufferUsageFlags::VERTEX_BUFFER,
+                Kind::Vertices | Kind::Instances => vk::BufferUsageFlags::VERTEX_BUFFER,
                 Kind::Quads => vk::BufferUsageFlags::STORAGE_BUFFER,
                 Kind::Indices => vk::BufferUsageFlags::INDEX_BUFFER,
             },

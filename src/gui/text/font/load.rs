@@ -35,10 +35,7 @@ fn load_font_stack(
     let (namespace, path) = crate::assets::split_id(id);
     let copies =
         crate::assets::resource_stack(assets.root(), namespace, &format!("font/{path}.json"));
-    anyhow::ensure!(
-        !copies.is_empty(),
-        "konnte Font-Definition nicht lesen: {id}"
-    );
+    anyhow::ensure!(!copies.is_empty(), "could not read font definition: {id}");
     for bytes in copies.iter().rev() {
         let Ok(value) = serde_json::from_slice::<serde_json::Value>(
             crate::assets::packs::meta::strip_bom(bytes),
@@ -187,7 +184,7 @@ pub(super) fn load_bitmap(
         None => {
             let img = assets
                 .image(file)
-                .with_context(|| format!("konnte Font-Textur nicht laden: {file}"))?;
+                .with_context(|| format!("could not load font texture: {file}"))?;
             let idx = pages.len();
             pages.push(img);
             page_index_by_path.insert(file.to_owned(), idx);

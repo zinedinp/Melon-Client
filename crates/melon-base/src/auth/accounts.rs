@@ -232,6 +232,11 @@ impl Accounts {
         for account in &mut self.accounts {
             let key = account.key();
             match account {
+                // Not read back (the keyring was locked): they are still there.
+                Account::Microsoft(account)
+                    if account.in_keyring && account.access_token.is_empty() => {}
+                Account::Alternative(account)
+                    if account.in_keyring && account.access_token.is_empty() => {}
                 Account::Microsoft(account) => {
                     let kept = store_tokens(&key, &account.access_token, &account.refresh_token);
                     account.in_keyring = kept;

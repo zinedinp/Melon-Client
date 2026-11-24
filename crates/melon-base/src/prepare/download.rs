@@ -192,9 +192,12 @@ fn fetch_objects(
     say: &dyn Fn(usize, usize, String),
 ) -> Result<(), String> {
     let path_of = |hash: &str| -> PathBuf { store_dir.join(&hash[..2]).join(hash) };
+    // Many names share one object: fetched once, or two threads would write
+    // the same `.part` file.
+    let mut seen = std::collections::HashSet::new();
     let missing: Vec<&(String, String)> = list
         .iter()
-        .filter(|(_, hash)| !path_of(hash).is_file())
+        .filter(|(_, hash)| seen.insert(hash.as_str()) && !path_of(hash).is_file())
         .collect();
     let total = missing.len();
     if total == 0 {

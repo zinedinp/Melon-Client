@@ -88,7 +88,7 @@ pub(crate) fn compile_all(assets_root: &Path) -> anyhow::Result<Vec<GuiShader>> 
             let source = |stage| {
                 shaders::core_source(assets_root, pipeline.shader, stage)
                     .map(|(text, _)| text)
-                    .ok_or_else(|| anyhow::anyhow!("core/{} fehlt", pipeline.shader))
+                    .ok_or_else(|| anyhow::anyhow!("core/{} missing", pipeline.shader))
             };
             let compile = |stage| -> anyhow::Result<Vec<u32>> {
                 shaders::compile(
@@ -122,7 +122,7 @@ fn compile_one(assets_root: &Path, pipeline: &Pipeline) -> anyhow::Result<Option
     }
     let missing = |stage: &str| {
         anyhow::anyhow!(
-            "{stage} fehlt (auch in assets/minecraft/shaders: Launcher: Prepare ausfuehren)"
+            "{stage} missing (also from assets/minecraft/shaders: run Prepare in the launcher)"
         )
     };
     let (vert, _) = vert.ok_or_else(|| missing("der Vertex-Shader"))?;
@@ -155,7 +155,7 @@ mod tests {
     fn vanilla_gui_shaders_fit_their_pipelines() {
         let root = crate::assets::default_root();
         if !root.join("minecraft/shaders/core/text.vsh").is_file() {
-            eprintln!("assets/minecraft/shaders fehlt, Test uebersprungen");
+            eprintln!("assets/minecraft/shaders missing, test skipped");
             return;
         }
         compile_all(&root).unwrap_or_else(|e| panic!("{e:#}"));

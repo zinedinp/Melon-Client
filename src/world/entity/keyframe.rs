@@ -280,8 +280,13 @@ impl Entry {
                 curve,
             } => (*part, *target, *keyframes, *curve),
         };
-        #[allow(clippy::neg_cmp_op_on_partial_ord)]
-        let first_after = keys.partition_point(|k| !(seconds <= k.time));
+        // Past every key not after `seconds`, NaN included (`!(seconds <= time)`).
+        let first_after = keys.partition_point(|k| {
+            !matches!(
+                seconds.partial_cmp(&k.time),
+                Some(std::cmp::Ordering::Less | std::cmp::Ordering::Equal)
+            )
+        });
         let prev = first_after.saturating_sub(1);
         let next = (prev + 1).min(keys.len() - 1);
         let alpha = if next == prev {

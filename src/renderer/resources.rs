@@ -1,8 +1,8 @@
 //! Textures, cube maps and meshes: uploading, updating and freeing them.
 
 use super::{
-    CubeMapId, IndexMeshId, MeshId, QuadMeshId, Renderer, TerrainQuad, TextureId, WorldVertex,
-    texture, texture_update,
+    CubeMapId, IndexMeshId, MeshId, ParticleMeshId, ParticleQuad, QuadMeshId, Renderer,
+    TerrainQuad, TextureId, WorldVertex, texture, texture_update,
 };
 use ash::vk;
 use image::RgbaImage;
@@ -340,6 +340,24 @@ impl Renderer {
         self.quad_meshes.free(quads.0, self.frames.number);
     }
 
+    /// Uploads this frame's particle quads.
+    pub fn upload_particles(&mut self, quads: &[ParticleQuad]) -> anyhow::Result<ParticleMeshId> {
+        let id = unsafe {
+            self.particle_meshes.upload(
+                &self.device,
+                &self.mem_props,
+                &mut self.residency,
+                quads,
+            )?
+        };
+        Ok(ParticleMeshId(id))
+    }
+
+    /// Frees quads from [`upload_particles`](Self::upload_particles).
+    pub fn free_particles(&mut self, quads: ParticleMeshId) {
+        self.particle_meshes.free(quads.0, self.frames.number);
+    }
+
     /// Uploads an index list ([`super::quad_index_list`]) for a vertex mesh.
     pub fn upload_indices(&mut self, list: &[u32]) -> anyhow::Result<IndexMeshId> {
         let id = unsafe {
@@ -366,7 +384,8 @@ impl Renderer {
         let (a, b) = self.meshes.usage();
         let (c, d) = self.quad_meshes.usage();
         let (e, f) = self.index_lists.usage();
-        (a + c + e, b + d + f)
+        let (g, h) = self.particle_meshes.usage();
+        (a + c + e + g, b + d + f + h)
     }
 
     pub(super) fn uploader(&self, sampler: vk::Sampler) -> texture::Uploader<'_> {

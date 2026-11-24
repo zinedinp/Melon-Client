@@ -473,6 +473,17 @@ impl Font {
         self.advance_in(None, c)
     }
 
+    /// `GlyphInfo.getAdvance(bold)`: [`Self::advance_in`], plus the glyph's
+    /// bold offset when `bold` (1, half that for Unifont's).
+    pub fn styled_advance_in(&self, font: Option<&str>, c: char, bold: bool) -> f32 {
+        let advance = self.advance_in(font, c);
+        if bold {
+            advance + self.glyph_in(font, c).map_or(1.0, |g| g.bold)
+        } else {
+            advance
+        }
+    }
+
     /// [`Self::advance`] in font `font`.
     pub fn advance_in(&self, font: Option<&str>, c: char) -> f32 {
         if c == super::OBJECT_CHAR {

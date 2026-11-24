@@ -37,8 +37,13 @@ pub struct Site {
     suppressed: AtomicU32,
 }
 
+impl Default for Site {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Site {
-    #[allow(clippy::new_without_default)]
     pub const fn new() -> Self {
         Self {
             window: AtomicU64::new(0),

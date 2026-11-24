@@ -816,7 +816,7 @@ fn drop_confirm(paths: Vec<PathBuf>, pack_dir: PathBuf) -> ScreenAction {
 fn copy_pack(from: &Path, dir: &Path) -> std::io::Result<()> {
     let name = from
         .file_name()
-        .ok_or_else(|| std::io::Error::other("kein Dateiname"))?;
+        .ok_or_else(|| std::io::Error::other("no file name"))?;
     let to = dir.join(name);
     if from.is_dir() {
         copy_dir(from, &to)

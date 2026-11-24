@@ -54,8 +54,12 @@ impl Tier {
         #[cfg(target_arch = "x86_64")]
         {
             let features = miraculix::x86::detect_features();
-            tiers.extend(super::x86::lanes::Avx512Lanes::new(features).map(Tier::Avx512));
-            tiers.extend(super::x86::lanes::AvxLanes::new(features).map(Tier::Avx));
+            if os_saves_zmm() {
+                tiers.extend(super::x86::lanes::Avx512Lanes::new(features).map(Tier::Avx512));
+            }
+            if os_saves_ymm() {
+                tiers.extend(super::x86::lanes::AvxLanes::new(features).map(Tier::Avx));
+            }
             tiers.extend(super::x86::lanes::Sse2Lanes::new(features).map(Tier::Sse2));
         }
         #[cfg(target_arch = "aarch64")]
@@ -108,8 +112,12 @@ impl ByteTier {
         {
             use super::x86::bytes::{Avx2Bytes, Ssse3Bytes, VbmiBytes};
             let features = miraculix::x86::detect_features();
-            tiers.extend(VbmiBytes::new(features).map(ByteTier::Avx512Vbmi));
-            tiers.extend(Avx2Bytes::new(features).map(ByteTier::Avx2));
+            if os_saves_zmm() {
+                tiers.extend(VbmiBytes::new(features).map(ByteTier::Avx512Vbmi));
+            }
+            if os_saves_ymm() {
+                tiers.extend(Avx2Bytes::new(features).map(ByteTier::Avx2));
+            }
             tiers.extend(Ssse3Bytes::new(features).map(ByteTier::Ssse3));
         }
         #[cfg(all(target_arch = "aarch64", target_endian = "little"))]
@@ -120,6 +128,20 @@ impl ByteTier {
         tiers.push(ByteTier::Scalar);
         tiers
     }
+}
+
+/// Whether the OS saves the 256-bit registers (XCR0, which `std` checks):
+/// `miraculix` reads CPUID alone, and AVX with that state off faults
+/// (`noxsave` kernels, some hypervisors).
+#[cfg(target_arch = "x86_64")]
+fn os_saves_ymm() -> bool {
+    std::arch::is_x86_feature_detected!("avx")
+}
+
+/// [`os_saves_ymm`] for the 512-bit registers and mask registers.
+#[cfg(target_arch = "x86_64")]
+fn os_saves_zmm() -> bool {
+    std::arch::is_x86_feature_detected!("avx512f")
 }
 
 /// Register width of every tier name, for `MELON_SIMD`.
@@ -144,10 +166,14 @@ fn width(name: &str) -> u32 {
 /// The widest register `MELON_SIMD` allows, if it names a tier.
 fn width_cap() -> Option<u32> {
     let wanted = std::env::var("MELON_SIMD").ok()?;
-    WIDTHS
+    let cap = WIDTHS
         .iter()
         .find(|(name, _)| name.eq_ignore_ascii_case(&wanted))
-        .map(|&(_, w)| w)
+        .map(|&(_, w)| w);
+    if cap.is_none() {
+        crate::warn!("MELON_SIMD={wanted} names no tier; taking the widest");
+    }
+    cap
 }
 
 /// Buffers this many lanes long (zero padded) only ever take whole steps
@@ -164,7 +190,9 @@ pub fn init() -> (Tier, ByteTier) {
     miraculix::x86::warm_up();
     #[cfg(target_arch = "aarch64")]
     miraculix::aarch64::warm_up();
-    (tier(), byte_tier())
+    let tiers = (tier(), byte_tier());
+    crate::info!("SIMD: {} floats, {} bytes", tiers.0.name(), tiers.1.name());
+    tiers
 }
 
 /// The float tier [`init`] settled (probed now if nothing called it, as in

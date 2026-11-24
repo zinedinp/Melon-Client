@@ -44,9 +44,9 @@ pub fn compile(assets_root: &Path) -> anyhow::Result<Option<Shader>> {
     if !from_pack(&vert) && !from_pack(&frag) {
         return Ok(None);
     }
-    let missing = |stage: &str| anyhow::anyhow!("{stage} von core/rendertype_outline fehlt");
-    let (vert, _) = vert.ok_or_else(|| missing("der Vertex-Shader"))?;
-    let (frag, _) = frag.ok_or_else(|| missing("der Fragment-Shader"))?;
+    let missing = |stage: &str| anyhow::anyhow!("core/rendertype_outline has no {stage}");
+    let (vert, _) = vert.ok_or_else(|| missing("vertex shader"))?;
+    let (frag, _) = frag.ok_or_else(|| missing("fragment shader"))?;
     let interface = Interface {
         inputs: &[("Position", 0), ("UV0", 1), ("Color", 2)],
         resources: &[

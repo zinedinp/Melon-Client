@@ -120,7 +120,7 @@ impl PacketDebug {
     pub fn received(&mut self, pid: i32, body: &[u8]) {
         if crate::probe::enabled() {
             crate::probe::count("packet.seen", label(pid));
-            crate::probe::trace_packet(packet_name(pid).unwrap_or("(unbekannt)"));
+            crate::probe::trace_packet(packet_name(pid).unwrap_or("(unknown)"));
         }
         if let Some(capture) = &mut self.capture
             && let Err(e) = record(capture, pid, body)
@@ -192,7 +192,7 @@ impl PacketDebug {
             let error = seen
                 .error
                 .as_deref()
-                .map_or(String::new(), |e| format!("  Fehler: {e}"));
+                .map_or(String::new(), |e| format!("  error: {e}"));
             eprintln!(
                 "[packet]   {:<44} {:>6}x {:>9} B{error}",
                 label(pid),
@@ -236,7 +236,7 @@ fn read_capture(path: &Path) -> Result<Vec<(u32, i32, Vec<u8>)>> {
     let mut magic = [0; 6];
     input.read_exact(&mut magic)?;
     if &magic != MAGIC {
-        bail!("{} ist kein Mitschnitt", path.display());
+        bail!("{} is not a packet recording", path.display());
     }
     let mut packets = Vec::new();
     let mut head = [0; 12];
@@ -278,7 +278,7 @@ pub fn replay(path: &Path) -> Result<()> {
 
 /// `0x2a set_cursor_item`.
 fn label(pid: i32) -> String {
-    format!("{pid:#04x} {}", packet_name(pid).unwrap_or("(unbekannt)"))
+    format!("{pid:#04x} {}", packet_name(pid).unwrap_or("(unknown)"))
 }
 
 /// The start of `body` as hex and text, if `show`.

@@ -65,6 +65,7 @@ impl Renderer {
         for arena in [
             &mut self.meshes,
             &mut self.quad_meshes,
+            &mut self.particle_meshes,
             &mut self.index_lists,
         ] {
             arena.prepare(&self.device, &self.mem_props, current)?;
@@ -114,6 +115,13 @@ impl Renderer {
         self.destroy_retired_textures();
         waits.gpu = started.elapsed();
 
+        if self.swapchain.framebuffers.is_empty() {
+            // A recreate failed half-way (out of memory): try again.
+            let (w, h) = (self.swapchain.extent.width, self.swapchain.extent.height);
+            self.device.device_wait_idle()?;
+            self.create_swapchain(w, h)?;
+            return Ok(());
+        }
         // Every allocation the frame needs, before an image is acquired:
         // past that point a failure would leave the image acquired and its
         // semaphore signalled with nothing to wait on it. Out of memory
@@ -205,6 +213,7 @@ impl Renderer {
         for arena in [
             &mut self.meshes,
             &mut self.quad_meshes,
+            &mut self.particle_meshes,
             &mut self.index_lists,
         ] {
             arena.record(
@@ -217,6 +226,7 @@ impl Renderer {
         }
         self.meshes.take_destroyed();
         self.index_lists.take_destroyed();
+        self.particle_meshes.take_destroyed();
         for buffer in self.quad_meshes.take_destroyed() {
             self.quad_sets.forget(&self.device, buffer);
         }
@@ -374,6 +384,7 @@ impl Renderer {
         for arena in [
             &mut self.meshes,
             &mut self.quad_meshes,
+            &mut self.particle_meshes,
             &mut self.index_lists,
         ] {
             arena.submitted();

@@ -164,7 +164,6 @@ fn lerp(t: f32, from: f32, to: f32) -> f32 {
 }
 
 /// `PandaModel.setupAnim`.
-#[allow(clippy::approx_constant)]
 pub fn setup_anim(
     parts: &PandaParts,
     pose: &mut ModelPose,
@@ -237,7 +236,6 @@ pub fn setup_anim(
 }
 
 /// `PandaModel.animateSitting` / `BabyPandaModel.animateSitting`.
-#[allow(clippy::approx_constant)]
 fn animate_sitting(parts: &PandaParts, pose: &mut ModelPose, sit: f32) {
     let head = parts.quadruped.head;
     let legs = parts.quadruped.legs;

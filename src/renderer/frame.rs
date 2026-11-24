@@ -3,7 +3,7 @@
 use glam::Mat4;
 
 use super::quad::DrawList;
-use super::{CubeMapId, IndexMeshId, MeshId, QuadMeshId, TextureId};
+use super::{CubeMapId, IndexMeshId, MeshId, ParticleMeshId, QuadMeshId, TextureId};
 
 /// One frame: scene first, then UI on top.
 pub struct Frame<'a> {
@@ -36,6 +36,8 @@ pub struct SceneFrame {
     pub world: Option<WorldDraw>,
     /// Extra meshes drawn with the same camera as `world` (terrain).
     pub entities: Vec<EntityDraw>,
+    /// Drawn in [`RenderLayer::Particles`], cut out ones first.
+    pub particles: Vec<ParticleDraw>,
     /// Cloud boxes, camera-relative, white texture, vertex colour.
     pub clouds: Option<CloudDraw>,
     /// Rain then snow columns, camera-relative, wrapping environment textures.
@@ -568,6 +570,14 @@ impl WorldVertex {
         v
     }
 
+    /// [`Self::rgba`] with the colour already as bytes (a GUI [`Vertex`](super::quad::Vertex)'s).
+    pub fn rgba8(pos: [f32; 3], uv: [f32; 2], color: [u8; 4]) -> Self {
+        Self {
+            color,
+            ..Self::new(pos, uv, [1.0; 3])
+        }
+    }
+
     /// The direction its shade was taken for.
     pub fn with_face(mut self, face: u8) -> Self {
         self.face = face;
@@ -625,6 +635,93 @@ fn octahedron_encode(v: glam::Vec3) -> [f32; 2] {
 }
 
 const _: () = assert!(std::mem::size_of::<WorldVertex>() == 28);
+
+/// One particle quad, read per instance by `shaders/particle.vert`: corners
+/// at `center ± right ± up`. The axes are the quad's own, so F16 is exact enough.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ParticleQuad {
+    /// Relative to the draw's block.
+    pub center: [f32; 3],
+    /// F16 bits: `right` then `up`, half the quad's width and height.
+    pub axes: [u16; 6],
+    /// `[u0, v0, u1, v1]` as UNORM16: `u1, v1` at `-right - up`.
+    pub uv: [u16; 4],
+    pub color: [u8; 4],
+    /// Block then sky in vanilla's light-coordinate units (`UV2`).
+    pub light: [u8; 2],
+    pub _pad: [u8; 2],
+}
+
+const _: () = assert!(std::mem::size_of::<ParticleQuad>() == 40);
+
+impl ParticleQuad {
+    /// A quad without its axes, which [`Self::encode_axes`] fills in.
+    pub fn new(
+        center: [f32; 3],
+        [u0, v0, u1, v1]: [f32; 4],
+        rgba: [f32; 4],
+        light: [u8; 2],
+    ) -> Self {
+        let (u0, u1) = unorm16_inward(u0, u1);
+        let (v0, v1) = unorm16_inward(v0, v1);
+        // `+ 0.5` and a cast: x86-64 has no inline `round` before SSE4.1.
+        let unorm8 = |v: f32| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+        Self {
+            center,
+            axes: [0; 6],
+            uv: [u0, v0, u1, v1],
+            color: rgba.map(unorm8),
+            light,
+            _pad: [0; 2],
+        }
+    }
+
+    /// Writes `axes` (six per quad: right, then up) into `quads` as F16.
+    /// `scratch` keeps its memory for the next call.
+    pub fn encode_axes(quads: &mut [Self], axes: &[f32], scratch: &mut Vec<u16>) {
+        use miraculix::formats::{MiniFloat, Overflow};
+        debug_assert_eq!(axes.len(), quads.len() * 6);
+        scratch.clear();
+        scratch.resize(axes.len(), 0);
+        MiniFloat::F16.encode_u16_slice(axes, scratch, Overflow::Special);
+        for (quad, bits) in quads.iter_mut().zip(scratch.as_chunks::<6>().0) {
+            quad.axes = *bits;
+        }
+    }
+}
+
+/// A texture's edge pair `a`, `b` as UNORM16, each rounded toward the
+/// other: a quad never samples past its sprite into the next one.
+fn unorm16_inward(a: f32, b: f32) -> (u16, u16) {
+    let scale = |v: f32| v.clamp(0.0, 1.0) * f32::from(u16::MAX);
+    // Casts truncate, so `floor` and `ceil` stay inline.
+    let floor = |v: f32| v as u16;
+    let ceil = |v: f32| floor(v) + u16::from(f32::from(floor(v)) < v);
+    // Edges within one step of each other meet at its start.
+    let inward = |lo: f32, hi: f32| match (ceil(lo), floor(hi)) {
+        (lo, hi) if lo <= hi => (lo, hi),
+        _ => (floor(lo), floor(lo)),
+    };
+    let (a, b) = (scale(a), scale(b));
+    if a <= b {
+        inward(a, b)
+    } else {
+        let (b, a) = inward(b, a);
+        (a, b)
+    }
+}
+
+/// One texture's particles of a frame (`ParticleEngine.extract`).
+#[derive(Clone, Copy)]
+pub struct ParticleDraw {
+    pub mesh: ParticleMeshId,
+    pub atlas: TextureId,
+    /// The block the quads' centres are relative to.
+    pub origin: glam::IVec3,
+    /// Blended, after the cut out ones.
+    pub translucent: bool,
+}
 
 /// A baked quad corner in the quad table `terrain.vert` reads.
 #[repr(C)]

@@ -9,3 +9,7 @@ pub mod platform;
 pub mod prepare;
 pub mod sysinfo;
 pub mod util;
+
+/// Held by each test that changes environment variables: tests run in parallel.
+#[cfg(test)]
+pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());

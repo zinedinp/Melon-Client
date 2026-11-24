@@ -169,6 +169,37 @@ pub fn split_words(command: &str) -> Vec<(usize, &str)> {
     words
 }
 
+/// `ClientboundCommandsPacket.validateEntries`: every index in range, the
+/// redirects and then the children buildable in some order (no cycles).
+fn validate(nodes: &[Node]) -> Result<()> {
+    let in_range = |i: &usize| *i < nodes.len();
+    if !nodes
+        .iter()
+        .all(|n| n.children.iter().all(in_range) && n.redirect.iter().all(in_range))
+    {
+        bail!("command node index out of range");
+    }
+    let built = |n: &Node, left: &[bool]| n.redirect.is_none_or(|r| !left[r]);
+    let resolved = |n: &Node, left: &[bool]| n.children.iter().all(|&c| !left[c]);
+    for ready in [&built as &dyn Fn(&Node, &[bool]) -> bool, &resolved] {
+        let mut left = vec![true; nodes.len()];
+        let mut remaining = nodes.len();
+        while remaining > 0 {
+            let before = remaining;
+            for i in 0..nodes.len() {
+                if left[i] && ready(&nodes[i], &left) {
+                    left[i] = false;
+                    remaining -= 1;
+                }
+            }
+            if remaining == before {
+                bail!("server sent an impossible command tree");
+            }
+        }
+    }
+    Ok(())
+}
+
 impl CommandTree {
     pub fn decode(body: &[u8]) -> Result<Self> {
         let mut r = Reader::new(body);
@@ -223,6 +254,7 @@ impl CommandTree {
         if root >= nodes.len() {
             bail!("command root {root} out of range");
         }
+        validate(&nodes)?;
         Ok(Self { nodes, root })
     }
 
@@ -492,6 +524,24 @@ mod tests {
         );
         assert!(tree.complete("gamem").unparsed);
         assert!(!tree.complete("gamemode").unparsed);
+    }
+
+    #[test]
+    fn rejects_trees_vanilla_rejects() {
+        let tree = |nodes: &[&[i32]]| {
+            let mut buf = Vec::new();
+            write_var_int(&mut buf, nodes.len() as i32).unwrap();
+            node(&mut buf, 0, nodes[0], None, None);
+            for children in &nodes[1..] {
+                node(&mut buf, 1, children, Some("a"), None);
+            }
+            write_var_int(&mut buf, 0).unwrap();
+            CommandTree::decode(&buf)
+        };
+        assert!(tree(&[&[1], &[2], &[]]).is_ok());
+        assert!(tree(&[&[1], &[3]]).is_err(), "child out of range");
+        assert!(tree(&[&[1], &[-1]]).is_err(), "negative child");
+        assert!(tree(&[&[1], &[2], &[1]]).is_err(), "cycle");
     }
 
     #[test]

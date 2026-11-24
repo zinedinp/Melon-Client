@@ -1,5 +1,6 @@
 //! `NautilusModel`: a shell over a body with a mouth of three parts.
 
+use super::rounded;
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::network::play::game::EquipmentSlot;
 use crate::world::entity::animations::nautilus::SWIMMING;
@@ -56,7 +57,6 @@ pub fn adult() -> LayerDefinition {
 
 /// `ZombieNautilusCoralModel.createBodyLayer`: the adult's body with
 /// corals growing on the shell. Vanilla's angles are its own literals.
-#[allow(clippy::approx_constant)]
 pub fn zombie_coral() -> LayerDefinition {
     let mut layer = adult();
     let shell = layer.root.child_mut("root").child_mut("shell");
@@ -67,12 +67,12 @@ pub fn zombie_coral() -> LayerDefinition {
     yellow.add_or_replace_child(
         "yellow_coral_second",
         plane((0.0, 85.0), (-4.5, -3.5, 0.0), (6.0, 8.0, 0.0)),
-        Pose::offset_rotation((0.0, 0.0, 2.0), (0.0, -0.7854, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, 2.0), (0.0, -rounded::PI_4, 0.0)),
     );
     yellow.add_or_replace_child(
         "yellow_coral_first",
         plane((0.0, 85.0), (-4.5, -3.5, 0.0), (6.0, 8.0, 0.0)),
-        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, 0.7854, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, rounded::PI_4, 0.0)),
     );
     let pink = corals.add_or_replace_child(
         "pink_coral",
@@ -82,18 +82,18 @@ pub fn zombie_coral() -> LayerDefinition {
     pink.add_or_replace_child(
         "pink_coral_second",
         plane((-8.0, 94.0), (-3.0, 0.0, -4.0), (6.0, 0.0, 8.0)),
-        Pose::offset_rotation((-1.5, 4.5, 4.0), (0.0, 0.0, 1.5708)),
+        Pose::offset_rotation((-1.5, 4.5, 4.0), (0.0, 0.0, rounded::PI_2)),
     );
     let blue = corals.add_or_replace_child("blue_coral", vec![], Pose::offset(-14.0, 0.0, 5.5));
     blue.add_or_replace_child(
         "blue_second",
         plane((0.0, 102.0), (-3.5, -5.5, 0.0), (5.0, 10.0, 0.0)),
-        Pose::offset_rotation((0.0, 0.0, -2.0), (0.0, 0.7854, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, -2.0), (0.0, rounded::PI_4, 0.0)),
     );
     blue.add_or_replace_child(
         "blue_first",
         plane((0.0, 102.0), (-3.5, -5.5, 0.0), (5.0, 10.0, 0.0)),
-        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, -0.7854, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, -rounded::PI_4, 0.0)),
     );
     let red = corals.add_or_replace_child("red_coral", vec![], Pose::ZERO);
     red.add_or_replace_child(
@@ -104,7 +104,7 @@ pub fn zombie_coral() -> LayerDefinition {
     red.add_or_replace_child(
         "red_coral_first",
         plane((0.0, 112.0), (-4.5, -5.5, 0.0), (6.0, 10.0, 0.0)),
-        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, 0.7854, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, 0.0), (0.0, rounded::PI_4, 0.0)),
     );
     layer
 }

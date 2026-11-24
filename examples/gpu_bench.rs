@@ -317,6 +317,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                         section_slots: visible.slots,
                     }),
                     entities: Vec::new(),
+                    particles: Vec::new(),
                     clouds: atmosphere
                         .first()
                         .cloned()

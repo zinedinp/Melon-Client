@@ -19,7 +19,6 @@ pub fn texture(suffocating: bool, baby: bool) -> &'static str {
     }
 }
 
-#[allow(clippy::approx_constant)]
 pub fn adult() -> LayerDefinition {
     let mut root = PartDefinition::root();
     root.add_or_replace_child(
@@ -191,7 +190,6 @@ pub fn setup_anim(
 }
 
 /// `AdultStriderModel` / `BabyStriderModel.customAnimations`.
-#[allow(clippy::approx_constant)]
 fn custom_animations(parts: &StriderParts, pose: &mut ModelPose, pos: f32, speed: f32, age: f32) {
     let flow = angle::cos(pos * SPEED + PI) * speed;
     if parts.baby {

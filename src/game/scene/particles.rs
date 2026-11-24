@@ -3,7 +3,7 @@
 use crate::game::InWorld;
 use crate::game::camera::Camera;
 use crate::game::world_resources::WorldResources;
-use crate::renderer::{EntityDraw, Renderer};
+use crate::renderer::{ParticleDraw, Renderer};
 
 /// What the particle layer draws from.
 pub(super) struct ParticleInput<'a> {
@@ -21,7 +21,7 @@ impl InWorld {
         renderer: &mut Renderer,
         assets: &WorldResources,
         input: &ParticleInput<'_>,
-        out: &mut Vec<EntityDraw>,
+        out: &mut Vec<ParticleDraw>,
     ) -> (usize, usize) {
         let frustum = input.camera.frustum(input.aspect);
         self.particle_draws(renderer, assets, input.camera, &frustum, input.partial, out);

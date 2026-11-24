@@ -16,15 +16,9 @@ pub struct Resolved {
     pub port: u16,
 }
 
-/// `resolveAddress`.
+/// `resolveAddress`: the SRV redirect is looked up even when the host itself
+/// does not resolve (a name with only an SRV record).
 pub fn resolve(host: &str, port: u16) -> Result<Resolved, CannotResolve> {
-    let own: Vec<SocketAddr> = (host, port)
-        .to_socket_addrs()
-        .map_err(|_| CannotResolve)?
-        .collect();
-    if own.is_empty() {
-        return Err(CannotResolve);
-    }
     if port == DEFAULT_PORT
         && host.parse::<IpAddr>().is_err()
         && let Some((target, target_port)) = lookup_srv(host)
@@ -41,6 +35,13 @@ pub fn resolve(host: &str, port: u16) -> Result<Resolved, CannotResolve> {
             host: target,
             port: target_port,
         });
+    }
+    let own: Vec<SocketAddr> = (host, port)
+        .to_socket_addrs()
+        .map_err(|_| CannotResolve)?
+        .collect();
+    if own.is_empty() {
+        return Err(CannotResolve);
     }
     Ok(Resolved {
         addrs: own,

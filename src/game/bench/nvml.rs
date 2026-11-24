@@ -87,49 +87,60 @@ impl Nvml {
             let library = libloading::Library::new(LIBRARY?).ok()?;
             let init: libloading::Symbol<unsafe extern "C" fn() -> Status> =
                 library.get(b"nvmlInit_v2").ok()?;
+            let shutdown: unsafe extern "C" fn() -> Status = *library.get(b"nvmlShutdown").ok()?;
             if init() != 0 {
                 return None;
             }
-            let count: libloading::Symbol<unsafe extern "C" fn(*mut c_uint) -> Status> =
-                library.get(b"nvmlDeviceGetCount_v2").ok()?;
-            let by_index: libloading::Symbol<
-                unsafe extern "C" fn(c_uint, *mut DeviceHandle) -> Status,
-            > = library.get(b"nvmlDeviceGetHandleByIndex_v2").ok()?;
-            let name_of: libloading::Symbol<
-                unsafe extern "C" fn(DeviceHandle, *mut c_char, c_uint) -> Status,
-            > = library.get(b"nvmlDeviceGetName").ok()?;
-            let mut devices = 0;
-            if count(&mut devices) != 0 || devices == 0 {
-                return None;
+            // NVML is shut down again on every way out but `Self`'s `Drop`.
+            let opened = (|| {
+                let count: libloading::Symbol<unsafe extern "C" fn(*mut c_uint) -> Status> =
+                    library.get(b"nvmlDeviceGetCount_v2").ok()?;
+                let by_index: libloading::Symbol<
+                    unsafe extern "C" fn(c_uint, *mut DeviceHandle) -> Status,
+                > = library.get(b"nvmlDeviceGetHandleByIndex_v2").ok()?;
+                let name_of: libloading::Symbol<
+                    unsafe extern "C" fn(DeviceHandle, *mut c_char, c_uint) -> Status,
+                > = library.get(b"nvmlDeviceGetName").ok()?;
+                let mut devices = 0;
+                if count(&mut devices) != 0 || devices == 0 {
+                    return None;
+                }
+                let mut chosen = None;
+                for index in 0..devices {
+                    let mut device = std::ptr::null_mut();
+                    if by_index(index, &mut device) != 0 {
+                        continue;
+                    }
+                    let mut name = [0 as c_char; 96];
+                    let got = name_of(device, name.as_mut_ptr(), name.len() as c_uint) == 0;
+                    // Ends in a NUL whatever the driver wrote.
+                    name[name.len() - 1] = 0;
+                    let named = got
+                        && CStr::from_ptr(name.as_ptr())
+                            .to_string_lossy()
+                            .contains(device_name.trim());
+                    if named || chosen.is_none() {
+                        chosen = Some(device);
+                    }
+                    if named {
+                        break;
+                    }
+                }
+                let device = chosen?;
+                Some(Self {
+                    utilization: *library.get(b"nvmlDeviceGetUtilizationRates").ok()?,
+                    memory: *library.get(b"nvmlDeviceGetMemoryInfo").ok()?,
+                    clock: *library.get(b"nvmlDeviceGetClockInfo").ok()?,
+                    power: *library.get(b"nvmlDeviceGetPowerUsage").ok()?,
+                    shutdown,
+                    device,
+                    _library: library,
+                })
+            })();
+            if opened.is_none() {
+                shutdown();
             }
-            let mut chosen = None;
-            for index in 0..devices {
-                let mut device = std::ptr::null_mut();
-                if by_index(index, &mut device) != 0 {
-                    continue;
-                }
-                let mut name = [0 as c_char; 96];
-                let named = name_of(device, name.as_mut_ptr(), name.len() as c_uint) == 0
-                    && CStr::from_ptr(name.as_ptr())
-                        .to_string_lossy()
-                        .contains(device_name.trim());
-                if named || chosen.is_none() {
-                    chosen = Some(device);
-                }
-                if named {
-                    break;
-                }
-            }
-            let device = chosen?;
-            Some(Self {
-                utilization: *library.get(b"nvmlDeviceGetUtilizationRates").ok()?,
-                memory: *library.get(b"nvmlDeviceGetMemoryInfo").ok()?,
-                clock: *library.get(b"nvmlDeviceGetClockInfo").ok()?,
-                power: *library.get(b"nvmlDeviceGetPowerUsage").ok()?,
-                shutdown: *library.get(b"nvmlShutdown").ok()?,
-                device,
-                _library: library,
-            })
+            opened
         }
     }
 

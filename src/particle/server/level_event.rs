@@ -377,7 +377,8 @@ fn detect_player(
     rng: &mut JavaRandom,
     out: &mut Vec<Spawn>,
 ) {
-    for _ in 0..30 + players.clamp(i32::MIN, 10) * 5 {
+    // Java's `int` arithmetic: a huge negative count wraps instead of panicking.
+    for _ in 0..players.min(10).wrapping_mul(5).wrapping_add(30) {
         let x = f64::from(2.0 * rng.next_float() - 1.0) * 0.65;
         let z = f64::from(2.0 * rng.next_float() - 1.0) * 0.65;
         let y = 0.1 + f64::from(rng.next_float() * 0.8);
@@ -408,7 +409,7 @@ fn growth(world: &World, pos: [i32; 3], count: i32, rng: &mut JavaRandom, out: &
         } else {
             pos
         };
-        spread(world, at, count * 3, 3.0, 1.0, rng, out);
+        spread(world, at, count.wrapping_mul(3), 3.0, 1.0, rng, out);
     } else {
         let at = if matches!(name, "mangrove_leaves" | "rooted_dirt") {
             [pos[0], pos[1] - 1, pos[2]]

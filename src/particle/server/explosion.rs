@@ -59,7 +59,10 @@ impl ExplosionTracker {
             self.blasts.clear();
             return;
         }
-        let total: i32 = self.blasts.iter().map(|b| b.block_count.max(0)).sum();
+        let total = self
+            .blasts
+            .iter()
+            .fold(0i32, |sum, b| sum.saturating_add(b.block_count.max(0)));
         for _ in 0..total.min(MAX_PER_TICK) {
             let mut pick = rng.next_int(total.max(1));
             let Some(blast) = self.blasts.iter().find(|b| {

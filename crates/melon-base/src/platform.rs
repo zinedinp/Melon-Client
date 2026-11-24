@@ -181,19 +181,32 @@ pub fn open_dir(path: &std::path::Path) {
     }
 }
 
+/// One clipboard for the process: on X11 and Wayland copied text lives only
+/// as long as the `Clipboard` that set it (unless a clipboard manager takes it).
+fn with_clipboard<R>(f: impl FnOnce(&mut arboard::Clipboard) -> R) -> Result<R, arboard::Error> {
+    static CLIPBOARD: std::sync::Mutex<Option<arboard::Clipboard>> = std::sync::Mutex::new(None);
+    let mut slot = CLIPBOARD
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let clipboard = match &mut *slot {
+        Some(clipboard) => clipboard,
+        empty => empty.insert(arboard::Clipboard::new()?),
+    };
+    Ok(f(clipboard))
+}
+
 /// `KeyboardHandler.setClipboard`.
 pub fn copy_to_clipboard(text: &str) {
-    match arboard::Clipboard::new() {
-        Ok(mut clipboard) => {
-            let _ = clipboard.set_text(text.to_owned());
-        }
-        Err(e) => crate::warn!("Clipboard unavailable: {e}"),
+    if let Err(e) = with_clipboard(|clipboard| clipboard.set_text(text.to_owned())) {
+        crate::warn!("Clipboard unavailable: {e}");
     }
 }
 
 /// `KeyboardHandler.getClipboard`: `None` when empty or unavailable.
 pub fn clipboard_text() -> Option<String> {
-    arboard::Clipboard::new().ok()?.get_text().ok()
+    with_clipboard(|clipboard| clipboard.get_text().ok())
+        .ok()
+        .flatten()
 }
 
 /// The processor's marketing name (`GLX._getCpuInfo()`).
@@ -210,27 +223,30 @@ pub fn cpu_name() -> Option<String> {
     {
         return Some(name);
     }
-    #[cfg(target_arch = "x86_64")]
-    {
-        use std::arch::x86_64::__cpuid;
-        let bytes = {
-            if __cpuid(0x8000_0000).eax < 0x8000_0004 {
-                return None;
-            }
-            let mut bytes = Vec::with_capacity(48);
-            for leaf in 0x8000_0002..=0x8000_0004 {
-                let r = __cpuid(leaf);
-                for reg in [r.eax, r.ebx, r.ecx, r.edx] {
-                    bytes.extend_from_slice(&reg.to_le_bytes());
-                }
-            }
-            bytes
-        };
-        let text = String::from_utf8_lossy(&bytes);
-        let name = text.trim_matches(|c: char| c == '\0' || c.is_whitespace());
-        return (!name.is_empty()).then(|| name.split_whitespace().collect::<Vec<_>>().join(" "));
+    cpuid_name()
+}
+
+/// The brand string CPUID leaves `0x8000_0002..=4` hold.
+#[cfg(target_arch = "x86_64")]
+fn cpuid_name() -> Option<String> {
+    use std::arch::x86_64::__cpuid;
+    if __cpuid(0x8000_0000).eax < 0x8000_0004 {
+        return None;
     }
-    #[allow(unreachable_code)]
+    let mut bytes = Vec::with_capacity(48);
+    for leaf in 0x8000_0002..=0x8000_0004 {
+        let r = __cpuid(leaf);
+        for reg in [r.eax, r.ebx, r.ecx, r.edx] {
+            bytes.extend_from_slice(&reg.to_le_bytes());
+        }
+    }
+    let text = String::from_utf8_lossy(&bytes);
+    let name = text.trim_matches(|c: char| c == '\0' || c.is_whitespace());
+    (!name.is_empty()).then(|| name.split_whitespace().collect::<Vec<_>>().join(" "))
+}
+
+#[cfg(not(target_arch = "x86_64"))]
+fn cpuid_name() -> Option<String> {
     None
 }
 
@@ -272,11 +288,10 @@ mod win_memory {
 
 /// Resident set size of this process.
 pub fn resident_set_bytes() -> Option<u64> {
+    // `VmRSS`: `statm` counts pages, which are 16 or 64 KiB on some ARM kernels.
     #[cfg(target_os = "linux")]
     {
-        let statm = std::fs::read_to_string("/proc/self/statm").ok()?;
-        let pages: u64 = statm.split_whitespace().nth(1)?.parse().ok()?;
-        Some(pages * 4096)
+        memory_details().map(|details| details.resident)
     }
     #[cfg(windows)]
     {
@@ -309,18 +324,18 @@ pub fn memory_details() -> Option<MemoryDetails> {
     #[cfg(target_os = "linux")]
     {
         let status = std::fs::read_to_string("/proc/self/status").ok()?;
-        return parse_proc_status(&status);
+        parse_proc_status(&status)
     }
     #[cfg(windows)]
     {
-        return win_memory::counters().map(|c| MemoryDetails {
+        win_memory::counters().map(|c| MemoryDetails {
             resident: c.working_set_size as u64,
             peak_resident: c.peak_working_set_size as u64,
             committed: c.pagefile_usage as u64,
             ..MemoryDetails::default()
-        });
+        })
     }
-    #[allow(unreachable_code)]
+    #[cfg(not(any(target_os = "linux", windows)))]
     None
 }
 
@@ -656,6 +671,9 @@ pub fn raise_frame_thread_priority() {
 mod dialog_tests {
     #[test]
     fn kde_desktop_is_detected_from_xdg() {
+        let _env = crate::ENV_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let prev_desktop = std::env::var_os("XDG_CURRENT_DESKTOP");
         let prev_session = std::env::var_os("DESKTOP_SESSION");
         unsafe {

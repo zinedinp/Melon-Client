@@ -153,11 +153,11 @@ mod tests {
         let Some(ScorePacket::Scoreboard(ScoreUpdate::Team { name, action })) =
             decode(cb::SET_PLAYER_TEAM.0, &body).unwrap()
         else {
-            panic!("kein Team");
+            panic!("not a team");
         };
         assert_eq!(&*name, "red");
         let TeamAction::Add { look, players } = action else {
-            panic!("kein Hinzufügen");
+            panic!("not an add");
         };
         assert_eq!(look.name_tags, Visibility::HideForOtherTeams);
         assert_eq!(look.collision, CollisionRule::Never);
@@ -193,7 +193,7 @@ mod tests {
         let Some(ScorePacket::Scoreboard(ScoreUpdate::SetScore { score, .. })) =
             decode(cb::SET_SCORE.0, &body).unwrap()
         else {
-            panic!("kein Score");
+            panic!("not a score");
         };
         assert_eq!(score.value, 5);
         assert_eq!(

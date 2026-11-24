@@ -1,5 +1,6 @@
 //! `WolfModel` (`AdultWolfModel`, `BabyWolfModel`).
 
+use super::rounded;
 use super::{ClientEntity, LayerSpec, ModelId as M, dye_tint};
 use crate::math::angle::{self, PI};
 use crate::world::entity::living::LivingRenderState;
@@ -61,7 +62,6 @@ fn adult_grown(g: f32) -> LayerDefinition {
 }
 
 /// `BabyWolfModel.createBodyLayer`, with vanilla's rounded angles.
-#[allow(clippy::approx_constant)]
 pub fn baby() -> LayerDefinition {
     let mut root = PartDefinition::root();
     let head = root.add_or_replace_child(
@@ -102,7 +102,7 @@ pub fn baby() -> LayerDefinition {
     let tail = root.add_or_replace_child(
         "tail",
         Vec::new(),
-        Pose::offset_rotation((0.0, 19.0, 3.0), (-0.5236, 0.0, 0.0)),
+        Pose::offset_rotation((0.0, 19.0, 3.0), (-rounded::PI_6, 0.0, 0.0)),
     );
     tail.add_or_replace_child(
         "tail_r1",

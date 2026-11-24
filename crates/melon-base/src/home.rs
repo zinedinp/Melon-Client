@@ -70,8 +70,11 @@ pub fn assets_base_from_pick(path: &Path) -> PathBuf {
 }
 
 fn dirs_data() -> PathBuf {
-    if let Some(xdg) = std::env::var_os("XDG_DATA_HOME") {
-        return PathBuf::from(xdg);
+    // The XDG spec ignores a relative (or empty) value.
+    if let Some(xdg) = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from)
+        && xdg.is_absolute()
+    {
+        return xdg;
     }
     let home = std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
@@ -122,6 +125,9 @@ mod tests {
 
     #[test]
     fn melon_home_wins() {
+        let _env = crate::ENV_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let prev = std::env::var_os("MELON_HOME");
         unsafe { std::env::set_var("MELON_HOME", "/tmp/melon-home-test") };
         assert_eq!(dir(), PathBuf::from("/tmp/melon-home-test"));
@@ -138,6 +144,9 @@ mod tests {
 
     #[test]
     fn default_assets_live_in_the_personal_folder() {
+        let _env = crate::ENV_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let prev = std::env::var_os("MELON_HOME");
         unsafe { std::env::remove_var("MELON_HOME") };
         let assets = default_assets_dir();

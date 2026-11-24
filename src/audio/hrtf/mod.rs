@@ -306,7 +306,7 @@ impl<I: Source> Binaural<I> {
     }
 
     /// Each source's filters, gain included, for where the listener is now.
-    /// A stereo file's sides stay at Â±30Â° from the listener and only fade
+    /// A stereo file's sides stay at ±30° from the listener and only fade
     /// with distance, as OpenAL Soft renders multi-channel sources.
     /// Without allocating: it runs on the audio thread. Only the first
     /// [`Self::inputs`] entries are meant.

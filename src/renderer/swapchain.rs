@@ -44,8 +44,16 @@ impl Renderer {
         });
         self.swapchain.present_mode = present_mode;
 
-        let extent = if capabilities.current_extent.width != u32::MAX {
-            capabilities.current_extent
+        let current = capabilities.current_extent;
+        if (current.width == 0 || current.height == 0)
+            && self.swapchain.handle != vk::SwapchainKHR::null()
+        {
+            // Minimized on Windows: no extent is valid, keep the old
+            // swapchain until the window has a size again.
+            return Ok(());
+        }
+        let extent = if current.width != u32::MAX {
+            current
         } else {
             vk::Extent2D {
                 width: width.clamp(
@@ -88,7 +96,9 @@ impl Renderer {
             .image_usage(usage)
             .image_sharing_mode(vk::SharingMode::EXCLUSIVE)
             .pre_transform(capabilities.current_transform)
-            .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
+            .composite_alpha(super::vk_util::composite_alpha(
+                capabilities.supported_composite_alpha,
+            ))
             .present_mode(present_mode)
             .clipped(true)
             .old_swapchain(old_swapchain);
@@ -98,6 +108,12 @@ impl Renderer {
         if old_swapchain != vk::SwapchainKHR::null() {
             self.swapchain.loader.destroy_swapchain(old_swapchain, None);
         }
+        // Kept at once: a failure below leaves the new swapchain without
+        // framebuffers, which the next frame recreates, not a freed handle.
+        self.swapchain.handle = swapchain;
+        self.swapchain.extent = extent;
+        self.swapchain.format = format.format;
+        self.swapchain.can_copy = can_copy;
 
         let images = self.swapchain.loader.get_swapchain_images(swapchain)?;
         let mut views = Vec::with_capacity(images.len());
@@ -149,10 +165,6 @@ impl Renderer {
             );
         }
 
-        self.swapchain.handle = swapchain;
-        self.swapchain.extent = extent;
-        self.swapchain.format = format.format;
-        self.swapchain.can_copy = can_copy;
         self.swapchain.views = views;
         self.swapchain.depth = depth;
         self.swapchain.framebuffers = framebuffers;

@@ -17,6 +17,10 @@ const BIOMES_PER_SECTION: usize = 4 * 4 * 4;
 const BLOCK_INDIRECT_MAX_BITS: u32 = 8;
 /// `Strategy.createForBiomes`: bits 1..=3 stay indirect.
 const BIOME_INDIRECT_MAX_BITS: u32 = 3;
+/// `Strategy.createForBlockStates`: indirect palettes of 1..=4 bits take 4.
+const BLOCK_INDIRECT_MIN_BITS: u32 = 4;
+/// Global ids are `u16` here; a wider index cannot name a state or biome.
+const GLOBAL_MAX_BITS: u32 = 16;
 
 /// Reads one `LevelChunkWithLight` packet body of a level `height` tall:
 pub fn decode(body: &[u8], height: Height) -> Result<Chunk> {
@@ -27,8 +31,13 @@ pub fn decode(body: &[u8], height: Height) -> Result<Chunk> {
     let heightmap_count = r.var_int()?;
     for _ in 0..heightmap_count {
         let _kind = r.var_int()?;
-        let longs = r.var_int()? as usize;
-        r.skip(longs * 8)?;
+        let Some(bytes) = usize::try_from(r.var_int()?)
+            .ok()
+            .and_then(|longs| longs.checked_mul(8))
+        else {
+            bail!("bad heightmap length");
+        };
+        r.skip(bytes)?;
     }
 
     let data_len = r.var_int()? as usize;
@@ -218,6 +227,9 @@ fn skip_nbt_payload(r: &mut Reader, ty: u8, depth: u32) -> Result<()> {
             if len < 0 {
                 bail!("negative NBT list");
             }
+            if elem == 0 && len > 0 {
+                bail!("missing type on NBT list");
+            }
             for _ in 0..len {
                 skip_nbt_payload(r, elem, depth + 1)?;
             }
@@ -261,6 +273,11 @@ fn read_paletted(
     wanted: impl Fn(u16) -> bool,
 ) -> Result<bool> {
     let bits_per_entry = u32::from(r.u8()?);
+    let min_bits = if indirect_max_bits == BLOCK_INDIRECT_MAX_BITS {
+        BLOCK_INDIRECT_MIN_BITS
+    } else {
+        1
+    };
 
     if bits_per_entry == 0 {
         let value = r.var_int()? as u16;
@@ -277,12 +294,15 @@ fn read_paletted(
         for entry in &mut palette[..palette_len] {
             *entry = r.var_int()? as u16;
         }
-        read_packed_indices(r, out, bits_per_entry, |index| {
+        read_packed_indices(r, out, bits_per_entry.max(min_bits), |index| {
             palette.get(index as usize).copied().unwrap_or(0)
         })?;
         return Ok(palette[..palette_len].iter().any(|&id| wanted(id)));
     }
 
+    if bits_per_entry > GLOBAL_MAX_BITS {
+        bail!("{bits_per_entry} bits per global palette entry");
+    }
     read_packed_indices(r, out, bits_per_entry, |id| id as u16)?;
     Ok(true)
 }
@@ -508,6 +528,34 @@ mod tests {
         let full = ChunkScan::of(5, 7, Height::OVERWORLD.min_y, &plain);
         assert_eq!(chunk.scan.block_entities, full.block_entities);
         assert_eq!(full.block_entities.len(), 1 + BLOCKS_PER_SECTION + 1);
+    }
+
+    #[test]
+    fn small_block_palettes_are_read_as_four_bits_like_vanilla() {
+        let stone = pumpkin_data::Block::STONE.default_state.id.as_u16();
+        let mut blocks = [0u16; BLOCKS_PER_SECTION];
+        blocks[5] = stone;
+        let mut data = Vec::new();
+        write_section(&mut data, 4, &blocks);
+        data[4] = 2;
+        for _ in 1..OVERWORLD_SECTIONS {
+            write_section(&mut data, 0, &[0; BLOCKS_PER_SECTION]);
+        }
+        let mut body = Vec::new();
+        body.extend_from_slice(&[0; 8]);
+        write_var_int(&mut body, 0).unwrap();
+        write_var_int(&mut body, data.len() as i32).unwrap();
+        body.extend_from_slice(&data);
+        let chunk = decode(&body, Height::OVERWORLD).unwrap();
+        assert_eq!(&*chunk.sections[0].to_array(), &blocks);
+
+        data[4] = 70;
+        let mut wide = body[..body.len() - data.len()].to_vec();
+        wide.extend_from_slice(&data);
+        assert!(
+            decode(&wide, Height::OVERWORLD).is_err(),
+            "no panic on 70 bits"
+        );
     }
 
     fn write_bitset(out: &mut Vec<u8>, words: &[u64]) {

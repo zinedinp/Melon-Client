@@ -137,5 +137,9 @@ pub(super) unsafe fn create(
         ],
         layouts: layouts.world,
         terrain: [terrain(Mode::Solid)?, terrain(Mode::Opaque)?],
+        particles: [
+            in_pass(render_pass, Mode::Opaque, Geometry::Particles)?,
+            in_pass(render_pass, Mode::Translucent, Geometry::Particles)?,
+        ],
     })
 }

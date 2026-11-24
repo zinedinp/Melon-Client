@@ -1,5 +1,6 @@
 //! `CowModel` and its cold, warm and baby forms.
 
+use super::rounded;
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, variant_body};
 use crate::math::angle::PI;
 use crate::world::entity::model::{LayerDefinition, PartDefinition};
@@ -49,7 +50,6 @@ pub fn adult() -> LayerDefinition {
 }
 
 /// `ColdCowModel`.
-#[allow(clippy::approx_constant)]
 pub fn cold() -> LayerDefinition {
     let mut root = base();
     root.add_or_replace_child(
@@ -72,12 +72,12 @@ pub fn cold() -> LayerDefinition {
     head.add_or_replace_child(
         "right_horn",
         vec![Cube::new((0.0, 40.0), (-1.5, -4.5, -0.5), (2.0, 6.0, 2.0))],
-        Pose::offset_rotation((-4.5, -2.5, -3.5), (1.5708, 0.0, 0.0)),
+        Pose::offset_rotation((-4.5, -2.5, -3.5), (rounded::PI_2, 0.0, 0.0)),
     );
     head.add_or_replace_child(
         "left_horn",
         vec![Cube::new((0.0, 32.0), (-1.5, -3.0, -0.5), (2.0, 6.0, 2.0))],
-        Pose::offset_rotation((5.5, -2.5, -5.0), (1.5708, 0.0, 0.0)),
+        Pose::offset_rotation((5.5, -2.5, -5.0), (rounded::PI_2, 0.0, 0.0)),
     );
     LayerDefinition::new(root, 64.0, 64.0)
 }

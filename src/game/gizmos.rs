@@ -400,7 +400,7 @@ fn text_quads(
         let at = (text.at - origin).as_vec3();
         let place = |v: &Vertex| {
             let p = at + view.right * (v.pos[0] * pixel) - view.up * (v.pos[1] * pixel);
-            WorldVertex::rgba(p.to_array(), v.uv, v.color)
+            WorldVertex::rgba8(p.to_array(), v.uv, v.color)
         };
         for call in &list.calls {
             let from = (call.first / 6 * 4) as usize;

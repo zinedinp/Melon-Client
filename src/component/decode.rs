@@ -304,8 +304,9 @@ pub fn click_event(value: &Value) -> Option<ClickEvent> {
 fn click(value: &Value) -> Option<ClickEvent> {
     let map = value.as_object()?;
     Some(match string(map, "action")?.as_str() {
+        // `ExtraCodecs.UNTRUSTED_URI`: only http(s) links are kept.
         "open_url" => ClickEvent::OpenUrl {
-            url: string(map, "url")?,
+            url: string(map, "url").filter(|url| crate::dialog::links::is_trusted_url(url))?,
         },
         "run_command" => ClickEvent::RunCommand {
             command: string(map, "command")?,
@@ -463,6 +464,15 @@ mod tests {
         assert_eq!(head.plain_text(), "[Alex head]");
         let named = component(&json!({"object": "player", "player": "Steve"}));
         assert_eq!(named.plain_text(), "[Steve head]");
+    }
+
+    #[test]
+    fn links_other_than_http_are_dropped() {
+        for url in ["file:///C:/Windows", "ms-settings:", "javascript:alert(1)"] {
+            let c =
+                component(&json!({"text": "x", "click_event": {"action": "open_url", "url": url}}));
+            assert_eq!(c.style.click_event, None, "{url}");
+        }
     }
 
     #[test]

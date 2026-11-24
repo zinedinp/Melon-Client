@@ -100,7 +100,7 @@ impl GuiSprite {
         let stack = packs::active();
         let (bytes, layer) = stack
             .find(assets.root(), namespace, &path)
-            .ok_or_else(|| anyhow::anyhow!("Textur fehlt: {id}"))?;
+            .ok_or_else(|| anyhow::anyhow!("texture missing: {id}"))?;
         let image = decode_png(&bytes).ok_or_else(|| anyhow::anyhow!("Textur kaputt: {id}"))?;
         let meta = stack
             .find_metadata(assets.root(), namespace, &path, layer)

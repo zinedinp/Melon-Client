@@ -757,12 +757,14 @@ fn animate_packed(
     (animation.frames.len() > 1).then_some(animation)
 }
 
+/// Each texture's id and its corners in a packed image.
+type PackedRects = Vec<(String, Vec2, Vec2)>;
+
 /// Every texture `quads` sample side by side in one image.
-#[allow(clippy::type_complexity)]
 fn pack_textures(
     quads: &[ItemQuad],
     textures: &mut TextureCache,
-) -> Option<(RgbaImage, Vec<(String, Vec2, Vec2)>)> {
+) -> Option<(RgbaImage, PackedRects)> {
     let mut images: Vec<(String, RgbaImage)> = Vec::new();
     for quad in quads {
         if images.iter().any(|(id, _)| *id == quad.texture) {

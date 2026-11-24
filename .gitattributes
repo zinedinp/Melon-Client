@@ -1,0 +1,3 @@
+# Read by Unix tools that choke on CR, even in a tree copied from Windows.
+*.sh text eol=lf
+*.desktop text eol=lf

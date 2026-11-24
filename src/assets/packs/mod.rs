@@ -98,7 +98,7 @@ impl Pack {
         let meta = source
             .read("pack.mcmeta")
             .and_then(|bytes| PackMeta::parse(&bytes))
-            .ok_or_else(|| anyhow::anyhow!("{title}: pack.mcmeta fehlt oder ist kaputt"))?;
+            .ok_or_else(|| anyhow::anyhow!("{title}: pack.mcmeta missing or broken"))?;
         Ok(Self {
             id,
             title,

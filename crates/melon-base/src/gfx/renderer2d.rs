@@ -290,7 +290,9 @@ impl Renderer2d {
             .image_usage(vk::ImageUsageFlags::COLOR_ATTACHMENT)
             .image_sharing_mode(vk::SharingMode::EXCLUSIVE)
             .pre_transform(capabilities.current_transform)
-            .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
+            .composite_alpha(super::vk_util::composite_alpha(
+                capabilities.supported_composite_alpha,
+            ))
             .present_mode(vk::PresentModeKHR::FIFO)
             .clipped(true)
             .old_swapchain(old);

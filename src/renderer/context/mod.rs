@@ -125,6 +125,12 @@ impl Renderer {
             MAX_FRAMES_IN_FLIGHT,
             mesh_arena::Kind::Quads,
         )?;
+        let particle_meshes = mesh_arena::MeshArena::new::<super::ParticleQuad>(
+            &device,
+            &mem_props,
+            MAX_FRAMES_IN_FLIGHT,
+            mesh_arena::Kind::Instances,
+        )?;
         let index_lists = mesh_arena::MeshArena::new::<u32>(
             &device,
             &mem_props,
@@ -173,6 +179,7 @@ impl Renderer {
             sky_cube,
             meshes,
             quad_meshes,
+            particle_meshes,
             index_lists,
             quad_table: None,
             gpu_timer,

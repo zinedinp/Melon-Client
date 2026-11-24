@@ -1,5 +1,6 @@
 //! `AbstractEquineModel`.
 
+use super::rounded;
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::math::angle::{self, HALF_PI, PI, QUARTER_PI, SIXTH_PI, THIRD_PI};
 use crate::world::entity::living::LivingRenderState;
@@ -157,7 +158,6 @@ pub fn donkey() -> LayerDefinition {
 }
 
 /// `BabyHorseModel.createBabyMesh`.
-#[allow(clippy::approx_constant)]
 pub fn baby_horse() -> LayerDefinition {
     let mut root = PartDefinition::root();
     let body = root.add_or_replace_child(
@@ -210,7 +210,6 @@ pub fn baby_horse() -> LayerDefinition {
 }
 
 /// `BabyDonkeyModel.createBabyLayer`: everything hangs off the body.
-#[allow(clippy::approx_constant)]
 pub fn baby_donkey() -> LayerDefinition {
     let mut root = PartDefinition::root();
     let body = root.add_or_replace_child(
@@ -240,13 +239,13 @@ pub fn baby_donkey() -> LayerDefinition {
     neck.add_or_replace_child(
         "neck_r1",
         vec![Cube::new((30.0, 9.0), (-3.0, -6.0, -3.0), (4.0, 8.0, 4.0))],
-        Pose::offset_rotation((0.0, 0.0, 0.0), (0.3927, 0.0, 0.0)),
+        Pose::offset_rotation((0.0, 0.0, 0.0), (rounded::PI_8, 0.0, 0.0)),
     );
     let head = neck.add_or_replace_child("head", Vec::new(), Pose::offset(0.0, -5.0, -3.0));
     head.add_or_replace_child(
         "head_r1",
         vec![Cube::new((0.0, 0.0), (-4.0, -3.6, -8.4), (6.0, 4.0, 9.0))],
-        Pose::offset_rotation((0.0, -1.0, 1.0), (0.3927, 0.0, 0.0)),
+        Pose::offset_rotation((0.0, -1.0, 1.0), (rounded::PI_8, 0.0, 0.0)),
     );
     head.add_or_replace_child(
         "left_ear",

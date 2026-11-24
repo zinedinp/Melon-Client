@@ -8,6 +8,12 @@ use image::RgbaImage;
 
 use super::staging::Staging;
 
+/// Where textures are sampled: pack GUI shaders read them in `.vsh` too.
+const SAMPLED_IN: vk::PipelineStageFlags = vk::PipelineStageFlags::from_raw(
+    vk::PipelineStageFlags::VERTEX_SHADER.as_raw()
+        | vk::PipelineStageFlags::FRAGMENT_SHADER.as_raw(),
+);
+
 /// A new texture's contents, copied in before anything samples it.
 pub struct PendingInit {
     pub image: vk::Image,
@@ -239,7 +245,7 @@ unsafe fn record_inits(
     device.cmd_pipeline_barrier(
         cmd,
         vk::PipelineStageFlags::TRANSFER,
-        vk::PipelineStageFlags::FRAGMENT_SHADER,
+        SAMPLED_IN,
         vk::DependencyFlags::empty(),
         &[],
         &[],
@@ -294,7 +300,7 @@ unsafe fn record_updates(
     };
     device.cmd_pipeline_barrier(
         cmd,
-        vk::PipelineStageFlags::FRAGMENT_SHADER,
+        SAMPLED_IN,
         vk::PipelineStageFlags::TRANSFER,
         vk::DependencyFlags::empty(),
         &[],
@@ -353,7 +359,7 @@ unsafe fn record_updates(
     device.cmd_pipeline_barrier(
         cmd,
         vk::PipelineStageFlags::TRANSFER,
-        vk::PipelineStageFlags::FRAGMENT_SHADER,
+        SAMPLED_IN,
         vk::DependencyFlags::empty(),
         &[],
         &[],

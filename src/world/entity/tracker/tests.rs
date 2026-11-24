@@ -155,7 +155,6 @@ fn a_mob_named_dinnerbone_hangs_upside_down_with_its_look_inverted() {
 }
 
 #[test]
-#[allow(deprecated)]
 fn a_name_that_translates_to_dinnerbone_does_what_dinnerbone_does() {
     use crate::gui::text::StyledText;
     use crate::i18n::Lang;
@@ -181,7 +180,6 @@ fn a_name_that_translates_to_dinnerbone_does_what_dinnerbone_does() {
 }
 
 #[test]
-#[allow(deprecated)]
 fn switching_the_language_looks_at_the_names_again() {
     use crate::gui::text::StyledText;
     use crate::i18n::Lang;

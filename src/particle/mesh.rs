@@ -3,19 +3,28 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use glam::{DVec3, IVec3, Mat4, Quat, Vec3};
+use glam::{DVec3, IVec3, Quat, Vec3};
 
 use super::Particle;
 use super::base::{Atlas, Facing};
 use super::behavior::Behavior;
-use crate::renderer::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId, WorldVertex};
+use crate::renderer::{ParticleDraw, ParticleMeshId, ParticleQuad, Renderer, TextureId};
 use crate::world::culling::frustum::Frustum;
 use crate::world::level::Level;
 
 /// The quads of one texture and blend mode.
 #[derive(Default)]
 pub struct Batch {
-    pub vertices: Vec<WorldVertex>,
+    pub quads: Vec<ParticleQuad>,
+    /// Per quad its `right` and `up`, until [`ParticleQuad::encode_axes`].
+    pub axes: Vec<f32>,
+}
+
+impl Batch {
+    fn clear(&mut self) {
+        self.quads.clear();
+        self.axes.clear();
+    }
 }
 
 /// What the quads are built for.
@@ -159,31 +168,28 @@ fn quad(
     center: Vec3,
     (right, up): (Vec3, Vec3),
     size: f32,
-    [u0, v0, u1, v1]: [f32; 4],
+    uv: [f32; 4],
     rgba: [f32; 4],
     light: [u8; 2],
 ) {
-    let corner = |x: f32, y: f32, u: f32, v: f32| {
-        let pos = center + (right * x + up * y) * size;
-        let mut vertex = WorldVertex::rgba(pos.to_array(), [u, v], rgba);
-        vertex.light = light;
-        vertex
-    };
-    batch.vertices.extend([
-        corner(-1.0, -1.0, u1, v1),
-        corner(1.0, -1.0, u0, v1),
-        corner(1.0, 1.0, u0, v0),
-        corner(-1.0, 1.0, u1, v0),
-    ]);
+    let (right, up) = (right * size, up * size);
+    batch
+        .quads
+        .push(ParticleQuad::new(center.to_array(), uv, rgba, light));
+    batch
+        .axes
+        .extend_from_slice(&[right.x, right.y, right.z, up.x, up.y, up.z]);
 }
 
 /// The particles' GPU side.
 #[derive(Default)]
 pub struct ParticleMeshes {
-    meshes: Vec<MeshId>,
+    meshes: Vec<ParticleMeshId>,
     /// By item id; `None` for one without a texture.
     items: HashMap<u16, Option<TextureId>>,
     batches: HashMap<(Atlas, bool), Batch>,
+    /// The axes' F16 bits on their way into the quads.
+    bits: Vec<u16>,
     /// Quads drawn last frame.
     pub drawn: usize,
 }
@@ -198,18 +204,18 @@ impl ParticleMeshes {
         particles: &[Particle],
         level: &Level,
         view: &View,
-        out: &mut Vec<EntityDraw>,
+        out: &mut Vec<ParticleDraw>,
     ) {
         for mesh in self.meshes.drain(..) {
-            renderer.free_mesh(mesh);
+            renderer.free_particles(mesh);
         }
         for batch in self.batches.values_mut() {
-            batch.vertices.clear();
+            batch.clear();
         }
         build(particles, level, view, &mut self.batches);
         self.drawn = 0;
-        for (&(atlas, translucent), batch) in &self.batches {
-            if batch.vertices.is_empty() {
+        for (&(atlas, translucent), batch) in &mut self.batches {
+            if batch.quads.is_empty() {
                 continue;
             }
             let texture = match atlas {
@@ -222,34 +228,28 @@ impl ParticleMeshes {
             let Some(texture) = texture else {
                 continue;
             };
-            match renderer.upload_mesh(&batch.vertices) {
+            ParticleQuad::encode_axes(&mut batch.quads, &batch.axes, &mut self.bits);
+            match renderer.upload_particles(&batch.quads) {
                 Ok(mesh) => {
                     self.meshes.push(mesh);
-                    self.drawn += batch.vertices.len() / 4;
-                    out.push(EntityDraw {
-                        scroll: None,
-                        alpha: 1.0,
+                    self.drawn += batch.quads.len();
+                    out.push(ParticleDraw {
                         mesh,
                         atlas: texture,
-                        model: Mat4::IDENTITY,
                         origin: view.origin,
-                        layer: RenderLayer::Particles,
-                        blend: crate::renderer::Blending::of(translucent),
-                        light: Some([1.0; 3]),
-                        overlay: 0.0,
-                        glint: crate::renderer::Glint::None,
+                        translucent,
                     });
                 }
                 Err(e) => crate::warn!("Particle mesh failed: {e:#}"),
             }
         }
-        self.batches.retain(|_, batch| !batch.vertices.is_empty());
+        self.batches.retain(|_, batch| !batch.quads.is_empty());
     }
 
     /// Frees everything, for new resources or a new level.
     pub fn clear(&mut self, renderer: &mut Renderer) {
         for mesh in self.meshes.drain(..) {
-            renderer.free_mesh(mesh);
+            renderer.free_particles(mesh);
         }
         for texture in self.items.drain().filter_map(|(_, t)| t) {
             renderer.free_texture(texture);
@@ -272,4 +272,90 @@ fn item_texture(renderer: &mut Renderer, assets_root: &Path, item: u16) -> Optio
         image = image::imageops::crop_imm(&image, 0, 0, side, side).to_image();
     }
     renderer.load_texture(&image).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use miraculix::formats::MiniFloat;
+
+    /// What `shaders/particle.vert` makes of a quad: corner positions and UVs,
+    /// in the order the CPU built its four vertices before.
+    fn corners(quad: &ParticleQuad) -> [(Vec3, [f32; 2]); 4] {
+        let axis = |i: usize| -> [f32; 3] {
+            std::array::from_fn(|k| MiniFloat::F16.decode(u32::from(quad.axes[i + k])))
+        };
+        let (right, up) = (Vec3::from_array(axis(0)), Vec3::from_array(axis(3)));
+        let [u0, v0, u1, v1] = quad.uv.map(|q| f32::from(q) / f32::from(u16::MAX));
+        let center = Vec3::from_array(quad.center);
+        [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].map(|(x, y): (f32, f32)| {
+            let uv = [if x < 0.0 { u1 } else { u0 }, if y < 0.0 { v1 } else { v0 }];
+            (center + right * x + up * y, uv)
+        })
+    }
+
+    #[test]
+    fn quads_land_where_the_vertices_did() {
+        let mut batch = Batch::default();
+        let mut cases = Vec::new();
+        for i in 0..200 {
+            let t = i as f32;
+            let center = Vec3::new(
+                (t * 7.3).sin() * 40.0,
+                (t * 1.9).cos() * 30.0,
+                t * 0.37 - 30.0,
+            );
+            let rotation = Quat::from_euler(glam::EulerRot::YXZ, t * 0.7, t * 1.3, t * 0.2);
+            let (right, up) = (rotation * Vec3::X, rotation * Vec3::Y);
+            let size = 0.02 + (t * 0.61).fract() * 4.0;
+            // A sprite's corner of a 16384 texel atlas, flipped every other time.
+            let (a, b) = (
+                (i * 37 % 1000) as f32 / 16384.0,
+                (i * 37 % 1000 + 3) as f32 / 16384.0,
+            );
+            let uv = if i % 2 == 0 {
+                [a, a, b, b]
+            } else {
+                [b, a, a, b]
+            };
+            quad(
+                &mut batch,
+                center,
+                (right, up),
+                size,
+                uv,
+                [1.0; 4],
+                [16, 240],
+            );
+            cases.push((center, right * size, up * size, uv));
+        }
+        let mut bits = Vec::new();
+        ParticleQuad::encode_axes(&mut batch.quads, &batch.axes, &mut bits);
+        for (quad, (center, right, up, [u0, v0, u1, v1])) in batch.quads.iter().zip(cases) {
+            let before = [
+                (center - right - up, [u1, v1]),
+                (center + right - up, [u0, v1]),
+                (center + right + up, [u0, v0]),
+                (center - right + up, [u1, v0]),
+            ];
+            for ((at, uv), (was_at, was_uv)) in corners(quad).into_iter().zip(before) {
+                // F16 is good to 2^-11 of the axes; the centre stays f32.
+                let size = right.length().max(up.length());
+                assert!(
+                    at.distance(was_at) <= size / 1024.0,
+                    "{at} against {was_at}"
+                );
+                for (now, was) in uv.into_iter().zip(was_uv) {
+                    assert!((now - was).abs() <= 1.0 / 65535.0, "{now} against {was}");
+                }
+            }
+            // UNORM16 rounds each edge toward the other: never past the sprite.
+            let [q0, _, q1, _] = quad.uv.map(|q| f32::from(q) / f32::from(u16::MAX));
+            let (lo, hi) = (u0.min(u1), u0.max(u1));
+            assert!(
+                q0.min(q1) >= lo && q0.max(q1) <= hi,
+                "{q0}, {q1} outside {lo}..{hi}"
+            );
+        }
+    }
 }

@@ -148,6 +148,8 @@ fn main() {
     compile_shader("shaders/world.vert", &out_dir, "vertex");
     // Rain and snow: the texture's drop streaks placed per column.
     compile_shader("shaders/weather.vert", &out_dir, "vertex");
+    // Particles: a quad per instance.
+    compile_shader("shaders/particle.vert", &out_dir, "vertex");
     // Lines and points of a fixed width in pixels: outlines and gizmos.
     compile_shader("shaders/lines.vert", &out_dir, "vertex");
     // Terrain faces from `TerrainQuad`s and the quad table.

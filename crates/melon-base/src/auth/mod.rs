@@ -408,6 +408,9 @@ mod tests {
 
     #[test]
     fn client_id_file_in_the_data_folder_is_enough() {
+        let _env = crate::ENV_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let prev = std::env::var_os("MELON_MS_CLIENT_ID");
         unsafe { std::env::remove_var("MELON_MS_CLIENT_ID") };
         let dir = std::env::temp_dir().join(format!(
@@ -430,6 +433,9 @@ mod tests {
 
     #[test]
     fn the_public_client_id_is_used_when_nothing_overrides_it() {
+        let _env = crate::ENV_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let prev = std::env::var_os("MELON_MS_CLIENT_ID");
         unsafe { std::env::remove_var("MELON_MS_CLIENT_ID") };
         let dir = std::env::temp_dir().join(format!(

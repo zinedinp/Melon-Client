@@ -199,6 +199,8 @@ pub struct InWorld {
     entity_meshes: entities::EntityMeshes,
     /// Last frame's entity draws, refilled by the next (see [`Self::recycle`]).
     spare_entities: Vec<EntityDraw>,
+    /// The same for the particle draws.
+    spare_particles: Vec<crate::renderer::ParticleDraw>,
     /// `ClientClockManager`: day/night from `SET_TIME`.
     clocks: ClientClocks,
     /// Cracks on blocks being broken, the own and others'.
@@ -403,6 +405,7 @@ impl InWorld {
             entities: Default::default(),
             block_entity_meshes: BlockEntityMeshes::default(),
             spare_entities: Vec::new(),
+            spare_particles: Vec::new(),
             entity_meshes: Default::default(),
             clocks: ClientClocks::default(),
             cracks: Default::default(),

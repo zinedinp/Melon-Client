@@ -322,16 +322,19 @@ impl ParticleEngine {
         let ctx = world.ctx(&looks);
         let mut requests = std::mem::take(&mut self.requests);
         for spawn in requests.drain(..) {
-            if !self.admits(&spawn) {
-                continue;
-            }
-            if let Some(p) =
-                provider::create(&spawn.spec, spawn.pos, spawn.aux, &ctx, &mut self.rng)
-            {
-                self.add(p);
-            }
+            self.make(&spawn, &ctx);
         }
         self.requests = requests;
+    }
+
+    /// `LevelRenderer.addParticleInternal`: `spawn` made now if admitted.
+    fn make(&mut self, spawn: &Spawn, ctx: &TickCtx) {
+        if !self.admits(spawn) {
+            return;
+        }
+        if let Some(p) = provider::create(&spawn.spec, spawn.pos, spawn.aux, ctx, &mut self.rng) {
+            self.add(p);
+        }
     }
 
     /// `ParticleEngine.add`: queued for the next tick, past any limit.
@@ -386,13 +389,18 @@ impl ParticleEngine {
             });
         }
         self.spore_blossoms = self.spore_blossoms.saturating_sub(gone_blossoms);
-        self.requests.extend(spawned);
+        // What particles gave off is made in their tick, as vanilla's
+        // `level.addParticle` does, and joins the groups below.
+        for spawn in &spawned {
+            self.make(spawn, &ctx);
+        }
         let pending = std::mem::take(&mut self.pending);
         for p in pending {
-            let group = if p.behavior.drawn() {
-                &mut self.quads
-            } else {
+            // `NoRenderParticle`s; a shriek still waiting is drawn later.
+            let group = if matches!(p.behavior, behavior::Behavior::Emitter(_)) {
                 &mut self.hidden
+            } else {
+                &mut self.quads
             };
             if !admit_to_group(group.len(), &mut self.rng) {
                 if p.kind == Kind::SporeBlossomAir {

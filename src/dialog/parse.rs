@@ -175,8 +175,12 @@ fn input(value: &Value) -> Option<Input> {
                 multiline: optional(map, "multiline", |v| {
                     let m = v.as_object()?;
                     Some(Multiline {
+                        // `ExtraCodecs.POSITIVE_INT`.
                         max_lines: optional(m, "max_lines", |n| {
-                            u32::try_from(n.as_i64()?).ok().filter(|&n| n > 0)
+                            i32::try_from(n.as_i64()?)
+                                .ok()
+                                .filter(|&n| n > 0)
+                                .map(|n| n as u32)
                         })?,
                         height: optional(m, "height", |n| {
                             u32::try_from(n.as_i64()?)

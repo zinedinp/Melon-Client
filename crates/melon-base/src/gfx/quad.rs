@@ -26,7 +26,16 @@ impl Transform2D {
 pub struct Vertex {
     pub pos: [f32; 2],
     pub uv: [f32; 2],
-    pub color: [f32; 4],
+    /// RGBA as unsigned normalized bytes, as vanilla's `ARGB` colours.
+    pub color: [u8; 4],
+}
+
+const _: () = assert!(std::mem::size_of::<Vertex>() == 20);
+
+/// `0..=1` as a byte, rounded to the nearest; `+ 0.5` and a cast, as x86-64
+/// has no inline `round` before SSE4.1.
+fn unorm8(color: [f32; 4]) -> [u8; 4] {
+    color.map(|c| (c.clamp(0.0, 1.0) * 255.0 + 0.5) as u8)
 }
 
 /// Which blend function a draw call wants. Vanilla picks a `RenderPipeline`
@@ -203,7 +212,7 @@ impl DrawList {
         self.vertices.extend((0..4).map(|i| Vertex {
             pos: corners[i],
             uv: uvs[i],
-            color: colors[i],
+            color: unorm8(colors[i]),
         }));
         self.push_call(texture, first, 6, program);
     }

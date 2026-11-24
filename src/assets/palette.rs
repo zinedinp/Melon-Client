@@ -3,39 +3,33 @@
 use image::{Rgba, RgbaImage};
 use std::path::Path;
 
-/// One entry of a palette mapping: a base colour (RGB) and what it becomes.
-pub type ColorMapping = ((u8, u8, u8), [u8; 4]);
+/// A palette mapping: each base colour (RGB) and what it becomes.
+pub type ColorMapping = rustc_hash::FxHashMap<[u8; 3], [u8; 4]>;
 
-/// `PaletteMapping.create`.
-pub fn mapping(base: &RgbaImage, target: &RgbaImage) -> Vec<ColorMapping> {
-    let n = (base.width() * base.height()).min(target.width() * target.height()) as usize;
-    let mut out = Vec::with_capacity(n);
-    for i in 0..n {
-        let bx = i as u32 % base.width();
-        let by = i as u32 / base.width();
-        let tx = i as u32 % target.width();
-        let ty = i as u32 / target.width();
-        let key = base.get_pixel(bx, by).0;
-        if key[3] == 0 {
-            continue;
-        }
-        out.push(((key[0], key[1], key[2]), target.get_pixel(tx, ty).0));
+/// `PaletteMapping.create`: `None` when the palettes differ in size (vanilla
+/// throws, and the sprite is not made); a colour listed twice takes its last entry.
+pub fn mapping(base: &RgbaImage, target: &RgbaImage) -> Option<ColorMapping> {
+    if base.pixels().len() != target.pixels().len() {
+        return None;
     }
-    out
+    let mut out = ColorMapping::default();
+    for (key, value) in base.pixels().zip(target.pixels()) {
+        if key[3] != 0 {
+            out.insert([key[0], key[1], key[2]], value.0);
+        }
+    }
+    Some(out)
 }
 
 /// `PaletteMapping.apply` over every pixel.
-pub fn apply(image: &RgbaImage, map: &[ColorMapping]) -> RgbaImage {
+pub fn apply(image: &RgbaImage, map: &ColorMapping) -> RgbaImage {
     let mut out = image.clone();
     for pixel in out.pixels_mut() {
         let [r, g, b, a] = pixel.0;
         if a == 0 {
             continue;
         }
-        if let Some(&(_, [tr, tg, tb, ta])) = map
-            .iter()
-            .find(|((kr, kg, kb), _)| *kr == r && *kg == g && *kb == b)
-        {
+        if let Some(&[tr, tg, tb, ta]) = map.get(&[r, g, b]) {
             let alpha = (u16::from(a) * u16::from(ta) / 255) as u8;
             *pixel = Rgba([tr, tg, tb, alpha]);
         }
@@ -65,7 +59,7 @@ pub fn permute(assets_root: &Path, base_id: &str, key: &str, palette: &str) -> O
     let base = crate::assets::decode_png(&png)?;
     let key = palette_image(assets_root, key)?;
     let target = palette_image(assets_root, palette)?;
-    Some(apply(&base, &mapping(&key, &target)))
+    Some(apply(&base, &mapping(&key, &target)?))
 }
 
 /// Atlas `paletted_permutations` for item trims: `trims/items/chestplate_trim_gold`
@@ -126,11 +120,23 @@ mod tests {
         let mut target = RgbaImage::new(2, 1);
         target.put_pixel(0, 0, Rgba([200, 100, 50, 128]));
         target.put_pixel(1, 0, Rgba([9, 9, 9, 255]));
-        let map = mapping(&base, &target);
-        assert_eq!(map, [((10, 20, 30), [200, 100, 50, 128])]);
+        let map = mapping(&base, &target).unwrap();
+        assert_eq!(map.len(), 1);
+        assert_eq!(map.get(&[10, 20, 30]), Some(&[200, 100, 50, 128]));
         let mut src = RgbaImage::new(1, 1);
         src.put_pixel(0, 0, Rgba([10, 20, 30, 128]));
         let out = apply(&src, &map);
         assert_eq!(out.get_pixel(0, 0).0, [200, 100, 50, 64]);
+    }
+
+    #[test]
+    fn a_repeated_colour_takes_its_last_entry_and_sizes_must_match() {
+        let base = RgbaImage::from_pixel(2, 1, Rgba([10, 20, 30, 255]));
+        let mut target = RgbaImage::new(2, 1);
+        target.put_pixel(0, 0, Rgba([1, 1, 1, 255]));
+        target.put_pixel(1, 0, Rgba([2, 2, 2, 255]));
+        let map = mapping(&base, &target).unwrap();
+        assert_eq!(map.get(&[10, 20, 30]), Some(&[2, 2, 2, 255]));
+        assert!(mapping(&base, &RgbaImage::new(3, 1)).is_none());
     }
 }

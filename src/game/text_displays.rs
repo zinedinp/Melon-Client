@@ -192,7 +192,7 @@ fn build(
 
 /// Both faces of the quad `corners` at `z`.
 fn push_quad(out: &mut Vec<WorldVertex>, corners: &[Vertex], z: f32) {
-    let corner = |v: &Vertex| WorldVertex::rgba([v.pos[0], v.pos[1], z], v.uv, v.color);
+    let corner = |v: &Vertex| WorldVertex::rgba8([v.pos[0], v.pos[1], z], v.uv, v.color);
     let q = [
         corner(&corners[0]),
         corner(&corners[1]),

@@ -178,7 +178,7 @@ pub unsafe fn create(
         attributes: &[
             (vk::Format::R32G32_SFLOAT, 0),
             (vk::Format::R32G32_SFLOAT, 8),
-            (vk::Format::R32G32B32A32_SFLOAT, 16),
+            (vk::Format::R8G8B8A8_UNORM, 16),
         ],
         instance: None,
         used_locations: shaders.inputs,

@@ -2,8 +2,8 @@
 
 use std::borrow::Cow;
 use std::path::Path;
-use std::sync::atomic::{AtomicPtr, AtomicU16, Ordering};
-use std::sync::{LazyLock, Mutex};
+use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::{LazyLock, Mutex, PoisonError, RwLock};
 
 use pumpkin_data::data_component::DataComponent;
 use pumpkin_data::data_component_impl::{
@@ -106,18 +106,16 @@ impl CreativeTab {
 /// Vanilla tabs only. Prefer [`tabs`] once zip-mods may have appended theirs.
 pub static TABS: LazyLock<Vec<CreativeTab>> = LazyLock::new(load);
 
-static TABS_PTR: AtomicPtr<Vec<CreativeTab>> = AtomicPtr::new(std::ptr::null_mut());
+/// Vanilla's and the mods' tabs once a mod added some. Each set is leaked:
+/// [`tabs`] hands out `'static` slices, and sets change only on a mod reload.
+static WITH_MODS: RwLock<Option<&'static [CreativeTab]>> = RwLock::new(None);
 static MOD_ITEMS: Mutex<Vec<&'static Item>> = Mutex::new(Vec::new());
 static NEXT_MOD_ITEM_ID: AtomicU16 = AtomicU16::new(50_000);
 
 /// Vanilla tabs, then tabs from enabled zip-mods (`data/*/creative_tab.json`).
 pub fn tabs() -> &'static [CreativeTab] {
-    let ptr = TABS_PTR.load(Ordering::Acquire);
-    if ptr.is_null() {
-        TABS.as_slice()
-    } else {
-        unsafe { (*ptr).as_slice() }
-    }
+    let with_mods = *WITH_MODS.read().unwrap_or_else(PoisonError::into_inner);
+    with_mods.unwrap_or_else(|| TABS.as_slice())
 }
 
 /// Reads `data/<ns>/creative_tab.json` from extracted zip-mods and appends their tabs.
@@ -127,7 +125,7 @@ pub fn apply_extracted_mods(extracted: impl IntoIterator<Item = impl AsRef<Path>
         .flat_map(|dir| collect_mod_tabs(dir.as_ref()))
         .collect();
     if extra.is_empty() {
-        TABS_PTR.store(std::ptr::null_mut(), Ordering::Release);
+        *WITH_MODS.write().unwrap_or_else(PoisonError::into_inner) = None;
         return;
     }
     let mut tabs = load();
@@ -146,8 +144,7 @@ pub fn apply_from_game_dir(game_dir: &Path) {
 }
 
 fn publish(tabs: Vec<CreativeTab>) {
-    let boxed = Box::into_raw(Box::new(tabs));
-    TABS_PTR.store(boxed, Ordering::Release);
+    *WITH_MODS.write().unwrap_or_else(PoisonError::into_inner) = Some(tabs.leak());
 }
 
 fn load() -> Vec<CreativeTab> {

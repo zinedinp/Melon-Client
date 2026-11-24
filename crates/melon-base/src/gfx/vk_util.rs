@@ -180,14 +180,51 @@ pub fn choose_surface_format(
 ) -> anyhow::Result<vk::SurfaceFormatKHR> {
     let formats =
         unsafe { surface_loader.get_physical_device_surface_formats(physical_device, surface)? };
-    Ok(formats
-        .iter()
-        .find(|f| {
-            f.format == vk::Format::B8G8R8A8_UNORM
-                && f.color_space == vk::ColorSpaceKHR::SRGB_NONLINEAR
+    pick_surface_format(&formats).ok_or_else(|| anyhow::anyhow!("the surface offers no format"))
+}
+
+/// A UNORM format, as vanilla's GL framebuffer stores colour (an `_SRGB` one
+/// would encode it a second time): BGRA, then RGBA, then whatever else is offered.
+fn pick_surface_format(formats: &[vk::SurfaceFormatKHR]) -> Option<vk::SurfaceFormatKHR> {
+    let srgb = |f: &vk::SurfaceFormatKHR| {
+        matches!(
+            f.format,
+            vk::Format::B8G8R8A8_SRGB
+                | vk::Format::R8G8B8A8_SRGB
+                | vk::Format::A8B8G8R8_SRGB_PACK32
+        )
+    };
+    let nonlinear = |f: &&vk::SurfaceFormatKHR| f.color_space == vk::ColorSpaceKHR::SRGB_NONLINEAR;
+    [vk::Format::B8G8R8A8_UNORM, vk::Format::R8G8B8A8_UNORM]
+        .into_iter()
+        .find_map(|wanted| {
+            formats
+                .iter()
+                .filter(nonlinear)
+                .find(|f| f.format == wanted)
         })
+        .or_else(|| formats.iter().filter(nonlinear).find(|f| !srgb(f)))
+        .or_else(|| {
+            formats
+                .iter()
+                .find(|f| !srgb(f) && f.format != vk::Format::UNDEFINED)
+        })
+        .or(formats.first())
         .copied()
-        .unwrap_or(formats[0]))
+}
+
+/// Opaque when the surface offers it, else the first mode it does (the spec
+/// wants one of `supportedCompositeAlpha`).
+pub fn composite_alpha(supported: vk::CompositeAlphaFlagsKHR) -> vk::CompositeAlphaFlagsKHR {
+    [
+        vk::CompositeAlphaFlagsKHR::OPAQUE,
+        vk::CompositeAlphaFlagsKHR::INHERIT,
+        vk::CompositeAlphaFlagsKHR::PRE_MULTIPLIED,
+        vk::CompositeAlphaFlagsKHR::POST_MULTIPLIED,
+    ]
+    .into_iter()
+    .find(|&mode| supported.contains(mode))
+    .unwrap_or(vk::CompositeAlphaFlagsKHR::OPAQUE)
 }
 
 /// How a frame's render pass starts.
@@ -298,9 +335,13 @@ pub unsafe fn create_render_pass(
                 | vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS
                 | vk::PipelineStageFlags::LATE_FRAGMENT_TESTS,
         )
-        .src_access_mask(vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE)
-        .dst_access_mask(
+        .src_access_mask(
             vk::AccessFlags::COLOR_ATTACHMENT_WRITE
+                | vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
+        )
+        .dst_access_mask(
+            vk::AccessFlags::COLOR_ATTACHMENT_READ
+                | vk::AccessFlags::COLOR_ATTACHMENT_WRITE
                 | vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_READ
                 | vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
         );

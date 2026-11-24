@@ -163,13 +163,18 @@ fn bind() -> std::io::Result<UdpSocket> {
 }
 
 fn listen(socket: &UdpSocket, list: &Mutex<List>, stop: &AtomicBool) {
-    let mut buffer = [0u8; 1024];
+    // Any datagram fits: on Windows a bigger one than the buffer is an error
+    // (`WSAEMSGSIZE`) where Java's 1024-byte packet just cuts it.
+    let mut buffer = vec![0u8; 1 << 16];
     while !stop.load(Ordering::Relaxed) {
         let received = socket.recv_from(&mut buffer);
         let now = Instant::now();
         let mut list = list.lock().unwrap_or_else(PoisonError::into_inner);
         match received {
-            Ok((len, from)) => list.add(&String::from_utf8_lossy(&buffer[..len]), from.ip(), now),
+            Ok((len, from)) => {
+                let text = String::from_utf8_lossy(&buffer[..len.min(1024)]);
+                list.add(&text, from.ip(), now);
+            }
             Err(error)
                 if matches!(
                     error.kind(),

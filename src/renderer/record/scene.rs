@@ -6,8 +6,8 @@ mod terrain;
 use crate::renderer::Blending;
 use crate::renderer::pipeline::world::{DrawLight, FogInput, Mode};
 use crate::renderer::{
-    LineStyle, MeshId, RenderLayer, Renderer, SceneFrame, Sky, SkyKind, TextureId, WeatherDraw,
-    WorldDraw, WorldVertex, globals, mesh_arena, pipeline, world_projection,
+    LineStyle, MeshId, ParticleQuad, RenderLayer, Renderer, SceneFrame, Sky, SkyKind, TextureId,
+    WeatherDraw, WorldDraw, WorldVertex, globals, mesh_arena, pipeline, world_projection,
 };
 use ash::vk;
 use glam::{Mat4, Vec3};
@@ -214,6 +214,9 @@ impl Renderer {
                                 );
                             }
                         }
+                    }
+                    if layer == RenderLayer::Particles {
+                        self.draw_particles(cmd, scene, world, (view_proj, fog));
                     }
                     if !lines_drawn {
                         for style in [LineStyle::Opaque, LineStyle::OpaqueDepthBias] {
@@ -458,6 +461,39 @@ impl Renderer {
         }
     }
 
+    /// The [`ParticleDraw`](crate::renderer::ParticleDraw)s, cut out then
+    /// blended, through `shaders/particle.vert`.
+    unsafe fn draw_particles(
+        &self,
+        cmd: vk::CommandBuffer,
+        scene: &SceneFrame,
+        world: &WorldDraw,
+        (view_proj, fog): (Mat4, FogInput),
+    ) {
+        let light = world.light([1.0; 4]).fogged(fog);
+        for (translucent, pass) in [false, true].into_iter().zip(&self.pipelines.particles) {
+            for draw in scene
+                .particles
+                .iter()
+                .filter(|d| d.translucent == translucent)
+            {
+                let Some(slot) = self.particle_meshes.slot(draw.mesh.0) else {
+                    continue;
+                };
+                if !self.bind_world_pipeline(cmd, draw.atlas, pass) {
+                    continue;
+                }
+                let (buffer, base) = self.particle_meshes.location(slot);
+                let mvp = view_proj * world.relative_to(Mat4::IDENTITY, draw.origin);
+                self.push_world(cmd, pass.layout, mvp, Vec3::ZERO, &light);
+                let offset = u64::from(base) * std::mem::size_of::<ParticleQuad>() as u64;
+                self.device
+                    .cmd_bind_vertex_buffers(cmd, 1, &[buffer], &[offset]);
+                self.device.cmd_draw_indexed(cmd, 6, slot.count, 0, 0, 0);
+            }
+        }
+    }
+
     /// Binds the world pipeline with `atlas`. `false` if the texture is gone.
     pub(in crate::renderer) unsafe fn bind_world_pass(
         &self,
@@ -465,9 +501,6 @@ impl Renderer {
         atlas: TextureId,
         mode: Mode,
     ) -> bool {
-        let Some(texture) = self.textures.list.get(atlas.0) else {
-            return false;
-        };
         let pass = match mode {
             Mode::Solid => &self.pipelines.solid,
             Mode::Opaque => &self.pipelines.world,
@@ -491,6 +524,20 @@ impl Renderer {
             Mode::LinesTranslucent => &self.pipelines.lines[2],
             Mode::LinesNoDepthWrite => &self.pipelines.lines[3],
             Mode::Glint => return false,
+        };
+        self.bind_world_pipeline(cmd, atlas, pass)
+    }
+
+    /// Binds `pass`, built like the world pipeline, with `atlas`. `false` if
+    /// the texture is gone.
+    unsafe fn bind_world_pipeline(
+        &self,
+        cmd: vk::CommandBuffer,
+        atlas: TextureId,
+        pass: &pipeline::Pass,
+    ) -> bool {
+        let Some(texture) = self.textures.list.get(atlas.0) else {
+            return false;
         };
         self.device
             .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);

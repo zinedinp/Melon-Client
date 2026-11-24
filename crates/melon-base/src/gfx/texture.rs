@@ -73,21 +73,21 @@ impl Uploader<'_> {
         let device = self.device;
         let first = layers
             .first()
-            .ok_or_else(|| anyhow::anyhow!("Textur-Upload ohne Bilddaten"))?;
+            .ok_or_else(|| anyhow::anyhow!("texture upload without image data"))?;
         let (width, height) = (first.width(), first.height());
         if layers
             .iter()
             .any(|l| l.width() != width || l.height() != height)
         {
-            anyhow::bail!("Textur-Layer haben unterschiedliche Groessen");
+            anyhow::bail!("texture layers differ in size");
         }
         if !mips.is_empty() && layers.len() != 1 {
-            anyhow::bail!("Mipmaps nur für einzelne Texturen");
+            anyhow::bail!("mipmaps only for single-layer textures");
         }
         for (level, mip) in mips.iter().enumerate() {
             let shift = level + 1;
             if mip.dimensions() != ((width >> shift).max(1), (height >> shift).max(1)) {
-                anyhow::bail!("Mipmap-Stufe {shift} hat die falsche Größe");
+                anyhow::bail!("mipmap level {shift} has the wrong size");
             }
         }
         let parts: Vec<(u32, u32, RgbaImage)> = layers

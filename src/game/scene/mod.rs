@@ -63,6 +63,8 @@ impl InWorld {
             },
         );
         self.profiler.mark("entities");
+        let mut particle_draws = std::mem::take(&mut self.spare_particles);
+        particle_draws.clear();
         let particles = self.particle_layer(
             renderer,
             assets,
@@ -71,7 +73,7 @@ impl InWorld {
                 aspect,
                 partial: view.level_partial,
             },
-            &mut layer.draws,
+            &mut particle_draws,
         );
         self.profiler.mark("particles");
         let lines = self.overlay_layer(
@@ -132,6 +134,7 @@ impl InWorld {
                 section_slots: chunks.slots,
             }),
             entities: layer.draws,
+            particles: particle_draws,
             clouds: sky.clouds,
             weather: sky.weather,
             lines,
@@ -150,5 +153,6 @@ impl InWorld {
                 .recycle(world.chunks, world.cutout, world.translucent);
         }
         self.spare_entities = scene.entities;
+        self.spare_particles = scene.particles;
     }
 }

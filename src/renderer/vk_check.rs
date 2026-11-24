@@ -326,6 +326,9 @@ fn every_pipeline_passes_validation(version: Option<ApiVersion>) {
             keep(world(mode, Geometry::Quads { indirect: false }).expect("terrain quads"));
             keep(world(mode, Geometry::Quads { indirect: true }).expect("terrain indirect"));
         }
+        for mode in [Mode::Opaque, Mode::Translucent] {
+            keep(world(mode, Geometry::Particles).expect("particles"));
+        }
 
         gpu.device.device_wait_idle().expect("idle after pipelines");
         for pass in &passes {

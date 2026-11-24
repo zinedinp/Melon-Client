@@ -501,7 +501,7 @@ impl Download {
             .build()
             .call()?;
         if let Some(length) = response.body().content_length() {
-            anyhow::ensure!(length <= MAX_PACK_SIZE, "Paket zu gross: {length} Bytes");
+            anyhow::ensure!(length <= MAX_PACK_SIZE, "pack too large: {length} bytes");
         }
         std::fs::create_dir_all(&self.dir)?;
         let temp = self
@@ -532,7 +532,7 @@ impl Download {
             if let Some(expected) = &self.hash {
                 anyhow::ensure!(
                     &actual == expected,
-                    "Hash {actual} passt nicht zum angekuendigten {expected}"
+                    "hash {actual} does not match the announced {expected}"
                 );
             }
             let target = self.dir.join(&actual);

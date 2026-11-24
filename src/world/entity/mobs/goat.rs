@@ -1,5 +1,6 @@
 //! `GoatModel` and `BabyGoatModel`.
 
+use super::rounded;
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::math::angle::EIGHTH_PI;
 use crate::world::entity::living::LivingRenderState;
@@ -85,7 +86,6 @@ pub fn adult() -> LayerDefinition {
     LayerDefinition::new(root, 64.0, 64.0)
 }
 
-#[allow(clippy::approx_constant)]
 pub fn baby() -> LayerDefinition {
     let mut root = PartDefinition::root();
     root.add_or_replace_child(
@@ -138,12 +138,12 @@ pub fn baby() -> LayerDefinition {
     head.add_or_replace_child(
         "right_ear",
         vec![Cube::new((0.0, 12.0), (-2.0, -0.5, -0.5), (2.0, 1.0, 1.0)).mirrored()],
-        Pose::offset_rotation((-1.7, -2.3126, 0.1452), (0.0, -0.5236, 0.0)),
+        Pose::offset_rotation((-1.7, -2.3126, 0.1452), (0.0, -rounded::PI_6, 0.0)),
     );
     head.add_or_replace_child(
         "left_ear",
         vec![Cube::new((0.0, 12.0), (0.0, -0.5, -0.5), (2.0, 1.0, 1.0))],
-        Pose::offset_rotation((1.7, -2.3126, 0.1452), (0.0, 0.5236, 0.0)),
+        Pose::offset_rotation((1.7, -2.3126, 0.1452), (0.0, rounded::PI_6, 0.0)),
     );
     head.add_or_replace_child(
         "HeadMain",

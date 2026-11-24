@@ -106,8 +106,11 @@ impl SectionCull {
                     .zip(least)
                     .all(|(row, &least)| row.0[y] >= least)
             });
+            // Not nearer than the fog's end, NaN included: as the AVX body's `cmplt`.
             let fogged = match (&self.fog, fog_room) {
-                (Some((near, _)), Some(room)) => near.0[y] >= room,
+                (Some((near, _)), Some(room)) => {
+                    near.0[y].partial_cmp(&room) != Some(std::cmp::Ordering::Less)
+                }
                 _ => false,
             };
             if framed && !fogged {

@@ -25,6 +25,8 @@ struct Entry {
     /// Offset of its local header in the file.
     local: u64,
     compressed: u64,
+    /// Uncompressed, as the directory claims: only a capacity hint.
+    size: u64,
     /// 0 stored, 8 deflated.
     method: u16,
 }
@@ -55,7 +57,7 @@ impl ZipPack {
             return None;
         }
         let skip = u64::from(u16_at(&header, 26)) + u64::from(u16_at(&header, 28));
-        let start = entry.local + LOC_LEN as u64 + skip;
+        let start = entry.local.checked_add(LOC_LEN as u64 + skip)?;
         if entry.compressed > MAX_ENTRY_SIZE {
             return None;
         }
@@ -64,7 +66,7 @@ impl ZipPack {
         match entry.method {
             0 => Some(data),
             8 => {
-                let mut out = Vec::with_capacity(data.len() * 3);
+                let mut out = Vec::with_capacity(entry.size.min(MAX_ENTRY_SIZE) as usize);
                 flate2::read::DeflateDecoder::new(data.as_slice())
                     .take(MAX_ENTRY_SIZE + 1)
                     .read_to_end(&mut out)
@@ -91,7 +93,7 @@ fn read_central_directory(file: &File, len: u64) -> anyhow::Result<HashMap<Box<s
     let end_at = (0..=tail.len() - END_LEN)
         .rev()
         .find(|&i| u32_at(&tail, i) == END_SIG)
-        .context("kein Zip: Endsatz fehlt")?;
+        .context("not a zip: no end of central directory")?;
     let end_pos = tail_start + end_at as u64;
     let end = &tail[end_at..];
     let mut cen_len = u64::from(u32_at(end, 12));
@@ -113,8 +115,8 @@ fn read_central_directory(file: &File, len: u64) -> anyhow::Result<HashMap<Box<s
     let base = cen_end
         .checked_sub(cen_len)
         .and_then(|p| p.checked_sub(cen_off))
-        .context("Zentralverzeichnis ausserhalb der Datei")?;
-    ensure!(cen_len <= 64 << 20, "Zentralverzeichnis zu gross");
+        .context("central directory outside the file")?;
+    ensure!(cen_len <= 64 << 20, "central directory too large");
     let mut cen = vec![0u8; cen_len as usize];
     read_exact_at(file, &mut cen, base + cen_off)?;
 
@@ -122,7 +124,7 @@ fn read_central_directory(file: &File, len: u64) -> anyhow::Result<HashMap<Box<s
     let mut pos = 0;
     while pos + CEN_LEN <= cen.len() {
         if u32_at(&cen, pos) != CEN_SIG {
-            bail!("kaputter Eintrag im Zentralverzeichnis");
+            bail!("broken central directory entry");
         }
         let method = u16_at(&cen, pos + 10);
         let mut compressed = u64::from(u32_at(&cen, pos + 20));
@@ -134,10 +136,7 @@ fn read_central_directory(file: &File, len: u64) -> anyhow::Result<HashMap<Box<s
         let name_start = pos + CEN_LEN;
         let extra_start = name_start + name_len;
         let next = extra_start + extra_len + comment_len;
-        ensure!(
-            next <= cen.len(),
-            "Eintrag laeuft ueber das Zentralverzeichnis"
-        );
+        ensure!(next <= cen.len(), "entry runs past the central directory");
         let mut extra = &cen[extra_start..extra_start + extra_len];
         while extra.len() >= 4 {
             let (id, data_len) = (u16_at(extra, 0), usize::from(u16_at(extra, 2)));
@@ -156,14 +155,16 @@ fn read_central_directory(file: &File, len: u64) -> anyhow::Result<HashMap<Box<s
             }
             extra = &extra[(4 + data_len).min(extra.len())..];
         }
-        let _ = size;
         let name: Box<str> = String::from_utf8_lossy(&cen[name_start..extra_start]).into();
-        if !name.ends_with('/') {
+        if let Some(local) = base.checked_add(local)
+            && !name.ends_with('/')
+        {
             index.insert(
                 name,
                 Entry {
-                    local: base + local,
+                    local,
                     compressed,
+                    size,
                     method,
                 },
             );

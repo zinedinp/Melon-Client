@@ -71,6 +71,7 @@ impl Panorama {
             }),
             world: None,
             entities: Vec::new(),
+            particles: Vec::new(),
             clouds: None,
             weather: Vec::new(),
             lines: Vec::new(),

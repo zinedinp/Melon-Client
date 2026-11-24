@@ -39,8 +39,9 @@ use vk_util::{
 
 pub use frame::{
     Blending, Blur, CelestialDraw, ChunkDraw, CloudDraw, CornerLight, EntityDraw, Frame, Glint,
-    LineDraw, LineStyle, QuadCorner, RenderLayer, SceneFrame, SectionCull, Sky, SkyKind,
-    TerrainMesh, TerrainQuad, WORLD_Z_NEAR, WeatherDraw, WorldDraw, WorldVertex, world_projection,
+    LineDraw, LineStyle, ParticleDraw, ParticleQuad, QuadCorner, RenderLayer, SceneFrame,
+    SectionCull, Sky, SkyKind, TerrainMesh, TerrainQuad, WORLD_Z_NEAR, WeatherDraw, WorldDraw,
+    WorldVertex, world_projection,
 };
 
 use ash::vk;
@@ -72,6 +73,10 @@ pub struct MeshId(pub usize);
 /// Handle to an uploaded list of [`TerrainQuad`]s.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct QuadMeshId(pub usize);
+
+/// Handle to an uploaded list of [`ParticleQuad`]s.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ParticleMeshId(pub usize);
 
 /// Handle to an uploaded index list ([`quad_index_list`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -107,6 +112,8 @@ pub struct Renderer {
     meshes: mesh_arena::MeshArena,
     /// Terrain [`TerrainQuad`] lists, the same way.
     quad_meshes: mesh_arena::MeshArena,
+    /// The particles' [`ParticleQuad`]s, rebuilt every frame.
+    particle_meshes: mesh_arena::MeshArena,
     /// The translucent terrain's index lists, sorted far to near.
     index_lists: mesh_arena::MeshArena,
     /// Every baked block quad's corners, which terrain quads index.
@@ -214,6 +221,8 @@ struct Pipelines {
     layouts: pipeline::world::Layouts,
     /// Terrain from [`TerrainQuad`]s.
     terrain: [pipeline::Pass; 2],
+    /// [`ParticleQuad`]s: cut out, then blended.
+    particles: [pipeline::Pass; 2],
 }
 
 /// The frames in flight.
@@ -371,6 +380,7 @@ impl Drop for Renderer {
             self.device.free_memory(self.sky_cube.memory, None);
             self.meshes.destroy(&self.device);
             self.quad_meshes.destroy(&self.device);
+            self.particle_meshes.destroy(&self.device);
             self.index_lists.destroy(&self.device);
             self.gpu_timer.destroy(&self.device);
             if let Some(indirect) = &mut self.indirect {
@@ -455,7 +465,12 @@ impl Drop for Renderer {
             for pass in &self.pipelines.lines {
                 pass.destroy(&self.device);
             }
-            for pass in &self.pipelines.terrain {
+            for pass in self
+                .pipelines
+                .terrain
+                .iter()
+                .chain(&self.pipelines.particles)
+            {
                 pass.destroy(&self.device);
             }
             self.quad_sets.destroy(&self.device);

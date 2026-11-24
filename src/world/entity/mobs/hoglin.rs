@@ -97,7 +97,6 @@ pub fn adult() -> LayerDefinition {
     LayerDefinition::new(root, 128.0, 64.0)
 }
 
-#[allow(clippy::approx_constant)]
 pub fn baby() -> LayerDefinition {
     let mut root = PartDefinition::root();
     let head = root.add_or_replace_child(

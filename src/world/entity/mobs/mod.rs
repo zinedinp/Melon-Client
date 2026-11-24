@@ -42,6 +42,7 @@ pub mod polar_bear;
 pub mod projectile;
 pub mod rabbit;
 pub mod ravager;
+mod rounded;
 pub mod segmented;
 pub mod sheep;
 pub mod shulker;

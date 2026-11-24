@@ -33,7 +33,7 @@ fn ordinal(r: &mut Reader, count: usize) -> Result<u8> {
     let value = r.var_int()?;
     match usize::try_from(value) {
         Ok(v) if v < count => Ok(v as u8),
-        _ => bail!("Boss-Leiste: Ordinal {value} unbekannt"),
+        _ => bail!("boss bar: unknown ordinal {value}"),
     }
 }
 
@@ -53,6 +53,6 @@ pub fn decode(r: &mut Reader) -> Result<BossEvent> {
         3 => BossEvent::Name(id, r.component()?),
         4 => BossEvent::Style(id, ordinal(r, COLORS)?, ordinal(r, OVERLAYS)?),
         5 => BossEvent::Properties(id, r.u8()?),
-        other => bail!("Boss-Leiste: Operation {other} unbekannt"),
+        other => bail!("boss bar: unknown operation {other}"),
     })
 }
