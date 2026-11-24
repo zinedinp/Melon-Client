@@ -26,6 +26,9 @@ pub use gpu_timer::PassStats;
 pub use melon_base::gfx::quad;
 pub use melon_base::gfx::{DeviceInfo, TextureId};
 use melon_base::gfx::{descriptor_pools, gui_uniforms, staging, texture, texture_update, vk_util};
+pub use mesh_arena::quad_index_list;
+#[cfg(test)]
+pub use mesh_arena::quads_of_index_list;
 pub use picture::{PictureDraw, pixel_projection};
 pub use swapchain::FIFO_LATEST_READY;
 use vk_util::{
@@ -69,6 +72,10 @@ pub struct MeshId(pub usize);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct QuadMeshId(pub usize);
 
+/// Handle to an uploaded index list ([`quad_index_list`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct IndexMeshId(pub usize);
+
 pub struct Renderer {
     /// Keeps the Vulkan loader loaded.
     _entry: ash::Entry,
@@ -97,6 +104,8 @@ pub struct Renderer {
     meshes: mesh_arena::MeshArena,
     /// Terrain [`TerrainQuad`] lists, the same way.
     quad_meshes: mesh_arena::MeshArena,
+    /// The translucent terrain's index lists, sorted far to near.
+    index_lists: mesh_arena::MeshArena,
     /// Every baked block quad's corners, which terrain quads index.
     quad_table: Option<quad_table::QuadTable>,
     /// What the command buffer being recorded has bound and pushed.
@@ -359,6 +368,7 @@ impl Drop for Renderer {
             self.device.free_memory(self.sky_cube.memory, None);
             self.meshes.destroy(&self.device);
             self.quad_meshes.destroy(&self.device);
+            self.index_lists.destroy(&self.device);
             self.gpu_timer.destroy(&self.device);
             if let Some(indirect) = &mut self.indirect {
                 indirect.destroy(&self.device);

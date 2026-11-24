@@ -3,7 +3,7 @@
 use glam::Mat4;
 
 use super::quad::DrawList;
-use super::{CubeMapId, MeshId, QuadMeshId, TextureId};
+use super::{CubeMapId, IndexMeshId, MeshId, QuadMeshId, TextureId};
 
 /// One frame: scene first, then UI on top.
 pub struct Frame<'a> {
@@ -386,7 +386,8 @@ pub struct ChunkDraw {
     pub mesh: TerrainMesh,
     /// Where the chunk-local mesh starts in the world, in blocks.
     pub origin: glam::IVec3,
-    /// Quads of a [`TerrainMesh::Quads`] mesh, vertices of a vertex mesh.
+    /// Quads of a [`TerrainMesh::Quads`] mesh, vertices of a vertex mesh
+    /// (a sorted mesh draws all of them).
     pub range: core::range::Range<u32>,
     /// The section it belongs to, for occlusion culling; `None` is never culled.
     pub cull: Option<SectionCull>,
@@ -408,7 +409,7 @@ impl ChunkDraw {
         let len = self.range.end.saturating_sub(self.range.start) as usize;
         match self.mesh {
             TerrainMesh::Quads(_) => len * 4,
-            TerrainMesh::Vertices(_) => len,
+            TerrainMesh::Vertices(_) | TerrainMesh::Sorted { .. } => len,
         }
     }
 }
@@ -418,6 +419,12 @@ impl ChunkDraw {
 pub enum TerrainMesh {
     Quads(QuadMeshId),
     Vertices(MeshId),
+    /// Vertices drawn through their own index list: the translucent
+    /// terrain, whose order changes as the camera moves.
+    Sorted {
+        vertices: MeshId,
+        indices: IndexMeshId,
+    },
 }
 
 /// Light and ambient occlusion at one corner of a [`TerrainQuad`].

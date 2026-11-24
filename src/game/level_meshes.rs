@@ -7,7 +7,8 @@ use glam::{DVec3, IVec3, Vec3};
 
 use crate::math::{ChunkMap, SECTION_SIZE, radix, section_coord};
 use crate::renderer::{
-    ChunkDraw, MeshId, QuadMeshId, Renderer, SectionCull, TerrainMesh, TerrainQuad, WorldVertex,
+    ChunkDraw, IndexMeshId, MeshId, QuadMeshId, Renderer, SectionCull, TerrainMesh, TerrainQuad,
+    WorldVertex,
 };
 use crate::world::block::direction::Direction;
 use crate::world::block_entity::BlockEntities;
@@ -22,14 +23,17 @@ use crate::world::terrain::{self, LayerMesh, SectionMesh, TranslucentMesh};
 const UPLOAD_BUDGET: usize = 16 << 20;
 /// `Octree.isClose`'s 32 blocks.
 const NEARBY_SECTIONS: i32 = 2;
-/// Bytes of sorted-again faces uploaded per frame at most, nearest sections first.
-const RESORT_BUDGET: usize = 4 << 20;
+/// Translucent quads sorted again per frame at most, nearest sections first.
+const RESORT_BUDGET: usize = 32 << 10;
 
 /// Where section meshes go.
 trait MeshSink {
     fn quads(&mut self, quads: &[TerrainQuad]) -> anyhow::Result<QuadMeshId>;
     fn vertices(&mut self, vertices: &[WorldVertex]) -> anyhow::Result<MeshId>;
+    fn indices(&mut self, list: &[u32]) -> anyhow::Result<IndexMeshId>;
+    /// Frees a mesh, both lists of a sorted one.
     fn free(&mut self, mesh: TerrainMesh);
+    fn free_indices(&mut self, list: IndexMeshId);
 }
 
 impl MeshSink for Renderer {
@@ -41,11 +45,23 @@ impl MeshSink for Renderer {
         self.upload_mesh(vertices)
     }
 
+    fn indices(&mut self, list: &[u32]) -> anyhow::Result<IndexMeshId> {
+        self.upload_indices(list)
+    }
+
     fn free(&mut self, mesh: TerrainMesh) {
         match mesh {
             TerrainMesh::Quads(id) => self.free_quads(id),
             TerrainMesh::Vertices(id) => self.free_mesh(id),
+            TerrainMesh::Sorted { vertices, indices } => {
+                self.free_mesh(vertices);
+                self.free_indices(indices);
+            }
         }
+    }
+
+    fn free_indices(&mut self, list: IndexMeshId) {
+        Renderer::free_indices(self, list);
     }
 }
 
@@ -61,7 +77,13 @@ impl<F: FnMut() -> usize> MeshSink for Headless<F> {
         Ok(MeshId((self.0)()))
     }
 
+    fn indices(&mut self, _: &[u32]) -> anyhow::Result<IndexMeshId> {
+        Ok(IndexMeshId((self.0)()))
+    }
+
     fn free(&mut self, _: TerrainMesh) {}
+
+    fn free_indices(&mut self, _: IndexMeshId) {}
 }
 
 /// A section's solid or cutout quads on the GPU, by facing group.
@@ -72,7 +94,9 @@ struct QuadLayer {
 
 /// A section's translucent faces on the GPU, and the list they came from.
 struct Translucent {
+    /// Uploaded once; a sort uploads only the index list.
     mesh: MeshId,
+    indices: IndexMeshId,
     faces: TranslucentMesh,
     /// `TranslucencyPointOfView`.
     view: IVec3,
@@ -131,11 +155,23 @@ impl SectionMeshes {
                 built.lava.items.len() as u32,
             ));
         }
-        let faces = built.translucent;
+        let mut faces = built.translucent;
         if !faces.vertices.is_empty() {
+            if faces.indices.is_empty() {
+                faces.sort(faces.sorted_from);
+            }
             let eye = faces.sorted_from.as_dvec3() + terrain::section_corner(pos, built.base_y);
+            let mesh = sink.vertices(&faces.vertices)?;
+            let indices = match sink.indices(&faces.indices) {
+                Ok(indices) => indices,
+                Err(e) => {
+                    sink.free(TerrainMesh::Vertices(mesh));
+                    return Err(e);
+                }
+            };
             self.translucent = Some(Translucent {
-                mesh: sink.vertices(&faces.vertices)?,
+                mesh,
+                indices,
                 view: point_of_view(section_of_eye(eye, built.base_y), pos),
                 block: eye.floor().as_ivec3(),
                 faces,
@@ -159,7 +195,10 @@ impl SectionMeshes {
             sink.free(TerrainMesh::Vertices(mesh));
         }
         if let Some(translucent) = self.translucent {
-            sink.free(TerrainMesh::Vertices(translucent.mesh));
+            sink.free(TerrainMesh::Sorted {
+                vertices: translucent.mesh,
+                indices: translucent.indices,
+            });
         }
     }
 }
@@ -189,7 +228,7 @@ impl QuadRuns {
     }
 }
 
-/// What drawing a section reads of its [`SectionMeshes`], packed in 80
+/// What drawing a section reads of its [`SectionMeshes`], packed in 88
 /// bytes beside its neighbours: the culling pass touches a line or two
 /// per section instead of the whole struct and its translucent faces.
 #[derive(Clone, Copy)]
@@ -198,7 +237,8 @@ struct SectionDraws {
     cutout: QuadRuns,
     /// Mesh and vertex count, [`NO_MESH`] for none.
     lava: (u32, u32),
-    translucent: (u32, u32),
+    /// Mesh, index list and vertex count, [`NO_MESH`] for none.
+    translucent: (u32, u32, u32),
     /// Its occlusion culling slot ([`SectionCull::slot`]) while it has solid
     /// or cutout quads, [`NO_MESH`] otherwise.
     slot: u32,
@@ -210,7 +250,7 @@ impl Default for SectionDraws {
             solid: QuadRuns::NONE,
             cutout: QuadRuns::NONE,
             lava: (NO_MESH, 0),
-            translucent: (NO_MESH, 0),
+            translucent: (NO_MESH, NO_MESH, 0),
             slot: NO_MESH,
         }
     }
@@ -224,9 +264,16 @@ impl SectionDraws {
             lava: meshes
                 .lava
                 .map_or((NO_MESH, 0), |(mesh, count)| (mesh_index(mesh.0), count)),
-            translucent: meshes.translucent.as_ref().map_or((NO_MESH, 0), |t| {
-                (mesh_index(t.mesh.0), t.faces.vertices.len() as u32)
-            }),
+            translucent: meshes
+                .translucent
+                .as_ref()
+                .map_or((NO_MESH, NO_MESH, 0), |t| {
+                    (
+                        mesh_index(t.mesh.0),
+                        mesh_index(t.indices.0),
+                        t.faces.vertices.len() as u32,
+                    )
+                }),
             slot: NO_MESH,
         }
     }
@@ -574,10 +621,10 @@ impl LevelMeshes {
             }
         }
         due.sort_unstable_by_key(|&(distance, ..)| distance);
-        let mut bytes = 0;
+        let mut quads = 0;
         for (_, pos, nearby) in due {
-            if nearby || bytes < RESORT_BUDGET {
-                bytes += self.resort_section(sink, pos, eye, camera);
+            if nearby || quads < RESORT_BUDGET {
+                quads += self.resort_section(sink, pos, eye, camera);
             }
         }
         self.seen_translucent = seen;
@@ -626,7 +673,8 @@ impl LevelMeshes {
             .and_then(|section| section.translucent.as_mut())
     }
 
-    /// Sorts one section's translucent faces from `eye` and uploads them.
+    /// Sorts one section's translucent faces from `eye` and uploads their
+    /// index list; how many quads that sorted.
     fn resort_section(
         &mut self,
         sink: &mut impl MeshSink,
@@ -641,27 +689,24 @@ impl LevelMeshes {
         translucent.faces.sort(terrain::sort_eye(eye, pos, min_y));
         translucent.view = point_of_view(camera, pos);
         translucent.block = eye.floor().as_ivec3();
-        match sink.vertices(&translucent.faces.vertices) {
-            Ok(mesh) => {
-                sink.free(TerrainMesh::Vertices(std::mem::replace(
-                    &mut translucent.mesh,
-                    mesh,
-                )));
+        match sink.indices(&translucent.faces.indices) {
+            Ok(indices) => {
+                sink.free_indices(std::mem::replace(&mut translucent.indices, indices));
             }
             Err(e) => crate::warn!("Translucent mesh not resorted: {e:#}"),
         }
-        let (bytes, mesh) = (
-            std::mem::size_of_val(translucent.faces.vertices.as_slice()),
-            mesh_index(translucent.mesh.0),
+        let (quads, indices) = (
+            translucent.faces.quad_count(),
+            mesh_index(translucent.indices.0),
         );
         if let Some(draws) = self
             .columns
             .get_mut(&(pos.0, pos.2))
             .and_then(|column| column.draws.get_mut(pos.1 as usize))
         {
-            draws.translucent.0 = mesh;
+            draws.translucent.1 = indices;
         }
-        bytes
+        quads
     }
 
     /// The parts of meshes `culler` lets through: per section, its solid
@@ -787,13 +832,16 @@ impl LevelMeshes {
                         },
                     );
                 }
-                let (translucent, count) = section.translucent;
-                if translucent != NO_MESH {
+                let (vertices, indices, count) = section.translucent;
+                if vertices != NO_MESH {
                     self.seen_translucent.push((cx, y as i32, cz));
                     self.translucent.push_far_first(
                         distance,
                         ChunkDraw {
-                            mesh: TerrainMesh::Vertices(MeshId(translucent as usize)),
+                            mesh: TerrainMesh::Sorted {
+                                vertices: MeshId(vertices as usize),
+                                indices: IndexMeshId(indices as usize),
+                            },
                             origin: vertices_origin,
                             range: (0..count).into(),
                             cull: None,
@@ -1186,8 +1234,8 @@ mod tests {
             .unwrap();
         translucent
             .faces
-            .vertices
-            .chunks(4)
+            .sorted_quads()
+            .iter()
             .map(|q| q[0].pos[1])
             .collect()
     }

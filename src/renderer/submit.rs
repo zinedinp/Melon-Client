@@ -61,7 +61,11 @@ impl Renderer {
             &self.textures.pending_inits,
             &self.textures.pending_updates,
         )?;
-        for arena in [&mut self.meshes, &mut self.quad_meshes] {
+        for arena in [
+            &mut self.meshes,
+            &mut self.quad_meshes,
+            &mut self.index_lists,
+        ] {
             arena.prepare(&self.device, &self.mem_props, current)?;
         }
         if let Some(indirect) = &mut self.indirect {
@@ -197,7 +201,11 @@ impl Renderer {
             &updates,
         )?;
         let oldest_in_flight = self.frames.oldest_in_flight();
-        for arena in [&mut self.meshes, &mut self.quad_meshes] {
+        for arena in [
+            &mut self.meshes,
+            &mut self.quad_meshes,
+            &mut self.index_lists,
+        ] {
             arena.record(
                 &self.device,
                 &self.mem_props,
@@ -207,6 +215,7 @@ impl Renderer {
             )?;
         }
         self.meshes.take_destroyed();
+        self.index_lists.take_destroyed();
         for buffer in self.quad_meshes.take_destroyed() {
             self.quad_sets.forget(&self.device, buffer);
         }
@@ -361,7 +370,11 @@ impl Renderer {
         waits.record =
             (submitting - recording).saturating_sub(waits.record_scene + waits.record_ui);
         self.frames.submitted[self.frames.current] = self.frames.number;
-        for arena in [&mut self.meshes, &mut self.quad_meshes] {
+        for arena in [
+            &mut self.meshes,
+            &mut self.quad_meshes,
+            &mut self.index_lists,
+        ] {
             arena.submitted();
         }
         if let Some(readback) = readback {

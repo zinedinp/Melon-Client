@@ -5,7 +5,7 @@ use std::ops::Range;
 use crate::math::{radix, section_to_block};
 use glam::{DVec3, Vec3};
 
-use crate::renderer::{TerrainQuad, WorldVertex as Vertex};
+use crate::renderer::{TerrainQuad, WorldVertex as Vertex, quad_index_list};
 use crate::world::block::direction::Direction;
 use crate::world::block::offset;
 use crate::world::block::skip_rendering;
@@ -130,7 +130,12 @@ impl<T> Default for LayerMesh<T> {
 /// vertices from the section's corner ([`section_corner`]).
 #[derive(Clone, Default)]
 pub struct TranslucentMesh {
+    /// In the order they were meshed, which every sort's ties keep (as
+    /// `MeshData.SortState`'s centroids do).
     pub vertices: Vec<Vertex>,
+    /// What draws the quads far to near from [`Self::sorted_from`]
+    /// ([`quad_index_list`]); empty until sorted.
+    pub indices: Vec<u32>,
     /// The eye ([`sort_eye`]) they were last sorted from.
     pub sorted_from: Vec3,
     /// The box around every quad's centroid, from the last sort; `None`
@@ -143,33 +148,35 @@ impl TranslucentMesh {
     }
 
     /// `VertexSorting.byDistance`: the quads far to near from `eye`, those
-    /// at one distance in the order they were (`IntArrays.mergeSort` is
-    /// stable). Sorts one `u64` per quad ([`far_first_key`], radix sort for
-    /// many) and moves each quad once, into its place.
+    /// at one distance in the order they were meshed (`IntArrays.mergeSort`
+    /// is stable). Sorts one `u64` per quad ([`far_first_key`], radix sort
+    /// for many) into [`Self::indices`]; the vertices stay where they are.
     pub fn sort(&mut self, eye: Vec3) {
-        SORTING.with_borrow_mut(
-            |Sorting {
-                 keys,
-                 scratch,
-                 vertices,
-             }| {
-                let (quads, _) = self.vertices.as_chunks::<4>();
-                let (mut low, mut high) = (Vec3::INFINITY, Vec3::NEG_INFINITY);
-                keys.clear();
-                keys.extend(quads.iter().enumerate().map(|(index, quad)| {
-                    let centroid = quad_centroid(quad);
-                    (low, high) = (low.min(centroid), high.max(centroid));
-                    far_first_key(distance_squared(eye, centroid), index)
-                }));
-                radix::sort(keys, scratch);
-                vertices.clear();
-                vertices.extend(keys.iter().flat_map(|&key| quads[key as u32 as usize]));
-                // The sorted copy becomes the mesh; the old buffer is the next sort's.
-                std::mem::swap(&mut self.vertices, vertices);
-                self.sorted_from = eye;
-                self.centroids = Some((low, high));
-            },
-        );
+        SORTING.with_borrow_mut(|Sorting { keys, scratch }| {
+            let (quads, _) = self.vertices.as_chunks::<4>();
+            let (mut low, mut high) = (Vec3::INFINITY, Vec3::NEG_INFINITY);
+            keys.clear();
+            keys.extend(quads.iter().enumerate().map(|(index, quad)| {
+                let centroid = quad_centroid(quad);
+                (low, high) = (low.min(centroid), high.max(centroid));
+                far_first_key(distance_squared(eye, centroid), index)
+            }));
+            radix::sort(keys, scratch);
+            let order = keys.iter().map(|&key| key as u32);
+            quad_index_list(order, self.vertices.len() as u32, &mut self.indices);
+            self.sorted_from = eye;
+            self.centroids = Some((low, high));
+        });
+    }
+
+    /// The quads in drawing order, as [`Self::indices`] puts them.
+    #[cfg(test)]
+    pub fn sorted_quads(&self) -> Vec<[Vertex; 4]> {
+        let (quads, _) = self.vertices.as_chunks::<4>();
+        crate::renderer::quads_of_index_list(&self.indices, self.vertices.len() as u32)
+            .into_iter()
+            .map(|quad| quads[quad as usize])
+            .collect()
     }
 
     /// Whether `eye` and [`Self::sorted_from`] sit on opposite sides of any
@@ -201,7 +208,6 @@ impl TranslucentMesh {
 struct Sorting {
     keys: Vec<u64>,
     scratch: Vec<u64>,
-    vertices: Vec<Vertex>,
 }
 
 thread_local! {
@@ -1193,9 +1199,9 @@ mod tests {
             section.translucent.sort(eye);
             section
                 .translucent
-                .vertices
-                .chunks(4)
-                .map(is_glass)
+                .sorted_quads()
+                .iter()
+                .map(|quad| is_glass(quad))
                 .collect::<Vec<_>>()
         };
         let section = &mut mesh.sections[0];
@@ -1299,7 +1305,7 @@ mod tests {
         };
         let order = |section: &mut SectionMesh, eye: Vec3| {
             section.translucent.sort(eye);
-            let quads: Vec<_> = section.translucent.vertices.chunks(4).collect();
+            let quads = section.translucent.sorted_quads();
             (
                 quads.iter().position(|q| is_cover(q)),
                 quads.iter().position(|q| is_water_top(q)),
@@ -1340,7 +1346,7 @@ mod tests {
         let unsorted = TranslucentMesh {
             vertices: faces.vertices.clone(),
             sorted_from: Vec3::new(0.5, 8.95, 0.5),
-            centroids: None,
+            ..TranslucentMesh::default()
         };
         assert!(unsorted.camera_crossed_a_face(Vec3::new(0.5, 8.5, 0.5)));
     }
@@ -1419,7 +1425,9 @@ mod tests {
         indices.iter().flat_map(|&i| quads[i]).collect()
     }
 
-    /// Few quads (compare sort) and many (radix sort), ties and all.
+    /// Few quads (compare sort) and many (radix sort), ties and all, sorted
+    /// again and again: ties keep the order they were meshed in, not the
+    /// last sort's, as vanilla sorts its centroids from the mesh each time.
     #[test]
     fn translucent_quads_sort_as_vanilla_sorts_them() {
         for (count, seed) in [
@@ -1430,21 +1438,23 @@ mod tests {
             (65, 5),
             (300, 6),
             (3000, 7),
+            (17000, 8),
         ] {
+            let vertices = grid_quads(count, seed);
+            let mut mesh = TranslucentMesh {
+                vertices: vertices.clone(),
+                ..TranslucentMesh::default()
+            };
             for eye in [
                 Vec3::new(8.25, 70.5, 8.75),
                 Vec3::new(-3.1, 2.0, 40.0),
                 Vec3::ZERO,
+                Vec3::new(8.25, 70.5, 8.75),
             ] {
-                let vertices = grid_quads(count, seed);
-                let mut mesh = TranslucentMesh {
-                    vertices: vertices.clone(),
-                    ..TranslucentMesh::default()
-                };
                 mesh.sort(eye);
                 let light = |v: &[Vertex]| v.iter().map(|v| v.light).collect::<Vec<_>>();
                 assert_eq!(
-                    light(&mesh.vertices),
+                    light(mesh.sorted_quads().as_flattened()),
                     light(&vanilla_order(&vertices, eye)),
                     "{count} quads from {eye}"
                 );

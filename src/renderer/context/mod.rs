@@ -123,6 +123,12 @@ impl Renderer {
             MAX_FRAMES_IN_FLIGHT,
             mesh_arena::Kind::Quads,
         )?;
+        let index_lists = mesh_arena::MeshArena::new::<u32>(
+            &device,
+            &mem_props,
+            MAX_FRAMES_IN_FLIGHT,
+            mesh_arena::Kind::Indices,
+        )?;
         let quad_sets = super::quad_table::QuadSets::new(&device)?;
         let gpu_timer = super::gpu_timer::GpuTimer::new(
             &device,
@@ -164,6 +170,7 @@ impl Renderer {
             sky_cube,
             meshes,
             quad_meshes,
+            index_lists,
             quad_table: None,
             gpu_timer,
             indirect,

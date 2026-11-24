@@ -8,14 +8,19 @@
 //! | [`TerrainPath::MultiDraw`] | `multiDrawIndirect`, `drawIndirectFirstInstance` (1.0 features) | the quad meshes' commands gathered before the frame (`indirect.rs`), one `vkCmdDrawIndexedIndirect` per buffer run |
 //! | [`TerrainPath::Counted`] | multi-draw, `drawIndirectCount` (core 1.2 or `VK_KHR_draw_indirect_count`), `MELON_OCCLUSION=1` | two-phase GPU occlusion culling (`occlusion.rs`) packs the commands, `vkCmdDrawIndexedIndirectCount` draws what it kept |
 //!
-//! Vertex meshes (lava) and translucent terrain always take the per-draw path.
+//! Vertex meshes (lava) and translucent terrain always take the per-draw path;
+//! the translucent sections each through their own index list, sorted far
+//! to near (vanilla's sorted index buffers), so a sort uploads only that.
 
 use crate::renderer::pipeline::world::{DrawLight, FogInput, Mode};
-use crate::renderer::{ChunkDraw, QuadMeshId, RenderLayer, Renderer, TerrainMesh, WorldDraw};
+use crate::renderer::{
+    ChunkDraw, IndexMeshId, MeshId, QuadMeshId, RenderLayer, Renderer, TerrainMesh, WorldDraw,
+};
 use ash::vk;
 use glam::{Mat4, Vec3};
 
 use super::super::super::indirect::{Pass, Phase, Run, corner_offset, quad_draws};
+use super::super::super::mesh_arena::wide_indices;
 use crate::renderer::pipeline;
 
 /// How the terrain's quad meshes are drawn, fixed when the renderer is made.
@@ -104,6 +109,7 @@ impl Renderer {
             self.draw_terrain_multi(cmd, world, mode, view_proj, light, phase);
         }
         let mut bound: Option<bool> = None;
+        let mut own_indices = false;
         for chunk in chunks.iter().filter(|_| rest) {
             let quads = matches!(chunk.mesh, TerrainMesh::Quads(_));
             if quads && by_multi {
@@ -134,7 +140,20 @@ impl Renderer {
                     &light.fogged(FogInput::Chunk),
                     Some(&chunk.range.into()),
                 ),
+                TerrainMesh::Sorted { vertices, indices } => {
+                    let light = light.fogged(FogInput::Chunk);
+                    own_indices |= self.draw_sorted_mesh(cmd, (vertices, indices), at, &light);
+                }
             }
+        }
+        if own_indices {
+            // What follows draws through the shared quad indices again.
+            self.device.cmd_bind_index_buffer(
+                cmd,
+                self.meshes.index_buffer(),
+                0,
+                vk::IndexType::UINT16,
+            );
         }
         self.gpu_timer.mark(&self.device, label);
     }
@@ -297,6 +316,37 @@ impl Renderer {
             self.device
                 .cmd_draw_indexed(cmd, n * 6, 1, 0, corner_offset(base + first), 0);
         }
+    }
+
+    /// Draws a vertex mesh through its index list with the bound world
+    /// pass; whether it bound that list.
+    unsafe fn draw_sorted_mesh(
+        &self,
+        cmd: vk::CommandBuffer,
+        (vertices, indices): (MeshId, IndexMeshId),
+        (mvp, offset): (Mat4, Vec3),
+        light: &DrawLight,
+    ) -> bool {
+        let (Some(mesh), Some(list)) = (
+            self.meshes.slot(vertices.0),
+            self.index_lists.slot(indices.0),
+        ) else {
+            return false;
+        };
+        let (vertex_buffer, base) = self.meshes.location(mesh);
+        let (index_buffer, words) = self.index_lists.location(list);
+        let (kind, first) = if wide_indices(mesh.count) {
+            (vk::IndexType::UINT32, words)
+        } else {
+            (vk::IndexType::UINT16, words * 2)
+        };
+        self.bind_vertices(cmd, vertex_buffer);
+        self.device
+            .cmd_bind_index_buffer(cmd, index_buffer, 0, kind);
+        self.push_world(cmd, self.pipelines.world.layout, mvp, offset, light);
+        self.device
+            .cmd_draw_indexed(cmd, mesh.count / 4 * 6, 1, first, base as i32, 0);
+        true
     }
 
     /// Binds mesh buffer `buffer` as the terrain shader's quads (set 4).

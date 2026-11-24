@@ -1,8 +1,8 @@
 //! Textures, cube maps and meshes: uploading, updating and freeing them.
 
 use super::{
-    CubeMapId, MeshId, QuadMeshId, Renderer, TerrainQuad, TextureId, WorldVertex, texture,
-    texture_update,
+    CubeMapId, IndexMeshId, MeshId, QuadMeshId, Renderer, TerrainQuad, TextureId, WorldVertex,
+    texture, texture_update,
 };
 use ash::vk;
 use image::RgbaImage;
@@ -337,11 +337,26 @@ impl Renderer {
         self.quad_meshes.free(quads.0, self.frames.number);
     }
 
+    /// Uploads an index list ([`super::quad_index_list`]) for a vertex mesh.
+    pub fn upload_indices(&mut self, list: &[u32]) -> anyhow::Result<IndexMeshId> {
+        let id = unsafe {
+            self.index_lists
+                .upload(&self.device, &self.mem_props, list)?
+        };
+        Ok(IndexMeshId(id))
+    }
+
+    /// Frees an index list from [`upload_indices`](Self::upload_indices).
+    pub fn free_indices(&mut self, list: IndexMeshId) {
+        self.index_lists.free(list.0, self.frames.number);
+    }
+
     /// Bytes of mesh memory allocated and in use.
     pub fn mesh_memory(&self) -> (u64, u64) {
         let (a, b) = self.meshes.usage();
         let (c, d) = self.quad_meshes.usage();
-        (a + c, b + d)
+        let (e, f) = self.index_lists.usage();
+        (a + c + e, b + d + f)
     }
 
     pub(super) fn uploader(&self, sampler: vk::Sampler) -> texture::Uploader<'_> {
