@@ -36,10 +36,7 @@ impl Uploader<'_> {
     ///
     /// The uploader's handles must be live and from one device.
     pub unsafe fn image_2d(&self, rgba: &RgbaImage) -> anyhow::Result<(Texture, PendingInit)> {
-        let _tt = std::time::Instant::now();
-        let r = self.upload(std::slice::from_ref(rgba), &[], vk::ImageViewType::TYPE_2D);
-        crate::tt::add(&crate::tt::TEX, _tt);
-        r
+        self.upload(std::slice::from_ref(rgba), &[], vk::ImageViewType::TYPE_2D)
     }
 
     /// A 2D texture with its smaller levels, each half the size of the one before.
@@ -52,10 +49,7 @@ impl Uploader<'_> {
         rgba: &RgbaImage,
         mips: &[RgbaImage],
     ) -> anyhow::Result<(Texture, PendingInit)> {
-        let _tt = std::time::Instant::now();
-        let r = self.upload(std::slice::from_ref(rgba), mips, vk::ImageViewType::TYPE_2D);
-        crate::tt::add(&crate::tt::TEX, _tt);
-        r
+        self.upload(std::slice::from_ref(rgba), mips, vk::ImageViewType::TYPE_2D)
     }
 
     /// Six equal-size faces in Vulkan cubemap order (+X, -X, +Y, -Y, +Z, -Z).

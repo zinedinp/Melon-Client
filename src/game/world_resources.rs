@@ -240,9 +240,7 @@ impl WorldResources {
 
     fn build(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
         let players = PlayerModels::load(renderer, assets)?;
-        melon_base::tt::mark(" players");
         let mobs = MobModels::load(renderer, assets)?;
-        melon_base::tt::mark(" mobs");
         let mut extras: Vec<ExtraTexture> = FluidSprites::TEXTURES
             .iter()
             .map(|id| ExtraTexture {
@@ -257,7 +255,6 @@ impl WorldResources {
                 .map(|id| ExtraTexture { id, image: None }),
         );
         let (models, atlas) = BlockModels::bake(assets.root(), extras, renderer.max_texture_side());
-        melon_base::tt::mark(" bake");
         renderer.set_quad_table(models.quad_corners())?;
         let sprite = |id: &str| models.sprite(id).unwrap_or([0.0; 4]);
         let fluids = FluidSprites {
@@ -273,17 +270,13 @@ impl WorldResources {
             sprite("minecraft:particle/generic_0"),
         );
         let models = std::sync::Arc::new(models);
-        melon_base::tt::mark(" sprites");
         let block_atlas = renderer.load_texture_mipmapped(&atlas.image, &atlas.mips)?;
-        melon_base::tt::mark(" block atlas");
         let items = crate::world::block_models::pack_sprites(
             assets.root(),
             crate::world::item_atlas::texture_ids(assets.root()),
             renderer.max_texture_side(),
         );
-        melon_base::tt::mark(" item pack");
         let item_atlas = renderer.load_texture(&items.image)?;
-        melon_base::tt::mark(" item atlas");
         let item_sprites = std::sync::Arc::new(items.sprites);
         let item_sheet = crate::gui::hud::item_icon::ItemSheet {
             texture: item_atlas,

@@ -8,5 +8,4 @@ pub mod json_file;
 pub mod platform;
 pub mod prepare;
 pub mod sysinfo;
-pub mod tt;
 pub mod util;

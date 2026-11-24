@@ -36,13 +36,11 @@ impl Renderer {
         let (surface_loader, surface) =
             instance::create_surface(&entry, &instance, display, window.window_handle()?.as_raw())?;
 
-        melon_base::tt::mark(" instance+surface");
         let gpu = device::pick(&instance, api, &surface_loader, surface)?;
         let features = features::probe(&instance, gpu.physical, api, features::GAME);
         let (device, queue) = device::create(&instance, &gpu, &features)?;
         let mem_props = gpu.mem_props;
         let residency = residency::Residency::new(&features, gpu.info.gpu);
-        melon_base::tt::mark(" pick+probe+device");
 
         let depth_format = find_depth_format(&instance, gpu.physical)?;
         let surface_format = choose_surface_format(&surface_loader, gpu.physical, surface)?.format;
@@ -100,7 +98,6 @@ impl Renderer {
             features.multi_draw(),
         )?;
 
-        melon_base::tt::mark(" pipelines");
         let descriptor_pools =
             super::descriptor_pools::DescriptorPools::new(&device, MAX_TEXTURES)?;
         let samplers = resources::create_samplers(&device)?;

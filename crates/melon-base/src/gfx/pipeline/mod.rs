@@ -228,11 +228,9 @@ impl PipelineDesc<'_> {
             .layout(layout)
             .render_pass(render_pass)
             .subpass(0);
-        let _tt = std::time::Instant::now();
         let pipeline = device
             .create_graphics_pipelines(vk::PipelineCache::null(), &[pipeline_info], None)
             .map_err(|(_, e)| e);
-        crate::tt::add(&crate::tt::PIPE, _tt);
         device.destroy_shader_module(vert_module, None);
         device.destroy_shader_module(frag_module, None);
         Ok(pipeline?[0])
