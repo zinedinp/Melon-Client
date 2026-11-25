@@ -104,7 +104,7 @@ mod tests {
     /// Prints what the log would say about each GPU; passes without Vulkan too.
     #[test]
     fn reads_the_driver() {
-        let Ok(entry) = (unsafe { ash::Entry::load() }) else {
+        let Ok(entry) = (unsafe { crate::gfx::loader::load() }) else {
             return;
         };
         let api = crate::gfx::api::instance_version(&entry);

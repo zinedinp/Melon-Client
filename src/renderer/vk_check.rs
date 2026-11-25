@@ -79,7 +79,7 @@ impl Gpu {
     /// At `version` instead, if given: `1.0` checks the floor every path has.
     unsafe fn at(version: Option<ApiVersion>) -> anyhow::Result<Self> {
         ensure_layer_search_path();
-        let entry = ash::Entry::load()?;
+        let entry = melon_base::gfx::loader::load()?;
         let layer = c"VK_LAYER_KHRONOS_validation";
         let found = entry
             .enumerate_instance_layer_properties()?
@@ -478,7 +478,7 @@ fn post_chains_pass_validation() {
 #[test]
 fn khronos_validation_layer_is_on_the_loader_path() {
     ensure_layer_search_path();
-    let entry = unsafe { ash::Entry::load() }.expect("libvulkan");
+    let entry = unsafe { melon_base::gfx::loader::load() }.expect("libvulkan");
     let layer = CString::new("VK_LAYER_KHRONOS_validation").unwrap();
     let found = unsafe {
         entry

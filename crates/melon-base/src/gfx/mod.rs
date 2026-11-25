@@ -18,6 +18,7 @@ pub mod device_pick;
 pub mod features;
 pub mod gui_uniforms;
 pub mod instance;
+pub mod loader;
 pub mod pipeline;
 pub mod quad;
 mod renderer2d;

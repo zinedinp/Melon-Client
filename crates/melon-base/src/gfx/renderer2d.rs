@@ -87,7 +87,7 @@ impl Renderer2d {
         window: &winit::window::Window,
         enable_validation: bool,
     ) -> anyhow::Result<Self> {
-        let entry = ash::Entry::load()?;
+        let entry = super::loader::load()?;
         let display = window.display_handle()?.as_raw();
         let instance::Instance {
             instance,

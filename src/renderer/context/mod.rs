@@ -25,7 +25,7 @@ impl Renderer {
         enable_validation: bool,
     ) -> anyhow::Result<Self> {
         residency::warm_up();
-        let entry = ash::Entry::load()?;
+        let entry = melon_base::gfx::loader::load()?;
         let display = window.display_handle()?.as_raw();
         let instance::Instance {
             instance,
