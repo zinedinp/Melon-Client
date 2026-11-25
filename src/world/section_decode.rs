@@ -42,6 +42,10 @@ pub fn decode_on(
         ByteTier::Ssse3(b) => {
             super::x86::section_decode::decode_ssse3(b, bits, as_bytes(words), palette, out)
         }
+        #[cfg(target_arch = "x86_64")]
+        ByteTier::Sse2(b) => {
+            super::x86::section_decode::decode_sse2(b, bits, as_bytes(words), palette, out)
+        }
         // Neon is every AArch64's baseline: no `target_feature` body needed.
         #[cfg(all(target_arch = "aarch64", target_endian = "little"))]
         ByteTier::Neon(b) => decode_with(b, bits, as_bytes(words), palette, out),
@@ -79,6 +83,10 @@ pub fn flag_rows_on(
         #[cfg(target_arch = "x86_64")]
         ByteTier::Ssse3(b) => {
             super::x86::section_decode::flag_rows_ssse3(b, bits, as_bytes(words), flags, len, out)
+        }
+        #[cfg(target_arch = "x86_64")]
+        ByteTier::Sse2(b) => {
+            super::x86::section_decode::flag_rows_sse2(b, bits, as_bytes(words), flags, len, out)
         }
         #[cfg(all(target_arch = "aarch64", target_endian = "little"))]
         ByteTier::Neon(b) => flag_rows_with(b, bits, as_bytes(words), flags, len, out),

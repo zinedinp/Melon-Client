@@ -1,14 +1,20 @@
-//! [`crate::world::nibble_decode`]'s loop under SSSE3, AVX2 and AVX-512
-//! VBMI: one `target_feature` body each.
+//! [`crate::world::nibble_decode`]'s loop under SSE2, SSSE3, AVX2 and
+//! AVX-512 VBMI: one body each.
 
 use miraculix::x86::bundles::V4Vbmi;
 use miraculix::x86::ops::avx::avx2::Avx2;
 use miraculix::x86::ops::sse::ssse3::Ssse3;
 
-use crate::math::x86::bytes::{Avx2Bytes, Ssse3Bytes, VbmiBytes};
+use crate::math::x86::bytes::{Avx2Bytes, Sse2Bytes, Ssse3Bytes, VbmiBytes};
 use crate::world::chunk::LIGHT_NIBBLES;
 use crate::world::nibble_decode::unpack_with;
 use crate::world::section::BLOCKS_PER_SECTION;
+
+/// The x86_64 baseline needs no `target_feature`; out of line as the others.
+#[inline(never)]
+pub fn unpack_sse2(b: Sse2Bytes, packed: &[u8; LIGHT_NIBBLES], out: &mut [u8; BLOCKS_PER_SECTION]) {
+    unpack_with(b, packed, out)
+}
 
 pub fn unpack_ssse3(
     b: Ssse3Bytes,

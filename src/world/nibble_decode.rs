@@ -22,6 +22,8 @@ pub fn unpack_on(tier: ByteTier, packed: &[u8; LIGHT_NIBBLES], out: &mut [u8; BL
         ByteTier::Avx2(b) => super::x86::nibble_decode::unpack_avx2(b, packed, out),
         #[cfg(target_arch = "x86_64")]
         ByteTier::Ssse3(b) => super::x86::nibble_decode::unpack_ssse3(b, packed, out),
+        #[cfg(target_arch = "x86_64")]
+        ByteTier::Sse2(b) => super::x86::nibble_decode::unpack_sse2(b, packed, out),
         #[cfg(all(target_arch = "aarch64", target_endian = "little"))]
         ByteTier::Neon(b) => unpack_with(b, packed, out),
         ByteTier::Scalar => unpack_scalar(packed, out),

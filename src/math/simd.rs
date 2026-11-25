@@ -76,6 +76,9 @@ impl Tier {
 #[derive(Clone, Copy)]
 pub enum ByteTier {
     Scalar,
+    /// Every x86_64: unpacks and compares, no `pshufb` (K8, K10, Pentium 4).
+    #[cfg(target_arch = "x86_64")]
+    Sse2(super::x86::bytes::Sse2Bytes),
     /// `pshufb`: nearly every x86_64 since 2006.
     #[cfg(target_arch = "x86_64")]
     Ssse3(super::x86::bytes::Ssse3Bytes),
@@ -94,6 +97,8 @@ impl ByteTier {
         match self {
             ByteTier::Scalar => "scalar",
             #[cfg(target_arch = "x86_64")]
+            ByteTier::Sse2(_) => "SSE2",
+            #[cfg(target_arch = "x86_64")]
             ByteTier::Ssse3(_) => "SSSE3",
             #[cfg(target_arch = "x86_64")]
             ByteTier::Avx2(_) => "AVX2",
@@ -110,7 +115,7 @@ impl ByteTier {
         let mut tiers = Vec::new();
         #[cfg(target_arch = "x86_64")]
         {
-            use super::x86::bytes::{Avx2Bytes, Ssse3Bytes, VbmiBytes};
+            use super::x86::bytes::{Avx2Bytes, Sse2Bytes, Ssse3Bytes, VbmiBytes};
             let features = miraculix::x86::detect_features();
             if os_saves_zmm() {
                 tiers.extend(VbmiBytes::new(features).map(ByteTier::Avx512Vbmi));
@@ -119,6 +124,7 @@ impl ByteTier {
                 tiers.extend(Avx2Bytes::new(features).map(ByteTier::Avx2));
             }
             tiers.extend(Ssse3Bytes::new(features).map(ByteTier::Ssse3));
+            tiers.extend(Sse2Bytes::new(features).map(ByteTier::Sse2));
         }
         #[cfg(all(target_arch = "aarch64", target_endian = "little"))]
         {
@@ -144,32 +150,34 @@ fn os_saves_zmm() -> bool {
     std::arch::is_x86_feature_detected!("avx512f")
 }
 
-/// Register width of every tier name, for `MELON_SIMD`.
-const WIDTHS: [(&str, u32); 8] = [
+/// Every tier name in the order CPUs gained them, for `MELON_SIMD`: a
+/// cap admits the tiers up to its own, as on a CPU that stops there.
+/// Neon is AArch64's baseline, as SSE2 is x86_64's.
+const RANKS: [(&str, u32); 8] = [
     ("scalar", 0),
-    ("SSE2", 128),
-    ("SSSE3", 128),
-    ("Neon", 128),
-    ("AVX", 256),
-    ("AVX2", 256),
-    ("AVX-512F", 512),
-    ("AVX-512VBMI", 512),
+    ("SSE2", 1),
+    ("Neon", 1),
+    ("SSSE3", 2),
+    ("AVX", 3),
+    ("AVX2", 4),
+    ("AVX-512F", 5),
+    ("AVX-512VBMI", 6),
 ];
 
-fn width(name: &str) -> u32 {
-    WIDTHS
+fn rank(name: &str) -> u32 {
+    RANKS
         .iter()
         .find(|(n, _)| *n == name)
-        .map_or(u32::MAX, |&(_, w)| w)
+        .map_or(u32::MAX, |&(_, r)| r)
 }
 
-/// The widest register `MELON_SIMD` allows, if it names a tier.
-fn width_cap() -> Option<u32> {
+/// The newest tier `MELON_SIMD` allows, if it names one.
+fn rank_cap() -> Option<u32> {
     let wanted = std::env::var("MELON_SIMD").ok()?;
-    let cap = WIDTHS
+    let cap = RANKS
         .iter()
         .find(|(name, _)| name.eq_ignore_ascii_case(&wanted))
-        .map(|&(_, w)| w);
+        .map(|&(_, r)| r);
     if cap.is_none() {
         crate::warn!("MELON_SIMD={wanted} names no tier; taking the widest");
     }
@@ -196,15 +204,15 @@ pub fn init() -> (Tier, ByteTier) {
 }
 
 /// The float tier [`init`] settled (probed now if nothing called it, as in
-/// tests): the widest, or the widest no wider than the tier `MELON_SIMD`
-/// names (`AVX`, `SSE2`, `scalar`, ...; either family's names).
+/// tests): the widest, or the newest no newer than the tier `MELON_SIMD`
+/// names (`AVX`, `SSSE3`, `SSE2`, `scalar`, ...; either family's names).
 #[inline]
 pub fn tier() -> Tier {
     *TIER.get_or_init(|| {
-        let cap = width_cap().unwrap_or(u32::MAX);
+        let cap = rank_cap().unwrap_or(u32::MAX);
         Tier::available()
             .into_iter()
-            .find(|tier| width(tier.name()) <= cap)
+            .find(|tier| rank(tier.name()) <= cap)
             .unwrap_or(Tier::Scalar)
     })
 }
@@ -213,10 +221,10 @@ pub fn tier() -> Tier {
 #[inline]
 pub fn byte_tier() -> ByteTier {
     *BYTE_TIER.get_or_init(|| {
-        let cap = width_cap().unwrap_or(u32::MAX);
+        let cap = rank_cap().unwrap_or(u32::MAX);
         ByteTier::available()
             .into_iter()
-            .find(|tier| width(tier.name()) <= cap)
+            .find(|tier| rank(tier.name()) <= cap)
             .unwrap_or(ByteTier::Scalar)
     })
 }
@@ -242,19 +250,28 @@ mod tests {
             .into_iter()
             .map(ByteTier::name)
             .collect();
+        #[cfg(target_arch = "x86_64")]
+        assert!(bytes.contains(&"SSE2"), "{bytes:?}");
         #[cfg(all(target_arch = "aarch64", target_endian = "little"))]
         assert!(bytes.contains(&"Neon"), "{bytes:?}");
         assert_eq!(bytes.last(), Some(&"scalar"));
     }
 
-    /// Every tier's name has a width, so `MELON_SIMD` can cap by it.
+    /// Every tier's name has a rank, so `MELON_SIMD` can cap by it, and
+    /// each family lists its tiers newest first.
     #[test]
-    fn every_tier_name_has_a_width() {
-        for name in Tier::available().into_iter().map(Tier::name) {
-            assert_ne!(width(name), u32::MAX, "{name}");
-        }
-        for name in ByteTier::available().into_iter().map(ByteTier::name) {
-            assert_ne!(width(name), u32::MAX, "{name}");
+    fn every_tier_name_has_a_rank() {
+        let floats: Vec<u32> = Tier::available()
+            .into_iter()
+            .map(|t| rank(t.name()))
+            .collect();
+        let bytes: Vec<u32> = ByteTier::available()
+            .into_iter()
+            .map(|t| rank(t.name()))
+            .collect();
+        for ranks in [floats, bytes] {
+            assert!(!ranks.contains(&u32::MAX), "{ranks:?}");
+            assert!(ranks.is_sorted_by(|a, b| a > b), "{ranks:?}");
         }
     }
 }

@@ -1,14 +1,41 @@
-//! [`crate::world::section_decode`]'s loops under SSSE3, AVX2 and AVX-512
-//! VBMI: one `target_feature` body each, the whole loop inside, so every
-//! byte op inlines to vector instructions.
+//! [`crate::world::section_decode`]'s loops under SSE2, SSSE3, AVX2 and
+//! AVX-512 VBMI: one body each, the whole loop inside, so every byte op
+//! inlines to vector instructions.
 
 use miraculix::x86::bundles::V4Vbmi;
 use miraculix::x86::ops::avx::avx2::Avx2;
 use miraculix::x86::ops::sse::ssse3::Ssse3;
 
-use crate::math::x86::bytes::{Avx2Bytes, Ssse3Bytes, VbmiBytes};
+use crate::math::x86::bytes::{Avx2Bytes, Sse2Bytes, Ssse3Bytes, VbmiBytes};
 use crate::world::section::BLOCKS_PER_SECTION;
 use crate::world::section_decode::{ROWS, decode_with, flag_rows_with};
+
+// SSE2 is every x86_64's baseline, so its bodies need no `target_feature`.
+// Out of line like the others: inlined, the loop made the dispatch around
+// it 5 µs slower a chunk on every tier (`section_visibility`).
+
+#[inline(never)]
+pub fn decode_sse2(
+    b: Sse2Bytes,
+    bits: u8,
+    bytes: &[u8],
+    palette: &[u16],
+    out: &mut [u16; BLOCKS_PER_SECTION],
+) {
+    decode_with(b, bits, bytes, palette, out)
+}
+
+#[inline(never)]
+pub fn flag_rows_sse2(
+    b: Sse2Bytes,
+    bits: u8,
+    bytes: &[u8],
+    flags: &[u8; 256],
+    len: usize,
+    out: &mut [[u16; ROWS]],
+) {
+    flag_rows_with(b, bits, bytes, flags, len, out)
+}
 
 pub fn decode_ssse3(
     b: Ssse3Bytes,

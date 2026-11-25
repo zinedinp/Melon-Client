@@ -1,4 +1,5 @@
-//! [`Bytes`] on x86_64: SSSE3 (16 lanes, `pshufb` lookups), AVX2 (32, two
+//! [`Bytes`] on x86_64: SSE2 (16 lanes, compare lookups), SSSE3 (16,
+//! `pshufb` lookups), AVX2 (32, two
 //! 16-lane halves) and AVX-512 VBMI (64, `vpermi2b` over 128 entries at a
 //! time). Every op is a `miraculix` token method, so the tier holding the
 //! tokens is all the proof the kernels need: no `unsafe` here.
@@ -113,17 +114,149 @@ fn store_pairs(v: &[u8], out: &mut [u16]) {
     }
 }
 
-/// 16 lanes on SSSE3.
+/// 16 lanes on SSE2 alone, every x86_64's baseline: no `pshufb`, so the
+/// spreads are byte unpacks and the lookups compares or loads.
+#[derive(Clone, Copy)]
+pub struct Sse2Bytes(Sse2);
+
+/// Nonzero entries up to which [`Sse2Bytes::lookup`] compares each lane's
+/// index against each entry's rather than loading a lane at a time.
+const COMPARES: usize = 16;
+
+impl Sse2Bytes {
+    pub fn new(features: FeatureSet) -> Option<Self> {
+        Sse2::from_features(features).map(Self)
+    }
+
+    /// Each of the low 8 bytes twice.
+    #[inline(always)]
+    fn twice(self, x: [u8; 16]) -> [u8; 16] {
+        self.0.unpacklo_u8x16(x, x)
+    }
+
+    /// Lanes where every bit of `bits` is set: `0xFF`, else `0`.
+    #[inline(always)]
+    fn has(self, v: [u8; 16], bits: [u8; 16]) -> [u8; 16] {
+        let s = self.0;
+        s.cmpeq_u8x16(s.and_u8x16(v, bits), bits)
+    }
+
+    /// Two-bit fields out of 4 bytes spread as [`SPREAD_2`].
+    #[inline(always)]
+    fn fields_2(self, spread: [u8; 16]) -> [u8; 16] {
+        let s = self.0;
+        s.or_u8x16(
+            s.and_u8x16(self.has(spread, LOW_2), [1; 16]),
+            s.and_u8x16(self.has(spread, HIGH_2), [2; 16]),
+        )
+    }
+
+    /// One-bit fields out of 2 bytes spread as [`SPREAD_1`].
+    #[inline(always)]
+    fn fields_1(self, spread: [u8; 16]) -> [u8; 16] {
+        self.0.and_u8x16(self.has(spread, BIT_1), [1; 16])
+    }
+
+    /// Low and high nibbles of 8 bytes, interleaved: 16 four-bit fields.
+    #[inline(always)]
+    fn nibbles(self, x: [u8; 16]) -> ([u8; 16], [u8; 16]) {
+        let s = self.0;
+        let (low, high) = (s.and_u8x16(x, [0x0F; 16]), s.shr_u8x16::<4>(x));
+        (s.unpacklo_u8x16(low, high), s.unpackhi_u8x16(low, high))
+    }
+}
+
+/// [`Sse2Bytes`]' table.
+pub struct Picks {
+    /// Up to [`COMPARES`] nonzero entries, each as its index and value in
+    /// every lane; the rest are zero.
+    few: [([u8; 16], [u8; 16]); COMPARES],
+    count: usize,
+    /// With more nonzero: every entry, loaded a lane at a time.
+    many: Option<[u8; 256]>,
+}
+
+impl Bytes for Sse2Bytes {
+    const LEN: usize = 16;
+    type V = [u8; 16];
+    type Table = Picks;
+
+    #[inline(always)]
+    fn table(self, entries: &[u8; 256], len: usize) -> Picks {
+        let entries = &entries[..len];
+        let mut table = Picks {
+            few: [([0; 16], [0; 16]); COMPARES],
+            count: 0,
+            many: None,
+        };
+        if entries.iter().filter(|&&e| e != 0).count() > COMPARES {
+            let mut all = [0; 256];
+            all[..len].copy_from_slice(entries);
+            table.many = Some(all);
+            return table;
+        }
+        for (i, &entry) in entries.iter().enumerate().filter(|(_, e)| **e != 0) {
+            table.few[table.count] = ([i as u8; 16], [entry; 16]);
+            table.count += 1;
+        }
+        table
+    }
+
+    #[inline(always)]
+    fn unpack<const BITS: usize>(self, packed: &[u8]) -> [u8; 16] {
+        match BITS {
+            8 => load(packed),
+            4 => self.nibbles(load_low::<8, 16>(packed)).0,
+            2 => self.fields_2(self.twice(self.twice(load_low::<4, 16>(packed)))),
+            _ => self.fields_1(self.twice(self.twice(self.twice(load_low::<2, 16>(packed))))),
+        }
+    }
+
+    #[inline(always)]
+    fn lookup(self, table: &Picks, index: [u8; 16]) -> [u8; 16] {
+        if let Some(entries) = &table.many {
+            return std::array::from_fn(|i| entries[usize::from(index[i])]);
+        }
+        let s = self.0;
+        table.few[..table.count]
+            .iter()
+            .fold([0; 16], |out, &(at, entry)| {
+                s.or_u8x16(out, s.and_u8x16(s.cmpeq_u8x16(index, at), entry))
+            })
+    }
+
+    #[inline(always)]
+    fn store_words(self, lo: [u8; 16], hi: [u8; 16], out: &mut [u16]) {
+        let s = self.0;
+        store_pairs(&s.unpacklo_u8x16(lo, hi), &mut out[..8]);
+        store_pairs(&s.unpackhi_u8x16(lo, hi), &mut out[8..16]);
+    }
+
+    #[inline(always)]
+    fn store_bytes(self, v: [u8; 16], out: &mut [u8]) {
+        out[..16].copy_from_slice(&v);
+    }
+
+    #[inline(always)]
+    fn bit_mask(self, v: [u8; 16], bit: u32) -> u64 {
+        // The bit to the top of each byte, where `pmovmskb` reads it.
+        let s = self.0;
+        let up: [u8; 16] = bytes(s.sll_u16x8(words(v), 7 - bit));
+        u64::from(s.movemask_i8x16(signed(up)))
+    }
+}
+
+/// 16 lanes on SSSE3: [`Sse2Bytes`] with `pshufb` spreads and lookups.
 #[derive(Clone, Copy)]
 pub struct Ssse3Bytes {
-    sse2: Sse2,
+    sse2: Sse2Bytes,
     ssse3: Ssse3,
 }
 
 impl Ssse3Bytes {
     pub fn new(features: FeatureSet) -> Option<Self> {
         Some(Self {
-            sse2: Sse2::from_features(features)?,
+            sse2: Sse2Bytes::new(features)?,
             ssse3: Ssse3::from_features(features)?,
         })
     }
@@ -137,21 +270,6 @@ impl Ssse3Bytes {
     #[inline(always)]
     fn shuffle(self, table: [u8; 16], index: [u8; 16]) -> [u8; 16] {
         unsigned(self.ssse3.shuffle_i8x16(signed(table), signed(index)))
-    }
-
-    /// Lanes where every bit of `bits` is set: `0xFF`, else `0`.
-    #[inline(always)]
-    fn has(self, v: [u8; 16], bits: [u8; 16]) -> [u8; 16] {
-        let s = self.sse2;
-        s.cmpeq_u8x16(s.and_u8x16(v, bits), bits)
-    }
-
-    /// Low and high nibbles of 8 bytes, interleaved: 16 four-bit fields.
-    #[inline(always)]
-    fn nibbles(self, x: [u8; 16]) -> ([u8; 16], [u8; 16]) {
-        let s = self.sse2;
-        let (low, high) = (s.and_u8x16(x, [0x0F; 16]), s.shr_u8x16::<4>(x));
-        (s.unpacklo_u8x16(low, high), s.unpackhi_u8x16(low, high))
     }
 }
 
@@ -178,21 +296,14 @@ impl Bytes for Ssse3Bytes {
 
     #[inline(always)]
     fn unpack<const BITS: usize>(self, packed: &[u8]) -> [u8; 16] {
-        let s = self.sse2;
         match BITS {
-            8 => load(packed),
-            4 => self.nibbles(load_low::<8, 16>(packed)).0,
-            2 => {
-                let spread = self.shuffle(load_low::<4, 16>(packed), SPREAD_2);
-                s.or_u8x16(
-                    s.and_u8x16(self.has(spread, LOW_2), [1; 16]),
-                    s.and_u8x16(self.has(spread, HIGH_2), [2; 16]),
-                )
-            }
-            _ => {
-                let spread = self.shuffle(load_low::<2, 16>(packed), SPREAD_1);
-                s.and_u8x16(self.has(spread, BIT_1), [1; 16])
-            }
+            2 => self
+                .sse2
+                .fields_2(self.shuffle(load_low::<4, 16>(packed), SPREAD_2)),
+            1 => self
+                .sse2
+                .fields_1(self.shuffle(load_low::<2, 16>(packed), SPREAD_1)),
+            _ => self.sse2.unpack::<BITS>(packed),
         }
     }
 
@@ -201,7 +312,7 @@ impl Bytes for Ssse3Bytes {
         if table.count == 1 {
             return self.shuffle(table.chunks[0], index);
         }
-        let s = self.sse2;
+        let s = self.sse2.0;
         let mut out = [0; 16];
         let mut rest = index;
         for chunk in &table.chunks[..table.count] {
@@ -213,22 +324,17 @@ impl Bytes for Ssse3Bytes {
 
     #[inline(always)]
     fn store_words(self, lo: [u8; 16], hi: [u8; 16], out: &mut [u16]) {
-        let s = self.sse2;
-        store_pairs(&s.unpacklo_u8x16(lo, hi), &mut out[..8]);
-        store_pairs(&s.unpackhi_u8x16(lo, hi), &mut out[8..16]);
+        self.sse2.store_words(lo, hi, out);
     }
 
     #[inline(always)]
     fn store_bytes(self, v: [u8; 16], out: &mut [u8]) {
-        out[..16].copy_from_slice(&v);
+        self.sse2.store_bytes(v, out);
     }
 
     #[inline(always)]
     fn bit_mask(self, v: [u8; 16], bit: u32) -> u64 {
-        // The bit to the top of each byte, where `pmovmskb` reads it.
-        let s = self.sse2;
-        let up: [u8; 16] = bytes(s.sll_u16x8(words(v), 7 - bit));
-        u64::from(s.movemask_i8x16(signed(up)))
+        self.sse2.bit_mask(v, bit)
     }
 }
 
@@ -292,7 +398,7 @@ impl Bytes for Avx2Bytes {
         match BITS {
             8 => load(packed),
             4 => {
-                let (low, high) = self.ssse3.nibbles(load(packed));
+                let (low, high) = self.ssse3.sse2.nibbles(load(packed));
                 concat(low, high)
             }
             2 => {
