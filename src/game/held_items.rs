@@ -66,7 +66,7 @@ struct Uploaded {
     parts: Vec<Part>,
     /// The item's own texture, when some part samples it.
     own: Option<TextureId>,
-    /// The ground mesh's lowest point and its depth (`getModelBoundingBox`
+    /// The ground mesh's lowest point and its depth (`getModelBoundingBox`).
     ground: (f32, f32),
     /// Animated own texture: the frames and the one showing. (Animated
     /// atlas sprites move with their atlas.)
@@ -80,7 +80,7 @@ pub struct HeldItems {
     items: rustc_hash::FxHashMap<(ItemKey, HeldUse), Option<Uploaded>>,
     /// Blocks drawn by a mob (a mooshroom's mushrooms), by model id.
     blocks: HashMap<&'static str, Option<Uploaded>>,
-    /// Player heads with a profile, by [`HeadProfile::skin_key`] and use:
+    /// Player heads with a profile, by [`HeadProfile::skin_key`] and use.
     heads: HashMap<(uuid::Uuid, bool), (bool, Option<Uploaded>)>,
 }
 

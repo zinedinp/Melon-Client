@@ -1,4 +1,4 @@
-//! The screen interface the app's screen stack drives, and the GUI scale:
+//! The screen interface the app's screen stack drives, and the GUI scale.
 
 use std::path::Path;
 
@@ -72,7 +72,7 @@ impl ScreenAction {
     }
 }
 
-/// `AbstractWidget.handleCursor`: `CursorTypes.POINTING_HAND`/`IBEAM` while
+/// `AbstractWidget.handleCursor`: `CursorTypes.POINTING_HAND`/`IBEAM` while hovered.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum CursorKind {
     #[default]

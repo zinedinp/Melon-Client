@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ThreadTimes(pub BTreeMap<String, u64>);
 
-/// A thread's group: its name without a trailing number (`chunk-mesher-3`
+/// A thread's group: its name without a trailing number (`chunk-mesher-3` is `chunk-mesher`).
 pub fn group_of(name: &str) -> &str {
     let name = name.trim();
     let trimmed = name.trim_end_matches(|c: char| c.is_ascii_digit());

@@ -1,4 +1,4 @@
-//! Vanilla `MouseSettingsScreen`, cut to the options that change looking:
+//! Vanilla `MouseSettingsScreen`, cut to the options that change looking.
 
 use crate::gui::screen::{ConfigChange, ScreenContext};
 use crate::gui::screens::options::{on_off_label, value_label};

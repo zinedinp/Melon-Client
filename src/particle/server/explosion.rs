@@ -11,7 +11,7 @@ use crate::world::level::Level;
 /// `MAX_PARTICLES_PER_TICK`.
 const MAX_PER_TICK: i32 = 512;
 
-/// One entry of the packet's `blockParticles` (`ExplosionParticleInfo`
+/// One entry of the packet's `blockParticles` (`ExplosionParticleInfo`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Debris {
     pub spec: ParticleSpec,

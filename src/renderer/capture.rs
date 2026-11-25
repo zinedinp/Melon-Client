@@ -1,7 +1,7 @@
 //! A one-off copy of a finished frame to the CPU: the world's `icon.png`
 
 use super::Renderer;
-use super::vk_util::{READBACK, create_buffer_in};
+use super::vk_util::{self, READBACK, create_buffer_in};
 use ash::vk;
 
 #[derive(Default)]
@@ -155,7 +155,14 @@ impl Renderer {
             }
             self.capture.image = image::RgbaImage::from_raw(extent.width, extent.height, pixels);
         }
-        self.device.destroy_buffer(readback.buffer, None);
-        self.device.free_memory(readback.memory, None);
+        self.drop_capture(Some(readback));
+    }
+
+    /// Frees the copy's buffer, read or not: no frame in flight may still write it.
+    pub(super) unsafe fn drop_capture(&self, readback: Option<Readback>) {
+        if let Some(readback) = readback {
+            self.device.destroy_buffer(readback.buffer, None);
+            vk_util::free_memory(&self.device, readback.memory);
+        }
     }
 }

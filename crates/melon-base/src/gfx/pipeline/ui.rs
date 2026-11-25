@@ -250,16 +250,7 @@ pub unsafe fn record(
     device.cmd_set_scissor(cmd, 0, &[full_scissor]);
     for call in calls {
         let wanted = match call.scissor {
-            Some([x, y, w, h]) => vk::Rect2D {
-                offset: vk::Offset2D {
-                    x: (x * scale_x).round() as i32,
-                    y: (y * scale_y).round() as i32,
-                },
-                extent: vk::Extent2D {
-                    width: (w * scale_x).round() as u32,
-                    height: (h * scale_y).round() as u32,
-                },
-            },
+            Some(rect) => scissor_pixels(rect, (scale_x, scale_y), target.extent),
             None => full_scissor,
         };
         if wanted != applied_scissor {
@@ -286,5 +277,54 @@ pub unsafe fn record(
             &[],
         );
         device.cmd_draw_indexed(cmd, call.count, 1, call.first, 0, 0);
+    }
+}
+
+/// A GUI scissor `[x, y, w, h]` in pixels, cut to `extent`: Vulkan allows no negative offset.
+fn scissor_pixels([x, y, w, h]: [f32; 4], scale: (f32, f32), extent: vk::Extent2D) -> vk::Rect2D {
+    let span = |start: f32, len: f32, scale: f32, max: u32| {
+        let from = (start * scale).round() as i64;
+        let to = from + (len * scale).round().max(0.0) as i64;
+        let (from, to) = (from.clamp(0, max.into()), to.clamp(0, max.into()));
+        (from as i32, (to - from) as u32)
+    };
+    let (x, width) = span(x, w, scale.0, extent.width);
+    let (y, height) = span(y, h, scale.1, extent.height);
+    vk::Rect2D {
+        offset: vk::Offset2D { x, y },
+        extent: vk::Extent2D { width, height },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scissors_off_the_edge_keep_their_pixels_on_screen() {
+        let extent = vk::Extent2D {
+            width: 800,
+            height: 600,
+        };
+        let rect = |x, y, width, height| vk::Rect2D {
+            offset: vk::Offset2D { x, y },
+            extent: vk::Extent2D { width, height },
+        };
+        assert_eq!(
+            scissor_pixels([10.0, 20.0, 30.0, 40.0], (2.0, 2.0), extent),
+            rect(20, 40, 60, 80)
+        );
+        assert_eq!(
+            scissor_pixels([-10.0, -5.0, 30.0, 40.0], (2.0, 2.0), extent),
+            rect(0, 0, 40, 70)
+        );
+        assert_eq!(
+            scissor_pixels([390.0, 290.0, 30.0, 40.0], (2.0, 2.0), extent),
+            rect(780, 580, 20, 20)
+        );
+        assert_eq!(
+            scissor_pixels([-50.0, 0.0, 20.0, -3.0], (2.0, 2.0), extent),
+            rect(0, 0, 0, 0)
+        );
     }
 }

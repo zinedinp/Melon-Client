@@ -1,6 +1,6 @@
 //! The menu background blur (`Screen.extractBlurredBackground`).
 
-use super::{Frame, Renderer, find_memory_type, pipeline};
+use super::{Frame, Renderer, find_memory_type, pipeline, vk_util};
 use crate::renderer::quad::DrawCall;
 use ash::vk;
 
@@ -37,6 +37,14 @@ pub(super) struct Image {
     pub image: vk::Image,
     pub memory: vk::DeviceMemory,
     pub view: vk::ImageView,
+}
+
+impl Image {
+    pub(super) unsafe fn destroy(&self, device: &ash::Device) {
+        device.destroy_image_view(self.view, None);
+        device.destroy_image(self.image, None);
+        vk_util::free_memory(device, self.memory);
+    }
 }
 
 impl Blur {
@@ -138,11 +146,8 @@ impl Blur {
         if let Some(targets) = self.targets.take() {
             let _ = device.device_wait_idle();
             device.destroy_framebuffer(targets.framebuffer, None);
-            for image in [targets.copy, targets.scratch] {
-                device.destroy_image_view(image.view, None);
-                device.destroy_image(image.image, None);
-                device.free_memory(image.memory, None);
-            }
+            targets.copy.destroy(device);
+            targets.scratch.destroy(device);
         }
     }
 
@@ -173,15 +178,21 @@ impl Blur {
             size,
             vk::ImageUsageFlags::TRANSFER_DST | vk::ImageUsageFlags::SAMPLED,
         )?;
-        let scratch = create_image(
+        let scratch = match create_image(
             device,
             mem_props,
             format,
             size,
             vk::ImageUsageFlags::COLOR_ATTACHMENT | vk::ImageUsageFlags::SAMPLED,
-        )?;
+        ) {
+            Ok(scratch) => scratch,
+            Err(e) => {
+                copy.destroy(device);
+                return Err(e);
+            }
+        };
         let attachments = [scratch.view];
-        let framebuffer = device.create_framebuffer(
+        let framebuffer = match device.create_framebuffer(
             &vk::FramebufferCreateInfo::default()
                 .render_pass(self.pass)
                 .attachments(&attachments)
@@ -189,7 +200,14 @@ impl Blur {
                 .height(size.height)
                 .layers(1),
             None,
-        )?;
+        ) {
+            Ok(framebuffer) => framebuffer,
+            Err(e) => {
+                copy.destroy(device);
+                scratch.destroy(device);
+                return Err(e.into());
+            }
+        };
         for (set, image) in self.sets.iter().zip([&copy, &scratch]) {
             let info = [vk::DescriptorImageInfo {
                 sampler: self.sampler,
@@ -241,31 +259,49 @@ pub(super) unsafe fn create_image(
             .initial_layout(vk::ImageLayout::UNDEFINED),
         None,
     )?;
-    let requirements = device.get_image_memory_requirements(image);
-    let memory = device.allocate_memory(
+    let mut made = Image {
+        image,
+        memory: vk::DeviceMemory::null(),
+        view: vk::ImageView::null(),
+    };
+    match bind_and_view(device, mem_props, format, &mut made) {
+        Ok(()) => Ok(made),
+        Err(e) => {
+            made.destroy(device);
+            Err(e)
+        }
+    }
+}
+
+/// Gives `made.image` its memory and view, each kept in `made` as it is made.
+unsafe fn bind_and_view(
+    device: &ash::Device,
+    mem_props: &vk::PhysicalDeviceMemoryProperties,
+    format: vk::Format,
+    made: &mut Image,
+) -> anyhow::Result<()> {
+    let requirements = device.get_image_memory_requirements(made.image);
+    let type_index = find_memory_type(
+        mem_props,
+        requirements.memory_type_bits,
+        vk::MemoryPropertyFlags::DEVICE_LOCAL,
+    )?;
+    made.memory = vk_util::allocate_memory(
+        device,
         &vk::MemoryAllocateInfo::default()
             .allocation_size(requirements.size)
-            .memory_type_index(find_memory_type(
-                mem_props,
-                requirements.memory_type_bits,
-                vk::MemoryPropertyFlags::DEVICE_LOCAL,
-            )?),
-        None,
+            .memory_type_index(type_index),
     )?;
-    device.bind_image_memory(image, memory, 0)?;
-    let view = device.create_image_view(
+    device.bind_image_memory(made.image, made.memory, 0)?;
+    made.view = device.create_image_view(
         &vk::ImageViewCreateInfo::default()
-            .image(image)
+            .image(made.image)
             .view_type(vk::ImageViewType::TYPE_2D)
             .format(format)
             .subresource_range(COLOR),
         None,
     )?;
-    Ok(Image {
-        image,
-        memory,
-        view,
-    })
+    Ok(())
 }
 
 pub(super) const COLOR: vk::ImageSubresourceRange = vk::ImageSubresourceRange {

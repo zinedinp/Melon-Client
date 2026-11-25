@@ -9,6 +9,12 @@ pub use crate::world::section::{BLOCKS_PER_SECTION, Section};
 /// `DataLayer.SIZE`: 4096 nibbles packed into 2048 bytes.
 pub const LIGHT_NIBBLES: usize = 2048;
 
+/// `DataLayer.get(index)`: even indices in the low nibble, odd in the high.
+#[inline(always)]
+pub fn nibble(data: &[u8; LIGHT_NIBBLES], index: usize) -> u8 {
+    data[index >> 1] >> ((index & 1) * 4) & 15
+}
+
 /// One 16³ light layer: empty (all 0) or packed nibbles (`DataLayer`).
 #[derive(Clone, Debug)]
 pub enum LightSection {
@@ -21,11 +27,7 @@ impl LightSection {
     pub fn get(&self, x: usize, y: usize, z: usize) -> u8 {
         match self {
             Self::Empty => 0,
-            Self::Data(data) => {
-                let index = y * 256 + z * 16 + x;
-                let byte = data[index >> 1];
-                if index & 1 == 0 { byte & 15 } else { byte >> 4 }
-            }
+            Self::Data(data) => nibble(data, y * 256 + z * 16 + x),
         }
     }
 

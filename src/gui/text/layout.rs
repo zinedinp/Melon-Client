@@ -20,6 +20,21 @@ pub struct TextPaint<'a> {
     pub obfuscation_seed: u64,
 }
 
+impl<'a> TextPaint<'a> {
+    /// White, opaque and shadowed: `GuiGraphics.drawString`'s defaults.
+    pub fn new(font: &'a Font, pages: &'a [TextureId], white: TextureId) -> Self {
+        Self {
+            font,
+            pages,
+            white,
+            color: [1.0; 3],
+            alpha: 1.0,
+            shadow: true,
+            obfuscation_seed: 0,
+        }
+    }
+}
+
 /// `Font.width` of styled text: bold glyphs are wider by their bold offset.
 pub fn width(font: &Font, text: &StyledText) -> f32 {
     text.spans

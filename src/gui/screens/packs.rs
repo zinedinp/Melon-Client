@@ -1,6 +1,6 @@
 //! Vanilla `PackSelectionScreen` for resource packs.
 
-use std::cell::RefCell;
+use std::cell::{OnceCell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -58,6 +58,8 @@ struct Entry {
     title: String,
     /// `pack.mcmeta`'s text component.
     description: serde_json::Value,
+    /// [`description_lines`], made when first drawn; cleared on resize and language change.
+    lines: OnceCell<Vec<StyledText>>,
     compatibility: Compatibility,
     /// `vanilla`: always selected, always at the bottom.
     required: bool,
@@ -167,6 +169,7 @@ impl PackSelectionScreen {
                     id: pack.id.clone(),
                     title: pack.name,
                     description: pack.description,
+                    lines: OnceCell::new(),
                     compatibility: Compatibility::Compatible,
                     required: false,
                     icon_image: cached
@@ -182,6 +185,7 @@ impl PackSelectionScreen {
             id: crate::singleplayer::data_packs::VANILLA.to_owned(),
             title: String::new(),
             description: serde_json::json!({"translate": "dataPack.vanilla.description"}),
+            lines: OnceCell::new(),
             compatibility: Compatibility::Compatible,
             required: true,
             icon_image: None,
@@ -215,6 +219,7 @@ impl PackSelectionScreen {
                     id: pack.id.clone(),
                     title: pack.title.clone(),
                     description: pack.meta.description.clone(),
+                    lines: OnceCell::new(),
                     compatibility: pack.meta.compatibility(),
                     required: false,
                     icon_image: cached_icon(&pack.id)
@@ -230,6 +235,7 @@ impl PackSelectionScreen {
             id: repository::VANILLA_ID.to_owned(),
             title: String::new(),
             description: serde_json::json!({"translate": "resourcePack.vanilla.description"}),
+            lines: OnceCell::new(),
             compatibility: Compatibility::Compatible,
             required: true,
             icon_image: None,
@@ -435,6 +441,7 @@ enum IconAction {
 
 impl Screen for PackSelectionScreen {
     fn resize(&mut self, ctx: &ScreenContext) {
+        self.forget_lines();
         let (width, height) = ctx.size();
         self.width = width;
         let left = ((width - LIST_W) / 2.0).floor();
@@ -450,6 +457,10 @@ impl Screen for PackSelectionScreen {
         let y = LAYOUT.footer_y(height, BUTTON_H);
         self.widgets
             .centered_row(&[Id::OpenFolder, Id::Done], width, y, SPACING);
+    }
+
+    fn refresh_lang(&mut self, _lang: &Lang) {
+        self.forget_lines();
     }
 
     fn tick(&mut self) {
@@ -678,6 +689,13 @@ impl Screen for PackSelectionScreen {
 }
 
 impl PackSelectionScreen {
+    /// Drops the wrapped descriptions: the font, GUI scale or language changed.
+    fn forget_lines(&mut self) {
+        for entry in self.available.iter_mut().chain(&mut self.selected) {
+            entry.lines.take();
+        }
+    }
+
     fn draw_row(&self, ui: &mut Ui, side: Side, row: usize, rect: Rect, hovered: bool) {
         let entry = self.entry(side, row);
         let icon = self.icon_rect(side, row);
@@ -704,7 +722,9 @@ impl PackSelectionScreen {
             StyledText::plain(&entry.title)
         };
         ui.styled(&title, text_x, icon.y + 1.0, colors::WHITE);
-        let lines = description_lines(ui, &entry.description, entry.compatibility);
+        let lines = entry
+            .lines
+            .get_or_init(|| description_lines(ui, &entry.description, entry.compatibility));
         for (i, line) in lines.iter().enumerate() {
             ui.styled(
                 line,

@@ -16,17 +16,7 @@ use miraculix::x86::ops::avx::avx2::Avx2;
 use miraculix::x86::ops::sse::sse2::Sse2;
 use miraculix::x86::ops::sse::ssse3::Ssse3;
 
-use crate::math::bytes::{Bytes, chunks};
-
-/// Each byte four times: lane `i` reads byte `i / 4` (two-bit fields).
-const SPREAD_2: [u8; 16] = [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3];
-/// Each byte eight times (one-bit fields).
-const SPREAD_1: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1];
-/// A two-bit field's low and high bit, lane `i`'s at `2 * (i % 4)`.
-const LOW_2: [u8; 16] = [1, 4, 16, 64, 1, 4, 16, 64, 1, 4, 16, 64, 1, 4, 16, 64];
-const HIGH_2: [u8; 16] = [2, 8, 32, 128, 2, 8, 32, 128, 2, 8, 32, 128, 2, 8, 32, 128];
-/// Lane `i`'s bit, `i % 8`.
-const BIT_1: [u8; 16] = [1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128];
+use crate::math::bytes::{BIT_1, Bytes, HIGH_2, LOW_2, SPREAD_1, SPREAD_2, chunks, load, load_low};
 
 /// `pattern` (16 bytes) once a 128-bit lane, each lane's bytes moved on by
 /// `step` from the last's: the in-lane shuffles of the wide tiers.
@@ -37,20 +27,6 @@ const fn lanes<const N: usize>(pattern: [u8; 16], step: u8) -> [u8; N] {
         out[i] = pattern[i % 16] + step * (i / 16) as u8;
         i += 1;
     }
-    out
-}
-
-/// The first `N` bytes of `bytes`.
-#[inline(always)]
-fn load<const N: usize>(bytes: &[u8]) -> [u8; N] {
-    bytes[..N].try_into().unwrap()
-}
-
-/// The first `K` bytes of `bytes`, zero padded to `N` (`movd`/`movq`).
-#[inline(always)]
-fn load_low<const K: usize, const N: usize>(bytes: &[u8]) -> [u8; N] {
-    let mut out = [0; N];
-    out[..K].copy_from_slice(&bytes[..K]);
     out
 }
 

@@ -1,4 +1,4 @@
-//! Vanilla `BitmapProvider` / `FontManager` (`font/default.json`:
+//! Vanilla `BitmapProvider` / `FontManager` (`font/default.json`).
 
 use anyhow::Context;
 use image::RgbaImage;
@@ -26,7 +26,7 @@ pub(crate) const BASELINE_ASCENT: f32 = 7.0;
 /// Vanilla `GlyphInfo.getShadowOffset()` default.
 pub(crate) const SHADOW_OFFSET: f32 = 1.0;
 
-/// `ARGB.scaleRGB(textColor, 0.25F)` (`Font.PreparedTextBuilder.getShadowColor`,
+/// `ARGB.scaleRGB(textColor, 0.25F)` (`Font.PreparedTextBuilder.getShadowColor`).
 pub(crate) fn shadow_color(color: [f32; 4]) -> [f32; 4] {
     [color[0] * 0.25, color[1] * 0.25, color[2] * 0.25, color[3]]
 }
@@ -520,21 +520,30 @@ impl Font {
         lines
     }
 
+    /// [`Self::wrap`] before the codes carry over; each line's width is kept up word by word.
     fn wrap_plain(&self, text: &str, max_width: f32) -> Vec<String> {
         let mut lines = Vec::new();
         for paragraph in text.split('\n') {
             let mut line = String::new();
+            let mut width = LineWidth::default();
             for word in paragraph.split_whitespace() {
-                let candidate = if line.is_empty() {
-                    word.to_string()
-                } else {
-                    format!("{line} {word}")
-                };
-                if !line.is_empty() && self.text_width(&candidate) > max_width {
+                if line.is_empty() {
+                    line.push_str(word);
+                    width.push_str(self, word);
+                    continue;
+                }
+                let mut longer = width.clone();
+                longer.push_str(self, " ");
+                longer.push_str(self, word);
+                if longer.width() > max_width {
                     lines.push(std::mem::take(&mut line));
-                    line = word.to_string();
+                    line.push_str(word);
+                    width = LineWidth::default();
+                    width.push_str(self, word);
                 } else {
-                    line = candidate;
+                    line.push(' ');
+                    line.push_str(word);
+                    width = longer;
                 }
             }
             lines.push(line);
@@ -595,45 +604,16 @@ impl Font {
             let paint = self.paint(page_textures, color, with_shadow);
             return super::layout::draw(draw_list, &paint, &StyledText::formatted(text), x, y);
         }
-        let shadow = shadow_color(color);
-        let program = draw_list.set_program(Program::Text);
-        let mut pen = x;
-        for ch in text.chars() {
-            if let Some(glyph) = self.glyph(ch) {
-                if let GlyphKind::Bitmap {
-                    page,
-                    u0,
-                    v0,
-                    u1,
-                    v1,
-                    width,
-                    height,
-                    ascent,
-                } = glyph.kind
-                {
-                    let draw_y = y + (BASELINE_ASCENT - ascent as f32);
-                    if with_shadow {
-                        draw_list.push_rect(
-                            page_textures[page],
-                            [pen + glyph.shadow, draw_y + glyph.shadow, width, height],
-                            [u0, v0, u1, v1],
-                            shadow,
-                        );
-                    }
-                    draw_list.push_rect(
-                        page_textures[page],
-                        [pen, draw_y, width, height],
-                        [u0, v0, u1, v1],
-                        color,
-                    );
-                }
-                pen += glyph.advance;
-            } else {
-                pen += self.advance(' ');
-            }
-        }
-        draw_list.set_program(program);
-        pen - x
+        self.push_plain(
+            draw_list,
+            text,
+            [x, y],
+            color,
+            with_shadow,
+            |list, page, rect, uv, color, _| {
+                list.push_rect(page_textures[page], rect, uv, color);
+            },
+        )
     }
 
     /// `push_text` with italic shear (`EditBox.SEARCH_HINT_STYLE`).
@@ -656,52 +636,20 @@ impl Font {
             styled.push_formatted(text, &italic);
             return super::layout::draw(draw_list, &paint, &styled, x, y);
         }
-        let shadow = shadow_color(color);
-        let program = draw_list.set_program(Program::Text);
-        let mut pen = x;
-        for ch in text.chars() {
-            if let Some(glyph) = self.glyph(ch) {
-                if let GlyphKind::Bitmap {
-                    page,
-                    u0,
-                    v0,
-                    u1,
-                    v1,
-                    width,
-                    height,
-                    ascent,
-                } = glyph.kind
-                {
-                    let draw_y = y + (BASELINE_ASCENT - ascent as f32);
-                    let up = draw_y - y;
-                    let down = up + height;
-                    let shear_top = 1.0 - 0.25 * up;
-                    let shear_bottom = 1.0 - 0.25 * down;
-                    draw_list.push_rect_sheared(
-                        page_textures[page],
-                        [pen + glyph.shadow, draw_y + glyph.shadow, width, height],
-                        [shear_top, shear_bottom],
-                        [u0, v0, u1, v1],
-                        shadow,
-                    );
-                    draw_list.push_rect_sheared(
-                        page_textures[page],
-                        [pen, draw_y, width, height],
-                        [shear_top, shear_bottom],
-                        [u0, v0, u1, v1],
-                        color,
-                    );
-                }
-                pen += glyph.advance;
-            } else {
-                pen += self.advance(' ');
-            }
-        }
-        draw_list.set_program(program);
-        pen - x
+        self.push_plain(
+            draw_list,
+            text,
+            [x, y],
+            color,
+            true,
+            |list, page, rect, uv, color, up| {
+                let shear = [1.0 - 0.25 * up, 1.0 - 0.25 * (up + rect[3])];
+                list.push_rect_sheared(page_textures[page], rect, shear, uv, color);
+            },
+        )
     }
 
-    /// `push_text` through `transform`. Vanilla `SplashRenderer.extractRenderState`
+    /// `push_text` through `transform` (vanilla `SplashRenderer.extractRenderState`).
     pub fn push_text_transformed(
         &self,
         draw_list: &mut DrawList,
@@ -711,12 +659,36 @@ impl Font {
         origin: [f32; 2],
         color: [f32; 4],
     ) -> f32 {
+        let text = strip_codes(text);
+        self.push_plain(
+            draw_list,
+            &text,
+            origin,
+            color,
+            true,
+            |list, page, rect, uv, color, _| {
+                list.push_rect_transformed(page_textures[page], transform, rect, uv, color);
+            },
+        )
+    }
+
+    /// `Font.drawInBatch` for text without `§` codes, advancing like [`Self::text_width`].
+    /// Each glyph goes to `quad` (page, `[x, y, w, h]`, uv, colour, top below `y`), shadow first.
+    fn push_plain(
+        &self,
+        draw_list: &mut DrawList,
+        text: &str,
+        [x, y]: [f32; 2],
+        color: [f32; 4],
+        with_shadow: bool,
+        mut quad: impl FnMut(&mut DrawList, usize, [f32; 4], [f32; 4], [f32; 4], f32),
+    ) -> f32 {
         let shadow = shadow_color(color);
         let program = draw_list.set_program(Program::Text);
-        let mut pen = origin[0];
-        for ch in strip_codes(text).chars() {
-            if let Some(glyph) = self.glyph(ch) {
-                if let GlyphKind::Bitmap {
+        let mut pen = x;
+        for ch in text.chars() {
+            if let Some(glyph) = self.glyph(ch)
+                && let GlyphKind::Bitmap {
                     page,
                     u0,
                     v0,
@@ -726,30 +698,19 @@ impl Font {
                     height,
                     ascent,
                 } = glyph.kind
-                {
-                    let draw_y = origin[1] + (BASELINE_ASCENT - ascent as f32);
-                    draw_list.push_rect_transformed(
-                        page_textures[page],
-                        transform,
-                        [pen + glyph.shadow, draw_y + glyph.shadow, width, height],
-                        [u0, v0, u1, v1],
-                        shadow,
-                    );
-                    draw_list.push_rect_transformed(
-                        page_textures[page],
-                        transform,
-                        [pen, draw_y, width, height],
-                        [u0, v0, u1, v1],
-                        color,
-                    );
+            {
+                let up = BASELINE_ASCENT - ascent as f32;
+                let uv = [u0, v0, u1, v1];
+                if with_shadow {
+                    let rect = [pen + glyph.shadow, y + up + glyph.shadow, width, height];
+                    quad(draw_list, page, rect, uv, shadow, up);
                 }
-                pen += glyph.advance;
-            } else {
-                pen += self.advance(' ');
+                quad(draw_list, page, [pen, y + up, width, height], uv, color, up);
             }
+            pen += self.advance(ch);
         }
         draw_list.set_program(program);
-        pen - origin[0]
+        pen - x
     }
 }
 
@@ -757,13 +718,10 @@ impl Font {
     /// How plain text with `§` codes is drawn.
     fn paint<'a>(&'a self, pages: &'a [TextureId], color: [f32; 4], shadow: bool) -> TextPaint<'a> {
         TextPaint {
-            font: self,
-            pages,
-            white: self.white,
             color: [color[0], color[1], color[2]],
             alpha: color[3],
             shadow,
-            obfuscation_seed: 0,
+            ..TextPaint::new(self, pages, self.white)
         }
     }
 }
@@ -787,6 +745,42 @@ fn other_font_ids(assets: &Assets) -> Vec<String> {
         }
     }
     ids
+}
+
+/// [`Font::text_width`] of a line that grows at its end: the same runs, summed in the same order.
+#[derive(Clone, Default)]
+struct LineWidth {
+    /// The style the next character gets, as `StyledText::formatted` reads the codes.
+    style: super::TextStyle,
+    /// The style of the run being summed; `None` before the first character.
+    run_style: Option<super::TextStyle>,
+    /// The finished runs' widths, summed.
+    done: f32,
+    run: f32,
+    /// A `§` waiting for its code.
+    code: bool,
+}
+
+impl LineWidth {
+    fn push_str(&mut self, font: &Font, text: &str) {
+        for c in text.chars() {
+            if std::mem::take(&mut self.code) {
+                super::apply_code(&mut self.style, c, &super::TextStyle::default());
+            } else if c == '§' {
+                self.code = true;
+            } else {
+                if self.run_style.as_ref() != Some(&self.style) {
+                    self.done += std::mem::take(&mut self.run);
+                    self.run_style = Some(self.style.clone());
+                }
+                self.run += font.styled_advance_in(None, c, self.style.bold);
+            }
+        }
+    }
+
+    fn width(&self) -> f32 {
+        self.done + self.run
+    }
 }
 
 fn has_codes(text: &str) -> bool {
@@ -834,6 +828,79 @@ fn active_codes(text: &str) -> String {
         }
     }
     active
+}
+
+#[cfg(test)]
+mod wrap_tests {
+    use super::*;
+
+    /// The wrap before it kept widths up: every candidate line measured from scratch.
+    fn wrap_plain_reference(font: &Font, text: &str, max_width: f32) -> Vec<String> {
+        let mut lines = Vec::new();
+        for paragraph in text.split('\n') {
+            let mut line = String::new();
+            for word in paragraph.split_whitespace() {
+                let candidate = if line.is_empty() {
+                    word.to_string()
+                } else {
+                    format!("{line} {word}")
+                };
+                if !line.is_empty() && font.text_width(&candidate) > max_width {
+                    lines.push(std::mem::take(&mut line));
+                    line = word.to_string();
+                } else {
+                    line = candidate;
+                }
+            }
+            lines.push(line);
+        }
+        lines
+    }
+
+    /// Advances that don't add up exactly in `f32`, so a different order of sums shows.
+    fn odd_font() -> Font {
+        let mut glyphs = GlyphMap::default();
+        for (i, c) in ('a'..='z').chain('A'..='Z').chain('0'..='9').enumerate() {
+            let mut glyph = Glyph::new(GlyphKind::Space, 0.1 + i as f32 * 0.37);
+            glyph.bold = 0.3 + (i % 3) as f32 * 0.45;
+            glyphs.insert(c, glyph);
+        }
+        glyphs.insert(' ', Glyph::new(GlyphKind::Space, 2.3));
+        glyphs.insert('.', Glyph::new(GlyphKind::Space, 0.7));
+        Font::from_bitmaps(glyphs, Vec::new())
+    }
+
+    #[test]
+    fn linear_wrap_matches_the_reference() {
+        let font = odd_font();
+        let texts = [
+            "",
+            "one",
+            "  lead and  trail  ",
+            "the quick brown fox jumps over the lazy dog again and again",
+            "a\nb c\n\nd e f g h i j k l m n o p",
+            "Supercalifragilisticexpialidocious is long. so is pneumonoultramicroscopic",
+            "\u{a7}lbold words \u{a7}rplain \u{a7}cred \u{a7}lred bold \u{a7}othen italic words here",
+            "\u{a7}l\u{a7}l same \u{a7}r\u{a7}r style \u{a7}4\u{a7}4 twice",
+            "trailing code \u{a7} l and \u{a7}",
+            "\u{a7}Lupper \u{a7}Ocase \u{a7}Zunknown \u{a7}Rreset words go on and on",
+            "x \u{a7} \u{a7}l y z w v u t s r q p o n m l k j i h g f e d c b a",
+            "unknown \u{e9}t\u{e9} \u{4e2d} glyphs . . . 0 1 2 3 4 5 6 7 8 9",
+        ];
+        let mut checked = 0;
+        for text in texts {
+            for step in 0..400 {
+                let max_width = step as f32 * 0.25;
+                assert_eq!(
+                    font.wrap_plain(text, max_width),
+                    wrap_plain_reference(&font, text, max_width),
+                    "{text:?} at {max_width}"
+                );
+                checked += 1;
+            }
+        }
+        assert_eq!(checked, texts.len() * 400);
+    }
 }
 
 #[cfg(test)]

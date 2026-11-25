@@ -37,7 +37,7 @@ pub(super) struct InputState {
     grab_wanted: bool,
     /// The cursor was let go and sent to the centre, but is still locked.
     release_pending: bool,
-    /// Whether the window takes composed text (an input method editor:
+    /// Whether the window takes composed text (an input method editor is on).
     ime_allowed: bool,
     /// Where the input method's candidate window was last put, in physical pixels.
     ime_area: Option<(i32, i32)>,

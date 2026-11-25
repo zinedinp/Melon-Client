@@ -1,6 +1,6 @@
 //! The swapchain and what is sized with it (depth buffer, framebuffers).
 
-use super::{Renderer, choose_surface_format, create_depth_image};
+use super::{Renderer, choose_surface_format, create_depth_image, vk_util};
 use ash::vk;
 
 /// `VK_PRESENT_MODE_FIFO_LATEST_READY_KHR` (same value as the `EXT` one);
@@ -202,7 +202,7 @@ impl Renderer {
         if depth.image != vk::Image::null() {
             self.device.destroy_image_view(depth.view, None);
             self.device.destroy_image(depth.image, None);
-            self.device.free_memory(depth.memory, None);
+            vk_util::free_memory(&self.device, depth.memory);
         }
         for &sem in &self.frames.render_finished {
             self.device.destroy_semaphore(sem, None);

@@ -61,7 +61,7 @@ pub struct LivingRenderState {
     /// `isPassenger`: sitting on a vehicle, legs bent and no walking.
     pub riding: bool,
     pub swim: Swim,
-    /// Drawn upside down (`isUpsideDown`.
+    /// Drawn upside down (`isUpsideDown`), turned over about this height.
     pub upside_down: Option<f32>,
     /// `scale`: the `scale` attribute the whole model grows by, about its
     /// feet.

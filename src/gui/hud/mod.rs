@@ -294,13 +294,9 @@ impl Hud {
             return;
         }
         let paint = TextPaint {
-            font: painter.font,
-            pages: painter.font_textures,
-            white: painter.white,
-            color: colors::WHITE,
             alpha: alpha / 255.0,
-            shadow: true,
             obfuscation_seed: u64::from(self.ticks),
+            ..painter.paint(colors::WHITE)
         };
         let (cx, cy) = (size.0 / 2.0, size.1 / 2.0);
         let mut line = |content: &StyledText, scale: f32, y: f32| {
@@ -336,13 +332,9 @@ impl Hud {
         let x = (screen_width / 2.0).floor() - (width / 2.0).floor();
         let y = screen_height - 68.0 - 4.0;
         let paint = TextPaint {
-            font: painter.font,
-            pages: painter.font_textures,
-            white: painter.white,
-            color: colors::WHITE,
             alpha: alpha / 255.0,
-            shadow: true,
             obfuscation_seed: u64::from(self.ticks),
+            ..painter.paint(colors::WHITE)
         };
         text::draw(draw_list, &paint, content, x, y);
     }
@@ -564,7 +556,7 @@ fn push_jump_bar(
     }
 }
 
-/// `ExperienceBar.extractBackground` and
+/// `ExperienceBar.extractBackground` and `extractRenderState`.
 fn push_experience(
     draw_list: &mut DrawList,
     textures: &HudTextures,
@@ -602,7 +594,7 @@ fn push_experience(
     }
 }
 
-/// `Hud.extractCrosshair`: `blitSprite(RenderPipelines.CROSSHAIR,
+/// `Hud.extractCrosshair`: `blitSprite(RenderPipelines.CROSSHAIR, ...)` in the middle.
 pub fn push_crosshair(draw_list: &mut DrawList, crosshair: GuiSprite, width: f32, height: f32) {
     let x = ((width - CROSSHAIR_SIZE) as i32 / 2) as f32;
     let y = ((height - CROSSHAIR_SIZE) as i32 / 2) as f32;

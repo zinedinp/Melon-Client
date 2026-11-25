@@ -32,6 +32,31 @@ pub const FORMATTING_COLORS: [[u8; 3]; 16] = [
     [255, 255, 255],
 ];
 
+/// `Style.applyLegacyFormat` for the `§` code `code`, `§r` going back to `base`.
+pub(crate) fn apply_code(style: &mut TextStyle, code: char, base: &TextStyle) {
+    match code.to_ascii_lowercase() {
+        digit @ ('0'..='9' | 'a'..='f') => {
+            let index = digit.to_digit(16).unwrap_or(15) as usize;
+            *style = TextStyle {
+                color: Some(rgb(FORMATTING_COLORS[index])),
+                ..base.clone()
+            };
+            style.bold = false;
+            style.italic = false;
+            style.underlined = false;
+            style.strikethrough = false;
+            style.obfuscated = false;
+        }
+        'k' => style.obfuscated = true,
+        'l' => style.bold = true,
+        'm' => style.strikethrough = true,
+        'n' => style.underlined = true,
+        'o' => style.italic = true,
+        'r' => *style = base.clone(),
+        _ => {}
+    }
+}
+
 pub fn rgb(color: [u8; 3]) -> [f32; 3] {
     color.map(|c| f32::from(c) / 255.0)
 }
@@ -248,27 +273,7 @@ impl StyledText {
             let Some(code) = chars.next() else { break };
             self.push(&run, &style);
             run.clear();
-            match code.to_ascii_lowercase() {
-                digit @ ('0'..='9' | 'a'..='f') => {
-                    let index = digit.to_digit(16).unwrap_or(15) as usize;
-                    style = TextStyle {
-                        color: Some(rgb(FORMATTING_COLORS[index])),
-                        ..base.clone()
-                    };
-                    style.bold = false;
-                    style.italic = false;
-                    style.underlined = false;
-                    style.strikethrough = false;
-                    style.obfuscated = false;
-                }
-                'k' => style.obfuscated = true,
-                'l' => style.bold = true,
-                'm' => style.strikethrough = true,
-                'n' => style.underlined = true,
-                'o' => style.italic = true,
-                'r' => style = base.clone(),
-                _ => {}
-            }
+            apply_code(&mut style, code, base);
         }
         self.push(&run, &style);
     }

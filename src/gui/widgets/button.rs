@@ -22,7 +22,7 @@ pub struct TabTextures {
 }
 
 impl TabTextures {
-    /// `WidgetSprites.get(enabled, focused)` as `MenuTabButton` calls it:
+    /// `WidgetSprites.get(enabled, focused)` as `MenuTabButton` calls it.
     pub fn get(&self, selected: bool, hovered: bool) -> GuiSprite {
         match (selected, hovered) {
             (true, true) => self.selected_highlighted,
@@ -42,7 +42,7 @@ pub struct Button {
     pub w: f32,
     pub h: f32,
     pub label: Label,
-    /// Centered icon instead of label (`CommonButtons`.
+    /// Centered icon instead of label (`CommonButtons`).
     pub icon: Option<IconSprite>,
     pub hovered: bool,
     pub enabled: bool,

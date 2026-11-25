@@ -20,6 +20,33 @@ pub struct Resolved {
     pub port: u16,
 }
 
+/// `ServerAddress.parseString` (Guava's `HostAndPort.fromString`): `None` where vanilla falls
+/// back to `server.invalid`. Bracketed ports take ASCII digits only, where Guava allows any.
+pub fn parse_address(input: &str) -> Option<(&str, u16)> {
+    let (host, port) = if let Some(bracketed) = input.strip_prefix('[') {
+        let close = bracketed.rfind(']')?;
+        if !bracketed[..close].contains(':') {
+            return None;
+        }
+        let port = match &bracketed[close + 1..] {
+            "" => "",
+            rest => rest.strip_prefix(':')?,
+        };
+        (&bracketed[..close], port)
+    } else {
+        match input.split_once(':') {
+            Some((host, port)) if !port.contains(':') => (host, port),
+            _ => (input, ""),
+        }
+    };
+    let port = match port {
+        "" => DEFAULT_PORT,
+        digits if digits.bytes().all(|b| b.is_ascii_digit()) => digits.parse().ok()?,
+        _ => return None,
+    };
+    (!host.is_empty()).then_some((host, port))
+}
+
 /// `resolveAddress`: the SRV redirect is looked up even when the host itself
 /// does not resolve (a name with only an SRV record).
 pub fn resolve(host: &str, port: u16) -> Result<Resolved, CannotResolve> {
@@ -299,6 +326,39 @@ mod tests {
         let resolved = resolve("hypixel.net", DEFAULT_PORT).unwrap();
         assert_eq!(resolved.host, "mc.hypixel.net");
         assert!(!resolved.addrs.is_empty());
+    }
+
+    #[test]
+    fn addresses_parse_like_host_and_port() {
+        assert_eq!(parse_address("example.org"), Some(("example.org", 25565)));
+        assert_eq!(
+            parse_address("example.org:25566"),
+            Some(("example.org", 25566))
+        );
+        assert_eq!(parse_address("example.org:"), Some(("example.org", 25565)));
+        assert_eq!(parse_address("127.0.0.1:0"), Some(("127.0.0.1", 0)));
+        assert_eq!(parse_address("::1"), Some(("::1", 25565)));
+        assert_eq!(parse_address("2001:db8::1"), Some(("2001:db8::1", 25565)));
+        assert_eq!(parse_address("[::1]"), Some(("::1", 25565)));
+        assert_eq!(parse_address("[::1]:25566"), Some(("::1", 25566)));
+        assert_eq!(parse_address("[::1]:"), Some(("::1", 25565)));
+        assert_eq!(parse_address("[fe80::1%eth0]:1"), Some(("fe80::1%eth0", 1)));
+        for invalid in [
+            "",
+            ":25565",
+            "[]",
+            "[host]:1",
+            "[::1]x",
+            "[::1]:+1",
+            "[::1",
+            "host:+1",
+            "host:-1",
+            "host:65536",
+            "host:port",
+            "host: 1",
+        ] {
+            assert_eq!(parse_address(invalid), None, "{invalid:?}");
+        }
     }
 
     #[test]

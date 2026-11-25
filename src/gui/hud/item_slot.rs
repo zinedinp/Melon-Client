@@ -79,7 +79,7 @@ impl<'a> ItemPainter<'a> {
         }
     }
 
-    /// [`Self::stack`] with the count text replaced (`itemDecorations`'
+    /// [`Self::stack`] with the count text replaced (`itemDecorations`' text).
     pub fn stack_with_count(
         &self,
         draw_list: &mut DrawList,
@@ -122,13 +122,8 @@ impl<'a> ItemPainter<'a> {
 
     pub fn paint(&self, color: [f32; 3]) -> TextPaint<'_> {
         TextPaint {
-            font: self.font,
-            pages: self.font_textures,
-            white: self.white,
             color,
-            alpha: 1.0,
-            shadow: true,
-            obfuscation_seed: 0,
+            ..TextPaint::new(self.font, self.font_textures, self.white)
         }
     }
 

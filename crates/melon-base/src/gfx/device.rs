@@ -63,6 +63,7 @@ pub unsafe fn create(
         .queue_family_index(gpu.queue_family)
         .queue_priorities(&queue_priorities)];
     let device = create_with(instance, gpu.physical, &queue_infos, features)?;
+    crate::gfx::vk_util::set_allocation_limit(gpu.limits.max_memory_allocation_count);
     let queue = device.get_device_queue(gpu.queue_family, 0);
     Ok((device, queue))
 }

@@ -295,7 +295,7 @@ fn standalone(renderer: &mut Renderer, assets: &Assets, id: &str) -> anyhow::Res
     }
 }
 
-/// `MenuTabBar.MenuTabButton.SPRITES`, in `WidgetSprites` order:
+/// `MenuTabBar.MenuTabButton.SPRITES`, in `WidgetSprites` order.
 fn load_tabs(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<TabTextures> {
     let mut tab = |name: &str| {
         load(

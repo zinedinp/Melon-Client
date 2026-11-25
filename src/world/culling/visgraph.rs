@@ -170,6 +170,7 @@ fn faces_of_row(filled: u16, y: usize, z: usize) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::xorshift::XorShift;
 
     /// Index steps in `Section.blocks` order (`y*256 + z*16 + x`), by direction.
     const INDEX_STEP: [isize; 6] = [-256, 256, -16, 16, -1, 1];
@@ -267,13 +268,8 @@ mod tests {
 
     #[test]
     fn row_fill_matches_the_block_fill() {
-        let mut state = 0x9e37_79b9_7f4a_7c15u64;
-        let mut next = move || {
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-            state
-        };
+        let mut rng = XorShift(0x9e37_79b9_7f4a_7c15);
+        let mut next = move || rng.next_u64();
         for round in 0..400 {
             let density = [10, 30, 45, 55, 60, 65, 70, 80, 90][round % 9];
             let cells: Vec<bool> = (0..CELLS)

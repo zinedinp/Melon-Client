@@ -324,7 +324,7 @@ impl InWorld {
         );
     }
 
-    /// `ClientboundLevelEventPacket`: `LevelEventHandler.levelEvent`'s
+    /// `ClientboundLevelEventPacket`: `LevelEventHandler.levelEvent`'s sounds.
     pub(super) fn on_level_event(&mut self, event: LevelEvent) {
         let at = block_center(event.pos);
         let sound = if event.event == BREAK_BLOCK {

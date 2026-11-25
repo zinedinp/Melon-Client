@@ -1,4 +1,4 @@
-//! Vanilla `PlayerModel` and the parts of `AvatarRenderer` that place it:
+//! Vanilla `PlayerModel` and the parts of `AvatarRenderer` that place it.
 
 use glam::{Mat4, Vec3};
 

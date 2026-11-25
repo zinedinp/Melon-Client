@@ -95,7 +95,7 @@ impl Font {
     }
 }
 
-/// The texture ids an atlas sprite is looked for under (`AtlasIds`' sources:
+/// The texture ids an atlas sprite is looked for under (`AtlasIds`' sources).
 fn folders(atlas: &str) -> &'static [&'static str] {
     match atlas {
         "minecraft:gui" => &["gui/sprites/", ""],

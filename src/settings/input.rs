@@ -61,7 +61,7 @@ impl InputBind {
         mouse_name(button).map(Self::new)
     }
 
-    /// `KeyMapping.getTranslatedKeyMessage` (`InputConstants.Type`'s
+    /// `KeyMapping.getTranslatedKeyMessage` (by `InputConstants.Type`).
     pub fn label<'a>(&'a self, lang: &'a Lang) -> Cow<'a, str> {
         if let Some(number) = self.name.strip_prefix("key.mouse.")
             && number.parse::<u8>().is_ok()

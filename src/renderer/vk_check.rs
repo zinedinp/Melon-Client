@@ -2,7 +2,7 @@
 
 use super::{
     globals, indirect, pipeline, quad_table,
-    vk_util::{PassStart, create_render_pass, find_depth_format},
+    vk_util::{self, PassStart, create_render_pass, find_depth_format},
 };
 use ash::vk;
 use melon_base::gfx::{api, device, features};
@@ -443,7 +443,7 @@ fn post_chains_pass_validation() {
         let free = |t: Texture| {
             device.destroy_image_view(t.view, None);
             device.destroy_image(t.image, None);
-            device.free_memory(t.memory, None);
+            vk_util::free_memory(device, t.memory);
         };
         let failed = post.set_chains(device, &mem_props, gui_layout, prepared, &free);
         assert!(failed.is_empty(), "chains failed: {failed:?}");
@@ -460,7 +460,7 @@ fn post_chains_pass_validation() {
         post.destroy(device, &free);
         device.destroy_image_view(view, None);
         device.destroy_image(image, None);
-        device.free_memory(memory, None);
+        vk_util::free_memory(device, memory);
         device.destroy_descriptor_set_layout(gui_layout, None);
         for pass in [scene, split, resume] {
             device.destroy_render_pass(pass, None);
@@ -577,7 +577,7 @@ fn texture_pools_grow_and_compact() {
             pools.free(device, tex.descriptor_set);
             device.destroy_image_view(tex.view, None);
             device.destroy_image(tex.image, None);
-            device.free_memory(tex.memory, None);
+            vk_util::free_memory(device, tex.memory);
         }
         assert!(pools.needs_compaction());
         pools
@@ -594,7 +594,7 @@ fn texture_pools_grow_and_compact() {
             pools.free(device, tex.descriptor_set);
             device.destroy_image_view(tex.view, None);
             device.destroy_image(tex.image, None);
-            device.free_memory(tex.memory, None);
+            vk_util::free_memory(device, tex.memory);
         }
         pools.free(device, sets[0]);
         pools.destroy(device);
@@ -773,7 +773,7 @@ fn queued_texture_uploads_land_without_waiting() {
             pools.free(device, tex.descriptor_set);
             device.destroy_image_view(tex.view, None);
             device.destroy_image(tex.image, None);
-            device.free_memory(tex.memory, None);
+            vk_util::free_memory(device, tex.memory);
         }
         pools.destroy(device);
         device.destroy_sampler(sampler, None);
@@ -1003,7 +1003,7 @@ fn written_and_copied_meshes_land() {
             assert!(landed == as_bytes(&quads), "direct {direct}: mesh differs");
             device.free_command_buffers(command_pool, &cmds);
             device.destroy_buffer(readback, None);
-            device.free_memory(memory, None);
+            vk_util::free_memory(device, memory);
             arena.destroy(device);
         }
         device.destroy_command_pool(command_pool, None);
@@ -1127,7 +1127,7 @@ unsafe fn read_back(
     device.unmap_memory(memory);
     device.free_command_buffers(command_pool, &[cmd]);
     device.destroy_buffer(buffer, None);
-    device.free_memory(memory, None);
+    vk_util::free_memory(device, memory);
     image::RgbaImage::from_raw(width, height, bytes).expect("pixels")
 }
 
@@ -1194,21 +1194,20 @@ fn occlusion_culls_what_the_depth_hides() {
             )
             .expect("depth image");
         let req = device.get_image_memory_requirements(depth);
-        let depth_memory = device
-            .allocate_memory(
-                &vk::MemoryAllocateInfo::default()
-                    .allocation_size(req.size)
-                    .memory_type_index(
-                        super::find_memory_type(
-                            &mem_props,
-                            req.memory_type_bits,
-                            vk::MemoryPropertyFlags::DEVICE_LOCAL,
-                        )
-                        .expect("memory type"),
-                    ),
-                None,
-            )
-            .expect("depth memory");
+        let depth_memory = vk_util::allocate_memory(
+            device,
+            &vk::MemoryAllocateInfo::default()
+                .allocation_size(req.size)
+                .memory_type_index(
+                    super::find_memory_type(
+                        &mem_props,
+                        req.memory_type_bits,
+                        vk::MemoryPropertyFlags::DEVICE_LOCAL,
+                    )
+                    .expect("memory type"),
+                ),
+        )
+        .expect("depth memory");
         device
             .bind_image_memory(depth, depth_memory, 0)
             .expect("bind depth");
@@ -1375,10 +1374,10 @@ fn occlusion_culls_what_the_depth_hides() {
         ] {
             device.unmap_memory(memory);
             device.destroy_buffer(buffer, None);
-            device.free_memory(memory, None);
+            vk_util::free_memory(device, memory);
         }
         device.destroy_image(depth, None);
-        device.free_memory(depth_memory, None);
+        vk_util::free_memory(device, depth_memory);
         device.destroy_command_pool(command_pool, None);
     }
     let messages = messages();

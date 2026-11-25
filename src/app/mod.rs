@@ -116,7 +116,7 @@ struct RunningState {
     window: Window,
     env: Env,
     screens: ScreenStack,
-    /// 3D scene behind the menus. `None` if cubemap textures are missing:
+    /// 3D scene behind the menus. `None` if cubemap textures are missing.
     background: Option<Panorama>,
     /// Uploaded on the first join and kept, since the renderer can't free all of it.
     world_resources: Option<WorldResources>,
@@ -396,7 +396,7 @@ impl RunningState {
         self.screens.close_top(self.world.is_some(), &ctx);
     }
 
-    /// The server's packets this frame changed whether the player is alive:
+    /// Handles what this frame's packets changed: a rejoin, the player dying or respawning.
     fn after_receive(&mut self, mut received: crate::game::Received) {
         if let Some((info, events)) = received.rejoined.take()
             && let Some(world) = self.world.take()

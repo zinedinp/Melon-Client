@@ -4,7 +4,7 @@
 use anyhow::Result;
 
 use crate::component::Component;
-use crate::network::protocol::reader::Reader;
+use crate::network::protocol::reader::{Reader, initial_capacity};
 
 /// `ServerLinks.KnownLinkType`, by its wire id.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -82,8 +82,8 @@ impl ServerLink {
 /// that are not http(s) are dropped.
 pub fn read(body: &[u8]) -> Result<Vec<ServerLink>> {
     let mut r = Reader::new(body);
-    let count = r.var_int()?.clamp(0, 1 << 10) as usize;
-    let mut links = Vec::with_capacity(count);
+    let count = r.list_count()?;
+    let mut links = Vec::with_capacity(initial_capacity(count));
     for _ in 0..count {
         let kind = if r.bool()? {
             Ok(KnownLink::by_id(r.var_int()?))

@@ -169,7 +169,7 @@ pub enum Mode {
     SkyDisc,
     /// What lies over the sky and under the sun.
     SkyGlow,
-    /// The cracks on a block being broken (`RenderPipelines.CRUMBLING`):
+    /// The cracks on a block being broken (`RenderPipelines.CRUMBLING`).
     Crumbling,
     /// The boat's water patch (`RenderPipelines.WATER_MASK`).
     WaterMask,

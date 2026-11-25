@@ -1,11 +1,15 @@
 //! A 16³ light layer's packed nibbles, unpacked many at a time: each byte
 //! holds two 4-bit levels (even index low, odd high), the same order
 //! [`crate::world::chunk::LightSection::get`] reads. Written once against
-//! [`Bytes`]
+//! [`Bytes`].
 
+#[cfg(any(
+    target_arch = "x86_64",
+    all(target_arch = "aarch64", target_endian = "little")
+))]
 use crate::math::bytes::Bytes;
 use crate::math::simd::{self, ByteTier};
-use crate::world::chunk::LIGHT_NIBBLES;
+use crate::world::chunk::{LIGHT_NIBBLES, nibble};
 use crate::world::section::BLOCKS_PER_SECTION;
 
 /// Packed nibbles (`LIGHT_NIBBLES` bytes) to one level per block.
@@ -32,12 +36,15 @@ pub fn unpack_on(tier: ByteTier, packed: &[u8; LIGHT_NIBBLES], out: &mut [u8; BL
 
 fn unpack_scalar(packed: &[u8; LIGHT_NIBBLES], out: &mut [u8; BLOCKS_PER_SECTION]) {
     for (i, slot) in out.iter_mut().enumerate() {
-        let byte = packed[i >> 1];
-        *slot = if i & 1 == 0 { byte & 15 } else { byte >> 4 };
+        *slot = nibble(packed, i);
     }
 }
 
 /// [`unpack`]'s loop: a register of 4-bit fields a step.
+#[cfg(any(
+    target_arch = "x86_64",
+    all(target_arch = "aarch64", target_endian = "little")
+))]
 #[inline(always)]
 pub(super) fn unpack_with<B: Bytes>(
     b: B,
@@ -53,25 +60,15 @@ pub(super) fn unpack_with<B: Bytes>(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    struct Noise(u64);
-
-    impl Noise {
-        fn next(&mut self) -> u64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            self.0
-        }
-    }
+    use crate::util::xorshift::XorShift;
 
     #[test]
     fn every_tier_unpacks_as_the_scalar_code() {
-        let mut noise = Noise(0x2545_F491_4F6C_DD1D);
+        let mut noise = XorShift(0x2545_F491_4F6C_DD1D);
         for _ in 0..8 {
             let mut packed = [0u8; LIGHT_NIBBLES];
             for byte in &mut packed {
-                *byte = noise.next() as u8;
+                *byte = noise.next_u64() as u8;
             }
             let mut expected = [0u8; BLOCKS_PER_SECTION];
             unpack_on(ByteTier::Scalar, &packed, &mut expected);

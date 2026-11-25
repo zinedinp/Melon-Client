@@ -6,7 +6,7 @@
 //! (`n.y·c.y + d + |n|·half`, the same in every column, worked out once a
 //! frame) and one that depends only on the column (`n.x·c.x + n.z·c.z`).
 //! Per column that leaves one compare per plane and section: eight sections
-//! a register on AVX ([`crate::math::x86::cull`]), one at a time otherwise.
+//! a register on AVX ([`super::x86::section_cull`]), one at a time otherwise.
 //! The fog's nearest-point test splits the same way.
 
 use glam::{IVec3, Vec3};
@@ -35,7 +35,7 @@ pub struct SectionCull {
     eye_block: IVec3,
     eye_fraction: Vec3,
     #[cfg(target_arch = "x86_64")]
-    avx: Option<crate::math::x86::cull::CullAvx>,
+    avx: Option<super::x86::section_cull::CullAvx>,
 }
 
 impl SectionCull {
@@ -71,7 +71,7 @@ impl SectionCull {
             eye_block,
             eye_fraction,
             #[cfg(target_arch = "x86_64")]
-            avx: crate::math::x86::cull::CullAvx::new(),
+            avx: super::x86::section_cull::CullAvx::new(),
         }
     }
 
@@ -91,7 +91,7 @@ impl SectionCull {
             .map(|(_, end)| end - nearest(cx).powi(2) - nearest(cz).powi(2));
         #[cfg(target_arch = "x86_64")]
         if let Some(avx) = self.avx {
-            return crate::math::x86::cull::column(avx, self, &least, fog_room);
+            return super::x86::section_cull::column(avx, self, &least, fog_room);
         }
         self.column_scalar(&least, fog_room)
     }
@@ -131,31 +131,24 @@ mod tests {
     use glam::{DVec3, Mat4};
 
     use super::*;
+    use crate::util::xorshift::XorShift;
     use crate::world::culling::frustum::Frustum;
     use crate::world::culling::{CullSettings, Culler};
-
-    /// A tiny xorshift, so the boxes are the same every run.
-    fn random(state: &mut u64) -> f64 {
-        *state ^= *state << 13;
-        *state ^= *state >> 7;
-        *state ^= *state << 17;
-        (*state >> 11) as f64 / (1u64 << 53) as f64
-    }
 
     /// Every column of a view, by section, gives what the box test of
     /// each section gives; on every tier.
     #[test]
     fn columns_match_the_section_by_section_test() {
-        let mut state = 0x9E37_79B9_7F4A_7C15;
+        let mut state = XorShift(0x9E37_79B9_7F4A_7C15);
         let (mut checked, mut seen) = (0, 0);
         for round in 0..64 {
             let eye = DVec3::new(
-                random(&mut state) * 4000.0 - 2000.0,
-                random(&mut state) * 300.0 - 64.0,
-                random(&mut state) * 4000.0 - 2000.0,
+                state.next_f64() * 4000.0 - 2000.0,
+                state.next_f64() * 300.0 - 64.0,
+                state.next_f64() * 4000.0 - 2000.0,
             );
-            let yaw = random(&mut state) as f32 * std::f32::consts::TAU;
-            let pitch = (random(&mut state) as f32 - 0.5) * 3.0;
+            let yaw = state.next_f64() as f32 * std::f32::consts::TAU;
+            let pitch = (state.next_f64() as f32 - 0.5) * 3.0;
             let view = Mat4::from_rotation_x(pitch) * Mat4::from_rotation_y(yaw);
             let projection = crate::renderer::world_projection(70.0, 16.0 / 9.0, 512.0);
             let settings = CullSettings {
@@ -170,7 +163,7 @@ mod tests {
                 settings,
             );
             if round % 3 != 0 {
-                culler = culler.with_fog(96.0 + random(&mut state) as f32 * 300.0);
+                culler = culler.with_fog(96.0 + state.next_f64() as f32 * 300.0);
             }
             let cull = culler.section_cull();
             let (ex, ez) = ((eye.x / 16.0).floor() as i32, (eye.z / 16.0).floor() as i32);

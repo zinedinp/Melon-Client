@@ -56,7 +56,7 @@ pub enum Glow {
     World,
     /// `15728880`: full block and sky light (explosions, sweeps).
     Full,
-    /// Block light raised to 15 (`LightCoordsUtil.withBlock(.., 15)`):
+    /// Block light raised to 15 (`LightCoordsUtil.withBlock(.., 15)`).
     Block,
     /// `addSmoothBlockEmission` by `age / lifetime` (flames, glow).
     Emission,

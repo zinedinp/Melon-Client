@@ -286,7 +286,7 @@ impl Entities {
         }
     }
 
-    /// Which wolves are angry at `game_time` (`NeutralMob.isAngry`.
+    /// Which wolves are angry at `game_time` (`NeutralMob.isAngry`).
     pub fn update_anger(&mut self, game_time: i64) {
         for entity in self.by_id.values_mut() {
             if entity.kind == EntityKind::Wolf {

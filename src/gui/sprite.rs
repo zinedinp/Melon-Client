@@ -154,7 +154,7 @@ impl GuiSprite {
         self.schedule.len() > 1
     }
 
-    /// The frame showing now (vanilla ticks the GUI atlas with the client:
+    /// The frame showing now (vanilla ticks the GUI atlas with the client).
     fn frame_origin(&self) -> [f32; 2] {
         let period: u64 = self.schedule.iter().map(|&(_, t)| u64::from(t)).sum();
         let frame = if period == 0 {

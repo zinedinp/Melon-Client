@@ -320,7 +320,7 @@ impl InWorld {
         }
     }
 
-    /// `LocalPlayer.sendIsSprintingIfNeeded` and the input packet:
+    /// `LocalPlayer.sendIsSprintingIfNeeded` and the input packet.
     pub(super) fn send_input(&mut self, input: player::MoveInput) {
         let keys = keys::player_input(input);
         if keys != self.sent.input || self.sent.input_dirty {

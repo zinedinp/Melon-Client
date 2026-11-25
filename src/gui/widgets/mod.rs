@@ -224,15 +224,7 @@ impl<'a> Ui<'a> {
             .into_iter()
             .map(|line| crate::gui::text::StyledText::plain(&line))
             .collect();
-        let paint = crate::gui::text::TextPaint {
-            font: &self.assets.font,
-            pages: &self.assets.font_textures,
-            white: self.assets.white,
-            color: crate::gui::text::colors::WHITE,
-            alpha: 1.0,
-            shadow: true,
-            obfuscation_seed: 0,
-        };
+        let paint = self.paint(crate::gui::text::colors::WHITE);
         let at = tooltip::by_widget(
             mouse,
             widget,
@@ -250,13 +242,12 @@ impl<'a> Ui<'a> {
 
     fn paint(&self, color: [f32; 3]) -> crate::gui::text::TextPaint<'a> {
         crate::gui::text::TextPaint {
-            font: &self.assets.font,
-            pages: &self.assets.font_textures,
-            white: self.assets.white,
             color,
-            alpha: 1.0,
-            shadow: true,
-            obfuscation_seed: 0,
+            ..crate::gui::text::TextPaint::new(
+                &self.assets.font,
+                &self.assets.font_textures,
+                self.assets.white,
+            )
         }
     }
 

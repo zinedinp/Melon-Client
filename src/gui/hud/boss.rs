@@ -168,13 +168,8 @@ impl BossBars {
                 }
             }
             let paint = TextPaint {
-                font: painter.font,
-                pages: painter.font_textures,
-                white: painter.white,
-                color: colors::WHITE,
-                alpha: 1.0,
-                shadow: true,
                 obfuscation_seed: u64::from(seed),
+                ..painter.paint(colors::WHITE)
             };
             let text_width = text::width(painter.font, &bar.name);
             let x = (size.0 / 2.0).floor() - (text_width / 2.0).floor();

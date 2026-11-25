@@ -6,6 +6,7 @@ use pumpkin_util::version::JavaMinecraftVersion;
 use serde_json::Value;
 
 use crate::network::protocol::packet::Reader;
+use crate::network::protocol::reader::initial_capacity;
 use crate::world::biome::{Biome, Biomes};
 use crate::world::dimension::{DimensionType, DimensionTypes};
 
@@ -34,8 +35,8 @@ impl WorldRegistries {
 }
 
 fn read_dimension_types(r: &mut Reader) -> Result<DimensionTypes> {
-    let count = r.var_int()?.clamp(0, 1 << 12) as usize;
-    let mut types = Vec::with_capacity(count);
+    let count = r.list_count()?;
+    let mut types = Vec::with_capacity(initial_capacity(count));
     for _ in 0..count {
         let name = r.string()?;
         let base = DimensionType::built_in(&name).unwrap_or_else(DimensionType::overworld);
@@ -49,8 +50,8 @@ fn read_dimension_types(r: &mut Reader) -> Result<DimensionTypes> {
 }
 
 fn read_damage_effects(r: &mut Reader) -> Result<std::sync::Arc<[String]>> {
-    let count = r.var_int()?.clamp(0, 1 << 12) as usize;
-    let mut effects = Vec::with_capacity(count);
+    let count = r.list_count()?;
+    let mut effects = Vec::with_capacity(initial_capacity(count));
     for _ in 0..count {
         let _name = r.string()?;
         let json = read_entry(r)?;
@@ -65,8 +66,8 @@ fn read_damage_effects(r: &mut Reader) -> Result<std::sync::Arc<[String]>> {
 }
 
 fn read_biomes(r: &mut Reader) -> Result<Biomes> {
-    let count = r.var_int()?.clamp(0, 1 << 12) as usize;
-    let mut biomes = Vec::with_capacity(count);
+    let count = r.list_count()?;
+    let mut biomes = Vec::with_capacity(initial_capacity(count));
     for _ in 0..count {
         let name = r.string()?;
         let biome = read_entry(r)?.map_or_else(Biome::default, |json| Biome::from_json(&json));

@@ -45,10 +45,7 @@ pub struct ServerStatus {
 }
 
 pub fn ping(addr: &str) -> Result<ServerStatus> {
-    let (host, port) = match addr.rsplit_once(':') {
-        Some((host, port)) => (host, port.parse().context("invalid port")?),
-        None => (addr, 25565),
-    };
+    let (host, port) = super::login::resolver::parse_address(addr).ok_or(CannotResolve)?;
     let targets = super::login::resolver::resolve(host, port)?.addrs;
     let connect = || -> Result<TcpStream> {
         let stream = targets

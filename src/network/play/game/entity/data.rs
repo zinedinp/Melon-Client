@@ -6,6 +6,7 @@ use pumpkin_data::item_stack::ItemStack;
 use pumpkin_data::meta_data_type::MetaDataType as T;
 
 use crate::network::protocol::packet::Reader;
+use crate::network::protocol::reader::initial_capacity;
 
 /// A value Melon keeps.
 #[derive(Clone)]
@@ -172,7 +173,7 @@ impl DataValue {
     }
 }
 
-/// The values of one packet's list, by index, as far as they can be read:
+/// The values of one packet's list, by index, as far as they can be read.
 pub fn read_entity_data(r: &mut Reader<'_>) -> Vec<(u8, DataValue)> {
     let mut values = Vec::new();
     while let Ok(index) = r.u8() {
@@ -270,8 +271,8 @@ fn read_value(r: &mut Reader<'_>, ty: i32) -> Result<Option<DataValue>> {
         }
         PARTICLE => DataValue::Particles(vec![r.particle()?]),
         PARTICLES => {
-            let count = r.var_int()?.clamp(0, 256);
-            let mut list = Vec::with_capacity(count as usize);
+            let count = r.list_count()?;
+            let mut list = Vec::with_capacity(initial_capacity(count));
             for _ in 0..count {
                 list.push(r.particle()?);
             }

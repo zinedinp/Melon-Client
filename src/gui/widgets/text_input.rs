@@ -287,7 +287,7 @@ impl TextInput {
         at.min(self.chars.len())
     }
 
-    /// `EditBox.onClick` at `x` pixels right of where the text starts:
+    /// `EditBox.onClick` at `x` pixels right of where the text starts.
     pub fn click(&mut self, x: f32, shift: bool) {
         let now = Instant::now();
         let double = self

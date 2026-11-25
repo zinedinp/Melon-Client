@@ -116,7 +116,7 @@ impl NetStats {
 }
 
 impl NetTotals {
-    /// Per second between `earlier` and `self`, `seconds` apart:
+    /// Rates per second between `earlier` and `self`, `seconds` apart.
     pub fn rates_since(&self, earlier: &NetTotals, seconds: f64) -> (f64, f64, f64, f64) {
         let per = |now: u64, then: u64| now.saturating_sub(then) as f64 / seconds.max(1e-9);
         (

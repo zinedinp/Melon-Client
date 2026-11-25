@@ -34,7 +34,8 @@ impl Source {
         }
     }
 
-    /// Every file below the folder `prefix` (ending in `/`), as names relative to the pack.
+    /// Every file below the folder `prefix` (ending in `/`), as names relative to the pack
+    /// (`PathPackResources.listPath` for a folder).
     fn list(&self, prefix: &str, out: &mut BTreeSet<String>) {
         match self {
             Self::Folder(root) => {
@@ -44,15 +45,31 @@ impl Source {
                         continue;
                     };
                     for entry in entries.flatten() {
+                        // `DirEntry::file_type` doesn't follow links, so a link loop can't hang.
+                        let Ok(kind) = entry.file_type() else {
+                            continue;
+                        };
                         let path = entry.path();
-                        if path.is_dir() {
+                        if kind.is_dir() {
                             stack.push(path);
-                        } else if let Ok(rel) = path.strip_prefix(root) {
-                            let parts: Vec<_> = rel
+                        } else if kind.is_file()
+                            && let Ok(rel) = path.strip_prefix(root)
+                        {
+                            let name = rel
                                 .components()
-                                .filter_map(|c| c.as_os_str().to_str())
-                                .collect();
-                            out.insert(parts.join("/"));
+                                .map(|c| c.as_os_str().to_str())
+                                .collect::<Option<Vec<_>>>()
+                                .map(|parts| parts.join("/"));
+                            match name {
+                                Some(name) if valid_path(&name) => {
+                                    out.insert(name);
+                                }
+                                _ => crate::warn!(
+                                    "Invalid path in pack {}: {}, ignoring",
+                                    root.display(),
+                                    rel.display()
+                                ),
+                            }
                         }
                     }
                 }
@@ -307,7 +324,7 @@ impl ResourceStack {
         found
     }
 
-    /// The paths (relative to `namespace`) of every file under `dir/`
+    /// The paths (relative to `namespace`) of every file under `dir/`, all layers merged.
     pub fn list(&self, root: &Path, namespace: &str, dir: &str) -> BTreeSet<String> {
         let mut out = BTreeSet::new();
         if !valid_namespace(namespace) || !valid_path(dir) {
@@ -474,6 +491,34 @@ mod tests {
         assert_eq!(events.len(), 2, "x merged, y added");
         assert!(stack.namespaces(&vanilla).contains("minecraft"));
         std::fs::remove_dir_all(&game).ok();
+    }
+
+    /// A folder lists its valid names only and doesn't walk into a link back to itself.
+    #[test]
+    fn folder_listing_skips_bad_names_and_links() {
+        let dir = std::env::temp_dir().join(format!("melon-pack-links-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let pack = folder_pack(
+            &dir,
+            "p",
+            r#"{"pack":{"description":"","pack_format":97}}"#,
+            &[
+                ("assets/minecraft/texts/a.txt", "a"),
+                ("assets/minecraft/texts/Upper.txt", "bad"),
+            ],
+        );
+        let texts = dir.join("p/assets/minecraft/texts");
+        #[cfg(windows)]
+        let linked = std::os::windows::fs::symlink_dir(&texts, texts.join("loop")).is_ok();
+        #[cfg(unix)]
+        let linked = std::os::unix::fs::symlink(&texts, texts.join("loop")).is_ok();
+        let mut out = BTreeSet::new();
+        pack.list("minecraft", "texts", &mut out);
+        assert_eq!(out.into_iter().collect::<Vec<_>>(), ["texts/a.txt"]);
+        if !linked {
+            eprintln!("no symlink made (no permission): only the names were checked");
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

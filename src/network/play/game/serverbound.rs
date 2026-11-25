@@ -71,7 +71,7 @@ fn write_hashed_stack(buf: &mut Vec<u8>, stack: &ItemStack) -> Result<()> {
     Ok(())
 }
 
-/// `ServerboundPlayerActionPacket.Action`, 26.3 numbering
+/// `ServerboundPlayerActionPacket.Action`, 26.3 numbering.
 #[derive(Clone, Copy)]
 pub enum PlayerAction {
     StartDestroyBlock = 0,

@@ -10,7 +10,7 @@ use crate::renderer::CornerLight;
 use crate::world::block::ao_flags::{self, AoFlags};
 use crate::world::block::direction::Direction;
 use crate::world::block_models::ao_shape::AoShape;
-use crate::world::chunk::{LIGHT_NIBBLES, LightSection};
+use crate::world::chunk::{LIGHT_NIBBLES, LightSection, nibble};
 use crate::world::nibble_decode;
 use crate::world::section::{BLOCKS_PER_SECTION, Section};
 use crate::world::terrain::Neighborhood;
@@ -311,7 +311,7 @@ impl LightCache {
                 Levels::Nibbles(data) => {
                     for (out, (i, _)) in out.chunks_exact_mut(width).zip(overlap.rows()) {
                         for (o, i) in out.iter_mut().zip(i..) {
-                            *o = data[i >> 1] >> ((i & 1) * 4) & 15;
+                            *o = nibble(data, i);
                         }
                     }
                 }

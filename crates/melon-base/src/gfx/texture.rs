@@ -4,8 +4,8 @@ use ash::vk;
 use image::RgbaImage;
 
 use super::descriptor_pools::DescriptorPools;
-use super::find_memory_type;
 use super::texture_update::PendingInit;
+use super::{find_memory_type, vk_util};
 
 #[derive(Clone, Copy)]
 pub struct Texture {
@@ -115,7 +115,7 @@ impl Uploader<'_> {
                 device.destroy_image(made.image, None);
             }
             if made.memory != vk::DeviceMemory::null() {
-                device.free_memory(made.memory, None);
+                vk_util::free_memory(device, made.memory);
             }
         }
         let texture = result?;
@@ -163,7 +163,8 @@ impl Uploader<'_> {
         let image = device.create_image(&image_info, None)?;
         made.image = image;
         let image_req = device.get_image_memory_requirements(image);
-        let memory = device.allocate_memory(
+        let memory = vk_util::allocate_memory(
+            device,
             &vk::MemoryAllocateInfo::default()
                 .allocation_size(image_req.size)
                 .memory_type_index(find_memory_type(
@@ -171,7 +172,6 @@ impl Uploader<'_> {
                     image_req.memory_type_bits,
                     vk::MemoryPropertyFlags::DEVICE_LOCAL,
                 )?),
-            None,
         )?;
         made.memory = memory;
         device.bind_image_memory(image, memory, 0)?;

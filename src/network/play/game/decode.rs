@@ -7,6 +7,7 @@ use pumpkin_protocol::codec::item_stack_seralizer::ItemStackSerializer;
 
 use super::id;
 use crate::network::protocol::packet::Reader;
+use crate::network::protocol::reader::initial_capacity;
 use crate::world::border::BorderUpdate;
 use crate::world::clock::ClockUpdate;
 use crate::world::game_mode::GameMode;
@@ -112,7 +113,7 @@ pub enum GameEvent {
         entity: i32,
         action: u8,
     },
-    /// `ClientboundBlockUpdatePacket` and `ClientboundSectionBlocksUpdatePacket`:
+    /// `ClientboundBlockUpdatePacket` and `ClientboundSectionBlocksUpdatePacket`.
     BlocksChanged(Vec<([i32; 3], u16)>),
     /// `ClientboundBlockChangedAckPacket`.
     BlockChangedAck(i32),
@@ -255,8 +256,8 @@ mod player_info {
 fn read_player_info(r: &mut Reader) -> Result<Vec<PlayerInfoUpdate>> {
     use player_info::*;
     let actions = r.u8()?;
-    let count = r.var_int()?.clamp(0, 4096);
-    let mut players = Vec::with_capacity(count as usize);
+    let count = r.list_count()?;
+    let mut players = Vec::with_capacity(initial_capacity(count));
     for _ in 0..count {
         let mut update = PlayerInfoUpdate {
             uuid: r.uuid()?,
@@ -264,7 +265,7 @@ fn read_player_info(r: &mut Reader) -> Result<Vec<PlayerInfoUpdate>> {
         };
         if actions & ADD_PLAYER != 0 {
             update.name = Some(r.string()?);
-            for _ in 0..r.var_int()?.clamp(0, 16) {
+            for _ in 0..r.count(16)? {
                 let name = r.string()?;
                 let value = r.string()?;
                 if r.bool()? {
@@ -278,9 +279,9 @@ fn read_player_info(r: &mut Reader) -> Result<Vec<PlayerInfoUpdate>> {
         if actions & INITIALIZE_CHAT != 0 && r.bool()? {
             let _session = r.uuid()?;
             let _expires = r.i64_be()?;
-            let key = r.var_int()?.max(0) as usize;
+            let key = r.count(512)?;
             r.skip(key)?;
-            let signature = r.var_int()?.max(0) as usize;
+            let signature = r.count(4096)?;
             r.skip(signature)?;
         }
         if actions & UPDATE_GAME_MODE != 0 {
@@ -333,8 +334,8 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
         id::CB_CONTAINER_SET_CONTENT => {
             let container = r.var_int()?;
             let state_id = r.var_int()?;
-            let count = r.var_int()?.clamp(0, 4096) as usize;
-            let mut slots = Vec::with_capacity(count);
+            let count = r.list_count()?;
+            let mut slots = Vec::with_capacity(initial_capacity(count));
             for _ in 0..count {
                 slots.push(r.item_stack()?);
             }
@@ -496,7 +497,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
                 (section << 44 >> 44) as i32 * 16,
                 (section << 22 >> 42) as i32 * 16,
             ];
-            let count = r.var_int()?.max(0) as usize;
+            let count = r.list_count()?;
             let mut changes = Vec::with_capacity(count.min(4096));
             for _ in 0..count {
                 let entry = r.var_long()?;
@@ -573,8 +574,8 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
             }
         }
         id::CB_PLAYER_INFO_REMOVE => {
-            let count = r.var_int()?.clamp(0, 4096);
-            let mut removed = Vec::with_capacity(count as usize);
+            let count = r.list_count()?;
+            let mut removed = Vec::with_capacity(initial_capacity(count));
             for _ in 0..count {
                 removed.push(r.uuid()?);
             }
@@ -582,8 +583,8 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
         }
         id::CB_SET_TIME => {
             let game_time = r.i64_be()?;
-            let count = r.var_int()?.clamp(0, 256) as usize;
-            let mut clocks = Vec::with_capacity(count);
+            let count = r.list_count()?;
+            let mut clocks = Vec::with_capacity(initial_capacity(count));
             for _ in 0..count {
                 clocks.push(ClockUpdate {
                     id: r.var_int()?,
@@ -623,8 +624,8 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
 impl Reader<'_> {
     /// `ItemStack.OPTIONAL_STREAM_CODEC`, through Pumpkin's decoder.
     pub fn merchant_offers(&mut self) -> Result<Offers> {
-        let count = self.var_int()?.clamp(0, 256) as usize;
-        let mut offers = Vec::with_capacity(count);
+        let count = self.list_count()?;
+        let mut offers = Vec::with_capacity(initial_capacity(count));
         for _ in 0..count {
             let base_cost_a = self.item_cost()?;
             let result = self.item_stack()?;

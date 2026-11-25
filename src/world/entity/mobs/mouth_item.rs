@@ -18,7 +18,7 @@ pub fn dolphin(root: Mat4, x_rot: f32) -> Mat4 {
 /// How a fox holds it.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FoxMouth {
-    /// The head part's position this frame, in blocks (`head.x / 16`...):
+    /// The head part's position this frame, in blocks (`head.x / 16`...).
     pub head: Vec3,
     pub baby: bool,
     pub sleeping: bool,

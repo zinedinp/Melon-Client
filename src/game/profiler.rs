@@ -16,7 +16,7 @@ pub struct FrameProfiler {
     frame_ms: f32,
     started: Instant,
     last: Instant,
-    /// The current (after [`Self::end`].
+    /// This frame's timings so far; after [`Self::end`], the finished frame's.
     frame: Vec<(&'static str, f32)>,
     frame_total_ms: f32,
     /// When the last frame ended.

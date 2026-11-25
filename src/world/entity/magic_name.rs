@@ -1,4 +1,4 @@
-//! The names that change how vanilla draws an entity (`LivingEntityRenderer.
+//! The names that change how vanilla draws an entity (Dinnerbone, Grumm, jeb_, Toast).
 
 /// What a custom name makes a renderer do.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -14,7 +14,7 @@ pub enum Magic {
 }
 
 impl Magic {
-    /// The effect of `name` (`Component.getString`.
+    /// The effect of `name` (`Component.getString`).
     pub fn of(name: &str) -> Self {
         match name {
             "Dinnerbone" | "Grumm" => Self::UpsideDown,

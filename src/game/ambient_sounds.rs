@@ -1,4 +1,4 @@
-//! The sounds the client makes up itself, with no packet asking for them:
+//! The sounds the client makes up itself, with no packet asking for them.
 
 use rand::RngExt;
 

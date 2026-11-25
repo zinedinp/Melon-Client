@@ -8,6 +8,7 @@ use pumpkin_data::item_stack::ItemStack;
 use pumpkin_protocol::codec::item_stack_seralizer::ItemStackSerializer;
 
 use crate::network::protocol::packet::Reader;
+use crate::network::protocol::reader::initial_capacity;
 use crate::network::protocol::varint;
 use crate::world::recipes::book::{BookSettings, Category, Entry, RecipeId, TypeSettings};
 use crate::world::recipes::display::Shown;
@@ -45,7 +46,7 @@ pub fn decode(pid: i32, r: &mut Reader) -> Result<Option<RecipeEvent>> {
     Ok(Some(match pid {
         p if p == cb::UPDATE_RECIPES.0 => RecipeEvent::Update(r.recipe_sets()?),
         p if p == cb::RECIPE_BOOK_ADD.0 => {
-            let count = r.var_int()?.clamp(0, 65_536) as usize;
+            let count = r.list_count()?;
             let mut entries = Vec::with_capacity(count.min(1024));
             for _ in 0..count {
                 let entry = r.recipe_entry()?;
@@ -57,7 +58,7 @@ pub fn decode(pid: i32, r: &mut Reader) -> Result<Option<RecipeEvent>> {
             }
         }
         p if p == cb::RECIPE_BOOK_REMOVE.0 => {
-            let count = r.var_int()?.clamp(0, 65_536) as usize;
+            let count = r.list_count()?;
             let mut ids = Vec::with_capacity(count.min(1024));
             for _ in 0..count {
                 ids.push(RecipeId(r.var_int()?));
@@ -98,7 +99,9 @@ impl Reader<'_> {
         if n == 0 {
             return Ok(ItemSet::Tag(self.string()?));
         }
-        let count = (n - 1).clamp(0, 65_536) as usize;
+        let Ok(count) = usize::try_from(n.wrapping_sub(1)) else {
+            bail!("negative holder set size {}", n.wrapping_sub(1));
+        };
         let mut items = Vec::with_capacity(count.min(1024));
         for _ in 0..count {
             items.push(self.item_by_id()?);
@@ -173,7 +176,7 @@ impl Reader<'_> {
                 }
             }
             10 => {
-                let count = self.var_int()?.clamp(0, 4096) as usize;
+                let count = self.list_count()?;
                 let mut parts = Vec::with_capacity(count.min(64));
                 for _ in 0..count {
                     parts.push(self.slot_display_at(depth + 1)?);
@@ -237,7 +240,7 @@ impl Reader<'_> {
     }
 
     fn slot_displays(&mut self) -> Result<Vec<SlotDisplay>> {
-        let count = self.var_int()?.clamp(0, 4096) as usize;
+        let count = self.list_count()?;
         let mut list = Vec::with_capacity(count.min(64));
         for _ in 0..count {
             list.push(self.slot_display()?);
@@ -258,7 +261,7 @@ impl Reader<'_> {
             bail!("unknown recipe book category {category}");
         };
         let requirements = if self.bool()? {
-            let count = self.var_int()?.clamp(0, 4096) as usize;
+            let count = self.list_count()?;
             let mut sets = Vec::with_capacity(count.min(64));
             for _ in 0..count {
                 sets.push(self.item_set()?);
@@ -278,18 +281,18 @@ impl Reader<'_> {
 
     /// `ClientboundUpdateRecipesPacket.STREAM_CODEC`.
     pub fn recipe_sets(&mut self) -> Result<RecipeSets> {
-        let count = self.var_int()?.clamp(0, 256) as usize;
-        let mut sets = HashMap::with_capacity(count);
+        let count = self.list_count()?;
+        let mut sets = HashMap::with_capacity(initial_capacity(count));
         for _ in 0..count {
             let name = self.string()?;
-            let n = self.var_int()?.clamp(0, 65_536) as usize;
+            let n = self.list_count()?;
             let mut items = Vec::with_capacity(n.min(1024));
             for _ in 0..n {
                 items.push(self.item_by_id()?);
             }
             sets.insert(name, PropertySet::new(items));
         }
-        let count = self.var_int()?.clamp(0, 65_536) as usize;
+        let count = self.list_count()?;
         let mut stonecutter = Vec::with_capacity(count.min(1024));
         for _ in 0..count {
             stonecutter.push(StonecutterOption {

@@ -1,4 +1,4 @@
-//! A biome's ambient particles (`minecraft:visual/ambient_particles`):
+//! A biome's ambient particles (`minecraft:visual/ambient_particles`).
 
 use serde_json::Value;
 

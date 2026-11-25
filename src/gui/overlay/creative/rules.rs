@@ -58,7 +58,7 @@ impl CreativeOverlay {
         changes
     }
 
-    /// A click outside the window with a stack on the cursor drops it:
+    /// A click outside the window with a stack on the cursor drops it.
     fn click_outside(&self, inventory: &mut Inventory, button: i8, changes: &mut CreativeChanges) {
         if !inventory.carried().is_empty() && self.has_clicked_outside {
             if button == 0 {

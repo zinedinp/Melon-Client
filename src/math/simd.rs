@@ -50,25 +50,38 @@ impl Tier {
 
     /// Every tier this CPU can run, widest first, [`Tier::Scalar`] last.
     pub fn available() -> Vec<Tier> {
-        let mut tiers = Vec::new();
-        #[cfg(target_arch = "x86_64")]
-        {
-            let features = miraculix::x86::detect_features();
-            if os_saves_zmm() {
-                tiers.extend(super::x86::lanes::Avx512Lanes::new(features).map(Tier::Avx512));
-            }
-            if os_saves_ymm() {
-                tiers.extend(super::x86::lanes::AvxLanes::new(features).map(Tier::Avx));
-            }
-            tiers.extend(super::x86::lanes::Sse2Lanes::new(features).map(Tier::Sse2));
-        }
-        #[cfg(target_arch = "aarch64")]
-        {
-            let features = miraculix::aarch64::detect_features();
-            tiers.extend(super::aarch64::lanes::NeonLanes::new(features).map(Tier::Neon));
-        }
+        let mut tiers = Self::vector();
         tiers.push(Tier::Scalar);
         tiers
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn vector() -> Vec<Tier> {
+        use super::x86::lanes::{Avx512Lanes, AvxLanes, Sse2Lanes};
+        let features = miraculix::x86::detect_features();
+        let mut tiers = Vec::new();
+        if os_saves_zmm() {
+            tiers.extend(Avx512Lanes::new(features).map(Tier::Avx512));
+        }
+        if os_saves_ymm() {
+            tiers.extend(AvxLanes::new(features).map(Tier::Avx));
+        }
+        tiers.extend(Sse2Lanes::new(features).map(Tier::Sse2));
+        tiers
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    fn vector() -> Vec<Tier> {
+        let features = miraculix::aarch64::detect_features();
+        super::aarch64::lanes::NeonLanes::new(features)
+            .map(Tier::Neon)
+            .into_iter()
+            .collect()
+    }
+
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+    fn vector() -> Vec<Tier> {
+        Vec::new()
     }
 }
 
@@ -112,27 +125,42 @@ impl ByteTier {
     /// Every tier this CPU can run, widest first, [`ByteTier::Scalar`]
     /// last.
     pub fn available() -> Vec<ByteTier> {
-        let mut tiers = Vec::new();
-        #[cfg(target_arch = "x86_64")]
-        {
-            use super::x86::bytes::{Avx2Bytes, Sse2Bytes, Ssse3Bytes, VbmiBytes};
-            let features = miraculix::x86::detect_features();
-            if os_saves_zmm() {
-                tiers.extend(VbmiBytes::new(features).map(ByteTier::Avx512Vbmi));
-            }
-            if os_saves_ymm() {
-                tiers.extend(Avx2Bytes::new(features).map(ByteTier::Avx2));
-            }
-            tiers.extend(Ssse3Bytes::new(features).map(ByteTier::Ssse3));
-            tiers.extend(Sse2Bytes::new(features).map(ByteTier::Sse2));
-        }
-        #[cfg(all(target_arch = "aarch64", target_endian = "little"))]
-        {
-            let features = miraculix::aarch64::detect_features();
-            tiers.extend(super::aarch64::bytes::NeonBytes::new(features).map(ByteTier::Neon));
-        }
+        let mut tiers = Self::vector();
         tiers.push(ByteTier::Scalar);
         tiers
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn vector() -> Vec<ByteTier> {
+        use super::x86::bytes::{Avx2Bytes, Sse2Bytes, Ssse3Bytes, VbmiBytes};
+        let features = miraculix::x86::detect_features();
+        let mut tiers = Vec::new();
+        if os_saves_zmm() {
+            tiers.extend(VbmiBytes::new(features).map(ByteTier::Avx512Vbmi));
+        }
+        if os_saves_ymm() {
+            tiers.extend(Avx2Bytes::new(features).map(ByteTier::Avx2));
+        }
+        tiers.extend(Ssse3Bytes::new(features).map(ByteTier::Ssse3));
+        tiers.extend(Sse2Bytes::new(features).map(ByteTier::Sse2));
+        tiers
+    }
+
+    #[cfg(all(target_arch = "aarch64", target_endian = "little"))]
+    fn vector() -> Vec<ByteTier> {
+        let features = miraculix::aarch64::detect_features();
+        super::aarch64::bytes::NeonBytes::new(features)
+            .map(ByteTier::Neon)
+            .into_iter()
+            .collect()
+    }
+
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        all(target_arch = "aarch64", target_endian = "little")
+    )))]
+    fn vector() -> Vec<ByteTier> {
+        Vec::new()
     }
 }
 
@@ -171,17 +199,22 @@ fn rank(name: &str) -> u32 {
         .map_or(u32::MAX, |&(_, r)| r)
 }
 
-/// The newest tier `MELON_SIMD` allows, if it names one.
-fn rank_cap() -> Option<u32> {
-    let wanted = std::env::var("MELON_SIMD").ok()?;
-    let cap = RANKS
-        .iter()
-        .find(|(name, _)| name.eq_ignore_ascii_case(&wanted))
-        .map(|&(_, r)| r);
-    if cap.is_none() {
-        crate::warn!("MELON_SIMD={wanted} names no tier; taking the widest");
-    }
-    cap
+/// The newest tier rank `MELON_SIMD` allows; `u32::MAX` when it names none.
+pub(crate) fn rank_cap() -> u32 {
+    static CAP: OnceLock<u32> = OnceLock::new();
+    *CAP.get_or_init(|| {
+        let Ok(wanted) = std::env::var("MELON_SIMD") else {
+            return u32::MAX;
+        };
+        let cap = RANKS
+            .iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case(&wanted))
+            .map(|&(_, r)| r);
+        if cap.is_none() {
+            crate::warn!("MELON_SIMD={wanted} names no tier; taking the widest");
+        }
+        cap.unwrap_or(u32::MAX)
+    })
 }
 
 /// Buffers this many lanes long (zero padded) only ever take whole steps
@@ -209,7 +242,7 @@ pub fn init() -> (Tier, ByteTier) {
 #[inline]
 pub fn tier() -> Tier {
     *TIER.get_or_init(|| {
-        let cap = rank_cap().unwrap_or(u32::MAX);
+        let cap = rank_cap();
         Tier::available()
             .into_iter()
             .find(|tier| rank(tier.name()) <= cap)
@@ -221,7 +254,7 @@ pub fn tier() -> Tier {
 #[inline]
 pub fn byte_tier() -> ByteTier {
     *BYTE_TIER.get_or_init(|| {
-        let cap = rank_cap().unwrap_or(u32::MAX);
+        let cap = rank_cap();
         ByteTier::available()
             .into_iter()
             .find(|tier| rank(tier.name()) <= cap)

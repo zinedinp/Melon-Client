@@ -105,7 +105,7 @@ pub struct FogContext {
 /// `BlindnessFogEnvironment`, `DarknessFogEnvironment` and night vision.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FogEffects {
-    /// Blindness' remaining ticks (`None`.
+    /// Blindness' remaining ticks and whether it's infinite (`None` without it).
     pub blindness: Option<(i32, bool)>,
     /// `MobEffectInstance.getBlendFactor` of darkness.
     pub darkness: Option<f32>,

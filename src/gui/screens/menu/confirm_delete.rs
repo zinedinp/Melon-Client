@@ -1,4 +1,4 @@
-//! Vanilla's delete `ConfirmScreen`s: `WorldSelectionList.WorldListEntry.
+//! Vanilla's delete `ConfirmScreen`s, for a world and for a saved server.
 
 use crate::gui::screen::{ScreenAction, ScreenContext};
 use crate::gui::widgets::dialog::DialogScreen;

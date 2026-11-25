@@ -26,7 +26,7 @@ pub fn push_impulse(from: DVec3, at: DVec3) -> DVec3 {
 }
 
 impl ClientEntity {
-    /// Whether it shoves the local player when their boxes meet:
+    /// Whether it shoves the local player when their boxes meet.
     fn pushes_player(&self) -> bool {
         match self.kind {
             EntityKind::Bat | EntityKind::Parrot | EntityKind::Boat => false,

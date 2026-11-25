@@ -1482,7 +1482,7 @@ checksum = "6ebaa1a2bf1290ab3bfe5a7b771d050ebffab2711c19a81691c683a5144a25de"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "subtle",
 ]
 
@@ -2611,7 +2611,7 @@ checksum = "7ebb8d8732c6a6df3d8f032a82911cfc747e00efb95cc46e8d0acd5b5b88570c"
 
 [[package]]
 name = "melon"
-version = "0.10.5+mc26.3"
+version = "0.10.6+mc26.3"
 dependencies = [
  "aes 0.9.4",
  "anyhow",
@@ -2651,7 +2651,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha1 0.11.0",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "shaderc",
  "socket2",
  "tokio",
@@ -3481,7 +3481,7 @@ dependencies = [
  "fiat-crypto",
  "primefield",
  "primeorder",
- "sha2 0.11.1",
+ "sha2 0.11.2",
 ]
 
 [[package]]
@@ -3847,7 +3847,7 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "thiserror 2.0.21",
  "uuid",
  "webpki-root-certs",
@@ -3939,7 +3939,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "sha1 0.11.0",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "subtle",
  "sysinfo",
  "thiserror 2.0.21",
@@ -4026,7 +4026,7 @@ dependencies = [
  "pumpkin-data",
  "serde",
  "serde_json",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "thiserror 2.0.21",
  "toml",
  "tracing",
@@ -4193,7 +4193,7 @@ dependencies = [
  "ruzstd",
  "serde",
  "serde_json",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "slotmap",
  "thiserror 2.0.21",
  "tokio",
@@ -4600,7 +4600,7 @@ dependencies = [
  "pkcs1",
  "pkcs8",
  "rand_core 0.10.1",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "signature",
  "spki",
  "zeroize",
@@ -5246,9 +5246,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.11.1"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19"
+checksum = "5b0e5c7d67bc53f435386b2130fdc900488c5703770f6d8a4633060e34288a27"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.1",

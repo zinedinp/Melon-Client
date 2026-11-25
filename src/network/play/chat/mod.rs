@@ -85,7 +85,7 @@ impl ChatTypes {
         if r.string()? != "minecraft:chat_type" {
             return Ok(None);
         }
-        let count = r.var_int()?.max(0) as usize;
+        let count = r.list_count()?;
         let mut types = Vec::with_capacity(count.min(256));
         for _ in 0..count {
             let name = r.string()?;
@@ -273,7 +273,8 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<ChatEvent>> {
             };
             let filter = r.var_int()?;
             if filter == 2 {
-                let longs = r.var_int()?.max(0) as usize;
+                let max = r.remaining().len() / 8;
+                let longs = r.count(max)?;
                 r.skip(longs * 8)?;
             }
             ChatEvent::Player {
@@ -295,7 +296,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<ChatEvent>> {
             let transaction = r.var_int()?;
             let start = r.var_int()?.max(0) as usize;
             let length = r.var_int()?.max(0) as usize;
-            let count = r.var_int()?.max(0) as usize;
+            let count = r.list_count()?;
             let mut matches = Vec::with_capacity(count.min(1024));
             for _ in 0..count {
                 let text = r.string()?;

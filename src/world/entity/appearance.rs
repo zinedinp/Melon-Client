@@ -115,7 +115,7 @@ pub struct Appearance {
     pub converting: bool,
     /// `DATA_IMMUNE_TO_ZOMBIFICATION` of a piglin.
     pub immune_to_zombification: bool,
-    /// A piglin that is turning into a zombified one (`isConverting`.
+    /// A piglin that is turning into a zombified one (`isConverting`).
     pub zombifying: bool,
     /// `DATA_TICKS_FROZEN`.
     pub frozen_ticks: i32,

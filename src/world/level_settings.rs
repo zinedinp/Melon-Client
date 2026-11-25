@@ -1,4 +1,4 @@
-//! What the server says about the level besides its blocks and border:
+//! What the server says about the level besides its blocks and border.
 
 /// `ClientboundSetDefaultSpawnPositionPacket`: where the world's spawn is.
 #[derive(Clone, Debug, PartialEq)]

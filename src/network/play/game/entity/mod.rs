@@ -143,13 +143,13 @@ pub fn attribute_value(base: f64, modifiers: &[(i8, f64)]) -> f64 {
 
 fn read_attributes(r: &mut Reader<'_>) -> Result<EntityPacket> {
     let id = r.var_int()?;
-    let count = r.var_int()?.clamp(0, 256);
+    let count = r.count(128)?;
     let mut values = Vec::new();
     let mut snapshots = Vec::new();
     for _ in 0..count {
         let attribute = r.var_int()?;
         let base = r.f64_be()?;
-        let modifiers = r.var_int()?.clamp(0, 256);
+        let modifiers = r.list_count()?;
         let mut list = Vec::new();
         let mut named = Vec::new();
         for _ in 0..modifiers {
@@ -242,8 +242,8 @@ pub fn decode(pid: i32, r: &mut Reader<'_>) -> Result<Option<EntityPacket>> {
         p if p == cb::UPDATE_ATTRIBUTES.0 => read_attributes(r)?,
         p if p == cb::SET_PASSENGERS.0 => {
             let id = r.var_int()?;
-            let count = r.var_int()?.clamp(0, 4096);
-            let mut passengers = Vec::with_capacity(count as usize);
+            let count = r.var_int_array_count()?;
+            let mut passengers = Vec::with_capacity(count);
             for _ in 0..count {
                 passengers.push(r.var_int()?);
             }

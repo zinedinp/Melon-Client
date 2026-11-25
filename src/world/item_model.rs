@@ -92,7 +92,7 @@ fn count_unit(model: &Value, max_stack: i32) -> (f64, f64) {
     (unit, model["scale"].as_f64().unwrap_or(1.0))
 }
 
-/// `PotionContents.getColorOptional`: the custom colour, or the effects'
+/// `PotionContents.getColorOptional`: the custom colour, or the effects' mix.
 pub fn potion_color(stack: &ItemStack) -> Option<[u8; 3]> {
     use pumpkin_data::data_component_impl::PotionContentsImpl;
     let contents = stack.get_data_component::<PotionContentsImpl>()?;
@@ -120,7 +120,7 @@ pub fn potion_color(stack: &ItemStack) -> Option<[u8; 3]> {
     (weight > 0).then(|| [(r / weight) as u8, (g / weight) as u8, (b / weight) as u8])
 }
 
-/// One thing an item definition draws in a GUI slot (`ItemModel.Unbaked`
+/// One thing an item definition draws in a GUI slot (`ItemModel.Unbaked`).
 pub(crate) struct Layer {
     source: Source,
     /// Model space (blocks) to the item's.
@@ -156,7 +156,7 @@ pub struct ItemModel {
 }
 
 impl ItemModel {
-    /// The item with registry key `key` (e.g.
+    /// The item with registry key `key` (e.g. `oak_stairs`).
     pub fn resolve(assets_root: &Path, key: &str, potion: Option<[u8; 3]>) -> Option<Self> {
         Self::resolve_in_use(assets_root, key, potion, (false, Count::ONE), None)
     }

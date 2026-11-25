@@ -311,7 +311,7 @@ pub struct Scoreboard {
 }
 
 impl Scoreboard {
-    /// `ClientPacketListener.handleAddObjective`, `handleSetScore`, ...:
+    /// `ClientPacketListener.handleAddObjective`, `handleSetScore` and the other scoreboard packets.
     pub fn apply(&mut self, update: ScoreUpdate) {
         match update {
             ScoreUpdate::SetObjective {

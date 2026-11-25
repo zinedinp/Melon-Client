@@ -5,7 +5,7 @@ use crate::world::entity::player::{Arm, ShownParts};
 use anyhow::Result;
 use std::io::Write;
 
-/// The options the server is told about (vanilla `ClientInformation`):
+/// The options the server is told about (vanilla `ClientInformation`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClientInfo {
     /// `Options.languageCode`, e.g. `en_us`.

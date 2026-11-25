@@ -2,7 +2,7 @@
 
 use ash::vk;
 
-use super::{QuadCorner, Renderer, WorldVertex, create_buffer, mesh_arena};
+use super::{QuadCorner, Renderer, WorldVertex, create_buffer, mesh_arena, vk_util};
 
 /// The table's buffer and the descriptor set binding it (set 1 of the terrain pipelines).
 pub(super) struct QuadTable {
@@ -16,7 +16,7 @@ impl QuadTable {
     pub unsafe fn destroy(self, device: &ash::Device) {
         device.destroy_descriptor_pool(self.pool, None);
         device.destroy_buffer(self.buffer, None);
-        device.free_memory(self.memory, None);
+        vk_util::free_memory(device, self.memory);
     }
 }
 
@@ -41,6 +41,8 @@ impl Renderer {
         unsafe {
             if let Some(old) = self.quad_table.take() {
                 self.device.device_wait_idle()?;
+                // A table replaced before a frame recorded its upload.
+                self.quad_meshes.cancel_copies(old.buffer);
                 old.destroy(&self.device);
             }
             let corners: Vec<QuadCorner> = corners.iter().map(|&v| v.into()).collect();
@@ -66,7 +68,7 @@ impl Renderer {
                 Ok(pool) => pool,
                 Err(e) => {
                     self.device.destroy_buffer(buffer, None);
-                    self.device.free_memory(memory, None);
+                    vk_util::free_memory(&self.device, memory);
                     return Err(e.into());
                 }
             };

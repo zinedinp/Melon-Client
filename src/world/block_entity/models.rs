@@ -48,7 +48,7 @@ pub fn chest(half: ChestHalf) -> ChestModel {
     }
 }
 
-/// `ShulkerBoxRenderer.ShulkerBoxModel` (`ShulkerModel.createBoxLayer`):
+/// `ShulkerBoxRenderer.ShulkerBoxModel` (`ShulkerModel.createBoxLayer`).
 pub struct ShulkerModel {
     pub lid: Part,
     pub base: Part,
@@ -182,7 +182,7 @@ impl SkullType {
     }
 }
 
-/// A head's root part, with its animated children reachable by index:
+/// A head's root part, with its animated children reachable by index.
 pub fn skull(skull: SkullType) -> Part {
     match skull {
         SkullType::Skeleton | SkullType::WitherSkeleton | SkullType::Creeper => {
@@ -305,7 +305,7 @@ pub fn book() -> Vec<Part> {
     ]
 }
 
-/// `DecoratedPotRenderer.createBaseLayer` (32x32.
+/// `DecoratedPotRenderer.createBaseLayer` (32x32).
 pub const POT_BASE_TEXTURE: Vec2 = Vec2::splat(32.0);
 pub const POT_SIDE_TEXTURE: Vec2 = Vec2::splat(16.0);
 

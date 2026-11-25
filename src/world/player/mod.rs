@@ -413,7 +413,7 @@ impl PlayerState {
         }
     }
 
-    /// `GameType.updatePlayerAbilities` and `LocalPlayer.onGameModeChanged`:
+    /// `GameType.updatePlayerAbilities` and `LocalPlayer.onGameModeChanged`.
     pub fn set_game_mode(&mut self, mode: crate::world::game_mode::GameMode) {
         self.abilities = mode.abilities(self.abilities);
         self.set_spectator(mode.is_spectator());
@@ -456,7 +456,7 @@ impl PlayerState {
         self.attributes.scale()
     }
 
-    /// `Attributes.MOVEMENT_SPEED` as the player's own movement reads it:
+    /// `Attributes.MOVEMENT_SPEED` as the player's own movement reads it.
     pub fn movement_speed(&self) -> f32 {
         if let Some(speed) = self.attributes.movement_speed(self.sprinting) {
             return speed;
@@ -642,7 +642,7 @@ impl PlayerState {
         self.sprinting
     }
 
-    /// `LocalPlayer.aiStep`'s sprint block, transcribed:
+    /// `LocalPlayer.aiStep`'s sprint block, transcribed.
     fn update_sprint(&mut self, input: MoveInput, can_sprint: bool, sprint_window: u32) {
         self.sprint_trigger_ticks = self.sprint_trigger_ticks.saturating_sub(1);
 

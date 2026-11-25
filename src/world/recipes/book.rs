@@ -416,7 +416,7 @@ impl RecipeBook {
         collection.entries.iter().any(|id| self.will_highlight(*id))
     }
 
-    /// The recipes of `collection` the stock can craft (empty requirements:
+    /// The recipes of `collection` the stock can craft (one without requirements never is).
     pub fn craftable<'a>(&'a self, collection: &'a Collection, stock: &Stock) -> Vec<&'a Entry> {
         collection
             .entries

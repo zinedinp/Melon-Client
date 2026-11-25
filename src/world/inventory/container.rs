@@ -155,7 +155,7 @@ pub struct OpenContainer {
     pub title: StyledText,
     pub slots: Vec<KeyedStack>,
     pub state_id: i32,
-    /// `ContainerData`, as `ClientboundContainerSetDataPacket` sets it:
+    /// `ContainerData`, as `ClientboundContainerSetDataPacket` sets it.
     data: Vec<i16>,
     /// A trader's offers (`ClientboundMerchantOffersPacket`).
     pub trades: Option<super::merchant::Offers>,

@@ -119,7 +119,7 @@ impl Mode {
         }
     }
 
-    /// Where a recipe's input `index` (as [`RecipeDisplay::ghost_slots`]
+    /// The menu slot of a recipe's input `index` (as [`RecipeDisplay::ghost_slots`] counts).
     fn input_slot(self, index: usize) -> usize {
         match self {
             Self::Crafting { .. } => 1 + index,

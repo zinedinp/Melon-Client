@@ -1,4 +1,4 @@
-//! Vanilla's JSON block and item models (`BlockModel`, `BlockElement`):
+//! Vanilla's JSON block and item models (`BlockModel`, `BlockElement`).
 
 use std::collections::HashMap;
 use std::path::Path;

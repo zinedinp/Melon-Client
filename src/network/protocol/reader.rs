@@ -68,6 +68,28 @@ impl<'a> Reader<'a> {
         Ok(read_var_int(&mut self.buf)?)
     }
 
+    /// `ByteBufCodecs.readCount`: a collection's size, an error past `max`.
+    /// A negative size is an error too, as vanilla's allocation of it throws.
+    pub fn count(&mut self, max: usize) -> Result<usize> {
+        let count = self.var_int()?;
+        match usize::try_from(count) {
+            Ok(n) if n <= max => Ok(n),
+            Ok(n) => bail!("{n} elements exceeded max size of: {max}"),
+            Err(_) => bail!("negative element count {count}"),
+        }
+    }
+
+    /// `ByteBufCodecs.list()`: a collection's size, limited only by the `VarInt`.
+    pub fn list_count(&mut self) -> Result<usize> {
+        self.count(i32::MAX as usize)
+    }
+
+    /// `FriendlyByteBuf.readVarIntArray()`: at most as many entries as bytes remain.
+    pub fn var_int_array_count(&mut self) -> Result<usize> {
+        let max = self.buf.len();
+        self.count(max)
+    }
+
     pub fn u8(&mut self) -> Result<u8> {
         let mut b = [0u8; 1];
         self.buf.read_exact(&mut b)?;
@@ -226,6 +248,14 @@ impl<'a> Reader<'a> {
     }
 }
 
+/// `ByteBufCodecs.MAX_INITIAL_COLLECTION_SIZE`: what a decoder reserves at most up front.
+pub const MAX_INITIAL_COLLECTION_SIZE: usize = 65_536;
+
+/// Room to reserve for `count` elements, as vanilla's `Math.min(count, 65536)`.
+pub fn initial_capacity(count: usize) -> usize {
+    count.min(MAX_INITIAL_COLLECTION_SIZE)
+}
+
 /// `BlockPos.of(long)`.
 pub fn unpack_block_pos(packed: i64) -> [i32; 3] {
     [
@@ -272,6 +302,25 @@ mod tests {
         for pos in [[0, 0, 0], [1, 2, 3], [-12, 64, 80], [100, -60, -200]] {
             assert_eq!(unpack_block_pos(pack_block_pos(pos)), pos);
         }
+    }
+
+    #[test]
+    fn counts_past_the_limit_or_below_zero_fail() {
+        assert_eq!(Reader::new(&[3]).count(3).unwrap(), 3);
+        assert!(Reader::new(&[4]).count(3).is_err());
+        assert!(
+            Reader::new(&[0xff, 0xff, 0xff, 0xff, 0x0f])
+                .list_count()
+                .is_err()
+        );
+        assert_eq!(
+            Reader::new(&[0xff, 0xff, 0xff, 0xff, 0x07])
+                .list_count()
+                .unwrap(),
+            i32::MAX as usize
+        );
+        assert_eq!(Reader::new(&[2, 1, 1]).var_int_array_count().unwrap(), 2);
+        assert!(Reader::new(&[3, 1]).var_int_array_count().is_err());
     }
 
     #[test]

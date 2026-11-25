@@ -374,10 +374,10 @@ impl Drop for Renderer {
             }
             for &mem in &self.ui_vertices.memories {
                 self.device.unmap_memory(mem);
-                self.device.free_memory(mem, None);
+                vk_util::free_memory(&self.device, mem);
             }
             self.device.destroy_buffer(self.sky_cube.buffer, None);
-            self.device.free_memory(self.sky_cube.memory, None);
+            vk_util::free_memory(&self.device, self.sky_cube.memory);
             self.meshes.destroy(&self.device);
             self.quad_meshes.destroy(&self.device);
             self.particle_meshes.destroy(&self.device);
@@ -392,7 +392,7 @@ impl Drop for Renderer {
             self.globals.destroy(&self.device);
             self.gui_uniforms.destroy(&self.device);
             self.device.destroy_buffer(self.ui_vertices.indices.0, None);
-            self.device.free_memory(self.ui_vertices.indices.1, None);
+            vk_util::free_memory(&self.device, self.ui_vertices.indices.1);
             if let Some(table) = self.quad_table.take() {
                 table.destroy(&self.device);
             }
@@ -410,7 +410,7 @@ impl Drop for Renderer {
                 }
                 self.device.destroy_image_view(tex.view, None);
                 self.device.destroy_image(tex.image, None);
-                self.device.free_memory(tex.memory, None);
+                vk_util::free_memory(&self.device, tex.memory);
             }
 
             for &sem in &self.frames.image_available {
@@ -518,6 +518,6 @@ unsafe fn free_effect_texture(
 ) {
     device.destroy_image_view(texture.view, None);
     device.destroy_image(texture.image, None);
-    device.free_memory(texture.memory, None);
+    vk_util::free_memory(device, texture.memory);
     pools.free(device, texture.descriptor_set);
 }

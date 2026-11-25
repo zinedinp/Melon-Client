@@ -1,4 +1,4 @@
-//! What a server-opened menu's screen draws and does beyond its slots:
+//! What a server-opened menu's screen draws and does beyond its slots.
 
 mod anvil;
 mod beacon;

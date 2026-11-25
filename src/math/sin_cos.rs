@@ -4,15 +4,20 @@
 //!
 //! A step loads the floats, widens them, runs the kernel, narrows and
 //! stores, all in vector registers; only a lane past
-//! [`REDUCE_LIMIT`] (or NaN) sends its step to the scalar code.
+//! [`REDUCE_LIMIT`](crate::math::angle::REDUCE_LIMIT) (or NaN) sends its
+//! step to the scalar code.
 
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 use super::lanes::Lanes;
 use super::simd::Tier;
+use crate::math::angle::sin_cos_exact;
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 use crate::math::angle::{
-    COS_COEFFS, FRAC_2_PI, PIO2_HI, PIO2_LO, REDUCE_LIMIT, ROUND_MAGIC, SIN_COEFFS, sin_cos_exact,
+    COS_COEFFS, FRAC_2_PI, PIO2_HI, PIO2_LO, REDUCE_LIMIT, ROUND_MAGIC, SIN_COEFFS,
 };
 
 /// The widest step any tier takes, for the padded last one.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 const MAX_LANES: usize = 8;
 
 /// `sin[i], cos[i]` of `angles[i]`, on the tier [`super::simd::init`]
@@ -46,6 +51,7 @@ pub fn sin_cos_on(tier: Tier, angles: &[f32], sin: &mut [f32], cos: &mut [f32]) 
 
 /// The loop: whole steps, the rest in half-wide ones, the last of those
 /// padded.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 #[inline(always)]
 pub(super) fn run<L: Lanes>(lanes: L, angles: &[f32], sin: &mut [f32], cos: &mut [f32]) {
     let done = steps(lanes, angles, sin, cos, 0);
@@ -55,6 +61,7 @@ pub(super) fn run<L: Lanes>(lanes: L, angles: &[f32], sin: &mut [f32], cos: &mut
 }
 
 /// Whole steps of `L::N` from `from` on; how far they got.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 #[inline(always)]
 fn steps<L: Lanes>(l: L, angles: &[f32], sin: &mut [f32], cos: &mut [f32], from: usize) -> usize {
     let n = L::N;
@@ -67,6 +74,7 @@ fn steps<L: Lanes>(l: L, angles: &[f32], sin: &mut [f32], cos: &mut [f32], from:
 }
 
 /// The angles from `whole` on, fewer than a step, padded to one.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 #[inline(always)]
 fn padded<L: Lanes>(lanes: L, angles: &[f32], sin: &mut [f32], cos: &mut [f32], whole: usize) {
     let n = L::N;
@@ -83,6 +91,7 @@ fn padded<L: Lanes>(lanes: L, angles: &[f32], sin: &mut [f32], cos: &mut [f32], 
 }
 
 /// One step of `L::N` angles.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 #[inline(always)]
 fn step<L: Lanes>(lanes: L, x: &[f32], sin: &mut [f32], cos: &mut [f32]) {
     let wide = lanes.widen(lanes.load(x));
@@ -97,6 +106,7 @@ fn step<L: Lanes>(lanes: L, x: &[f32], sin: &mut [f32], cos: &mut [f32]) {
 
 /// A step with a lane past [`REDUCE_LIMIT`] or NaN, the scalar way: out
 /// of the vector loop, so it doesn't crowd it.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 #[cold]
 #[inline(never)]
 fn far_step(x: &[f32], sin: &mut [f32], cos: &mut [f32]) {
@@ -107,6 +117,7 @@ fn far_step(x: &[f32], sin: &mut [f32], cos: &mut [f32]) {
 
 /// `sin_cos_exact`'s double precision part on every lane: the quarter
 /// turns taken off, fdlibm's polynomials, the quadrant's swap and signs.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 #[inline(always)]
 fn kernel<L: Lanes>(l: L, x: L::F64) -> (L::F64, L::F64) {
     let k = |v: f64| l.splat(v);

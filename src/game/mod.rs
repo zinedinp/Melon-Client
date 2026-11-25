@@ -335,7 +335,7 @@ impl InWorld {
         let mut level = Level::default();
         level.set_dimension(&dimension_type);
         let mut meshes = LevelMeshes::default();
-        meshes.set_min_y(dimension_type.height.min_y);
+        meshes.set_height(dimension_type.height);
         let mut game_mode = LocalGameMode::default();
         game_mode.set_both(info.game_mode, info.previous_game_mode);
         player.set_game_mode(game_mode.current);
@@ -648,7 +648,7 @@ impl InWorld {
         self.level_info.dimension = dimension_name;
         self.level.set_dimension(&self.level_info.dimension_type);
         self.meshes
-            .set_min_y(self.level_info.dimension_type.height.min_y);
+            .set_height(self.level_info.dimension_type.height);
         self.block_entities = BlockEntities::default();
         self.border = Default::default();
         self.entities.clear();

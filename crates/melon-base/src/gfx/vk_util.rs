@@ -2,6 +2,7 @@
 
 use ash::vk;
 use std::ffi::CStr;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 /// `mipmapped`.
 ///
@@ -140,15 +141,15 @@ pub unsafe fn create_buffer_placed(
         // Every type with the flags, not only the first: a full heap (the
         // VRAM, the BAR window) can have a type the next heap shares flags with.
         for index in memory_types(mem_props, requirements.memory_type_bits, flags) {
-            match device.allocate_memory(
+            match allocate_memory(
+                device,
                 &vk::MemoryAllocateInfo::default()
                     .allocation_size(requirements.size)
                     .memory_type_index(index),
-                None,
             ) {
                 Ok(memory) => {
                     if let Err(e) = device.bind_buffer_memory(buffer, memory, 0) {
-                        device.free_memory(memory, None);
+                        free_memory(device, memory);
                         device.destroy_buffer(buffer, None);
                         return Err(e.into());
                     }
@@ -225,6 +226,41 @@ pub fn composite_alpha(supported: vk::CompositeAlphaFlagsKHR) -> vk::CompositeAl
     .into_iter()
     .find(|&mode| supported.contains(mode))
     .unwrap_or(vk::CompositeAlphaFlagsKHR::OPAQUE)
+}
+
+/// Whether a `vkQueuePresentKHR` result asks for a new swapchain: always when out of date,
+/// when suboptimal only if the surface's size (`surface_extent`) differs from `extent`.
+/// Mesa on X11 reports suboptimal on every present, so that alone doesn't recreate.
+pub fn recreate_after_present(
+    presented: ash::prelude::VkResult<bool>,
+    extent: vk::Extent2D,
+    surface_extent: impl FnOnce() -> Option<vk::Extent2D>,
+) -> ash::prelude::VkResult<bool> {
+    match presented {
+        Ok(false) => Ok(false),
+        Ok(true) => Ok(
+            surface_extent().is_some_and(|now| now.width > 0 && now.height > 0 && now != extent)
+        ),
+        Err(vk::Result::ERROR_OUT_OF_DATE_KHR) => Ok(true),
+        Err(e) => Err(e),
+    }
+}
+
+/// The surface's `currentExtent`; `None` where the swapchain picks it (Wayland) or it can't be read.
+///
+/// # Safety
+///
+/// `surface` must be live and made from the instance `loader` is for.
+pub unsafe fn surface_extent(
+    loader: &ash::khr::surface::Instance,
+    physical_device: vk::PhysicalDevice,
+    surface: vk::SurfaceKHR,
+) -> Option<vk::Extent2D> {
+    let capabilities = loader
+        .get_physical_device_surface_capabilities(physical_device, surface)
+        .ok()?;
+    let current = capabilities.current_extent;
+    (current.width != u32::MAX).then_some(current)
 }
 
 /// How a frame's render pass starts.
@@ -414,31 +450,47 @@ pub unsafe fn create_depth_image(
             .initial_layout(vk::ImageLayout::UNDEFINED),
         None,
     )?;
+    let mut memory = vk::DeviceMemory::null();
+    let view = depth_memory_and_view(device, mem_props, image, format, sampled, &mut memory);
+    match view {
+        Ok(view) => Ok((image, memory, view)),
+        Err(e) => {
+            free_memory(device, memory);
+            device.destroy_image(image, None);
+            Err(e)
+        }
+    }
+}
+
+/// Binds memory to the depth `image` (left in `memory`, for the caller to free on failure) and makes its view.
+unsafe fn depth_memory_and_view(
+    device: &ash::Device,
+    mem_props: &vk::PhysicalDeviceMemoryProperties,
+    image: vk::Image,
+    format: vk::Format,
+    sampled: bool,
+    memory: &mut vk::DeviceMemory,
+) -> anyhow::Result<vk::ImageView> {
     let req = device.get_image_memory_requirements(image);
-    let memory = device.allocate_memory(
+    let wanted = if sampled {
+        vk::MemoryPropertyFlags::DEVICE_LOCAL
+    } else {
+        vk::MemoryPropertyFlags::LAZILY_ALLOCATED
+    };
+    let type_index = find_memory_type(mem_props, req.memory_type_bits, wanted).or_else(|_| {
+        find_memory_type(
+            mem_props,
+            req.memory_type_bits,
+            vk::MemoryPropertyFlags::DEVICE_LOCAL,
+        )
+    })?;
+    *memory = allocate_memory(
+        device,
         &vk::MemoryAllocateInfo::default()
             .allocation_size(req.size)
-            .memory_type_index(
-                find_memory_type(
-                    mem_props,
-                    req.memory_type_bits,
-                    if sampled {
-                        vk::MemoryPropertyFlags::DEVICE_LOCAL
-                    } else {
-                        vk::MemoryPropertyFlags::LAZILY_ALLOCATED
-                    },
-                )
-                .or_else(|_| {
-                    find_memory_type(
-                        mem_props,
-                        req.memory_type_bits,
-                        vk::MemoryPropertyFlags::DEVICE_LOCAL,
-                    )
-                })?,
-            ),
-        None,
+            .memory_type_index(type_index),
     )?;
-    device.bind_image_memory(image, memory, 0)?;
+    device.bind_image_memory(image, *memory, 0)?;
 
     let has_stencil = matches!(
         format,
@@ -449,7 +501,7 @@ pub unsafe fn create_depth_image(
     } else {
         vk::ImageAspectFlags::DEPTH
     };
-    let view = device.create_image_view(
+    Ok(device.create_image_view(
         &vk::ImageViewCreateInfo::default()
             .image(image)
             .view_type(vk::ImageViewType::TYPE_2D)
@@ -462,8 +514,7 @@ pub unsafe fn create_depth_image(
                 layer_count: 1,
             }),
         None,
-    )?;
-    Ok((image, memory, view))
+    )?)
 }
 
 /// The memory types with `flags` among `type_bits`, in the device's order.
@@ -490,6 +541,63 @@ fn note_memory_fallback(flags: vk::MemoryPropertyFlags) {
              falling back to {flags:?}"
         );
     });
+}
+
+/// Live `vkAllocateMemory` allocations, of every device.
+static LIVE_ALLOCATIONS: AtomicU32 = AtomicU32::new(0);
+/// The device's `maxMemoryAllocationCount`; until one is made, 4096, the usual Windows value.
+static ALLOCATION_LIMIT: AtomicU32 = AtomicU32::new(4096);
+/// The count reached [`near_allocation_limit`] and wasn't low again since.
+static ALLOCATION_WARNED: AtomicBool = AtomicBool::new(false);
+
+/// Sets the limit [`allocate_memory`] warns against.
+pub fn set_allocation_limit(limit: u32) {
+    ALLOCATION_LIMIT.store(limit, Ordering::Relaxed);
+}
+
+/// Whether `live` allocations are close to `limit`: three quarters of it.
+fn near_allocation_limit(live: u32, limit: u32) -> bool {
+    live >= limit - limit / 4
+}
+
+/// `vkAllocateMemory`, counted; warns once the count nears `maxMemoryAllocationCount`.
+/// Every texture and buffer has its own allocation (no sub-allocation yet).
+///
+/// # Safety
+///
+/// `device` must be live.
+pub unsafe fn allocate_memory(
+    device: &ash::Device,
+    info: &vk::MemoryAllocateInfo<'_>,
+) -> ash::prelude::VkResult<vk::DeviceMemory> {
+    let memory = device.allocate_memory(info, None)?;
+    let live = LIVE_ALLOCATIONS.fetch_add(1, Ordering::Relaxed) + 1;
+    let limit = ALLOCATION_LIMIT.load(Ordering::Relaxed);
+    if near_allocation_limit(live, limit) && !ALLOCATION_WARNED.swap(true, Ordering::Relaxed) {
+        crate::warn!("vulkan: {live} memory allocations live, the device allows {limit}");
+    }
+    Ok(memory)
+}
+
+/// `vkFreeMemory` of memory from [`allocate_memory`]; null is skipped.
+///
+/// # Safety
+///
+/// `memory` must be from `device` and no longer in use.
+pub unsafe fn free_memory(device: &ash::Device, memory: vk::DeviceMemory) {
+    if memory == vk::DeviceMemory::null() {
+        return;
+    }
+    device.free_memory(memory, None);
+    let live = LIVE_ALLOCATIONS
+        .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
+            Some(n.saturating_sub(1))
+        })
+        .unwrap_or(0)
+        .saturating_sub(1);
+    if live < ALLOCATION_LIMIT.load(Ordering::Relaxed) / 2 {
+        ALLOCATION_WARNED.store(false, Ordering::Relaxed);
+    }
 }
 
 pub fn find_memory_type(
@@ -523,4 +631,43 @@ pub unsafe extern "system" fn debug_callback(
     let message = CStr::from_ptr((*data).p_message).to_string_lossy();
     crate::warn!("[vulkan] {message}");
     vk::FALSE
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const EXTENT: vk::Extent2D = vk::Extent2D {
+        width: 854,
+        height: 480,
+    };
+
+    #[test]
+    fn suboptimal_recreates_only_when_the_surface_resized() {
+        let grown = vk::Extent2D {
+            width: 1280,
+            height: 720,
+        };
+        let recreate = |presented, now| recreate_after_present(presented, EXTENT, || now);
+        assert_eq!(recreate(Ok(false), Some(grown)), Ok(false));
+        assert_eq!(recreate(Ok(true), Some(EXTENT)), Ok(false));
+        assert_eq!(recreate(Ok(true), None), Ok(false));
+        assert_eq!(recreate(Ok(true), Some(vk::Extent2D::default())), Ok(false));
+        assert_eq!(recreate(Ok(true), Some(grown)), Ok(true));
+        assert_eq!(
+            recreate(Err(vk::Result::ERROR_OUT_OF_DATE_KHR), Some(EXTENT)),
+            Ok(true)
+        );
+        assert_eq!(
+            recreate(Err(vk::Result::ERROR_DEVICE_LOST), None),
+            Err(vk::Result::ERROR_DEVICE_LOST)
+        );
+    }
+
+    #[test]
+    fn allocations_near_the_limit_at_three_quarters() {
+        assert!(!near_allocation_limit(3071, 4096));
+        assert!(near_allocation_limit(3072, 4096));
+        assert!(near_allocation_limit(u32::MAX, u32::MAX));
+    }
 }

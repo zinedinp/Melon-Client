@@ -2,7 +2,7 @@
 
 use ash::vk;
 
-use super::create_buffer;
+use super::{create_buffer, vk_util};
 
 #[derive(Default)]
 pub struct Staging {
@@ -84,7 +84,7 @@ impl Staging {
         if self.buffer != vk::Buffer::null() {
             device.unmap_memory(self.memory);
             device.destroy_buffer(self.buffer, None);
-            device.free_memory(self.memory, None);
+            vk_util::free_memory(device, self.memory);
         }
         *self = Self::default();
     }

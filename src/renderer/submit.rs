@@ -2,7 +2,7 @@
 
 use super::globals::Globals;
 use super::record::scene::ScenePart;
-use super::{Frame, FrameWaits, MAX_FRAMES_IN_FLIGHT, Renderer, VERTEX_CAPACITY, quad};
+use super::{Frame, FrameWaits, MAX_FRAMES_IN_FLIGHT, Renderer, VERTEX_CAPACITY, quad, vk_util};
 use ash::vk;
 use std::time::Instant;
 
@@ -362,9 +362,14 @@ impl Renderer {
             None
         };
         self.gpu_timer.end(self.frames.current);
-        self.device.end_command_buffer(cmd)?;
-
-        self.device.reset_fences(&[fence])?;
+        let ended = self
+            .device
+            .end_command_buffer(cmd)
+            .and_then(|()| self.device.reset_fences(&[fence]));
+        if let Err(e) = ended {
+            self.drop_capture(readback);
+            return Err(e.into());
+        }
 
         let wait_semaphores = [self.frames.image_available[self.frames.current]];
         let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
@@ -376,7 +381,10 @@ impl Renderer {
             .command_buffers(&command_buffers)
             .signal_semaphores(&signal_semaphores);
         let submitting = Instant::now();
-        self.device.queue_submit(self.queue, &[submit], fence)?;
+        if let Err(e) = self.device.queue_submit(self.queue, &[submit], fence) {
+            self.drop_capture(readback);
+            return Err(e.into());
+        }
         waits.submit = submitting.elapsed();
         waits.record =
             (submitting - recording).saturating_sub(waits.record_scene + waits.record_ui);
@@ -390,7 +398,12 @@ impl Renderer {
             arena.submitted();
         }
         if let Some(readback) = readback {
-            self.device.wait_for_fences(&[fence], true, u64::MAX)?;
+            if let Err(e) = self.device.wait_for_fences(&[fence], true, u64::MAX) {
+                // The copy may still run: let it end (or the device be lost) first.
+                let _ = self.device.device_wait_idle();
+                self.drop_capture(Some(readback));
+                return Err(e.into());
+            }
             self.finish_capture(readback);
         }
 
@@ -407,16 +420,15 @@ impl Renderer {
             .queue_present(self.queue, &present_info);
         waits.present = started.elapsed();
         self.frames.last_waits = waits;
-        match present_result {
-            Ok(_) => {}
-            Err(vk::Result::ERROR_OUT_OF_DATE_KHR) | Err(vk::Result::SUBOPTIMAL_KHR) => {
-                let (w, h) = (self.swapchain.extent.width, self.swapchain.extent.height);
-                // The frame just submitted still uses the framebuffer, the
-                // depth buffer and the semaphore this destroys.
-                self.device.device_wait_idle()?;
-                self.create_swapchain(w, h)?;
-            }
-            Err(e) => return Err(e.into()),
+        let extent = self.swapchain.extent;
+        let recreate = vk_util::recreate_after_present(present_result, extent, || {
+            vk_util::surface_extent(&self.surface_loader, self.physical_device, self.surface)
+        })?;
+        if recreate {
+            // The frame just submitted still uses the framebuffer, the
+            // depth buffer and the semaphore this destroys.
+            self.device.device_wait_idle()?;
+            self.create_swapchain(extent.width, extent.height)?;
         }
 
         self.frames.current = (self.frames.current + 1) % MAX_FRAMES_IN_FLIGHT;

@@ -206,7 +206,7 @@ fn run_login(client_id: &str, game_dir: &Path, tx: &Sender<LoginEvent>) {
     }
 }
 
-/// Xbox Live → XSTS → Minecraft profile, then write it to `accounts.json`:
+/// Xbox Live → XSTS → Minecraft profile, then write it to `accounts.json`.
 fn finish_microsoft_login(
     ms_token: oauth::MicrosoftAccessToken,
     game_dir: &Path,

@@ -179,7 +179,7 @@ struct CornerRow {
     qy: i32,
     /// `quart_side × quart_side`, z-major.
     corners: Box<[Corner]>,
-    /// For the cell at each corner, as the parent `getBiome` looks from:
+    /// The parent cell's biome for each corner, as `getBiome` looks it up.
     parents: Box<[u16]>,
 }
 

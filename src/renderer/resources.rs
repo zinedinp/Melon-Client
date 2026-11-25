@@ -2,7 +2,7 @@
 
 use super::{
     CubeMapId, IndexMeshId, MeshId, ParticleMeshId, ParticleQuad, QuadMeshId, Renderer,
-    TerrainQuad, TextureId, WorldVertex, texture, texture_update,
+    TerrainQuad, TextureId, WorldVertex, texture, texture_update, vk_util,
 };
 use ash::vk;
 use image::RgbaImage;
@@ -36,7 +36,7 @@ impl Renderer {
         Ok(self.put_new(made))
     }
 
-    /// Linear and wrapping: the enchanted glint (`blur.
+    /// Linear and wrapping, for the enchanted glint (blurred and repeating).
     pub fn load_texture_linear_tiled(&mut self, rgba: &RgbaImage) -> anyhow::Result<TextureId> {
         let made = unsafe {
             self.uploader(self.textures.linear_repeat_sampler)
@@ -243,7 +243,7 @@ impl Renderer {
                 pools.free(device, tex.descriptor_set);
                 device.destroy_image_view(tex.view, None);
                 device.destroy_image(tex.image, None);
-                device.free_memory(tex.memory, None);
+                vk_util::free_memory(device, tex.memory);
             }
             false
         });

@@ -258,7 +258,7 @@ impl ParticleMeshes {
     }
 }
 
-/// An item's particle texture (its model's `particle`, else `layer0`):
+/// An item's particle texture (its model's `particle`, else `layer0`).
 fn item_texture(renderer: &mut Renderer, assets_root: &Path, item: u16) -> Option<TextureId> {
     let key = pumpkin_data::item::Item::from_id(item)?.registry_key;
     let model = crate::world::item_model::ItemModel::resolve(assets_root, key, None)?;

@@ -97,13 +97,13 @@ pub fn read_move_rot(r: &mut Reader<'_>) -> Result<MoveEntity> {
     })
 }
 
-/// `ClientboundEntityPositionSyncPacket`: a `PositionPath` (linear.
+/// `ClientboundEntityPositionSyncPacket`: a `PositionPath` (a point, or a path whose end counts).
 pub fn read_position_sync(r: &mut Reader<'_>) -> Result<SetPosition> {
     let id = r.var_int()?;
     let pos = match r.var_int()? {
         0 => r.vec3_f64()?,
         1 => {
-            let count = r.var_int()?.clamp(0, 4096);
+            let count = r.list_count()?;
             let mut end = None;
             for _ in 0..count {
                 end = Some(r.vec3_f64()?);

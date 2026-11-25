@@ -1,4 +1,4 @@
-//! What the status bars show of the local player beyond health and food:
+//! What the status bars show of the local player beyond health and food.
 
 use super::InWorld;
 use crate::gui::hud::bars::air::MAX_AIR;

@@ -11,7 +11,7 @@ use super::frame::DEPTH_CLEAR;
 use super::pipeline::world::{DrawLight, Mode};
 use super::{
     Blending, EntityDraw, PassStart, Renderer, TextureId, blur, create_depth_image,
-    create_render_pass, texture,
+    create_render_pass, texture, vk_util,
 };
 
 /// One picture for this frame: `entities` drawn into `target`.
@@ -39,7 +39,7 @@ impl Target {
         device.destroy_framebuffer(self.framebuffer, None);
         device.destroy_image_view(self.depth.2, None);
         device.destroy_image(self.depth.0, None);
-        device.free_memory(self.depth.1, None);
+        vk_util::free_memory(device, self.depth.1);
     }
 }
 
@@ -108,7 +108,7 @@ impl Renderer {
         let destroy_color = || {
             device.destroy_image_view(color.view, None);
             device.destroy_image(color.image, None);
-            device.free_memory(color.memory, None);
+            vk_util::free_memory(device, color.memory);
         };
         let depth = match create_depth_image(
             device,
@@ -126,7 +126,7 @@ impl Renderer {
         let destroy_depth = || {
             device.destroy_image_view(depth.2, None);
             device.destroy_image(depth.0, None);
-            device.free_memory(depth.1, None);
+            vk_util::free_memory(device, depth.1);
         };
         let attachments = [color.view, depth.2];
         let framebuffer = match device.create_framebuffer(

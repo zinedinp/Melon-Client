@@ -18,7 +18,7 @@ use pumpkin_util::version::JavaMinecraftVersion;
 
 use super::links::ServerLink;
 use super::{Dialog, DialogRef, DialogSet};
-use crate::network::protocol::reader::Reader;
+use crate::network::protocol::reader::{Reader, initial_capacity};
 
 const VERSION: JavaMinecraftVersion = JavaMinecraftVersion::V_26_3;
 const REGISTRY: &str = "minecraft:dialog";
@@ -86,8 +86,8 @@ pub fn read_registry(body: &[u8]) -> Result<()> {
     if r.string()? != REGISTRY {
         return Ok(());
     }
-    let count = r.var_int()?.clamp(0, 1 << 12) as usize;
-    let mut entries = Vec::with_capacity(count);
+    let count = r.list_count()?;
+    let mut entries = Vec::with_capacity(initial_capacity(count));
     for _ in 0..count {
         let name = r.string()?;
         let dialog = if r.bool()? {
@@ -109,15 +109,15 @@ pub fn read_registry(body: &[u8]) -> Result<()> {
 /// `ClientboundUpdateTagsPacket`: the dialog registry's tags.
 pub fn read_tags(body: &[u8]) -> Result<()> {
     let mut r = Reader::new(body);
-    let registries = r.var_int()?.clamp(0, 1 << 12);
+    let registries = r.list_count()?;
     for _ in 0..registries {
         let registry = r.string()?;
-        let count = r.var_int()?.clamp(0, 1 << 16);
+        let count = r.list_count()?;
         let mut tags = HashMap::new();
         for _ in 0..count {
             let name = r.string()?;
-            let ids = r.var_int()?.clamp(0, 1 << 16);
-            let mut entries = Vec::with_capacity(ids as usize);
+            let ids = r.list_count()?;
+            let mut entries = Vec::with_capacity(initial_capacity(ids));
             for _ in 0..ids {
                 entries.push(r.var_int()?.max(0) as usize);
             }

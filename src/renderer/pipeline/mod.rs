@@ -1,4 +1,4 @@
-//! Renderer pipelines, kept separate: [`sky`] (3D cubemap), [`world`]
+//! Renderer pipelines, kept separate: [`sky`] (3D cubemap), [`world`] and [`blur`].
 
 pub mod blur;
 pub mod sky;

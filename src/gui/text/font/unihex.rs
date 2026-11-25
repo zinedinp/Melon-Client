@@ -347,7 +347,7 @@ mod tests {
 
     #[test]
     fn a_16_pixel_glyph_is_read_left_bit_first() {
-        let mut rows = vec!["0000"; 16];
+        let mut rows = ["0000"; 16];
         rows[0] = "8000";
         rows[15] = "0001";
         let u = unihex(&format!("4E00:{}\n", rows.concat()), &[]);

@@ -46,18 +46,14 @@ pub fn sort(keys: &mut Vec<u64>, scratch: &mut Vec<u64>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::xorshift::XorShift;
 
     /// The radix sort gives what a comparison sort does: few keys and
     /// many, all alike and all different.
     #[test]
     fn sorts_like_sort_unstable() {
-        let mut state = 0x2545_F491_4F6C_DD1Du64;
-        let mut next = || {
-            state ^= state << 13;
-            state ^= state >> 7;
-            state ^= state << 17;
-            state
-        };
+        let mut rng = XorShift(0x2545_F491_4F6C_DD1D);
+        let mut next = || rng.next_u64();
         let mut scratch = Vec::new();
         for len in [0, 1, 63, 64, 65, 500, 6000] {
             for spread in [1u64, 16, 1 << 20, u64::MAX] {

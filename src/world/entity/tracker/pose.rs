@@ -141,8 +141,7 @@ impl ClientEntity {
         self.is_living().then_some((self.prev_body, self.body))
     }
 
-    /// `getYRot(partial)` and `getXRot(partial)`, vanilla's degrees (0 faces
-    /// What a projectile's, crystal's or fangs' `setupAnim` reads.
+    /// What a projectile's, crystal's or fangs' `setupAnim` reads (vanilla's degrees).
     pub fn thing_pose(&self, partial: f32) -> mobs::projectile::ThingPose {
         mobs::projectile::ThingPose {
             y_rot: self.yaw_degrees(partial),

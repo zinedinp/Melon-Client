@@ -277,17 +277,13 @@ impl InWorld {
                 );
             }
             let start = draw_list.vertices_len();
-            let mut paint = text::TextPaint {
-                font: painter.font,
-                pages: painter.font_textures,
-                white: painter.white,
-                color: [1.0; 3],
+            let paint = text::TextPaint {
                 alpha,
                 shadow: state.flags & FLAG_SHADOW != 0,
-                obfuscation_seed: 0,
+                obfuscation_seed: (entity.id as u64)
+                    ^ self.ticks.wrapping_mul(0x9E37_79B9_7F4A_7C15),
+                ..painter.paint(text::colors::WHITE)
             };
-            paint.obfuscation_seed =
-                (entity.id as u64) ^ self.ticks.wrapping_mul(0x9E37_79B9_7F4A_7C15);
             for (i, (line, width)) in lines.iter().zip(&widths).enumerate() {
                 let x = if state.flags & FLAG_ALIGN_LEFT != 0 {
                     0.0
@@ -471,14 +467,11 @@ impl InWorld {
         );
         let start = draw_list.vertices_len();
         let paint = text::TextPaint {
-            font: painter.font,
-            pages: painter.font_textures,
-            white: painter.white,
-            color: [1.0; 3],
             alpha: dim.unwrap_or(1.0),
             shadow: false,
             obfuscation_seed: self.ticks.wrapping_mul(0x9E37_79B9_7F4A_7C15)
                 ^ u64::from(at[0].to_bits()),
+            ..painter.paint(text::colors::WHITE)
         };
         text::draw(draw_list, &paint, styled, -width / 2.0, -9.0);
         draw_list.scale_since(start, scale);

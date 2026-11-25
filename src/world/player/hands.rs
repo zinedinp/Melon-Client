@@ -292,7 +292,7 @@ pub struct Hands {
     swap_ticker: i32,
     last_main: ItemStack,
     pub using: Option<UsingItem>,
-    /// Set by a tick that is due the bites' sounds (`Consumable.onUseTick`):
+    /// Set by a tick that is due the bites' sounds (`Consumable.onUseTick`).
     pub consuming: Option<Hand>,
     /// The items each first-person hand shows.
     shown: [ItemStack; 2],

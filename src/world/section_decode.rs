@@ -7,6 +7,10 @@
 //! [`Bytes`], the `target_feature` bodies for x86_64 in `x86/` beside this
 //! file. The scalar code is the reference every tier must match exactly.
 
+#[cfg(any(
+    target_arch = "x86_64",
+    all(target_arch = "aarch64", target_endian = "little")
+))]
 use crate::math::bytes::Bytes;
 use crate::math::simd::{self, ByteTier};
 use crate::world::section::BLOCKS_PER_SECTION;
@@ -194,6 +198,10 @@ fn gather_bits(bytes: u64) -> u8 {
 
 /// [`decode`]'s loop: the palette's low and high bytes as two tables, then
 /// a register of blocks a step, looked up in both and stored as words.
+#[cfg(any(
+    target_arch = "x86_64",
+    all(target_arch = "aarch64", target_endian = "little")
+))]
 #[inline(always)]
 pub(super) fn decode_with<B: Bytes>(
     b: B,
@@ -215,6 +223,10 @@ pub(super) fn decode_with<B: Bytes>(
     }
 }
 
+#[cfg(any(
+    target_arch = "x86_64",
+    all(target_arch = "aarch64", target_endian = "little")
+))]
 #[inline(always)]
 fn decode_steps<B: Bytes, const BITS: usize>(
     b: B,
@@ -231,6 +243,10 @@ fn decode_steps<B: Bytes, const BITS: usize>(
 
 /// [`flag_rows`]' loop: a register of blocks a step, their flags looked
 /// up, one mask a flag bit, split into rows.
+#[cfg(any(
+    target_arch = "x86_64",
+    all(target_arch = "aarch64", target_endian = "little")
+))]
 #[inline(always)]
 pub(super) fn flag_rows_with<B: Bytes>(
     b: B,
@@ -249,6 +265,10 @@ pub(super) fn flag_rows_with<B: Bytes>(
     }
 }
 
+#[cfg(any(
+    target_arch = "x86_64",
+    all(target_arch = "aarch64", target_endian = "little")
+))]
 #[inline(always)]
 fn flag_steps<B: Bytes, const BITS: usize>(
     b: B,
@@ -272,24 +292,13 @@ fn flag_steps<B: Bytes, const BITS: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// Small xorshift: the same blocks on every run.
-    struct Noise(u64);
-
-    impl Noise {
-        fn next(&mut self) -> u64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            self.0
-        }
-    }
+    use crate::util::xorshift::XorShift;
 
     /// Random indices below `len`, packed at `bits`.
-    fn packed(bits: u8, len: usize, noise: &mut Noise) -> Vec<u64> {
+    fn packed(bits: u8, len: usize, noise: &mut XorShift) -> Vec<u64> {
         let mut words = vec![0u64; 64 * usize::from(bits)];
         for i in 0..BLOCKS_PER_SECTION {
-            let index = noise.next() % len as u64;
+            let index = noise.next_u64() % len as u64;
             let offset = i * usize::from(bits);
             words[offset >> 6] |= index << (offset & 63);
         }
@@ -306,10 +315,10 @@ mod tests {
 
     #[test]
     fn every_tier_decodes_as_the_scalar_code() {
-        let mut noise = Noise(0x2545_F491_4F6C_DD1D);
+        let mut noise = XorShift(0x2545_F491_4F6C_DD1D);
         for (bits, len) in cases() {
             let words = packed(bits, len, &mut noise);
-            let palette: Vec<u16> = (0..len).map(|_| noise.next() as u16).collect();
+            let palette: Vec<u16> = (0..len).map(|_| noise.next_u64() as u16).collect();
             let mut expected = [0u16; BLOCKS_PER_SECTION];
             decode_on(ByteTier::Scalar, bits, &words, &palette, &mut expected);
             for (i, block) in expected.iter().enumerate() {
@@ -331,12 +340,12 @@ mod tests {
 
     #[test]
     fn every_tier_builds_the_scalar_flag_rows() {
-        let mut noise = Noise(0x9E37_79B9_7F4A_7C15);
+        let mut noise = XorShift(0x9E37_79B9_7F4A_7C15);
         for (bits, len) in cases() {
             let words = packed(bits, len, &mut noise);
             let mut flags = [0u8; 256];
             for flag in &mut flags[..len] {
-                *flag = noise.next() as u8;
+                *flag = noise.next_u64() as u8;
             }
             for count in [1, 3, 8] {
                 let mut expected = vec![[0u16; ROWS]; count];

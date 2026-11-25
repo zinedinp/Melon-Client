@@ -111,7 +111,7 @@ pub enum LineStyle {
     Hud,
 }
 
-/// One non-terrain mesh in world space: `model` places [`EntityDraw::mesh`]
+/// One non-terrain mesh in world space: `model` places [`EntityDraw::mesh`].
 #[derive(Clone)]
 pub struct EntityDraw {
     pub mesh: MeshId,
@@ -235,7 +235,7 @@ pub enum RenderLayer {
     Entities,
     /// Entity blob shadows (`ShadowFeatureRenderer`): blended, no depth write.
     Shadows,
-    /// Cracks on blocks being broken (`RenderPipelines.CRUMBLING`):
+    /// Cracks on blocks being broken (`RenderPipelines.CRUMBLING`).
     Crumbling,
     /// Depth only, before the water: what keeps it out of a boat.
     WaterMask,
@@ -820,7 +820,7 @@ const _: () = assert!(std::mem::size_of::<QuadCorner>() == 24);
 /// The world camera's near plane, in blocks (vanilla `GameRenderer.PROJECTION_Z_NEAR`).
 pub const WORLD_Z_NEAR: f32 = 0.05;
 
-/// The world camera's projection (Vulkan clip space.
+/// The world camera's projection (Vulkan clip space).
 pub fn world_projection(fov_y_degrees: f32, aspect: f32, far: f32) -> Mat4 {
     glam::camera::rh::proj::vulkan::perspective(
         fov_y_degrees.to_radians(),

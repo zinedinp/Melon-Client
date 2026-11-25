@@ -1,4 +1,4 @@
-//! An entity drawn into a box of a screen, turned toward the mouse:
+//! An entity drawn into a box of a screen, turned toward the mouse.
 
 use glam::{Mat3, Mat4, Vec3};
 use image::RgbaImage;

@@ -5,6 +5,7 @@ use pumpkin_data::sound::Sound;
 
 use crate::audio::source::SoundSource;
 use crate::network::protocol::packet::Reader;
+use crate::network::protocol::reader::initial_capacity;
 use crate::particle::ParticleSpec;
 use crate::particle::server::explosion::Debris;
 
@@ -81,8 +82,8 @@ pub(super) fn read_explosion(r: &mut Reader) -> Result<Explosion> {
     let knockback = if r.bool()? { Some(r.vec3_f64()?) } else { None };
     let particle = r.particle()?;
     let event = read_event(r)?;
-    let pool = r.var_int()?.clamp(0, 4096);
-    let mut debris = Vec::with_capacity(pool as usize);
+    let pool = r.list_count()?;
+    let mut debris = Vec::with_capacity(initial_capacity(pool));
     for _ in 0..pool {
         debris.push(Debris {
             spec: r.particle()?,

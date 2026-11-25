@@ -274,7 +274,7 @@ impl<Id: Copy + PartialEq + std::fmt::Debug> WidgetSet<Id> {
         }
     }
 
-    /// Tab: the focus moves to the next widget that takes it (Shift.
+    /// Tab: the focus moves to the next widget that takes it (Shift: the one before).
     pub fn tab(&mut self, backwards: bool) {
         let count = self.items.len();
         if count == 0 {

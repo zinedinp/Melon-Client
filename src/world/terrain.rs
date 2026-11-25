@@ -441,7 +441,7 @@ pub fn mesh_section(neighborhood: &Neighborhood, s: usize, context: &MeshContext
     })
 }
 
-/// Every section of `neighborhood`'s centre chunk, bottom to top, unsorted:
+/// Meshes every section of `neighborhood`'s centre chunk, bottom to top, unsorted.
 pub fn mesh_chunk(neighborhood: &Neighborhood, context: &MeshContext) -> Vec<SectionMesh> {
     (0..neighborhood.center().sections.len())
         .map(|s| mesh_section(neighborhood, s, context))

@@ -59,7 +59,7 @@ const LIST_TILE: f32 = 16.0;
 /// `Screen.HEADER_SEPARATOR`/`FOOTER_SEPARATOR`: 32 wide, tiled not stretched.
 const SEPARATOR_TILE: f32 = 32.0;
 
-/// `AbstractScrollArea.extractListBackground` and `extractListSeparators`:
+/// `AbstractScrollArea.extractListBackground` and `extractListSeparators`.
 pub fn push_list_background(
     draw_list: &mut DrawList,
     assets: &GuiAssets,

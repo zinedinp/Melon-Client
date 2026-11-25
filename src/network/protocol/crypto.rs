@@ -1,4 +1,4 @@
-//! Login-phase encryption (vanilla's `EncryptionRequest`/`EncryptionResponse`
+//! Login-phase encryption (vanilla's `EncryptionRequest`/`EncryptionResponse`).
 
 use anyhow::{Context, Result};
 use rsa::pkcs8::DecodePublicKey;

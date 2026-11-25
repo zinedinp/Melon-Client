@@ -450,15 +450,31 @@ impl Post {
                 }
             };
             let size = BLOCK_STRIDE * block_count as u64;
-            let (ubo, ubo_memory) = create_buffer_in(
+            let ubo = create_buffer_in(
                 device,
                 mem_props,
                 size,
                 vk::BufferUsageFlags::UNIFORM_BUFFER,
                 &MAPPED_FOR_GPU,
-            )?;
-            let ubo_ptr =
-                device.map_memory(ubo_memory, 0, size, vk::MemoryMapFlags::empty())? as *mut u8;
+            )
+            .and_then(|(ubo, memory)| {
+                match device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty()) {
+                    Ok(ptr) => Ok((ubo, memory, ptr.cast::<u8>())),
+                    Err(e) => {
+                        device.destroy_buffer(ubo, None);
+                        vk_util::free_memory(device, memory);
+                        Err(e.into())
+                    }
+                }
+            });
+            let (ubo, ubo_memory, ubo_ptr) = match ubo {
+                Ok(ubo) => ubo,
+                Err(e) => {
+                    pipeline.destroy(device);
+                    let _ = device.free_descriptor_sets(self.pool, &sets);
+                    return Err(e);
+                }
+            };
             let blocks = pass
                 .uniforms
                 .iter()
@@ -486,7 +502,7 @@ impl Post {
         Ok(())
     }
 
-    /// The swapchain's size and views changed (or this is the first time):
+    /// The swapchain's size and views changed (or this is the first time).
     pub unsafe fn resize(
         &mut self,
         device: &ash::Device,
@@ -502,8 +518,10 @@ impl Post {
         }
         let usage = vk::ImageUsageFlags::COLOR_ATTACHMENT | vk::ImageUsageFlags::SAMPLED;
         let outline = create_image(device, mem_props, self.format, extent, usage)?;
-        self.outline_framebuffer = framebuffer(device, self.color_pass, outline.view, extent)?;
+        let outline_view = outline.view;
+        // Kept first, so `destroy_sized` frees it if the framebuffer fails.
         self.outline = Some(outline);
+        self.outline_framebuffer = framebuffer(device, self.color_pass, outline_view, extent)?;
         self.snapshot = Some(create_image(
             device,
             mem_props,
@@ -538,7 +556,7 @@ impl Post {
         Ok(())
     }
 
-    /// Makes every chain's own targets for `extent` and writes the passes'
+    /// Makes every chain's own targets for `extent` and writes the passes' descriptor sets.
     unsafe fn bind_all(
         &mut self,
         device: &ash::Device,
@@ -756,7 +774,7 @@ impl Post {
             let _ = device.free_descriptor_sets(self.pool, &[pass.sampler_set, pass.block_set]);
             device.unmap_memory(pass.ubo_memory);
             device.destroy_buffer(pass.ubo, None);
-            device.free_memory(pass.ubo_memory, None);
+            vk_util::free_memory(device, pass.ubo_memory);
         }
         for texture in chain.textures.drain(..) {
             free_texture(texture.texture);
@@ -941,7 +959,7 @@ unsafe fn framebuffer(
 unsafe fn destroy_image(device: &ash::Device, image: &Image) {
     device.destroy_image_view(image.view, None);
     device.destroy_image(image.image, None);
-    device.free_memory(image.memory, None);
+    vk_util::free_memory(device, image.memory);
 }
 
 unsafe fn destroy_internal(device: &ash::Device, internal: &mut Internal) {

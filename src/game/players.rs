@@ -51,7 +51,7 @@ impl InWorld {
         self.tab_list.visible() || self.game_mode.current.is_spectator()
     }
 
-    /// `getListedOnlinePlayers` sorted by `PlayerTabOverlay.
+    /// `getListedOnlinePlayers` sorted by `PlayerTabOverlay.PLAYER_COMPARATOR`.
     pub(super) fn listed_players(&self) -> Vec<(uuid::Uuid, &PlayerEntry)> {
         let mut out: Vec<_> = self
             .players

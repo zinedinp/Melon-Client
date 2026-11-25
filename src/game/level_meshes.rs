@@ -25,6 +25,8 @@ const UPLOAD_BUDGET: usize = 16 << 20;
 const NEARBY_SECTIONS: i32 = 2;
 /// Translucent quads sorted again per frame at most, nearest sections first.
 const RESORT_BUDGET: usize = 32 << 10;
+/// Sections per column the `u32` masks hold; ones above are not drawn (a level over 512 blocks tall).
+const MASK_SECTIONS: usize = u32::BITS as usize;
 
 /// Where section meshes go.
 trait MeshSink {
@@ -447,9 +449,16 @@ impl Default for LevelMeshes {
 }
 
 impl LevelMeshes {
-    /// The level's bottom: where its first section starts.
-    pub fn set_min_y(&mut self, min_y: i32) {
-        self.min_y = min_y;
+    /// The level's bottom (where its first section starts) and height.
+    pub fn set_height(&mut self, height: Height) {
+        self.min_y = height.min_y;
+        let drawn = MASK_SECTIONS as i32 * SECTION_SIZE;
+        if height.height > drawn {
+            crate::warn!(
+                "The level is {} blocks tall; blocks above its lowest {drawn} are not drawn",
+                height.height
+            );
+        }
     }
 
     /// Uploads finished meshes in place of the sections' old ones.
@@ -483,7 +492,7 @@ impl LevelMeshes {
     pub fn section_compiled(&self, (x, y, z): SectionPos) -> bool {
         usize::try_from(y)
             .ok()
-            .filter(|&y| y < 32)
+            .filter(|&y| y < MASK_SECTIONS)
             .is_some_and(|y| {
                 self.columns
                     .get(&(x, z))
@@ -496,7 +505,7 @@ impl LevelMeshes {
     pub fn section_filled(&self, (x, y, z): SectionPos) -> bool {
         usize::try_from(y)
             .ok()
-            .filter(|&y| y < 32)
+            .filter(|&y| y < MASK_SECTIONS)
             .is_some_and(|y| {
                 self.columns
                     .get(&(x, z))
@@ -520,7 +529,7 @@ impl LevelMeshes {
         let Ok(y) = usize::try_from(pos.1) else {
             return;
         };
-        if y >= 32 {
+        if y >= MASK_SECTIONS {
             return;
         }
         let meshes = match SectionMeshes::upload(pos, mesh, sink) {
@@ -1022,7 +1031,7 @@ impl ChangingMesh {
 /// How far the camera moves before the still block entities are gathered again.
 const STILL_STEP: f32 = 8.0;
 
-/// The block entities' geometry (chests, bells, books...), in two meshes:
+/// The block entities' geometry (chests, bells, books...), in two meshes.
 #[derive(Default)]
 pub struct BlockEntityMeshes {
     still: ChangingMesh,
@@ -1091,16 +1100,12 @@ impl BlockEntityMeshes {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::xorshift::XorShift;
 
     #[test]
     fn draw_keys_order_like_distance_then_index() {
-        let mut seed = 0x0bad_5eed_1234_5678u64;
-        let mut random = move || {
-            seed ^= seed << 13;
-            seed ^= seed >> 7;
-            seed ^= seed << 17;
-            seed
-        };
+        let mut rng = XorShift(0x0bad_5eed_1234_5678);
+        let mut random = move || rng.next_u64();
         let draws: Vec<(f32, usize)> = (0..400)
             .map(|index| ((random() % 50) as f32 * 37.25, index))
             .collect();
@@ -1129,7 +1134,7 @@ mod tests {
             groups: std::array::from_fn(|g| g as u32 * 10..g as u32 * 10 + 10),
         };
         let mut meshes = LevelMeshes::default();
-        meshes.set_min_y(-64);
+        meshes.set_height(Height::OVERWORLD);
         let mut next = 0;
         for x in -32..=32 {
             for z in -32..=32 {

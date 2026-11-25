@@ -55,7 +55,7 @@ impl InWorld {
         })
     }
 
-    /// What the hands show in first person from the camera at `eye`:
+    /// What the hands show in first person from the camera at `eye`.
     pub(super) fn first_person_hands(
         &self,
         eye: Vec3,

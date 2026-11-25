@@ -2,7 +2,7 @@
 
 use super::{BOTTOM_MARGIN, Chat, Line, Tag};
 use crate::gui::text::font::{Font, Glyphs};
-use crate::gui::text::{self, StyledText, TextPaint, TextStyle, colors};
+use crate::gui::text::{self, StyledText, TextPaint, TextStyle};
 use crate::i18n::Lang;
 use crate::renderer::quad::DrawList;
 
@@ -157,13 +157,9 @@ impl Chat {
         let Glyphs { font, pages, white } = glyphs;
         let scale = self.scale();
         let paint = TextPaint {
-            font,
-            pages,
-            white,
-            color: colors::WHITE,
             alpha,
-            shadow: true,
             obfuscation_seed: u64::from(self.ticks),
+            ..TextPaint::new(font, pages, white)
         };
         if (scale - 1.0).abs() < f32::EPSILON {
             text::draw(draw_list, &paint, content, 4.0, text_top);

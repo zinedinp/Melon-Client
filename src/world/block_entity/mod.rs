@@ -1,4 +1,4 @@
-//! Blocks drawn by a block entity renderer (vanilla `BlockEntityRenderers`):
+//! Blocks drawn by a block entity renderer (vanilla `BlockEntityRenderers`).
 
 mod anim;
 pub mod item;

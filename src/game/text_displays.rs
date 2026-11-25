@@ -111,13 +111,10 @@ fn build(
     let draw = |shadow: bool| {
         let mut list = DrawList::new();
         let paint = text::TextPaint {
-            font: painter.font,
-            pages: painter.font_textures,
-            white: painter.white,
-            color: [1.0; 3],
             alpha: f32::from(opacity) / 255.0,
             shadow,
             obfuscation_seed: seed,
+            ..painter.paint(text::colors::WHITE)
         };
         for (i, (line, width)) in lines.iter().zip(&widths).enumerate() {
             let x = if state.flags & FLAG_ALIGN_LEFT != 0 {

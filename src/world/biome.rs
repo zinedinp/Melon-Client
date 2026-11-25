@@ -23,7 +23,7 @@ pub enum GrassModifier {
     Swamp,
 }
 
-/// What a biome sets of the environment attributes (`minecraft:visual/...`
+/// What a biome sets of the environment attributes (`minecraft:visual/...`).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Visuals {
     pub sky_color: Option<Rgb>,

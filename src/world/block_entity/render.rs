@@ -40,7 +40,7 @@ fn block_center(pos: [i32; 3]) -> DVec3 {
 }
 
 impl BlockEntities {
-    /// Builds the block entities at rest into `out` (world positions):
+    /// Builds the block entities at rest into `out` (world positions).
     pub fn build_still(
         &self,
         level: &Level,

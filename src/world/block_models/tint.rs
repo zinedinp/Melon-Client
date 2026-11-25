@@ -50,7 +50,7 @@ pub(super) fn bake_tint(
     }
 }
 
-/// The tint a block's particles get (`BlockTintSource.colorAsTerrainParticle`
+/// The tint a block's particles get (`BlockTintSource.colorAsTerrainParticle`).
 pub(super) fn particle_tint(block: &str, props: &[(&str, &str)]) -> ([f32; 3], TintKind) {
     if block.trim_start_matches("minecraft:") == "grass_block" {
         return ([1.0; 3], TintKind::None);
@@ -58,7 +58,7 @@ pub(super) fn particle_tint(block: &str, props: &[(&str, &str)]) -> ([f32; 3], T
     bake_tint(block, Some(0), props)
 }
 
-/// Whether vanilla's `BlockColors` gives the block a tint source at all:
+/// Whether vanilla's `BlockColors` gives the block a tint source at all.
 pub(super) fn has_tint_source(block: &str) -> bool {
     matches!(
         block.trim_start_matches("minecraft:"),

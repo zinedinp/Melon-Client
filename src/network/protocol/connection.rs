@@ -48,7 +48,7 @@ impl Connection {
         self.decryptor = Some(Decryptor::new(key.into(), key.into()));
     }
 
-    /// `ClientHandshakePacketListenerImpl.handleCompression`:
+    /// `ClientHandshakePacketListenerImpl.handleCompression`.
     pub fn enable_compression(&mut self, threshold: i32) {
         self.compression = (threshold >= 0).then_some(threshold);
     }
@@ -105,6 +105,7 @@ impl Connection {
                 encryptor: self.encryptor,
                 compression: self.compression,
                 play: false,
+                failed: None,
             },
         ))
     }
@@ -136,11 +137,18 @@ pub struct WriteHalf {
     compression: Option<i32>,
     /// Past the configuration phase.
     pub play: bool,
+    /// A write failed (or timed out) partway, so the stream is cut off mid-packet.
+    failed: Option<io::ErrorKind>,
 }
 
 impl WriteHalf {
     pub(crate) fn compression(&self) -> Option<i32> {
         self.compression
+    }
+
+    /// Why writing stopped: every write after a failed one fails the same way.
+    pub fn failed(&self) -> Option<io::ErrorKind> {
+        self.failed
     }
 
     pub fn write_packet(
@@ -160,7 +168,14 @@ impl Write for WriteHalf {
 
     /// See [`write_encrypted`].
     fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
-        write_encrypted(&mut *self.stream, self.encryptor.as_mut(), buf)
+        if let Some(kind) = self.failed {
+            return Err(io::Error::new(kind, "an earlier write failed"));
+        }
+        let written = write_encrypted(&mut *self.stream, self.encryptor.as_mut(), buf);
+        if let Err(e) = &written {
+            self.failed = Some(e.kind());
+        }
+        written
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -291,6 +306,40 @@ mod tests {
         fn split(self: Box<Self>) -> io::Result<(Box<dyn Read + Send>, Box<dyn Write + Send>)> {
             Ok((self.clone(), self))
         }
+    }
+
+    /// A stream whose writes time out, as to a server that stopped reading.
+    struct Stalled;
+
+    impl Read for Stalled {
+        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+            Ok(0)
+        }
+    }
+
+    impl Write for Stalled {
+        fn write(&mut self, _: &[u8]) -> io::Result<usize> {
+            Err(io::ErrorKind::TimedOut.into())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl Stream for Stalled {
+        fn split(self: Box<Self>) -> io::Result<(Box<dyn Read + Send>, Box<dyn Write + Send>)> {
+            Ok((Box::new(Stalled), self))
+        }
+    }
+
+    #[test]
+    fn a_timed_out_write_fails_every_later_one() {
+        let (_, mut writer) = Connection::new(Stalled).into_split().unwrap();
+        assert_eq!(writer.failed(), None);
+        assert!(writer.write_packet(1, |_| Ok(())).is_err());
+        assert_eq!(writer.failed(), Some(io::ErrorKind::TimedOut));
+        assert!(writer.write_packet(2, |_| Ok(())).is_err());
     }
 
     fn packet(id: i32, body: &[u8]) -> Vec<u8> {

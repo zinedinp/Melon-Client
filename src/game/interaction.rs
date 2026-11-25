@@ -141,7 +141,7 @@ impl InWorld {
         self.continue_attack(self.keys.attack && !instant);
     }
 
-    /// `MultiPlayerGameMode.getDestroyStage` into `destroyBlockProgress`:
+    /// `MultiPlayerGameMode.getDestroyStage` into `destroyBlockProgress`.
     pub(super) fn update_own_crack(&mut self) {
         let own = self.joined.session.info.entity_id;
         match &self.interaction.destroying {

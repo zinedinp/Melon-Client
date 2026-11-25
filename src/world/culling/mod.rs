@@ -1,9 +1,11 @@
-//! What the camera can't see isn't drawn. Three layers, cheapest first:
+//! What the camera can't see isn't drawn, in three layers, cheapest first.
 
 pub mod frustum;
 pub mod occlusion;
 pub mod section_cull;
 pub mod visgraph;
+#[cfg(target_arch = "x86_64")]
+pub mod x86;
 
 use glam::{DVec3, IVec3, Vec3};
 
@@ -137,7 +139,7 @@ impl<'a> Culler<'a> {
         self.sees_section_within(pos, false)
     }
 
-    /// [`Self::sees_section`] for a section of a box [`Self::frames_box`]
+    /// [`Self::sees_section`]; `framed`: [`Self::frames_box`] already passed the section's box.
     #[inline]
     pub fn sees_section_within(&self, pos: SectionPos, framed: bool) -> bool {
         self.reaches(pos) && {

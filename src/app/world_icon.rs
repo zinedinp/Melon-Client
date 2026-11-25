@@ -1,4 +1,4 @@
-//! The world's `icon.png` (vanilla's `GameRenderer.tryTakeScreenshotIfNeeded`):
+//! The world's `icon.png` (vanilla's `GameRenderer.tryTakeScreenshotIfNeeded`).
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};

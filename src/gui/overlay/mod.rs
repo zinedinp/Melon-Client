@@ -82,7 +82,7 @@ pub enum OverlayAction {
         primary: Option<i32>,
         secondary: Option<i32>,
     },
-    /// Creative inventory slots the client set (`ServerboundSetCreativeModeSlotPacket`;
+    /// Creative inventory slots the client set (`ServerboundSetCreativeModeSlotPacket`).
     CreativeSlots(Vec<(i16, ItemStack)>),
     /// Send this chat message or `/command`, and close.
     Send(String),

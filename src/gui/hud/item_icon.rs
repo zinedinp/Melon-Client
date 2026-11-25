@@ -316,7 +316,7 @@ fn atlas_layers(item: &ItemModel, sheet: &ItemSheet) -> Option<Vec<([f32; 4], [f
         .collect()
 }
 
-/// Bakes the icon for the item with registry key `key` (e.g.
+/// Bakes the icon for the item with registry key `key` (e.g. `oak_stairs`).
 pub fn bake(assets_root: &Path, key: &str) -> Option<RgbaImage> {
     let item = resolve(assets_root, key, None)?;
     bake_item(assets_root, &item, None).map(|mut icon| icon.frames.swap_remove(0))

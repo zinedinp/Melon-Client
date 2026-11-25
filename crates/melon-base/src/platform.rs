@@ -8,13 +8,48 @@ use std::process::Command;
 use std::process::Output;
 
 /// PowerShell without a console window: the launcher is a GUI program, so Windows would open one.
+/// By its full path: its folder isn't always on `PATH`, and then the dialogs never opened.
 #[cfg(windows)]
 fn powershell() -> std::process::Command {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    let mut cmd = std::process::Command::new("powershell");
+    let root = std::env::var_os("SystemRoot").unwrap_or_else(|| r"C:\Windows".into());
+    let exe = std::path::Path::new(&root).join(r"System32\WindowsPowerShell\v1.0\powershell.exe");
+    let mut cmd = std::process::Command::new(exe);
     cmd.creation_flags(CREATE_NO_WINDOW);
     cmd
+}
+
+/// Makes PowerShell write its output in UTF-8 instead of the OEM code page.
+#[cfg(windows)]
+const UTF8_OUTPUT: &str = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ";
+
+/// A single-quoted PowerShell string: every quote doubled, the typographic ones too.
+#[cfg(any(windows, test))]
+fn powershell_string(text: &str) -> String {
+    let mut out = String::from("'");
+    for c in text.chars() {
+        if matches!(c, '\'' | '\u{2018}' | '\u{2019}' | '\u{201A}' | '\u{201B}') {
+            out.push(c);
+        }
+        out.push(c);
+    }
+    out.push('\'');
+    out
+}
+
+/// A double-quoted AppleScript string: quotes and backslashes escaped.
+#[cfg(any(target_os = "macos", test))]
+fn applescript_string(text: &str) -> String {
+    let mut out = String::from("\"");
+    for c in text.chars() {
+        if matches!(c, '"' | '\\') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('"');
+    out
 }
 
 /// Native file dialog (zenity / kdialog / osascript / PowerShell). No Python, no Java.
@@ -43,7 +78,9 @@ pub fn pick_file(title: &str, extension: &str) -> Option<std::path::PathBuf> {
                 .args([
                     "-e",
                     &format!(
-                        "POSIX path of (choose file of type {{\"{extension}\"}} with prompt \"{title}\")"
+                        "POSIX path of (choose file of type {{{}}} with prompt {})",
+                        applescript_string(extension),
+                        applescript_string(title),
                     ),
                 ])
                 .output()
@@ -53,9 +90,9 @@ pub fn pick_file(title: &str, extension: &str) -> Option<std::path::PathBuf> {
         #[cfg(windows)]
         {
             let script = format!(
-                "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.OpenFileDialog; $f.Filter = '{ext} (*.{ext})|*.{ext}'; $f.Title = '{title}'; if ($f.ShowDialog() -eq 'OK') {{ $f.FileName }}",
-                ext = extension,
-                title = title.replace('\'', "''"),
+                "{UTF8_OUTPUT}Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.OpenFileDialog; $f.Filter = {filter}; $f.Title = {title}; if ($f.ShowDialog() -eq 'OK') {{ $f.FileName }}",
+                filter = powershell_string(&format!("{extension} (*.{extension})|*.{extension}")),
+                title = powershell_string(title),
             );
             powershell()
                 .args(["-NoProfile", "-Command", &script])
@@ -90,7 +127,10 @@ pub fn pick_folder(title: &str) -> Option<std::path::PathBuf> {
             std::process::Command::new("osascript")
                 .args([
                     "-e",
-                    &format!("POSIX path of (choose folder with prompt \"{title}\")"),
+                    &format!(
+                        "POSIX path of (choose folder with prompt {})",
+                        applescript_string(title)
+                    ),
                 ])
                 .output()
                 .ok()
@@ -99,8 +139,8 @@ pub fn pick_folder(title: &str) -> Option<std::path::PathBuf> {
         #[cfg(windows)]
         {
             let script = format!(
-                "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = '{title}'; if ($f.ShowDialog() -eq 'OK') {{ $f.SelectedPath }}",
-                title = title.replace('\'', "''"),
+                "{UTF8_OUTPUT}Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = {title}; if ($f.ShowDialog() -eq 'OK') {{ $f.SelectedPath }}",
+                title = powershell_string(title),
             );
             powershell()
                 .args(["-NoProfile", "-Command", &script])
@@ -664,6 +704,40 @@ pub fn raise_frame_thread_priority() {
     #[cfg(windows)]
     if std::thread::available_parallelism().is_ok_and(|n| n.get() > 4) {
         win_threads::set_priority(win_threads::ABOVE_NORMAL, "raised");
+    }
+}
+
+#[cfg(test)]
+mod dialog_script_tests {
+    #[test]
+    fn applescript_titles_escape_quotes_and_backslashes() {
+        assert_eq!(super::applescript_string("Pick"), r#""Pick""#);
+        assert_eq!(
+            super::applescript_string(r#"A "skin" in C:\x"#),
+            r#""A \"skin\" in C:\\x""#
+        );
+    }
+
+    #[test]
+    fn powershell_titles_double_every_quote() {
+        assert_eq!(super::powershell_string("it's"), "'it''s'");
+        assert_eq!(
+            super::powershell_string("l\u{2019}image"),
+            "'l\u{2019}\u{2019}image'"
+        );
+    }
+
+    /// A path with an umlaut comes back intact, not in the OEM code page.
+    #[cfg(windows)]
+    #[test]
+    fn powershell_output_is_utf8() {
+        let script = format!("{}\"C:\\Users\\M$([char]0xFC)ller\"", super::UTF8_OUTPUT);
+        let output = super::powershell()
+            .args(["-NoProfile", "-Command", &script])
+            .output()
+            .expect("PowerShell runs");
+        let text = String::from_utf8(output.stdout).expect("UTF-8 output");
+        assert_eq!(text.trim(), "C:\\Users\\M\u{FC}ller");
     }
 }
 

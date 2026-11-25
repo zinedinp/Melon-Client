@@ -359,7 +359,7 @@ impl Renderer2d {
         if image != vk::Image::null() {
             self.device.destroy_image_view(view, None);
             self.device.destroy_image(image, None);
-            self.device.free_memory(memory, None);
+            vk_util::free_memory(&self.device, memory);
         }
         for semaphore in self.frames.render_finished.drain(..) {
             self.device.destroy_semaphore(semaphore, None);
@@ -513,13 +513,13 @@ impl Renderer2d {
             .wait_semaphores(&signal_semaphores)
             .swapchains(&swapchains)
             .image_indices(&image_indices);
-        match self.swapchain.loader.queue_present(self.queue, &present) {
-            Ok(false) => {}
-            Ok(true) | Err(vk::Result::ERROR_OUT_OF_DATE_KHR) => {
-                self.device.device_wait_idle()?;
-                self.create_swapchain(width, height)?;
-            }
-            Err(e) => return Err(e.into()),
+        let presented = self.swapchain.loader.queue_present(self.queue, &present);
+        let recreate = vk_util::recreate_after_present(presented, self.swapchain.extent, || {
+            vk_util::surface_extent(&self.surface_loader, self.physical, self.surface)
+        })?;
+        if recreate {
+            self.device.device_wait_idle()?;
+            self.create_swapchain(width, height)?;
         }
         self.frames.current = (current + 1) % FRAMES_IN_FLIGHT;
         Ok(())
@@ -607,14 +607,14 @@ impl Drop for Renderer2d {
             for &(buffer, memory, _) in &self.vertices.buffers {
                 self.device.destroy_buffer(buffer, None);
                 self.device.unmap_memory(memory);
-                self.device.free_memory(memory, None);
+                vk_util::free_memory(&self.device, memory);
             }
             self.device.destroy_buffer(self.vertices.indices.0, None);
-            self.device.free_memory(self.vertices.indices.1, None);
+            vk_util::free_memory(&self.device, self.vertices.indices.1);
             for texture in &self.textures {
                 self.device.destroy_image_view(texture.view, None);
                 self.device.destroy_image(texture.image, None);
-                self.device.free_memory(texture.memory, None);
+                vk_util::free_memory(&self.device, texture.memory);
             }
             for staging in &mut self.staging {
                 staging.destroy(&self.device);

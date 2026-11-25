@@ -41,3 +41,34 @@ pub trait Bytes: Copy {
 pub fn chunks(len: usize, per: usize) -> usize {
     len.div_ceil(per).max(1)
 }
+
+/// Each byte four times: lane `i` reads byte `i / 4` (two-bit fields).
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub(super) const SPREAD_2: [u8; 16] = [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3];
+/// Each byte eight times (one-bit fields).
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub(super) const SPREAD_1: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1];
+/// A two-bit field's low and high bit, lane `i`'s at `2 * (i % 4)`.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub(super) const LOW_2: [u8; 16] = [1, 4, 16, 64, 1, 4, 16, 64, 1, 4, 16, 64, 1, 4, 16, 64];
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub(super) const HIGH_2: [u8; 16] = [2, 8, 32, 128, 2, 8, 32, 128, 2, 8, 32, 128, 2, 8, 32, 128];
+/// Lane `i`'s bit, `i % 8`.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub(super) const BIT_1: [u8; 16] = [1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128];
+
+/// The first `N` bytes of `bytes`.
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+#[inline(always)]
+pub(super) fn load<const N: usize>(bytes: &[u8]) -> [u8; N] {
+    bytes[..N].try_into().unwrap()
+}
+
+/// The first `K` bytes of `bytes`, zero padded to `N` (`movd`/`movq`).
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+#[inline(always)]
+pub(super) fn load_low<const K: usize, const N: usize>(bytes: &[u8]) -> [u8; N] {
+    let mut out = [0; N];
+    out[..K].copy_from_slice(&bytes[..K]);
+    out
+}

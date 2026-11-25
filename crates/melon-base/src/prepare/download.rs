@@ -1,4 +1,4 @@
-//! Fetches what a prepare needs from Mojang when it isn't on this computer:
+//! Fetches what a prepare needs from Mojang when it isn't on this computer.
 
 use super::{Found, Progress, VERSION, hex, sha1_file};
 use serde::Deserialize;

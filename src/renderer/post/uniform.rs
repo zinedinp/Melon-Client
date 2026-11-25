@@ -16,7 +16,7 @@ pub enum UniformValue {
 }
 
 impl UniformValue {
-    /// `UniformValue.CODEC`: `{"type": ..., "value".
+    /// `UniformValue.CODEC`: `{"type": ..., "value": ...}`.
     pub fn parse(json: &Value) -> Result<Self, String> {
         let kind = json["type"].as_str().ok_or("uniform without a type")?;
         let value = &json["value"];

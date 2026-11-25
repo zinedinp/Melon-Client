@@ -30,7 +30,7 @@ pub fn core_source(assets_root: &Path, name: &str, stage: Stage) -> Option<(Stri
     Some((text, layer > 0))
 }
 
-/// The shader `id` (`minecraft:post/blit`, `core/screenquad`) for `stage`:
+/// The shader `id` (`minecraft:post/blit`, `core/screenquad`) for `stage`.
 pub fn source(assets_root: &Path, id: &str, stage: Stage) -> Option<(String, bool)> {
     let (namespace, path) = id.split_once(':').unwrap_or(("minecraft", id));
     let file = format!("shaders/{path}.{}", stage.extension());

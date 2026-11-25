@@ -7,6 +7,7 @@ use anyhow::Result;
 
 use super::commands::{Argument, Parser};
 use crate::network::protocol::packet::Reader;
+use crate::network::protocol::reader::initial_capacity;
 use pumpkin_protocol::codec::registry_ids;
 use pumpkin_protocol::ser::NetworkReadSliceExt;
 use pumpkin_util::version::JavaMinecraftVersion;
@@ -38,8 +39,8 @@ impl Registries {
     pub fn read_packet(&mut self, body: &[u8]) -> Result<()> {
         let mut r = Reader::new(body);
         let registry = r.string()?;
-        let count = r.var_int()?.clamp(0, 1 << 16) as usize;
-        let mut ids = Vec::with_capacity(count);
+        let count = r.list_count()?;
+        let mut ids = Vec::with_capacity(initial_capacity(count));
         for _ in 0..count {
             ids.push(r.string()?);
             if r.bool()? {

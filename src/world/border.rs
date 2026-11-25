@@ -168,7 +168,7 @@ impl WorldBorder {
         x >= min_x && x < max_x && z >= min_z && z < max_z
     }
 
-    /// How red the vignette is at `(x, z)`, `0..=1` (`Gui.updateVignette`):
+    /// How red the vignette is at `(x, z)`, `0..=1` (`Gui.updateVignette`).
     pub fn warning(&self, x: f64, z: f64) -> f32 {
         let speed = if self.moving() {
             (self.to - self.from).abs() / (self.total as f64 * 50.0)

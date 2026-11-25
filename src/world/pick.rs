@@ -10,7 +10,7 @@ use crate::world::physics::Aabb;
 /// `Attributes.BLOCK_INTERACTION_RANGE`.
 pub const SURVIVAL_RANGE: f64 = 4.5;
 pub const CREATIVE_RANGE: f64 = 5.0;
-/// `Attributes.ENTITY_INTERACTION_RANGE`, creative adding
+/// `Attributes.ENTITY_INTERACTION_RANGE`, creative adding 2.
 pub const SURVIVAL_ENTITY_RANGE: f64 = 3.0;
 pub const CREATIVE_ENTITY_RANGE: f64 = 5.0;
 

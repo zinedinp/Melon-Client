@@ -20,7 +20,7 @@ pub enum Target {
 pub enum Interpolation {
     /// `Interpolations.LINEAR`.
     Linear,
-    /// `Interpolations.CATMULLROM`: a smooth curve through the keyframes'
+    /// `Interpolations.CATMULLROM`: a smooth curve through the keyframes' values.
     CatmullRom,
 }
 

@@ -636,7 +636,7 @@ fn pickable(ty: &EntityType) -> bool {
         || ty.id == EntityType::INTERACTION.id
 }
 
-/// `ItemEntity.bobOffs`, which vanilla draws at random for each client:
+/// `ItemEntity.bobOffs`, which vanilla draws at random for each client.
 fn bob_offset(uuid: uuid::Uuid) -> f32 {
     let (hi, lo) = uuid.as_u64_pair();
     let bits = (hi ^ lo.rotate_left(17)) >> 40;

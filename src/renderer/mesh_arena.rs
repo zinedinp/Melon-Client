@@ -13,7 +13,7 @@ use melon_base::gfx::residency::Residency;
 
 use super::create_buffer;
 use super::staging::Staging;
-use super::vk_util::create_buffer_placed;
+use super::vk_util::{self, create_buffer_placed};
 
 /// Bytes per arena block.
 const BLOCK_BYTES: u64 = 64 << 20;
@@ -316,6 +316,11 @@ impl MeshArena {
         self.pending_bytes.extend_from_slice(bytes);
     }
 
+    /// Drops the queued copies into `dst`, a buffer about to be destroyed.
+    pub fn cancel_copies(&mut self, dst: vk::Buffer) {
+        self.pending.retain(|copy| copy.dst != dst);
+    }
+
     /// Places `elements` in a block and writes them there, or queues their
     /// upload; returns the mesh's id. A new block goes where `residency`
     /// says, and counts against its VRAM room.
@@ -564,7 +569,7 @@ impl MeshArena {
             // Every mesh in it was last drawn by a frame that is done:
             // nothing in flight reads the buffer any more.
             device.destroy_buffer(block.buffer, None);
-            device.free_memory(block.memory, None);
+            vk_util::free_memory(device, block.memory);
             self.destroyed.push(block.buffer);
             *entry = None;
         }
@@ -581,14 +586,14 @@ impl MeshArena {
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
         for block in self.blocks.drain(..).flatten() {
             device.destroy_buffer(block.buffer, None);
-            device.free_memory(block.memory, None);
+            vk_util::free_memory(device, block.memory);
         }
         for staging in &mut self.staging {
             staging.destroy(device);
         }
         if let Some((buffer, memory)) = self.index.take() {
             device.destroy_buffer(buffer, None);
-            device.free_memory(memory, None);
+            vk_util::free_memory(device, memory);
         }
     }
 }

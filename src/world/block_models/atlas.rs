@@ -34,7 +34,7 @@ pub(super) fn has_holes(image: &RgbaImage) -> bool {
     image.pixels().any(|p| p.0[3] == 0)
 }
 
-/// The biggest atlas side Melon makes even when the GPU allows more:
+/// The biggest atlas side Melon makes even when the GPU allows more.
 const MAX_SIDE: u32 = 16384;
 
 /// One texture as loaded: its (first) frame, and all frames if animated.

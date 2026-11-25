@@ -4,7 +4,7 @@ use ash::vk;
 use glam::Mat4;
 
 use super::frame::WorldDraw;
-use super::vk_util::{MAPPED_FOR_GPU, create_buffer_in};
+use super::vk_util::{self, MAPPED_FOR_GPU, create_buffer_in};
 use crate::world::fog::FogData;
 
 /// `Globals` in `globals.glsl`, std140: ten `vec4`s.
@@ -201,7 +201,7 @@ impl GlobalBuffers {
         for frame in self.frames.drain(..) {
             device.unmap_memory(frame.memory);
             device.destroy_buffer(frame.buffer, None);
-            device.free_memory(frame.memory, None);
+            vk_util::free_memory(device, frame.memory);
         }
         device.destroy_descriptor_pool(self.pool, None);
         device.destroy_descriptor_set_layout(self.layout, None);

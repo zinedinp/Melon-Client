@@ -16,10 +16,30 @@ pub fn dir() -> PathBuf {
     platform_data()
 }
 
-/// A source checkout of the client or the launcher: `Cargo.toml` plus `src/main.rs` in the cwd.
+/// A source checkout of the client or the launcher: their `Cargo.toml` plus `src/main.rs` in the cwd.
 fn checkout() -> Option<PathBuf> {
     let cwd = std::env::current_dir().ok()?;
-    (cwd.join("Cargo.toml").is_file() && cwd.join("src/main.rs").is_file()).then_some(cwd)
+    let manifest = std::fs::read_to_string(cwd.join("Cargo.toml")).ok()?;
+    (is_melon_package(&manifest) && cwd.join("src/main.rs").is_file()).then_some(cwd)
+}
+
+/// The packages whose checkouts keep their data in the checkout.
+const PACKAGES: [&str; 2] = ["melon", "melon-launcher"];
+
+/// Whether a `Cargo.toml`'s `[package]` is named one of [`PACKAGES`].
+fn is_melon_package(manifest: &str) -> bool {
+    let mut in_package = false;
+    for line in manifest.lines().map(str::trim) {
+        if line.starts_with('[') {
+            in_package = line == "[package]";
+        } else if in_package
+            && let Some((key, value)) = line.split_once('=')
+            && key.trim() == "name"
+        {
+            return PACKAGES.contains(&value.trim().trim_matches(['"', '\'']));
+        }
+    }
+    false
 }
 
 /// OS personal data folder for Melon (`%APPDATA%/melon`, XDG, Application Support).
@@ -135,6 +155,19 @@ mod tests {
             Some(v) => unsafe { std::env::set_var("MELON_HOME", v) },
             None => unsafe { std::env::remove_var("MELON_HOME") },
         }
+    }
+
+    #[test]
+    fn only_melon_checkouts_hold_the_data() {
+        assert!(is_melon_package(
+            "[package]\r\nname = \"melon\"\r\nversion = \"1\"\r\n"
+        ));
+        assert!(is_melon_package("[package]\nname='melon-launcher'\n"));
+        assert!(!is_melon_package("[package]\nname = \"other-game\"\n"));
+        assert!(!is_melon_package("[package]\nname = \"melon-base\"\n"));
+        assert!(!is_melon_package("[workspace]\nname = \"melon\"\n"));
+        assert!(!is_melon_package("[dependencies]\nmelon = \"1\"\n"));
+        assert!(!is_melon_package(""));
     }
 
     #[test]

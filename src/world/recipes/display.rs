@@ -4,7 +4,7 @@ use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 use pumpkin_data::tag::{RegistryKey, get_tag_ids};
 
-/// An item stack with the comparison and printing a recipe display needs:
+/// An item stack with the comparison and printing a recipe display needs.
 #[derive(Clone)]
 pub struct Shown(pub ItemStack);
 
@@ -66,7 +66,7 @@ impl ItemSet {
 #[derive(Clone, Debug, PartialEq)]
 pub enum SlotDisplay {
     Empty,
-    /// TODO(fuel): the client has no fuel list (`minecraft:cooking_fuel`
+    /// TODO(fuel): the client has no fuel list (`minecraft:cooking_fuel`).
     AnyFuel,
     /// TODO(potions): list one stack per potion (`WithAnyPotion`).
     WithAnyPotion(Box<SlotDisplay>),

@@ -1,4 +1,4 @@
-//! How a dropped item is drawn (`ItemEntityRenderer`, `ItemClusterRenderState`):
+//! How a dropped item is drawn (`ItemEntityRenderer`, `ItemClusterRenderState`).
 
 use glam::Vec3;
 

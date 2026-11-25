@@ -1,4 +1,4 @@
-//! Particles the client makes up by itself, with no packet asking:
+//! Particles the client makes up by itself, with no packet asking.
 
 use glam::{DVec3, IVec3};
 use pumpkin_data::{Block, BlockStateId};

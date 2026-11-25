@@ -18,7 +18,7 @@ pub enum SectionState {
     Loaded(VisibilitySet),
 }
 
-/// `ChunkTrackingView.isWithinDistance` (the one-chunk buffer variant):
+/// `ChunkTrackingView.isWithinDistance` (the one-chunk buffer variant).
 #[inline]
 pub fn within_view_distance(dx: i32, dz: i32, view_distance: i32) -> bool {
     let dx = i64::from((dx.abs() - 1).max(0));
@@ -280,7 +280,7 @@ impl OcclusionMask {
     }
 }
 
-/// `SectionOcclusionGraph.MINIMUM_ADVANCED_CULLING_DISTANCE`: past this
+/// `SectionOcclusionGraph.MINIMUM_ADVANCED_CULLING_DISTANCE`, squared: past it the smart cull applies.
 const ADVANCED_CULLING_DISTANCE_SQR: f64 = 60.0 * 60.0;
 /// `MINIMUM_ADVANCED_CULLING_SECTION_DISTANCE`: `blockToSectionCoord(60)`.
 const ADVANCED_CULLING_SECTIONS: i32 = 60 >> 4;
@@ -445,7 +445,7 @@ fn walk_grid(
 /// Every direction's bit.
 const ALL_DIRECTIONS: u8 = 0x3F;
 
-/// The faces a section with visibility bits `cell` may be left through:
+/// The faces a section with visibility bits `cell` may be left through.
 #[inline]
 fn exits_of(cell: u64, entered: u8, travelled: u8) -> u8 {
     let exits = if entered == 0 {
@@ -740,6 +740,7 @@ impl OcclusionCache {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::xorshift::XorShift;
 
     const HEIGHT: i32 = 8;
 
@@ -868,13 +869,8 @@ mod tests {
     #[test]
     fn the_sky_band_keeps_every_section_the_whole_walk_reaches() {
         const H: i32 = 12;
-        let mut seed = 0x2545_f491_4f6c_dd1du64;
-        let mut random = move || {
-            seed ^= seed << 13;
-            seed ^= seed >> 7;
-            seed ^= seed << 17;
-            seed
-        };
+        let mut rng = XorShift(0x2545_f491_4f6c_dd1d);
+        let mut random = move || rng.next_u64();
         let r = 9;
         let mut sets = std::collections::HashMap::new();
         for x in -r - 4..=r + 4 {

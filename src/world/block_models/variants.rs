@@ -1,4 +1,4 @@
-//! Weighted random variants (vanilla `WeightedVariants`, `MultiPartModel`):
+//! Weighted random variants (vanilla `WeightedVariants`, `MultiPartModel`).
 
 use std::sync::Arc;
 

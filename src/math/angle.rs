@@ -165,34 +165,30 @@ pub(crate) const FRAC_2_PI: f64 = std::f64::consts::FRAC_2_PI;
 /// `π / 2` in two parts (fdlibm's `pio2_1`, `pio2_1t`): the first has
 /// 33 significant bits, so a quarter-turn count below `2^20` times it
 /// is exact.
-#[allow(clippy::excessive_precision)] // fdlibm's literals, as written there.
-pub(crate) const PIO2_HI: f64 = 1.570_796_326_734_125_614_17;
-#[allow(clippy::excessive_precision)]
-pub(crate) const PIO2_LO: f64 = 6.077_100_506_506_192_249_32e-11;
+pub(crate) const PIO2_HI: f64 = 1.570_796_326_734_125_6;
+pub(crate) const PIO2_LO: f64 = 6.077_100_506_506_192e-11;
 /// Past this the split above loses digits: [`sin_cos_exact`] asks libm.
 pub(crate) const REDUCE_LIMIT: f32 = 400_000.0;
 /// Adding and taking away `1.5 · 2^52` rounds a double to an integer.
 pub(crate) const ROUND_MAGIC: f64 = 6_755_399_441_055_744.0;
 
 /// fdlibm's `__kernel_sin` coefficients, `S1` first.
-#[allow(clippy::excessive_precision)] // fdlibm's literals, as written there.
 pub(crate) const SIN_COEFFS: [f64; 6] = [
-    -1.666_666_666_666_663_243_48e-01,
-    8.333_333_333_322_489_461_24e-03,
-    -1.984_126_982_985_794_931_34e-04,
-    2.755_731_370_707_006_767_89e-06,
-    -2.505_076_025_340_686_341_95e-08,
-    1.589_690_995_211_550_102_21e-10,
+    -1.666_666_666_666_663_2e-01,
+    8.333_333_333_322_49e-03,
+    -1.984_126_982_985_795e-04,
+    2.755_731_370_707_006_8e-06,
+    -2.505_076_025_340_686_3e-08,
+    1.589_690_995_211_55e-10,
 ];
 /// fdlibm's `__kernel_cos` coefficients, `C1` first.
-#[allow(clippy::excessive_precision)]
 pub(crate) const COS_COEFFS: [f64; 6] = [
-    4.166_666_666_666_660_190_37e-02,
-    -1.388_888_888_887_410_957_49e-03,
-    2.480_158_728_947_672_941_78e-05,
-    -2.755_731_435_139_066_330_35e-07,
-    2.087_572_321_298_174_827_90e-09,
-    -1.135_964_755_778_819_482_65e-11,
+    4.166_666_666_666_66e-02,
+    -1.388_888_888_887_411e-03,
+    2.480_158_728_947_673e-05,
+    -2.755_731_435_139_066_3e-07,
+    2.087_572_321_298_175e-09,
+    -1.135_964_755_778_819_5e-11,
 ];
 
 /// fdlibm's `__kernel_sin` and `__kernel_cos` for `|r| <= π/4`, both
@@ -384,6 +380,38 @@ mod tests {
     /// Vanilla's table: `(float) Math.sin(i * 2π / 65536)`.
     fn vanilla(i: i64) -> f32 {
         ((i as f64) * double::PI * 2.0 / STEPS as f64).sin() as f32
+    }
+
+    /// The shortened literals are fdlibm's longer ones to the bit (its hex notes).
+    #[test]
+    fn the_fdlibm_constants_keep_their_bits() {
+        let bits = |values: &[f64]| values.iter().map(|v| v.to_bits()).collect::<Vec<_>>();
+        assert_eq!(
+            bits(&[PIO2_HI, PIO2_LO]),
+            [0x3FF9_21FB_5440_0000, 0x3DD0_B461_1A62_6331]
+        );
+        assert_eq!(
+            bits(&SIN_COEFFS),
+            [
+                0xBFC5_5555_5555_5549,
+                0x3F81_1111_1110_F8A6,
+                0xBF2A_01A0_19C1_61D5,
+                0x3EC7_1DE3_57B1_FE7D,
+                0xBE5A_E5E6_8A2B_9CEB,
+                0x3DE5_D93A_5ACF_D57C,
+            ]
+        );
+        assert_eq!(
+            bits(&COS_COEFFS),
+            [
+                0x3FA5_5555_5555_554C,
+                0xBF56_C16C_16C1_5177,
+                0x3EFA_01A0_19CB_1590,
+                0xBE92_7E4F_809C_52AD,
+                0x3E21_EE9E_BDB4_B1C4,
+                0xBDA8_FAE9_BE88_38D4,
+            ]
+        );
     }
 
     #[test]

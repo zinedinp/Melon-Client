@@ -7,7 +7,7 @@ use glam::Mat4;
 
 use super::gui_uniforms::BLOCKS;
 use super::pipeline::{Pass, PipelineDesc, depth_disabled};
-use super::vk_util::{MAPPED_FOR_GPU, create_buffer_in};
+use super::vk_util::{self, MAPPED_FOR_GPU, create_buffer_in};
 use super::{Renderer, WorldVertex};
 use crate::assets::shaders::{self, Interface, Stage};
 
@@ -162,7 +162,7 @@ impl PackOutline {
         device.destroy_descriptor_set_layout(self.layout, None);
         device.unmap_memory(self.memory);
         device.destroy_buffer(self.buffer, None);
-        device.free_memory(self.memory, None);
+        vk_util::free_memory(device, self.memory);
     }
 }
 
@@ -272,7 +272,7 @@ unsafe fn uniforms(
         Ok(ptr) => ptr as *mut u8,
         Err(e) => {
             device.destroy_buffer(buffer, None);
-            device.free_memory(memory, None);
+            vk_util::free_memory(device, memory);
             device.destroy_descriptor_pool(pool, None);
             return Err(e.into());
         }

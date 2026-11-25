@@ -100,7 +100,7 @@ impl Packed {
 }
 
 impl Section {
-    /// Index into the section for section-relative `0..16` coordinates:
+    /// Index into the section for section-relative `0..16` coordinates.
     #[inline]
     pub const fn index(x: usize, y: usize, z: usize) -> usize {
         y * 256 + z * 16 + x

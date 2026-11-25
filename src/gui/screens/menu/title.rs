@@ -1,4 +1,4 @@
-//! Vanilla `TitleScreen.init()` / `extractRenderState`:
+//! Vanilla `TitleScreen.init()` / `extractRenderState`.
 
 use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::gui::screens::menu::create_world::CreateWorldScreen;

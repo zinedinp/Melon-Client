@@ -125,7 +125,7 @@ fn team_look(r: &mut Reader) -> Result<TeamLook> {
 }
 
 fn players(r: &mut Reader) -> Result<Vec<Box<str>>> {
-    let count = r.var_int()?.clamp(0, 4096) as usize;
+    let count = r.list_count()?;
     (0..count).map(|_| Ok(r.string()?.into())).collect()
 }
 

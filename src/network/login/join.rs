@@ -18,7 +18,7 @@ use pumpkin_data::packet::serverbound::{config as config_sb, login as login_sb};
 use std::io::Write;
 use std::net::{Shutdown, TcpStream};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// The send side of a joined connection, shared with whatever answers the server.
 pub(crate) type SharedWriter = Arc<Mutex<WriteHalf>>;
@@ -108,12 +108,13 @@ pub fn join_server(addr: &str, identity: &Identity, client: &ClientInfo) -> Resu
     )
 }
 
-/// `host:port`, with a vanilla-default port when it's left out, resolved and connected.
+/// How long a send may wait on a server that stopped reading before the session ends.
+const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// `host:port` ([`parse_address`](super::resolver::parse_address)), resolved and connected.
 pub(crate) fn connect_tcp(addr: &str) -> Result<(TcpStream, String, u16)> {
-    let (host, port) = match addr.rsplit_once(':') {
-        Some((host, port)) => (host, port.parse().context("invalid port")?),
-        None => (addr, 25565),
-    };
+    let (host, port) =
+        super::resolver::parse_address(addr).ok_or(crate::network::status::CannotResolve)?;
     let resolved = super::resolver::resolve(host, port)?;
     let stream = resolved
         .addrs
@@ -122,6 +123,7 @@ pub(crate) fn connect_tcp(addr: &str) -> Result<(TcpStream, String, u16)> {
         .with_context(|| format!("connecting to {addr}"))?;
     stream.set_nodelay(true).ok();
     stream.set_read_timeout(Some(Duration::from_secs(30)))?;
+    stream.set_write_timeout(Some(WRITE_TIMEOUT))?;
     Ok((stream, resolved.host, resolved.port))
 }
 
@@ -446,7 +448,11 @@ pub(crate) fn configure_loop(
     }
 }
 
-/// Reads Play packets until the `Login` packet and the first position sync.
+/// How long the join waits for the spawn and a chunk: `LevelLoadTracker.CLIENT_WAIT_TIMEOUT_MS`.
+const JOIN_WAIT: Duration = Duration::from_secs(30);
+
+/// Reads Play packets until the `Login` packet and the first position sync, or until
+/// [`JOIN_WAIT`] after the `Login` (vanilla lets the player in anyway then).
 pub(crate) fn play(
     reader: &mut ReadHalf,
     writer: &SharedWriter,
@@ -456,13 +462,15 @@ pub(crate) fn play(
     let mut events = Vec::new();
     let mut got_spawn = false;
     let mut got_chunk = false;
+    let mut deadline = Instant::now() + JOIN_WAIT;
 
-    for _ in 0..256 {
+    while Instant::now() < deadline {
         let (pid, body) = reader.read_packet()?;
         if pid == id::CB_PLAY_LOGIN {
             let login = read_login(&mut Reader::new(&body))?;
             listener.enter(login.dimension_id);
             join = Some(login);
+            deadline = Instant::now() + JOIN_WAIT;
             continue;
         }
         let (reply, play) = listener.handle(pid, &body)?;

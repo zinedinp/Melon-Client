@@ -3,6 +3,7 @@
 use anyhow::{Result, bail};
 
 use crate::network::protocol::packet::Reader;
+use crate::network::protocol::reader::initial_capacity;
 
 pub const CB_COMMANDS: i32 = pumpkin_data::packet::clientbound::play::COMMANDS.0;
 
@@ -22,7 +23,7 @@ pub enum Parser {
     GameProfile,
     /// `gamemode`.
     GameMode,
-    /// `resource_or_tag`, `resource_or_tag_key`, `resource`,
+    /// `resource_or_tag`, `resource_or_tag_key`, `resource` and the other registry parsers.
     Registry { registry: Box<str>, tags: bool },
     /// Anything else, by its id.
     Other(i32),
@@ -98,7 +99,7 @@ pub struct CommandTree {
     pub root: usize,
 }
 
-/// Reads an argument's properties (`ArgumentTypeInfo.serializeToNetwork`):
+/// Reads an argument's properties (`ArgumentTypeInfo.serializeToNetwork`).
 fn read_parser(r: &mut Reader, parser: i32) -> Result<(Parser, bool)> {
     let mut greedy = false;
     let mut kind = Parser::Other(parser);
@@ -203,11 +204,11 @@ fn validate(nodes: &[Node]) -> Result<()> {
 impl CommandTree {
     pub fn decode(body: &[u8]) -> Result<Self> {
         let mut r = Reader::new(body);
-        let count = r.var_int()?.clamp(0, 1 << 16) as usize;
-        let mut nodes = Vec::with_capacity(count);
+        let count = r.list_count()?;
+        let mut nodes = Vec::with_capacity(initial_capacity(count));
         for _ in 0..count {
             let flags = r.u8()?;
-            let children = (0..r.var_int()?.max(0))
+            let children = (0..r.var_int_array_count()?)
                 .map(|_| r.var_int().map(|c| c as usize))
                 .collect::<Result<Vec<_>>>()?;
             let redirect = if flags & HAS_REDIRECT != 0 {

@@ -1,4 +1,4 @@
-//! Renderer pipelines, kept separate: [`sky`] (3D cubemap), [`world`]
+//! Pipeline building shared by the passes, and the GUI's [`ui`] pipeline.
 
 pub mod ui;
 
@@ -78,7 +78,7 @@ pub struct PipelineDesc<'a> {
     pub blend: vk::PipelineColorBlendAttachmentState,
     /// The layouts of the sets after the texture's (set 0): sets 1, 2, ...
     pub extra_sets: &'a [vk::DescriptorSetLayout],
-    /// Depth bias, constant and by slope (vanilla's `DepthStencilState`
+    /// Depth bias, constant and by slope (vanilla's `DepthStencilState`).
     pub depth_bias: Option<(f32, f32)>,
 }
 

@@ -397,7 +397,7 @@ impl Model {
         out
     }
 
-    /// The matrix `translateAndRotate` leaves for `part` and its ancestors:
+    /// The matrix `translateAndRotate` leaves for `part` and its ancestors.
     pub fn part_transform(&self, pose: &ModelPose, part: PartId, root: Mat4) -> Mat4 {
         pose[part]
             .pose

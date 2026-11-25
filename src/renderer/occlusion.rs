@@ -14,7 +14,7 @@
 use ash::vk;
 
 use super::pipeline::create_shader_module;
-use super::vk_util::{create_buffer, create_sampler};
+use super::vk_util::{self, create_buffer, create_sampler};
 
 const HIZ_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/hiz.comp.spv"));
 const SELECT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/occlusion_select.comp.spv"));
@@ -78,7 +78,7 @@ impl Pyramid {
             device.destroy_image_view(view, None);
         }
         device.destroy_image(self.image, None);
-        device.free_memory(self.memory, None);
+        vk_util::free_memory(device, self.memory);
     }
 }
 
@@ -350,11 +350,11 @@ impl Occlusion {
             vk::MemoryPropertyFlags::DEVICE_LOCAL,
         )
         .and_then(|index| {
-            Ok(device.allocate_memory(
+            Ok(vk_util::allocate_memory(
+                device,
                 &vk::MemoryAllocateInfo::default()
                     .allocation_size(req.size)
                     .memory_type_index(index),
-                None,
             )?)
         }) {
             Ok(memory) => memory,
@@ -417,7 +417,7 @@ impl Occlusion {
                 }
             }
             device.destroy_image(image, None);
-            device.free_memory(memory, None);
+            vk_util::free_memory(device, memory);
             return Err(e);
         }
         for level in 0..levels {
@@ -481,7 +481,7 @@ impl Occlusion {
             let grown = create_visible(device, mem_props, slots.next_power_of_two())?;
             let old = std::mem::replace(&mut self.visible, grown);
             device.destroy_buffer(old.buffer, None);
-            device.free_memory(old.memory, None);
+            vk_util::free_memory(device, old.memory);
         }
         let Some(pyramid) = &self.pyramid else {
             return Ok(());
@@ -775,7 +775,7 @@ impl Occlusion {
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
         self.release_sized(device);
         device.destroy_buffer(self.visible.buffer, None);
-        device.free_memory(self.visible.memory, None);
+        vk_util::free_memory(device, self.visible.memory);
         device.destroy_sampler(self.sampler, None);
         device.destroy_descriptor_pool(self.pool, None);
         for pipeline in [self.hiz, self.select, self.cull, self.compact] {

@@ -8,17 +8,7 @@
 use miraculix::aarch64::FeatureSet;
 use miraculix::aarch64::ops::neon::neon::Neon;
 
-use crate::math::bytes::{Bytes, chunks};
-
-/// Each byte four times: lane `i` reads byte `i / 4` (two-bit fields).
-const SPREAD_2: [u8; 16] = [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3];
-/// Each byte eight times (one-bit fields).
-const SPREAD_1: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1];
-/// A two-bit field's low and high bit, lane `i`'s at `2 * (i % 4)`.
-const LOW_2: [u8; 16] = [1, 4, 16, 64, 1, 4, 16, 64, 1, 4, 16, 64, 1, 4, 16, 64];
-const HIGH_2: [u8; 16] = [2, 8, 32, 128, 2, 8, 32, 128, 2, 8, 32, 128, 2, 8, 32, 128];
-/// Lane `i`'s bit, `i % 8`.
-const BIT_1: [u8; 16] = [1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128];
+use crate::math::bytes::{BIT_1, Bytes, HIGH_2, LOW_2, SPREAD_1, SPREAD_2, chunks, load, load_low};
 
 /// 16 lanes on Neon.
 #[derive(Clone, Copy)]
@@ -40,20 +30,6 @@ pub struct Chunks {
     count: usize,
     /// All entries in the first 16: one `tbl` of one register.
     small: bool,
-}
-
-/// The first `N` bytes of `bytes`.
-#[inline(always)]
-fn load<const N: usize>(bytes: &[u8]) -> [u8; N] {
-    bytes[..N].try_into().unwrap()
-}
-
-/// The first `K` bytes of `bytes`, zero padded to 16.
-#[inline(always)]
-fn load_low<const K: usize>(bytes: &[u8]) -> [u8; 16] {
-    let mut out = [0; 16];
-    out[..K].copy_from_slice(&bytes[..K]);
-    out
 }
 
 impl Bytes for NeonBytes {
@@ -84,13 +60,13 @@ impl Bytes for NeonBytes {
                 out
             }
             2 => {
-                let spread = n.tbl_u8x16(load_low::<4>(packed), SPREAD_2);
+                let spread = n.tbl_u8x16(load_low::<4, 16>(packed), SPREAD_2);
                 let low = n.and_u8x16(n.test_u8x16(spread, LOW_2), [1; 16]);
                 let high = n.and_u8x16(n.test_u8x16(spread, HIGH_2), [2; 16]);
                 n.or_u8x16(low, high)
             }
             _ => {
-                let spread = n.tbl_u8x16(load_low::<2>(packed), SPREAD_1);
+                let spread = n.tbl_u8x16(load_low::<2, 16>(packed), SPREAD_1);
                 n.and_u8x16(n.test_u8x16(spread, BIT_1), [1; 16])
             }
         }

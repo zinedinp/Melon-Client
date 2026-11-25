@@ -3,7 +3,7 @@
 use ash::vk;
 
 use super::mesh_arena::{self, MeshArena};
-use super::vk_util::{MAPPED_FOR_GPU, create_buffer_in};
+use super::vk_util::{self, MAPPED_FOR_GPU, create_buffer_in};
 use super::{ChunkDraw, TerrainMesh, WorldDraw};
 
 /// Bytes of one `VkDrawIndexedIndirectCommand`.
@@ -45,7 +45,7 @@ impl Mapped {
         if self.buffer != vk::Buffer::null() {
             device.unmap_memory(self.memory);
             device.destroy_buffer(self.buffer, None);
-            device.free_memory(self.memory, None);
+            vk_util::free_memory(device, self.memory);
         }
         *self = Self::default();
     }

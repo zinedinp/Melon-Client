@@ -35,7 +35,7 @@ pub struct FishingMeshes {
     lines: HashMap<i32, Kept, ChunkHash>,
 }
 
-/// The sprite, half a block across and centred (`vertex(.. x - 0.5, y - 0.5)`
+/// The sprite, half a block across and centred (`vertex(.. x - 0.5, y - 0.5)`).
 fn sprite_quads() -> Vec<WorldVertex> {
     let corner = |x: f32, y: f32, u: f32, v: f32| {
         WorldVertex::new([x - 0.5, y - 0.5, 0.0], [u, v], [1.0; 3])

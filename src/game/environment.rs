@@ -46,7 +46,7 @@ pub struct FrameEnvironment {
 }
 
 impl InWorld {
-    /// Blindness and night vision, as the fog reads them. (Darkness'
+    /// Blindness and night vision, as the fog reads them.
     fn fog_effects(&self, partial: f32) -> FogEffects {
         use crate::world::player::status_effects::{BLINDNESS_ID, NIGHT_VISION_ID};
         let blindness = self

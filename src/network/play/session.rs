@@ -90,6 +90,8 @@ pub struct Session {
     pub(crate) writer: Arc<Mutex<WriteHalf>>,
     pub(crate) end_reason: Option<String>,
     pub(crate) close: Option<Box<dyn FnOnce() + Send>>,
+    /// Why a [`send`](Self::send) cut the stream off, for [`poll`](Self::poll) to end on.
+    send_failed: std::sync::OnceLock<String>,
     stats: Arc<NetStats>,
 }
 
@@ -130,6 +132,7 @@ impl Session {
             writer,
             end_reason: None,
             close: Some(close),
+            send_failed: std::sync::OnceLock::new(),
             stats,
         })
     }
@@ -152,6 +155,9 @@ impl Session {
                 }
                 Err(TryRecvError::Empty) => break,
             }
+        }
+        if self.end_reason.is_none() {
+            self.end_reason = self.send_failed.get().cloned();
         }
         self.stats.taken(out.len() - joining);
         out
@@ -373,7 +379,7 @@ impl Session {
         });
     }
 
-    /// `ServerboundPlayerActionPacket` `DROP_ALL_ITEMS`/`DROP_ITEM`: throws
+    /// `ServerboundPlayerActionPacket` `DROP_ALL_ITEMS`/`DROP_ITEM`: throws the held stack or one item.
     pub fn send_drop(&self, whole_stack: bool) {
         self.send_player_action(if whole_stack {
             game::PlayerAction::DropAllItems
@@ -382,7 +388,7 @@ impl Session {
         });
     }
 
-    /// `ServerboundPlayerActionPacket` for an action without a block:
+    /// `ServerboundPlayerActionPacket` for an action without a block.
     pub fn send_player_action(&self, action: game::PlayerAction) {
         self.send_player_action_at(action, [0, 0, 0], 0, 0);
     }
@@ -627,7 +633,7 @@ impl Session {
         });
     }
 
-    /// `ServerboundSetCreativeModeSlotPacket`, see
+    /// `ServerboundSetCreativeModeSlotPacket`.
     pub fn send_creative_slot(&self, slot: i16, stack: &pumpkin_data::item_stack::ItemStack) {
         self.send(game::id::SB_SET_CREATIVE_MODE_SLOT, |buf| {
             game::write_creative_slot(buf, slot, stack)
@@ -659,7 +665,7 @@ impl Session {
         self.joining = events;
     }
 
-    /// Writes one packet.
+    /// Writes one packet; a write that fails or times out ends the session.
     pub(crate) fn send(&self, id: i32, body: impl FnOnce(&mut Vec<u8>) -> Result<()>) {
         let mut writer = self
             .writer
@@ -670,6 +676,11 @@ impl Session {
         }
         crate::probe::trace_sent(id);
         let _ = writer.write_packet(id, body);
+        if let Some(kind) = writer.failed() {
+            let failure = timed_out(std::io::Error::from(kind).into());
+            let _ = self.send_failed.set(format!("{failure:#}"));
+            return;
+        }
         self.stats.transmitted();
     }
 
@@ -942,6 +953,7 @@ fn handle_play_packet(
             (None, Play::Nothing)
         }
         pid if pid == cb::CUSTOM_PAYLOAD.0 => (None, read_custom_payload(&mut r)?),
+        pid if pid == cb::COOKIE_REQUEST.0 => (Some(cookie_response(&mut r)?), Play::Nothing),
         pid if IGNORED.contains(&pid) => (None, Play::Nothing),
         _ => {
             let decoded = game::decode(pid, body);
@@ -985,7 +997,7 @@ pub(crate) fn read_loop(
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
             let compression = writer.compression();
-            reply.send(&mut *writer, compression)?;
+            reply.send(&mut *writer, compression).map_err(timed_out)?;
         }
         let event = match play {
             Play::Event(event) => event,
@@ -1033,7 +1045,7 @@ fn reconfigure(
     Ok(WorldEvent::Rejoined(Box::new(info), joined))
 }
 
-/// What a read that waited longer than the socket's timeout turns into.
+/// What a read or write that waited longer than the socket's timeout turns into.
 fn timed_out(e: anyhow::Error) -> anyhow::Error {
     let timeout = e.chain().any(|cause| {
         cause.downcast_ref::<std::io::Error>().is_some_and(|io| {
@@ -1122,6 +1134,18 @@ fn read_custom_payload(r: &mut Reader) -> Result<Play> {
     })
 }
 
+/// `ClientCommonPacketListenerImpl.handleRequestCookie`, with no payload: Melon stores no cookies.
+fn cookie_response(r: &mut Reader) -> Result<Reply> {
+    let key = r.string()?;
+    let mut body = Vec::new();
+    packet::write_string(&mut body, &key)?;
+    packet::write_bool(&mut body, false)?;
+    Ok(Reply {
+        id: pumpkin_data::packet::serverbound::play::COOKIE_RESPONSE.0,
+        body,
+    })
+}
+
 /// The server's `melon:swap` (`pumpkin_protocol::java::melon_swap`).
 pub const SWAP_CHANNEL: &str = "melon:swap";
 
@@ -1177,6 +1201,25 @@ mod tests {
         let reply = reply.expect("a pong");
         assert_eq!(reply.id, id::SB_PLAY_PONG);
         assert_eq!(reply.body, 7_i32.to_be_bytes());
+        assert!(matches!(play, Play::Nothing));
+    }
+
+    #[test]
+    fn a_play_cookie_request_is_answered_without_a_cookie() {
+        let mut listener = PlayListener {
+            ack_teleports: false,
+            ..PlayListener::default()
+        };
+        let mut body = Vec::new();
+        packet::write_string(&mut body, "minecraft:token").unwrap();
+        let (reply, play) = listener.handle(cb::COOKIE_REQUEST.0, &body).unwrap();
+        let reply = reply.expect("a cookie response");
+        assert_eq!(
+            reply.id,
+            pumpkin_data::packet::serverbound::play::COOKIE_RESPONSE.0
+        );
+        body.push(0);
+        assert_eq!(reply.body, body);
         assert!(matches!(play, Play::Nothing));
     }
 

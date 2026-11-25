@@ -41,6 +41,6 @@ pub fn read_add_entity(r: &mut Reader<'_>) -> Result<AddEntity> {
 }
 
 pub fn read_remove_entities(r: &mut Reader<'_>) -> Result<Vec<i32>> {
-    let count = r.var_int()?.clamp(0, 65_536) as usize;
+    let count = r.list_count()?;
     (0..count).map(|_| r.var_int()).collect()
 }

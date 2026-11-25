@@ -1,4 +1,4 @@
-//! The client's own light engine (vanilla `LevelLightEngine` on the client):
+//! The client's own light engine (vanilla `LevelLightEngine` on the client).
 
 use std::collections::VecDeque;
 use std::sync::Arc;

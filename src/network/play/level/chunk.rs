@@ -22,7 +22,7 @@ const BLOCK_INDIRECT_MIN_BITS: u32 = 4;
 /// Global ids are `u16` here; a wider index cannot name a state or biome.
 const GLOBAL_MAX_BITS: u32 = 16;
 
-/// Reads one `LevelChunkWithLight` packet body of a level `height` tall:
+/// Reads one `LevelChunkWithLight` packet body of a level `height` tall.
 pub fn decode(body: &[u8], height: Height) -> Result<Chunk> {
     let mut r = Reader::new(body);
     let x = r.i32_be()?;
@@ -265,7 +265,7 @@ fn skip_nbt_payload(r: &mut Reader, ty: u8, depth: u32) -> Result<()> {
 /// The most entries an indirect palette can have: 8 bits per entry.
 const MAX_PALETTE: usize = 1 << BLOCK_INDIRECT_MAX_BITS;
 
-/// Decodes one `PalettedContainer`'s network form into `out`:
+/// Decodes one `PalettedContainer`'s network form into `out`.
 fn read_paletted(
     r: &mut Reader,
     out: &mut [u16],

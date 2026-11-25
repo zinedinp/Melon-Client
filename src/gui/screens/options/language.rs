@@ -18,7 +18,7 @@ use crate::i18n::languages::Language;
 const ROW_W: f32 = 270.0;
 /// `itemHeight` passed to the `ObjectSelectionList` constructor.
 const ROW_H: f32 = 18.0;
-/// The header: `OptionsSubScreen.addTitle`'s
+/// The header (`OptionsSubScreen.addTitle`'s) and the footer with the warning.
 const LAYOUT: HeaderFooter = HeaderFooter::new(36.0, 53.0);
 const WARNING_COLOR: [f32; 4] = [0.73, 0.73, 0.73, 1.0];
 
