@@ -2,7 +2,7 @@
 
 use super::{
     CubeMapId, IndexMeshId, MeshId, ParticleMeshId, ParticleQuad, QuadMeshId, Renderer,
-    TerrainQuad, TextureId, WorldVertex, texture, texture_update, vk_util,
+    TerrainQuad, TextureId, WorldVertex, texture, texture_update,
 };
 use ash::vk;
 use image::RgbaImage;
@@ -17,6 +17,7 @@ impl Renderer {
     }
 
     pub fn load_texture(&mut self, rgba: &RgbaImage) -> anyhow::Result<TextureId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let made = unsafe {
             self.uploader(self.textures.nearest_sampler)
                 .image_2d(rgba)?
@@ -26,18 +27,21 @@ impl Renderer {
 
     /// A texture sampled linearly (`blur: true` in its `.mcmeta`).
     pub fn load_texture_linear(&mut self, rgba: &RgbaImage) -> anyhow::Result<TextureId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let made = unsafe { self.uploader(self.textures.linear_sampler).image_2d(rgba)? };
         Ok(self.put_new(made))
     }
 
     /// A texture that repeats outside `0..1` (vanilla's `GL_REPEAT`).
     pub fn load_texture_tiled(&mut self, rgba: &RgbaImage) -> anyhow::Result<TextureId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let made = unsafe { self.uploader(self.textures.repeat_sampler).image_2d(rgba)? };
         Ok(self.put_new(made))
     }
 
     /// Linear and wrapping, for the enchanted glint (blurred and repeating).
     pub fn load_texture_linear_tiled(&mut self, rgba: &RgbaImage) -> anyhow::Result<TextureId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let made = unsafe {
             self.uploader(self.textures.linear_repeat_sampler)
                 .image_2d(rgba)?
@@ -50,6 +54,7 @@ impl Renderer {
         let Some(tex) = self.textures.list.get(texture.0) else {
             return;
         };
+        // SAFETY: the glint set is rewritten before this frame is recorded; earlier frames keep theirs.
         unsafe {
             self.gui_uniforms.bind_glint(
                 &self.device,
@@ -65,6 +70,7 @@ impl Renderer {
         rgba: &RgbaImage,
         mips: &[RgbaImage],
     ) -> anyhow::Result<TextureId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let made = unsafe {
             self.uploader(self.textures.mipmap_sampler)
                 .image_2d_mipmapped(rgba, mips)?
@@ -118,6 +124,7 @@ impl Renderer {
         }
         let inits = std::mem::take(&mut self.textures.pending_inits);
         self.textures.pending_init_bytes = 0;
+        // SAFETY: `submit_now` waits on its own fence, so the copies are done when it returns.
         let result = unsafe {
             texture_update::submit_now(
                 &self.device,
@@ -239,11 +246,12 @@ impl Renderer {
             // still count, so a copy into it may still be queued.
             inits.retain(|init| init.image != tex.image);
             updates.retain(|update| update.image != tex.image);
+            // SAFETY: its frame is past `oldest_in_flight`, and its queued copies were dropped just above.
             unsafe {
                 pools.free(device, tex.descriptor_set);
                 device.destroy_image_view(tex.view, None);
                 device.destroy_image(tex.image, None);
-                vk_util::free_memory(device, tex.memory);
+                melon_base::gfx::suballoc::release(device, tex.memory);
             }
             false
         });
@@ -257,6 +265,7 @@ impl Renderer {
         if !self.textures.descriptor_pools.needs_compaction() {
             return;
         }
+        // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
                 crate::warn!("Waiting for the GPU failed: {e}");
@@ -290,6 +299,7 @@ impl Renderer {
 
     /// Six equal-size faces in Vulkan order (+X, -X, +Y, -Y, +Z, -Z).
     pub fn load_cubemap(&mut self, faces: &[RgbaImage; 6]) -> anyhow::Result<CubeMapId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let (tex, init) = unsafe { self.uploader(self.textures.linear_sampler).cubemap(faces)? };
         self.queue_init(init);
         self.textures.cubemaps.push(tex);
@@ -298,6 +308,7 @@ impl Renderer {
 
     /// Uploads a mesh (a list of quads, see [`WorldVertex`]).
     pub fn upload_mesh(&mut self, vertices: &[WorldVertex]) -> anyhow::Result<MeshId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let id = unsafe {
             self.meshes
                 .upload(&self.device, &self.mem_props, &mut self.residency, vertices)?
@@ -315,6 +326,7 @@ impl Renderer {
 
     /// Uploads a chunk's block faces; drawn like [`upload_mesh`](Self::upload_mesh)'s.
     pub fn upload_quads(&mut self, quads: &[TerrainQuad]) -> anyhow::Result<QuadMeshId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let id = unsafe {
             let id = self.quad_meshes.upload(
                 &self.device,
@@ -342,6 +354,7 @@ impl Renderer {
 
     /// Uploads this frame's particle quads.
     pub fn upload_particles(&mut self, quads: &[ParticleQuad]) -> anyhow::Result<ParticleMeshId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let id = unsafe {
             self.particle_meshes.upload(
                 &self.device,
@@ -360,6 +373,7 @@ impl Renderer {
 
     /// Uploads an index list ([`super::quad_index_list`]) for a vertex mesh.
     pub fn upload_indices(&mut self, list: &[u32]) -> anyhow::Result<IndexMeshId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let id = unsafe {
             self.index_lists
                 .upload(&self.device, &self.mem_props, &mut self.residency, list)?
@@ -406,6 +420,7 @@ impl Renderer {
         shaders: &[super::GuiShader],
     ) -> Vec<(super::quad::Program, anyhow::Error)> {
         let mut failed = Vec::new();
+        // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
                 crate::warn!("Waiting for the GPU failed: {e}");

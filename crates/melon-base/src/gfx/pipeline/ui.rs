@@ -71,7 +71,8 @@ impl UiPipelines {
     pub unsafe fn clear_pack(&mut self, device: &ash::Device) {
         for passes in self.pack.iter_mut().filter_map(Option::take) {
             for pass in &passes {
-                pass.destroy(device);
+                // SAFETY: made by this device, and no frame in flight uses it any more.
+                unsafe { pass.destroy(device) };
             }
         }
     }
@@ -82,11 +83,14 @@ impl UiPipelines {
     ///
     /// `device` must be live and done with them.
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
-        self.clear_pack(device);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.clear_pack(device) };
         for pass in &self.built_in {
-            pass.destroy(device);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { pass.destroy(device) };
         }
-        self.glint.destroy(device);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.glint.destroy(device) };
     }
 }
 
@@ -104,18 +108,22 @@ pub unsafe fn create_all(
 ) -> anyhow::Result<[Pass; 4]> {
     let mut built = Vec::with_capacity(BLENDS.len());
     for blend in BLENDS {
-        match create(
-            device,
-            render_pass,
-            descriptor_set_layout,
-            gui_layout,
-            blend,
-            shaders,
-        ) {
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        match unsafe {
+            create(
+                device,
+                render_pass,
+                descriptor_set_layout,
+                gui_layout,
+                blend,
+                shaders,
+            )
+        } {
             Ok(pass) => built.push(pass),
             Err(e) => {
                 for pass in &built {
-                    pass.destroy(device);
+                    // SAFETY: made by this device, and no frame in flight uses it any more.
+                    unsafe { pass.destroy(device) };
                 }
                 return Err(e);
             }
@@ -169,26 +177,29 @@ pub unsafe fn create(
             .src_alpha_blend_factor(vk::BlendFactor::ZERO)
             .dst_alpha_blend_factor(vk::BlendFactor::ONE),
     };
-    PipelineDesc {
-        vert: shaders.vert,
-        frag: shaders.frag,
-        push_constant_size: PUSH_CONSTANT_SIZE,
-        push_stages: vk::ShaderStageFlags::VERTEX,
-        vertex_stride: std::mem::size_of::<Vertex>() as u32,
-        attributes: &[
-            (vk::Format::R32G32_SFLOAT, 0),
-            (vk::Format::R32G32_SFLOAT, 8),
-            (vk::Format::R8G8B8A8_UNORM, 16),
-        ],
-        instance: None,
-        used_locations: shaders.inputs,
-        cull: vk::CullModeFlags::NONE,
-        depth: depth_disabled(),
-        blend,
-        extra_sets: &[gui_layout],
-        depth_bias: None,
+    // SAFETY: `device` is live, and the layout, pass and shaders named are its own.
+    unsafe {
+        PipelineDesc {
+            vert: shaders.vert,
+            frag: shaders.frag,
+            push_constant_size: PUSH_CONSTANT_SIZE,
+            push_stages: vk::ShaderStageFlags::VERTEX,
+            vertex_stride: std::mem::size_of::<Vertex>() as u32,
+            attributes: &[
+                (vk::Format::R32G32_SFLOAT, 0),
+                (vk::Format::R32G32_SFLOAT, 8),
+                (vk::Format::R8G8B8A8_UNORM, 16),
+            ],
+            instance: None,
+            used_locations: shaders.inputs,
+            cull: vk::CullModeFlags::NONE,
+            depth: depth_disabled(),
+            blend,
+            extra_sets: &[gui_layout],
+            depth_bias: None,
+        }
+        .build(device, render_pass, descriptor_set_layout)
     }
-    .build(device, render_pass, descriptor_set_layout)
 }
 
 /// Where UI quads are recorded to, and what they are drawn with.
@@ -222,39 +233,51 @@ pub unsafe fn record(
     let (device, cmd, ui) = (target.device, target.cmd, target.pipelines);
     let push = [ui_size.0, ui_size.1];
     let bind = |pass: &Pass| {
-        device.cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
-        device.cmd_push_constants(
-            cmd,
-            pass.layout,
-            vk::ShaderStageFlags::VERTEX,
-            0,
-            super::push_constant_bytes(&push, PUSH_CONSTANT_SIZE),
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { device.cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline) };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_push_constants(
+                cmd,
+                pass.layout,
+                vk::ShaderStageFlags::VERTEX,
+                0,
+                super::push_constant_bytes(&push, PUSH_CONSTANT_SIZE),
+            )
+        };
     };
     let mut applied = (Program::Sprite, BlendMode::Alpha);
     bind(ui.pass(applied.0, applied.1));
-    device.cmd_bind_vertex_buffers(cmd, 0, &[target.vertices], &[0]);
-    device.cmd_bind_index_buffer(cmd, target.indices, 0, vk::IndexType::UINT32);
-    device.cmd_bind_descriptor_sets(
-        cmd,
-        vk::PipelineBindPoint::GRAPHICS,
-        ui.layout(),
-        1,
-        &[target.gui_set],
-        &[],
-    );
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe {
+        device.cmd_bind_vertex_buffers(cmd, 0, &[target.vertices], &[0]);
+        device.cmd_bind_index_buffer(cmd, target.indices, 0, vk::IndexType::UINT32);
+    }
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe {
+        device.cmd_bind_descriptor_sets(
+            cmd,
+            vk::PipelineBindPoint::GRAPHICS,
+            ui.layout(),
+            1,
+            &[target.gui_set],
+            &[],
+        )
+    };
 
     let scale_x = target.extent.width as f32 / ui_size.0;
     let scale_y = target.extent.height as f32 / ui_size.1;
     let mut applied_scissor = full_scissor;
-    device.cmd_set_scissor(cmd, 0, &[full_scissor]);
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe { device.cmd_set_scissor(cmd, 0, &[full_scissor]) };
     for call in calls {
         let wanted = match call.scissor {
             Some(rect) => scissor_pixels(rect, (scale_x, scale_y), target.extent),
             None => full_scissor,
         };
         if wanted != applied_scissor {
-            device.cmd_set_scissor(cmd, 0, &[wanted]);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe { device.cmd_set_scissor(cmd, 0, &[wanted]) };
             applied_scissor = wanted;
         }
         let wanted_pipeline = (call.program, call.blend);
@@ -268,15 +291,19 @@ pub unsafe fn record(
             }
             applied = wanted_pipeline;
         }
-        device.cmd_bind_descriptor_sets(
-            cmd,
-            vk::PipelineBindPoint::GRAPHICS,
-            ui.layout(),
-            0,
-            &[set_of(call.texture)],
-            &[],
-        );
-        device.cmd_draw_indexed(cmd, call.count, 1, call.first, 0, 0);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_bind_descriptor_sets(
+                cmd,
+                vk::PipelineBindPoint::GRAPHICS,
+                ui.layout(),
+                0,
+                &[set_of(call.texture)],
+                &[],
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { device.cmd_draw_indexed(cmd, call.count, 1, call.first, 0, 0) };
     }
 }
 

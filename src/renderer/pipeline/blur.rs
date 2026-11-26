@@ -16,22 +16,25 @@ pub unsafe fn create(
     render_pass: vk::RenderPass,
     descriptor_set_layout: vk::DescriptorSetLayout,
 ) -> anyhow::Result<Pass> {
-    PipelineDesc {
-        vert: VERT_SPV,
-        frag: FRAG_SPV,
-        push_constant_size: PUSH_CONSTANT_SIZE,
-        push_stages: vk::ShaderStageFlags::FRAGMENT,
-        vertex_stride: 0,
-        attributes: &[],
-        instance: None,
-        used_locations: None,
-        cull: vk::CullModeFlags::NONE,
-        depth: depth_disabled(),
-        blend: vk::PipelineColorBlendAttachmentState::default()
-            .color_write_mask(vk::ColorComponentFlags::RGBA)
-            .blend_enable(false),
-        extra_sets: &[],
-        depth_bias: None,
+    // SAFETY: `device` is live, and the layout, pass and shaders named are its own.
+    unsafe {
+        PipelineDesc {
+            vert: VERT_SPV,
+            frag: FRAG_SPV,
+            push_constant_size: PUSH_CONSTANT_SIZE,
+            push_stages: vk::ShaderStageFlags::FRAGMENT,
+            vertex_stride: 0,
+            attributes: &[],
+            instance: None,
+            used_locations: None,
+            cull: vk::CullModeFlags::NONE,
+            depth: depth_disabled(),
+            blend: vk::PipelineColorBlendAttachmentState::default()
+                .color_write_mask(vk::ColorComponentFlags::RGBA)
+                .blend_enable(false),
+            extra_sets: &[],
+            depth_bias: None,
+        }
+        .build(device, render_pass, descriptor_set_layout)
     }
-    .build(device, render_pass, descriptor_set_layout)
 }

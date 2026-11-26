@@ -33,19 +33,22 @@ pub unsafe fn create(
     let mut extension_names = ash_window::enumerate_required_extensions(display)?.to_vec();
     let mut layer_names: Vec<*const c_char> = Vec::new();
     let validation_layer = c"VK_LAYER_KHRONOS_validation";
-    let validation_available = entry
-        .enumerate_instance_layer_properties()?
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let validation_available = unsafe { entry.enumerate_instance_layer_properties() }?
         .iter()
-        .any(|l| CStr::from_ptr(l.layer_name.as_ptr()) == validation_layer);
+        // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
+        .any(|l| unsafe { CStr::from_ptr(l.layer_name.as_ptr()) } == validation_layer);
     let use_validation = enable_validation && validation_available;
     if enable_validation && !validation_available {
         crate::warn!("vulkan: VK_LAYER_KHRONOS_validation not found, going on without validation");
     }
-    let available = entry.enumerate_instance_extension_properties(None)?;
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let available = unsafe { entry.enumerate_instance_extension_properties(None) }?;
     let offers = |name: &CStr| {
         available
             .iter()
-            .any(|e| CStr::from_ptr(e.extension_name.as_ptr()) == name)
+            // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
+            .any(|e| unsafe { CStr::from_ptr(e.extension_name.as_ptr()) } == name)
     };
     // Debug utils also name the passes for GPU profilers (Nsight Graphics,
     // RenderDoc), so they are on whenever the driver offers them.
@@ -83,10 +86,12 @@ pub unsafe fn create(
         .application_info(&app_info)
         .enabled_layer_names(&layer_names)
         .enabled_extension_names(&extension_names);
-    let instance = entry.create_instance(&instance_info, None)?;
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let instance = unsafe { entry.create_instance(&instance_info, None) }?;
 
     let debug = if use_validation {
-        Some(create_messenger(entry, &instance)?)
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        Some(unsafe { create_messenger(entry, &instance) }?)
     } else {
         None
     };
@@ -115,7 +120,8 @@ unsafe fn create_messenger(
                 | vk::DebugUtilsMessageTypeFlagsEXT::PERFORMANCE,
         )
         .pfn_user_callback(Some(debug_callback));
-    let messenger = debug_instance.create_debug_utils_messenger(&messenger_info, None)?;
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let messenger = unsafe { debug_instance.create_debug_utils_messenger(&messenger_info, None) }?;
     Ok((debug_instance, messenger))
 }
 
@@ -131,6 +137,7 @@ pub unsafe fn create_surface(
     window: RawWindowHandle,
 ) -> anyhow::Result<(ash::khr::surface::Instance, vk::SurfaceKHR)> {
     let loader = ash::khr::surface::Instance::new(entry, instance);
-    let surface = ash_window::create_surface(entry, instance, display, window, None)?;
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let surface = unsafe { ash_window::create_surface(entry, instance, display, window, None) }?;
     Ok((loader, surface))
 }

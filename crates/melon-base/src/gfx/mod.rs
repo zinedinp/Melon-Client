@@ -3,11 +3,15 @@
 //!
 //! Vulkan 1.0 is the floor; [`api`] picks the version, [`features`] the
 //! faster paths a newer one or an extension adds.
+//!
+//! Every `unsafe` block leans on three rules: each Vulkan handle is made by the
+//! one device and outlives its uses; nothing a frame in flight reads is changed
+//! or destroyed before that frame's fence (or a device wait); a command buffer
+//! is recorded by one thread at a time.
 // TODO(backend): OpenGL and DirectX as render backbones beside Vulkan, for
 // systems without a usable Vulkan driver. The renderer calls `ash` directly
 // everywhere today; this needs a backend layer (devices, buffers, pipelines,
 // command recording) under `gfx` and `renderer` first.
-#![allow(unsafe_op_in_unsafe_fn)]
 
 pub mod api;
 pub mod ascii8;
@@ -19,20 +23,23 @@ pub mod features;
 pub mod gui_uniforms;
 pub mod instance;
 pub mod loader;
+pub mod mapped;
 pub mod pipeline;
 pub mod quad;
 mod renderer2d;
 pub mod residency;
 pub mod staging;
+pub mod suballoc;
 pub mod texture;
 pub mod texture_update;
+pub mod ui_vertices;
 pub mod vk_util;
 
 pub use device_info::read_device_info;
 pub use renderer2d::Renderer2d;
 pub use vk_util::{
-    PassStart, choose_surface_format, create_buffer, create_depth_image, create_render_pass,
-    create_sampler, debug_callback, find_depth_format, find_memory_type,
+    PassStart, Place, choose_surface_format, create_buffer, create_depth_image, create_render_pass,
+    create_sampler, debug_callback, find_depth_format,
 };
 
 /// Handle to a 2D texture (UI sprites, font pages).

@@ -39,6 +39,7 @@ fn ensure_layer_search_path() {
     }
     let dir = local_layer_dir();
     if dir.join("VkLayer_khronos_validation.json").is_file() {
+        // SAFETY: test-only, before the first Vulkan instance; on Unix another test reading the environment then could race (Windows serializes it).
         unsafe {
             std::env::set_var("VK_LAYER_PATH", dir);
         }
@@ -56,7 +57,8 @@ unsafe extern "system" fn collect_messages(
     if !severity.intersects(wanted) {
         return vk::FALSE;
     }
-    let message = CStr::from_ptr((*data).p_message).to_string_lossy();
+    // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
+    let message = unsafe { CStr::from_ptr((*data).p_message) }.to_string_lossy();
     messages().push(message.into_owned());
     vk::FALSE
 }
@@ -73,18 +75,21 @@ struct Gpu {
 impl Gpu {
     /// At the version the game picks.
     unsafe fn new() -> anyhow::Result<Self> {
-        Self::at(None)
+        // SAFETY: a test instance and device of its own; nothing else uses them.
+        unsafe { Self::at(None) }
     }
 
     /// At `version` instead, if given: `1.0` checks the floor every path has.
     unsafe fn at(version: Option<ApiVersion>) -> anyhow::Result<Self> {
         ensure_layer_search_path();
-        let entry = melon_base::gfx::loader::load()?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let entry = unsafe { melon_base::gfx::loader::load() }?;
         let layer = c"VK_LAYER_KHRONOS_validation";
-        let found = entry
-            .enumerate_instance_layer_properties()?
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        let found = unsafe { entry.enumerate_instance_layer_properties() }?
             .iter()
-            .any(|l| CStr::from_ptr(l.layer_name.as_ptr()) == layer);
+            // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
+            .any(|l| unsafe { CStr::from_ptr(l.layer_name.as_ptr()) } == layer);
         anyhow::ensure!(
             found,
             "VK_LAYER_KHRONOS_validation missing. Install vulkan-validation-layers, \
@@ -121,22 +126,24 @@ impl Gpu {
             .enabled_layer_names(&layers)
             .enabled_extension_names(&extensions)
             .push_next(&mut messenger_info);
-        let instance = entry.create_instance(&instance_info, None)?;
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        let instance = unsafe { entry.create_instance(&instance_info, None) }?;
         let debug = ash::ext::debug_utils::Instance::new(&entry, &instance);
-        let messenger = debug.create_debug_utils_messenger(&messenger_info, None)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let messenger = unsafe { debug.create_debug_utils_messenger(&messenger_info, None) }?;
 
-        let physical = instance
-            .enumerate_physical_devices()?
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        let physical = unsafe { instance.enumerate_physical_devices() }?
             .into_iter()
             .find(|&pd| {
-                instance
-                    .get_physical_device_queue_family_properties(pd)
+                // SAFETY: `instance` is live, and the physical device and surface are its own.
+                unsafe { instance.get_physical_device_queue_family_properties(pd) }
                     .iter()
                     .any(|q| q.queue_flags.contains(vk::QueueFlags::GRAPHICS))
             })
             .ok_or_else(|| anyhow::anyhow!("no graphics GPU found"))?;
-        let family = instance
-            .get_physical_device_queue_family_properties(physical)
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        let family = unsafe { instance.get_physical_device_queue_family_properties(physical) }
             .iter()
             .position(|q| q.queue_flags.contains(vk::QueueFlags::GRAPHICS))
             .expect("graphics queue") as u32;
@@ -147,8 +154,10 @@ impl Gpu {
             .queue_priorities(&priorities);
         let queues = [queue_info];
         // The game's features, so the layer checks the chain it builds.
-        let features = features::probe(&instance, physical, api, features::GAME);
-        let device = device::create_with(&instance, physical, &queues, &features)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let features = unsafe { features::probe(&instance, physical, api, features::GAME) };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let device = unsafe { device::create_with(&instance, physical, &queues, &features) }?;
 
         Ok(Self {
             _entry: entry,
@@ -163,6 +172,7 @@ impl Gpu {
 
 impl Drop for Gpu {
     fn drop(&mut self) {
+        // SAFETY: the test's own device, waited idle before it is destroyed.
         unsafe {
             self.device.device_wait_idle().ok();
             self.device.destroy_device(None);
@@ -193,12 +203,15 @@ unsafe fn color_only_pass(
     let subpasses = [vk::SubpassDescription::default()
         .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
         .color_attachments(&color)];
-    Ok(device.create_render_pass(
-        &vk::RenderPassCreateInfo::default()
-            .attachments(&attachments)
-            .subpasses(&subpasses),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_render_pass(
+            &vk::RenderPassCreateInfo::default()
+                .attachments(&attachments)
+                .subpasses(&subpasses),
+            None,
+        )
+    }?)
 }
 
 #[test]
@@ -216,6 +229,7 @@ fn validation_layers_accept_every_pipeline_on_vulkan_1_0() {
 fn every_pipeline_passes_validation(version: Option<ApiVersion>) {
     let _serial = serial();
     messages().clear();
+    // SAFETY: a test instance and device of its own; the queue is waited idle before anything is freed.
     unsafe {
         let gpu = Gpu::at(version).expect("Vulkan instance with validation");
         let depth = find_depth_format(&gpu.instance, gpu.physical).expect("depth format");
@@ -375,6 +389,7 @@ fn post_chains_pass_validation() {
             packs: vec![std::sync::Arc::new(pack)],
         });
     }
+    // SAFETY: a test instance and device of its own; the queue is waited idle before anything is freed.
     unsafe {
         let gpu = Gpu::new().expect("Vulkan instance with validation");
         let mem_props = gpu
@@ -428,7 +443,7 @@ fn post_chains_pass_validation() {
                     .expect("effect texture");
                     let texture = Texture {
                         image: image.image,
-                        memory: image.memory,
+                        memory: melon_base::gfx::suballoc::Allocation::whole(image.memory),
                         view: image.view,
                         descriptor_set: vk::DescriptorSet::null(),
                         mip_levels: 1,
@@ -443,7 +458,7 @@ fn post_chains_pass_validation() {
         let free = |t: Texture| {
             device.destroy_image_view(t.view, None);
             device.destroy_image(t.image, None);
-            vk_util::free_memory(device, t.memory);
+            melon_base::gfx::suballoc::release(device, t.memory);
         };
         let failed = post.set_chains(device, &mem_props, gui_layout, prepared, &free);
         assert!(failed.is_empty(), "chains failed: {failed:?}");
@@ -478,8 +493,10 @@ fn post_chains_pass_validation() {
 #[test]
 fn khronos_validation_layer_is_on_the_loader_path() {
     ensure_layer_search_path();
+    // SAFETY: `entry` holds the loaded Vulkan loader.
     let entry = unsafe { melon_base::gfx::loader::load() }.expect("libvulkan");
     let layer = CString::new("VK_LAYER_KHRONOS_validation").unwrap();
+    // SAFETY: `entry` holds the loaded Vulkan loader.
     let found = unsafe {
         entry
             .enumerate_instance_layer_properties()
@@ -505,6 +522,7 @@ fn texture_pools_grow_and_compact() {
 
     let _serial = serial();
     messages().clear();
+    // SAFETY: a test instance and device of its own; the queue is waited idle before anything is freed.
     unsafe {
         let gpu = Gpu::new().expect("Vulkan instance with validation");
         let device = &gpu.device;
@@ -550,6 +568,20 @@ fn texture_pools_grow_and_compact() {
             .expect("pixels up");
         assert_eq!(pools.capacities(), [4, 8, 16]);
         assert!(pools.needs_compaction());
+        // Small textures share one block of device memory, each at an offset of its own.
+        let block = textures[0].memory.memory;
+        assert!(
+            textures.iter().all(|t| t.memory.memory == block),
+            "one shared block"
+        );
+        let mut offsets: Vec<u64> = textures.iter().map(|t| t.memory.offset).collect();
+        offsets.sort_unstable();
+        offsets.dedup();
+        assert_eq!(
+            offsets.len(),
+            textures.len(),
+            "no two textures at one offset"
+        );
 
         let before: Vec<vk::DescriptorSet> = textures.iter().map(|t| t.descriptor_set).collect();
         let mut sets = [unwritten];
@@ -577,7 +609,7 @@ fn texture_pools_grow_and_compact() {
             pools.free(device, tex.descriptor_set);
             device.destroy_image_view(tex.view, None);
             device.destroy_image(tex.image, None);
-            vk_util::free_memory(device, tex.memory);
+            melon_base::gfx::suballoc::release(device, tex.memory);
         }
         assert!(pools.needs_compaction());
         pools
@@ -594,7 +626,7 @@ fn texture_pools_grow_and_compact() {
             pools.free(device, tex.descriptor_set);
             device.destroy_image_view(tex.view, None);
             device.destroy_image(tex.image, None);
-            vk_util::free_memory(device, tex.memory);
+            melon_base::gfx::suballoc::release(device, tex.memory);
         }
         pools.free(device, sets[0]);
         pools.destroy(device);
@@ -636,6 +668,7 @@ fn queued_texture_uploads_land_without_waiting() {
         );
     };
     let forget = || messages().clear();
+    // SAFETY: a test instance and device of its own; the queue is waited idle before anything is freed.
     unsafe {
         let gpu = Gpu::new().expect("Vulkan instance with validation");
         let device = &gpu.device;
@@ -773,7 +806,7 @@ fn queued_texture_uploads_land_without_waiting() {
             pools.free(device, tex.descriptor_set);
             device.destroy_image_view(tex.view, None);
             device.destroy_image(tex.image, None);
-            vk_util::free_memory(device, tex.memory);
+            melon_base::gfx::suballoc::release(device, tex.memory);
         }
         pools.destroy(device);
         device.destroy_sampler(sampler, None);
@@ -801,6 +834,7 @@ fn empty_mesh_blocks_are_released() {
 
     let _serial = serial();
     messages().clear();
+    // SAFETY: a test instance and device of its own; the queue is waited idle before anything is freed.
     unsafe {
         let gpu = Gpu::new().expect("Vulkan instance with validation");
         let device = &gpu.device;
@@ -878,11 +912,13 @@ fn empty_mesh_blocks_are_released() {
 #[test]
 fn written_and_copied_meshes_land() {
     use super::TerrainQuad;
-    use super::mesh_arena::{Kind, MeshArena, as_bytes};
+    use super::mesh_arena::{Kind, MeshArena};
     use melon_base::gfx::residency::Residency;
+    use numerobis::elem::as_bytes;
 
     let _serial = serial();
     messages().clear();
+    // SAFETY: a test instance and device of its own; the queue is waited idle before anything is freed.
     unsafe {
         let gpu = Gpu::new().expect("Vulkan instance with validation");
         let device = &gpu.device;
@@ -904,7 +940,13 @@ fn written_and_copied_meshes_land() {
             .get_physical_device_memory_properties(gpu.physical);
         let mapped_vram = mem_props.memory_types[..mem_props.memory_type_count as usize]
             .iter()
-            .any(|t| t.property_flags.contains(super::vk_util::MAPPED_FOR_GPU[0]));
+            .any(|t| {
+                t.property_flags.contains(
+                    vk::MemoryPropertyFlags::DEVICE_LOCAL
+                        | vk::MemoryPropertyFlags::HOST_VISIBLE
+                        | vk::MemoryPropertyFlags::HOST_COHERENT,
+                )
+            });
         let quads: Vec<TerrainQuad> = (0..1000u32)
             .map(|i| TerrainQuad([i, i * 3, i ^ 0xABCD, 7, !i]))
             .collect();
@@ -932,7 +974,7 @@ fn written_and_copied_meshes_land() {
                 &mem_props,
                 size,
                 vk::BufferUsageFlags::TRANSFER_DST,
-                vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+                super::Place::READBACK,
             )
             .expect("readback buffer");
             let cmd = device
@@ -1028,24 +1070,29 @@ unsafe fn read_back(
     (width, height): (u32, u32),
 ) -> image::RgbaImage {
     let size = (width * height * 4) as u64;
-    let (buffer, memory) = super::create_buffer(
-        device,
-        mem_props,
-        size,
-        vk::BufferUsageFlags::TRANSFER_DST,
-        vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-    )
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let (buffer, memory) = unsafe {
+        super::create_buffer(
+            device,
+            mem_props,
+            size,
+            vk::BufferUsageFlags::TRANSFER_DST,
+            super::Place::READBACK,
+        )
+    }
     .expect("readback buffer");
-    let cmd = device
-        .allocate_command_buffers(
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let cmd = unsafe {
+        device.allocate_command_buffers(
             &vk::CommandBufferAllocateInfo::default()
                 .command_pool(command_pool)
                 .level(vk::CommandBufferLevel::PRIMARY)
                 .command_buffer_count(1),
         )
-        .expect("cmd")[0];
-    device
-        .begin_command_buffer(cmd, &vk::CommandBufferBeginInfo::default())
+    }
+    .expect("cmd")[0];
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    unsafe { device.begin_command_buffer(cmd, &vk::CommandBufferBeginInfo::default()) }
         .expect("begin");
     let range = vk::ImageSubresourceRange::default()
         .aspect_mask(vk::ImageAspectFlags::COLOR)
@@ -1064,70 +1111,87 @@ unsafe fn read_back(
             .src_access_mask(src)
             .dst_access_mask(dst)
     };
-    device.cmd_pipeline_barrier(
-        cmd,
-        vk::PipelineStageFlags::ALL_COMMANDS,
-        vk::PipelineStageFlags::TRANSFER,
-        vk::DependencyFlags::empty(),
-        &[],
-        &[],
-        &[barrier(
-            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe {
+        device.cmd_pipeline_barrier(
+            cmd,
+            vk::PipelineStageFlags::ALL_COMMANDS,
+            vk::PipelineStageFlags::TRANSFER,
+            vk::DependencyFlags::empty(),
+            &[],
+            &[],
+            &[barrier(
+                vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+                vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                vk::AccessFlags::SHADER_READ,
+                vk::AccessFlags::TRANSFER_READ,
+            )],
+        )
+    };
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe {
+        device.cmd_copy_image_to_buffer(
+            cmd,
+            image,
             vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            vk::AccessFlags::SHADER_READ,
-            vk::AccessFlags::TRANSFER_READ,
-        )],
-    );
-    device.cmd_copy_image_to_buffer(
-        cmd,
-        image,
-        vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-        buffer,
-        &[vk::BufferImageCopy::default()
-            .image_subresource(vk::ImageSubresourceLayers {
-                aspect_mask: vk::ImageAspectFlags::COLOR,
-                mip_level: level,
-                base_array_layer: layer,
-                layer_count: 1,
-            })
-            .image_extent(vk::Extent3D {
-                width,
-                height,
-                depth: 1,
-            })],
-    );
-    device.cmd_pipeline_barrier(
-        cmd,
-        vk::PipelineStageFlags::TRANSFER,
-        vk::PipelineStageFlags::ALL_COMMANDS,
-        vk::DependencyFlags::empty(),
-        &[],
-        &[],
-        &[barrier(
-            vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-            vk::AccessFlags::TRANSFER_READ,
-            vk::AccessFlags::empty(),
-        )],
-    );
-    device.end_command_buffer(cmd).expect("end");
+            buffer,
+            &[vk::BufferImageCopy::default()
+                .image_subresource(vk::ImageSubresourceLayers {
+                    aspect_mask: vk::ImageAspectFlags::COLOR,
+                    mip_level: level,
+                    base_array_layer: layer,
+                    layer_count: 1,
+                })
+                .image_extent(vk::Extent3D {
+                    width,
+                    height,
+                    depth: 1,
+                })],
+        )
+    };
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe {
+        device.cmd_pipeline_barrier(
+            cmd,
+            vk::PipelineStageFlags::TRANSFER,
+            vk::PipelineStageFlags::ALL_COMMANDS,
+            vk::DependencyFlags::empty(),
+            &[],
+            &[],
+            &[barrier(
+                vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+                vk::AccessFlags::TRANSFER_READ,
+                vk::AccessFlags::empty(),
+            )],
+        )
+    };
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    unsafe { device.end_command_buffer(cmd) }.expect("end");
     let cmds = [cmd];
-    device
-        .queue_submit(
+    // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+    unsafe {
+        device.queue_submit(
             queue,
             &[vk::SubmitInfo::default().command_buffers(&cmds)],
             vk::Fence::null(),
         )
-        .expect("submit");
-    device.queue_wait_idle(queue).expect("idle");
-    let mapped = device
-        .map_memory(memory, 0, size, vk::MemoryMapFlags::empty())
+    }
+    .expect("submit");
+    // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+    unsafe { device.queue_wait_idle(queue) }.expect("idle");
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let mapped = unsafe { device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty()) }
         .expect("map") as *const u8;
-    let bytes = std::slice::from_raw_parts(mapped, size as usize).to_vec();
-    device.unmap_memory(memory);
-    device.free_command_buffers(command_pool, &[cmd]);
-    device.destroy_buffer(buffer, None);
-    vk_util::free_memory(device, memory);
+    // SAFETY: the buffer is `size` bytes, just mapped, and the queue is idle.
+    let bytes = unsafe { std::slice::from_raw_parts(mapped, size as usize) }.to_vec();
+    // SAFETY: made by this device, and no frame in flight uses it any more.
+    unsafe {
+        device.unmap_memory(memory);
+        device.free_command_buffers(command_pool, &[cmd]);
+        device.destroy_buffer(buffer, None);
+        vk_util::free_memory(device, memory);
+    }
     image::RgbaImage::from_raw(width, height, bytes).expect("pixels")
 }
 
@@ -1139,6 +1203,7 @@ fn occlusion_culls_what_the_depth_hides() {
 
     let _serial = serial();
     messages().clear();
+    // SAFETY: a test instance and device of its own; the queue is waited idle before anything is freed.
     unsafe {
         let gpu = Gpu::new().expect("Vulkan instance with validation");
         let device = &gpu.device;
@@ -1194,20 +1259,9 @@ fn occlusion_culls_what_the_depth_hides() {
             )
             .expect("depth image");
         let req = device.get_image_memory_requirements(depth);
-        let depth_memory = vk_util::allocate_memory(
-            device,
-            &vk::MemoryAllocateInfo::default()
-                .allocation_size(req.size)
-                .memory_type_index(
-                    super::find_memory_type(
-                        &mem_props,
-                        req.memory_type_bits,
-                        vk::MemoryPropertyFlags::DEVICE_LOCAL,
-                    )
-                    .expect("memory type"),
-                ),
-        )
-        .expect("depth memory");
+        let (depth_memory, _) =
+            vk_util::allocate_for(device, &mem_props, req, super::Place::DEVICE)
+                .expect("depth memory");
         device
             .bind_image_memory(depth, depth_memory, 0)
             .expect("bind depth");
@@ -1225,7 +1279,7 @@ fn occlusion_culls_what_the_depth_hides() {
             [-8.0, -8.0, -100.0, f32::from_bits(indirect::NO_SLOT)],
         ];
         let count = bounds.len() as u32;
-        let host = vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT;
+        let host = super::Place::READBACK;
         let mapped = |size: u64, usage| {
             let (buffer, memory) =
                 super::create_buffer(device, &mem_props, size, usage, host).expect("buffer");

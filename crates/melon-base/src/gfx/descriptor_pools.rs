@@ -40,7 +40,8 @@ impl DescriptorPools {
     ///
     /// `device` must be live.
     pub unsafe fn new(device: &ash::Device, base: u32) -> anyhow::Result<Self> {
-        let handle = create_pool(device, base)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let handle = unsafe { create_pool(device, base) }?;
         Ok(Self {
             base,
             inner: RefCell::new(Inner {
@@ -71,14 +72,16 @@ impl DescriptorPools {
             if pool.live >= pool.capacity {
                 continue;
             }
-            match allocate_one(device, pool.handle, layout) {
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            match unsafe { allocate_one(device, pool.handle, layout) } {
                 Ok(set) => return Ok(inner.record(set, index)),
                 Err(vk::Result::ERROR_OUT_OF_POOL_MEMORY | vk::Result::ERROR_FRAGMENTED_POOL) => {}
                 Err(e) => return Err(e.into()),
             }
         }
         let capacity = inner.pools.last().map_or(self.base, |p| p.capacity * 2);
-        let handle = create_pool(device, capacity)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let handle = unsafe { create_pool(device, capacity) }?;
         inner.pools.push(Pool {
             handle,
             capacity,
@@ -86,7 +89,8 @@ impl DescriptorPools {
         });
         let total: u32 = inner.pools.iter().map(|p| p.capacity).sum();
         crate::info!("Texture descriptors: pool grown by {capacity}, {total} in all");
-        let set = allocate_one(device, handle, layout)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let set = unsafe { allocate_one(device, handle, layout) }?;
         let index = inner.pools.len() - 1;
         Ok(inner.record(set, index))
     }
@@ -103,7 +107,8 @@ impl DescriptorPools {
             return;
         };
         let pool = &mut inner.pools[index];
-        let _ = device.free_descriptor_sets(pool.handle, &[set]);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        let _ = unsafe { device.free_descriptor_sets(pool.handle, &[set]) };
         pool.live -= 1;
     }
 
@@ -149,19 +154,24 @@ impl DescriptorPools {
         let mut inner = self.inner.borrow_mut();
         let olds: Vec<vk::DescriptorSet> = inner.owner.keys().copied().collect();
         let capacity = self.target_capacity(olds.len());
-        let handle = create_pool(device, capacity)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let handle = unsafe { create_pool(device, capacity) }?;
         let news = if olds.is_empty() {
             Vec::new()
         } else {
             let layouts = vec![layout; olds.len()];
-            match device.allocate_descriptor_sets(
-                &vk::DescriptorSetAllocateInfo::default()
-                    .descriptor_pool(handle)
-                    .set_layouts(&layouts),
-            ) {
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            match unsafe {
+                device.allocate_descriptor_sets(
+                    &vk::DescriptorSetAllocateInfo::default()
+                        .descriptor_pool(handle)
+                        .set_layouts(&layouts),
+                )
+            } {
                 Ok(news) => news,
                 Err(e) => {
-                    device.destroy_descriptor_pool(handle, None);
+                    // SAFETY: made by this device, and no frame in flight uses it any more.
+                    unsafe { device.destroy_descriptor_pool(handle, None) };
                     return Err(e.into());
                 }
             }
@@ -178,7 +188,8 @@ impl DescriptorPools {
                     .descriptor_count(1)
             })
             .collect();
-        device.update_descriptor_sets(&[], &copies);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { device.update_descriptor_sets(&[], &copies) };
 
         let moved: HashMap<vk::DescriptorSet, vk::DescriptorSet> =
             olds.iter().copied().zip(news.iter().copied()).collect();
@@ -189,7 +200,8 @@ impl DescriptorPools {
         });
 
         for pool in inner.pools.drain(..) {
-            device.destroy_descriptor_pool(pool.handle, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { device.destroy_descriptor_pool(pool.handle, None) };
         }
         inner.pools.push(Pool {
             handle,
@@ -218,7 +230,8 @@ impl DescriptorPools {
     pub unsafe fn destroy(&self, device: &ash::Device) {
         let mut inner = self.inner.borrow_mut();
         for pool in inner.pools.drain(..) {
-            device.destroy_descriptor_pool(pool.handle, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { device.destroy_descriptor_pool(pool.handle, None) };
         }
         inner.owner.clear();
     }
@@ -237,13 +250,16 @@ unsafe fn create_pool(device: &ash::Device, capacity: u32) -> anyhow::Result<vk:
         ty: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
         descriptor_count: capacity,
     }];
-    Ok(device.create_descriptor_pool(
-        &vk::DescriptorPoolCreateInfo::default()
-            .flags(vk::DescriptorPoolCreateFlags::FREE_DESCRIPTOR_SET)
-            .pool_sizes(&sizes)
-            .max_sets(capacity),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_descriptor_pool(
+            &vk::DescriptorPoolCreateInfo::default()
+                .flags(vk::DescriptorPoolCreateFlags::FREE_DESCRIPTOR_SET)
+                .pool_sizes(&sizes)
+                .max_sets(capacity),
+            None,
+        )
+    }?)
 }
 
 unsafe fn allocate_one(
@@ -252,11 +268,13 @@ unsafe fn allocate_one(
     layout: vk::DescriptorSetLayout,
 ) -> Result<vk::DescriptorSet, vk::Result> {
     let layouts = [layout];
-    device
-        .allocate_descriptor_sets(
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    unsafe {
+        device.allocate_descriptor_sets(
             &vk::DescriptorSetAllocateInfo::default()
                 .descriptor_pool(pool)
                 .set_layouts(&layouts),
         )
-        .map(|sets| sets[0])
+    }
+    .map(|sets| sets[0])
 }

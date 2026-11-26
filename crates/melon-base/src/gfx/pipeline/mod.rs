@@ -17,8 +17,11 @@ impl Pass {
     ///
     /// `device` must be live and done with the pipeline.
     pub unsafe fn destroy(&self, device: &ash::Device) {
-        device.destroy_pipeline(self.pipeline, None);
-        device.destroy_pipeline_layout(self.layout, None);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe {
+            device.destroy_pipeline(self.pipeline, None);
+            device.destroy_pipeline_layout(self.layout, None);
+        }
     }
 }
 
@@ -35,10 +38,13 @@ pub unsafe fn create_descriptor_set_layout(
         .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
         .descriptor_count(1)
         .stage_flags(vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT)];
-    Ok(device.create_descriptor_set_layout(
-        &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_descriptor_set_layout(
+            &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
+            None,
+        )
+    }?)
 }
 
 /// A shader module from SPIR-V bytes.
@@ -51,7 +57,10 @@ pub unsafe fn create_shader_module(
     spirv: &[u8],
 ) -> anyhow::Result<vk::ShaderModule> {
     let words = ash::util::read_spv(&mut std::io::Cursor::new(spirv))?;
-    Ok(device.create_shader_module(&vk::ShaderModuleCreateInfo::default().code(&words), None)?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_shader_module(&vk::ShaderModuleCreateInfo::default().code(&words), None)
+    }?)
 }
 
 /// Viewport and scissor are dynamic in all pipelines (window size).
@@ -105,15 +114,20 @@ impl PipelineDesc<'_> {
         } else {
             &push_constant_ranges
         };
-        let layout = device.create_pipeline_layout(
-            &vk::PipelineLayoutCreateInfo::default()
-                .set_layouts(&set_layouts)
-                .push_constant_ranges(ranges),
-            None,
-        )?;
-        let pipeline = self.build_pipeline(device, render_pass, layout);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let layout = unsafe {
+            device.create_pipeline_layout(
+                &vk::PipelineLayoutCreateInfo::default()
+                    .set_layouts(&set_layouts)
+                    .push_constant_ranges(ranges),
+                None,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let pipeline = unsafe { self.build_pipeline(device, render_pass, layout) };
         if pipeline.is_err() {
-            device.destroy_pipeline_layout(layout, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { device.destroy_pipeline_layout(layout, None) };
         }
         Ok(Pass {
             layout,
@@ -127,11 +141,14 @@ impl PipelineDesc<'_> {
         render_pass: vk::RenderPass,
         layout: vk::PipelineLayout,
     ) -> anyhow::Result<vk::Pipeline> {
-        let vert_module = create_shader_module(device, self.vert)?;
-        let frag_module = match create_shader_module(device, self.frag) {
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let vert_module = unsafe { create_shader_module(device, self.vert) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let frag_module = match unsafe { create_shader_module(device, self.frag) } {
             Ok(module) => module,
             Err(e) => {
-                device.destroy_shader_module(vert_module, None);
+                // SAFETY: made by this device, and no frame in flight uses it any more.
+                unsafe { device.destroy_shader_module(vert_module, None) };
                 return Err(e);
             }
         };
@@ -228,11 +245,16 @@ impl PipelineDesc<'_> {
             .layout(layout)
             .render_pass(render_pass)
             .subpass(0);
-        let pipeline = device
-            .create_graphics_pipelines(vk::PipelineCache::null(), &[pipeline_info], None)
-            .map_err(|(_, e)| e);
-        device.destroy_shader_module(vert_module, None);
-        device.destroy_shader_module(frag_module, None);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let pipeline = unsafe {
+            device.create_graphics_pipelines(vk::PipelineCache::null(), &[pipeline_info], None)
+        }
+        .map_err(|(_, e)| e);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe {
+            device.destroy_shader_module(vert_module, None);
+            device.destroy_shader_module(frag_module, None);
+        }
         Ok(pipeline?[0])
     }
 }
@@ -246,6 +268,7 @@ pub fn depth_disabled<'a>() -> vk::PipelineDepthStencilStateCreateInfo<'a> {
 
 /// `data` as push-constant bytes.
 pub fn push_constant_bytes(data: &[f32], size: u32) -> &[u8] {
-    assert_eq!(std::mem::size_of_val(data), size as usize);
-    unsafe { std::slice::from_raw_parts(data.as_ptr().cast(), std::mem::size_of_val(data)) }
+    let bytes = numerobis::elem::as_bytes(data);
+    assert_eq!(bytes.len(), size as usize);
+    bytes
 }

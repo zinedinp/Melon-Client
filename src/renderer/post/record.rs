@@ -29,6 +29,7 @@ impl Renderer {
             }
             Vec::new()
         };
+        // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
                 crate::warn!("Waiting for the GPU failed: {e}");
@@ -76,13 +77,16 @@ impl Renderer {
             .swapchain
             .depth_sampled
             .then_some((self.swapchain.depth.image, self.swapchain.depth_format));
-        self.post.resize(
-            &self.device,
-            &self.mem_props,
-            self.swapchain.extent,
-            &self.swapchain.views,
-            depth,
-        )
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe {
+            self.post.resize(
+                &self.device,
+                &self.mem_props,
+                self.swapchain.extent,
+                &self.swapchain.views,
+                depth,
+            )
+        }
     }
 
     /// Each texture input of `source`'s passes, in order.
@@ -96,7 +100,8 @@ impl Renderer {
         let fail = |out: &mut Vec<(crate::renderer::texture::Texture, u32, u32)>, e| {
             let (device, pools) = (self.device.clone(), &self.textures.descriptor_pools);
             for (texture, _, _) in out.drain(..) {
-                free_effect_texture(&device, pools, texture);
+                // SAFETY: made by this device, and no frame in flight uses it any more.
+                unsafe { free_effect_texture(&device, pools, texture) };
             }
             e
         };
@@ -116,10 +121,11 @@ impl Renderer {
                     .get(location)
                     .cloned()
                     .unwrap_or_else(crate::assets::missing_texture);
-                match self
-                    .uploader(self.textures.nearest_sampler)
-                    .image_2d(&image)
-                {
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                match unsafe {
+                    self.uploader(self.textures.nearest_sampler)
+                        .image_2d(&image)
+                } {
                     Ok((texture, init)) => {
                         out.push((texture, *width, *height));
                         inits.push(init);
@@ -130,13 +136,16 @@ impl Renderer {
         }
         // Loaded while the device is idle anyway, and freed without
         // waiting for a frame: up now, not with the next frame.
-        if let Err(e) = crate::renderer::texture_update::submit_now(
-            &self.device,
-            &self.mem_props,
-            self.frames.command_pool,
-            self.queue,
-            &inits,
-        ) {
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        if let Err(e) = unsafe {
+            crate::renderer::texture_update::submit_now(
+                &self.device,
+                &self.mem_props,
+                self.frames.command_pool,
+                self.queue,
+                &inits,
+            )
+        } {
             return Err(fail(&mut out, e));
         }
         Ok(out)
@@ -174,12 +183,15 @@ impl Renderer {
         scene: &SceneFrame,
         chains: &[String],
     ) {
-        self.begin_post(cmd);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.begin_post(cmd) };
         if chains.iter().any(|c| c == OUTLINE_CHAIN) {
-            self.record_outline_pass(cmd, scene);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe { self.record_outline_pass(cmd, scene) };
         }
         for id in chains {
-            self.record_post_chain(cmd, image_index, id);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe { self.record_post_chain(cmd, image_index, id) };
         }
     }
 
@@ -195,17 +207,24 @@ impl Renderer {
         let Some((pass, set)) = &self.post.blit else {
             return;
         };
-        self.device
-            .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
-        self.device.cmd_bind_descriptor_sets(
-            cmd,
-            vk::PipelineBindPoint::GRAPHICS,
-            pass.layout,
-            0,
-            &[*set],
-            &[],
-        );
-        self.device.cmd_draw(cmd, 3, 1, 0, 0);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device
+                .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline)
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_descriptor_sets(
+                cmd,
+                vk::PipelineBindPoint::GRAPHICS,
+                pass.layout,
+                0,
+                &[*set],
+                &[],
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.device.cmd_draw(cmd, 3, 1, 0, 0) };
     }
 
     /// Whether the chain `id` is loaded.
@@ -216,21 +235,26 @@ impl Renderer {
     /// Before the chains of a frame.
     pub(in crate::renderer) unsafe fn begin_post(&self, cmd: vk::CommandBuffer) {
         let device = &self.device;
-        device.cmd_pipeline_barrier(
-            cmd,
-            vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT
-                | vk::PipelineStageFlags::LATE_FRAGMENT_TESTS,
-            vk::PipelineStageFlags::FRAGMENT_SHADER | vk::PipelineStageFlags::TRANSFER,
-            vk::DependencyFlags::empty(),
-            &[vk::MemoryBarrier::default()
-                .src_access_mask(
-                    vk::AccessFlags::COLOR_ATTACHMENT_WRITE
-                        | vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
-                )
-                .dst_access_mask(vk::AccessFlags::SHADER_READ | vk::AccessFlags::TRANSFER_READ)],
-            &[],
-            &[],
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT
+                    | vk::PipelineStageFlags::LATE_FRAGMENT_TESTS,
+                vk::PipelineStageFlags::FRAGMENT_SHADER | vk::PipelineStageFlags::TRANSFER,
+                vk::DependencyFlags::empty(),
+                &[vk::MemoryBarrier::default()
+                    .src_access_mask(
+                        vk::AccessFlags::COLOR_ATTACHMENT_WRITE
+                            | vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
+                    )
+                    .dst_access_mask(
+                        vk::AccessFlags::SHADER_READ | vk::AccessFlags::TRANSFER_READ,
+                    )],
+                &[],
+                &[],
+            )
+        };
         self.post.main_dirty.set(true);
         if self.post.needs_init.replace(false) {
             let images = self.post.internal_images();
@@ -257,23 +281,29 @@ impl Renderer {
                     )
                 })
                 .collect();
-            device.cmd_pipeline_barrier(
-                cmd,
-                vk::PipelineStageFlags::TOP_OF_PIPE,
-                vk::PipelineStageFlags::TRANSFER,
-                vk::DependencyFlags::empty(),
-                &[],
-                &[],
-                &to_clear,
-            );
-            for &image in &images {
-                device.cmd_clear_color_image(
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_pipeline_barrier(
                     cmd,
-                    image,
-                    vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    &vk::ClearColorValue { float32: [0.0; 4] },
-                    &[COLOR],
-                );
+                    vk::PipelineStageFlags::TOP_OF_PIPE,
+                    vk::PipelineStageFlags::TRANSFER,
+                    vk::DependencyFlags::empty(),
+                    &[],
+                    &[],
+                    &to_clear,
+                )
+            };
+            for &image in &images {
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe {
+                    device.cmd_clear_color_image(
+                        cmd,
+                        image,
+                        vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                        &vk::ClearColorValue { float32: [0.0; 4] },
+                        &[COLOR],
+                    )
+                };
             }
             let to_read: Vec<_> = images
                 .iter()
@@ -287,15 +317,18 @@ impl Renderer {
                     )
                 })
                 .collect();
-            device.cmd_pipeline_barrier(
-                cmd,
-                vk::PipelineStageFlags::TRANSFER,
-                vk::PipelineStageFlags::FRAGMENT_SHADER,
-                vk::DependencyFlags::empty(),
-                &[],
-                &[],
-                &to_read,
-            );
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_pipeline_barrier(
+                    cmd,
+                    vk::PipelineStageFlags::TRANSFER,
+                    vk::PipelineStageFlags::FRAGMENT_SHADER,
+                    vk::DependencyFlags::empty(),
+                    &[],
+                    &[],
+                    &to_read,
+                )
+            };
         }
     }
 
@@ -309,11 +342,13 @@ impl Renderer {
         let Some(chain) = self.post.chains.get(id) else {
             return;
         };
-        self.gpu_timer.pass("post");
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.gpu_timer.pass("post") };
         let device = &self.device;
         for pass in &chain.passes {
             if pass.inputs.contains(&Source::MainColor) && self.post.main_dirty.get() {
-                self.snapshot_main(cmd, image_index);
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe { self.snapshot_main(cmd, image_index) };
             }
             let (render_pass, framebuffer, extent, clear) = match pass.output {
                 Dest::Main => (
@@ -336,48 +371,68 @@ impl Renderer {
             let clears = [vk::ClearValue {
                 color: vk::ClearColorValue { float32: clear },
             }];
-            device.cmd_begin_render_pass(
-                cmd,
-                &vk::RenderPassBeginInfo::default()
-                    .render_pass(render_pass)
-                    .framebuffer(framebuffer)
-                    .render_area(area)
-                    .clear_values(&clears),
-                vk::SubpassContents::INLINE,
-            );
-            device.cmd_set_viewport(
-                cmd,
-                0,
-                &[vk::Viewport {
-                    x: 0.0,
-                    y: 0.0,
-                    width: extent.width as f32,
-                    height: extent.height as f32,
-                    min_depth: 0.0,
-                    max_depth: 1.0,
-                }],
-            );
-            device.cmd_set_scissor(cmd, 0, &[area]);
-            device.cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline.pipeline);
-            device.cmd_bind_descriptor_sets(
-                cmd,
-                vk::PipelineBindPoint::GRAPHICS,
-                pass.pipeline.layout,
-                0,
-                &[
-                    pass.sampler_set,
-                    self.gui_uniforms.set(self.frames.current),
-                    pass.block_set,
-                ],
-                &[],
-            );
-            device.cmd_draw(cmd, 3, 1, 0, 0);
-            device.cmd_end_render_pass(cmd);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_begin_render_pass(
+                    cmd,
+                    &vk::RenderPassBeginInfo::default()
+                        .render_pass(render_pass)
+                        .framebuffer(framebuffer)
+                        .render_area(area)
+                        .clear_values(&clears),
+                    vk::SubpassContents::INLINE,
+                )
+            };
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_set_viewport(
+                    cmd,
+                    0,
+                    &[vk::Viewport {
+                        x: 0.0,
+                        y: 0.0,
+                        width: extent.width as f32,
+                        height: extent.height as f32,
+                        min_depth: 0.0,
+                        max_depth: 1.0,
+                    }],
+                )
+            };
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_set_scissor(cmd, 0, &[area]);
+                device.cmd_bind_pipeline(
+                    cmd,
+                    vk::PipelineBindPoint::GRAPHICS,
+                    pass.pipeline.pipeline,
+                );
+            }
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_bind_descriptor_sets(
+                    cmd,
+                    vk::PipelineBindPoint::GRAPHICS,
+                    pass.pipeline.layout,
+                    0,
+                    &[
+                        pass.sampler_set,
+                        self.gui_uniforms.set(self.frames.current),
+                        pass.block_set,
+                    ],
+                    &[],
+                )
+            };
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_draw(cmd, 3, 1, 0, 0);
+                device.cmd_end_render_pass(cmd);
+            }
             if pass.output == Dest::Main {
                 self.post.main_dirty.set(true);
             }
         }
-        self.gpu_timer.mark(device, "post");
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.gpu_timer.mark(device, "post") };
     }
 
     /// Copies the swapchain image into the image the passes read `main`
@@ -398,31 +453,34 @@ impl Renderer {
                 .dst_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
                 .subresource_range(COLOR)
         };
-        device.cmd_pipeline_barrier(
-            cmd,
-            vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT
-                | vk::PipelineStageFlags::FRAGMENT_SHADER,
-            vk::PipelineStageFlags::TRANSFER,
-            vk::DependencyFlags::empty(),
-            &[],
-            &[],
-            &[
-                barrier(
-                    source,
-                    vk::ImageLayout::PRESENT_SRC_KHR,
-                    vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                    vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
-                    vk::AccessFlags::TRANSFER_READ,
-                ),
-                barrier(
-                    snapshot.image,
-                    vk::ImageLayout::UNDEFINED,
-                    vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    vk::AccessFlags::empty(),
-                    vk::AccessFlags::TRANSFER_WRITE,
-                ),
-            ],
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT
+                    | vk::PipelineStageFlags::FRAGMENT_SHADER,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::DependencyFlags::empty(),
+                &[],
+                &[],
+                &[
+                    barrier(
+                        source,
+                        vk::ImageLayout::PRESENT_SRC_KHR,
+                        vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                        vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
+                        vk::AccessFlags::TRANSFER_READ,
+                    ),
+                    barrier(
+                        snapshot.image,
+                        vk::ImageLayout::UNDEFINED,
+                        vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                        vk::AccessFlags::empty(),
+                        vk::AccessFlags::TRANSFER_WRITE,
+                    ),
+                ],
+            )
+        };
         let layer = vk::ImageSubresourceLayers {
             aspect_mask: vk::ImageAspectFlags::COLOR,
             mip_level: 0,
@@ -430,50 +488,56 @@ impl Renderer {
             layer_count: 1,
         };
         let extent = self.swapchain.extent;
-        device.cmd_copy_image(
-            cmd,
-            source,
-            vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            snapshot.image,
-            vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-            &[vk::ImageCopy {
-                src_subresource: layer,
-                src_offset: vk::Offset3D::default(),
-                dst_subresource: layer,
-                dst_offset: vk::Offset3D::default(),
-                extent: vk::Extent3D {
-                    width: extent.width,
-                    height: extent.height,
-                    depth: 1,
-                },
-            }],
-        );
-        device.cmd_pipeline_barrier(
-            cmd,
-            vk::PipelineStageFlags::TRANSFER,
-            vk::PipelineStageFlags::FRAGMENT_SHADER
-                | vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
-            vk::DependencyFlags::empty(),
-            &[],
-            &[],
-            &[
-                barrier(
-                    snapshot.image,
-                    vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-                    vk::AccessFlags::TRANSFER_WRITE,
-                    vk::AccessFlags::SHADER_READ,
-                ),
-                barrier(
-                    source,
-                    vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                    vk::ImageLayout::PRESENT_SRC_KHR,
-                    vk::AccessFlags::TRANSFER_READ,
-                    vk::AccessFlags::COLOR_ATTACHMENT_READ
-                        | vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
-                ),
-            ],
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_copy_image(
+                cmd,
+                source,
+                vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                snapshot.image,
+                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                &[vk::ImageCopy {
+                    src_subresource: layer,
+                    src_offset: vk::Offset3D::default(),
+                    dst_subresource: layer,
+                    dst_offset: vk::Offset3D::default(),
+                    extent: vk::Extent3D {
+                        width: extent.width,
+                        height: extent.height,
+                        depth: 1,
+                    },
+                }],
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::PipelineStageFlags::FRAGMENT_SHADER
+                    | vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
+                vk::DependencyFlags::empty(),
+                &[],
+                &[],
+                &[
+                    barrier(
+                        snapshot.image,
+                        vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                        vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+                        vk::AccessFlags::TRANSFER_WRITE,
+                        vk::AccessFlags::SHADER_READ,
+                    ),
+                    barrier(
+                        source,
+                        vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                        vk::ImageLayout::PRESENT_SRC_KHR,
+                        vk::AccessFlags::TRANSFER_READ,
+                        vk::AccessFlags::COLOR_ATTACHMENT_READ
+                            | vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
+                    ),
+                ],
+            )
+        };
         self.post.main_dirty.set(false);
     }
 }
@@ -493,7 +557,8 @@ impl Renderer {
         if self.post.outline.is_none() {
             return;
         }
-        self.gpu_timer.pass("outline");
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.gpu_timer.pass("outline") };
         let device = &self.device;
         let extent = self.swapchain.extent;
         let area = vk::Rect2D {
@@ -503,56 +568,71 @@ impl Renderer {
         let clears = [vk::ClearValue {
             color: vk::ClearColorValue { float32: [0.0; 4] },
         }];
-        device.cmd_begin_render_pass(
-            cmd,
-            &vk::RenderPassBeginInfo::default()
-                .render_pass(self.post.color_pass)
-                .framebuffer(self.post.outline_framebuffer)
-                .render_area(area)
-                .clear_values(&clears),
-            vk::SubpassContents::INLINE,
-        );
-        device.cmd_set_viewport(
-            cmd,
-            0,
-            &[vk::Viewport {
-                x: 0.0,
-                y: 0.0,
-                width: extent.width as f32,
-                height: extent.height as f32,
-                min_depth: 0.0,
-                max_depth: 1.0,
-            }],
-        );
-        device.cmd_set_scissor(cmd, 0, &[area]);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_begin_render_pass(
+                cmd,
+                &vk::RenderPassBeginInfo::default()
+                    .render_pass(self.post.color_pass)
+                    .framebuffer(self.post.outline_framebuffer)
+                    .render_area(area)
+                    .clear_values(&clears),
+                vk::SubpassContents::INLINE,
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_set_viewport(
+                cmd,
+                0,
+                &[vk::Viewport {
+                    x: 0.0,
+                    y: 0.0,
+                    width: extent.width as f32,
+                    height: extent.height as f32,
+                    min_depth: 0.0,
+                    max_depth: 1.0,
+                }],
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { device.cmd_set_scissor(cmd, 0, &[area]) };
         self.recording.forget_all();
         if self.pack_outline.is_some() {
-            self.record_pack_outline(cmd, scene, world);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe { self.record_pack_outline(cmd, scene, world) };
         } else {
             let view_proj = self.world_view_projection(world, RenderLayer::Entities);
             for &(index, [r, g, b]) in &scene.glowing {
                 let Some(entity) = scene.entities.get(index) else {
                     continue;
                 };
-                if !self.bind_world_pass(cmd, entity.atlas, Mode::Outline) {
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                if !unsafe { self.bind_world_pass(cmd, entity.atlas, Mode::Outline) } {
                     continue;
                 }
                 let colour = [r, g, b].map(|c| f32::from(c) / 255.0);
-                self.draw_world_mesh(
-                    cmd,
-                    self.pipelines.outline.layout,
-                    entity.mesh,
-                    (
-                        view_proj * world.relative_to(entity.model, entity.origin),
-                        glam::Vec3::ZERO,
-                    ),
-                    &DrawLight::tint([colour[0], colour[1], colour[2], 1.0]),
-                    None,
-                );
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe {
+                    self.draw_world_mesh(
+                        cmd,
+                        self.pipelines.outline.layout,
+                        entity.mesh,
+                        (
+                            view_proj * world.relative_to(entity.model, entity.origin),
+                            glam::Vec3::ZERO,
+                        ),
+                        &DrawLight::tint([colour[0], colour[1], colour[2], 1.0]),
+                        None,
+                    )
+                };
             }
         }
-        device.cmd_end_render_pass(cmd);
-        self.gpu_timer.mark(device, "outline");
+        // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
+        unsafe {
+            device.cmd_end_render_pass(cmd);
+            self.gpu_timer.mark(device, "outline");
+        }
     }
 
     /// Pack `rendertype_outline`.
@@ -578,15 +658,22 @@ impl Renderer {
             self.aspect_ratio(),
             world.far,
         );
-        pack.write_frame(proj, (extent.width as f32, extent.height as f32));
-        self.device
-            .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pack.pass.pipeline);
-        self.device.cmd_bind_index_buffer(
-            cmd,
-            self.meshes.index_buffer(),
-            0,
-            vk::IndexType::UINT16,
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { pack.write_frame(proj, (extent.width as f32, extent.height as f32)) };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device
+                .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pack.pass.pipeline)
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_index_buffer(
+                cmd,
+                self.meshes.index_buffer(),
+                0,
+                vk::IndexType::UINT16,
+            )
+        };
         for (slot, &(index, [r, g, b])) in scene
             .glowing
             .iter()
@@ -600,30 +687,40 @@ impl Renderer {
                 continue;
             };
             let colour = [r, g, b].map(|c| f32::from(c) / 255.0);
-            pack.write_entity(
-                slot,
-                view * world.relative_to(entity.model, entity.origin),
-                [colour[0], colour[1], colour[2], 1.0],
-            );
-            self.device.cmd_bind_descriptor_sets(
-                cmd,
-                vk::PipelineBindPoint::GRAPHICS,
-                pack.pass.layout,
-                0,
-                &[texture.descriptor_set, pack.set(slot)],
-                &[],
-            );
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                pack.write_entity(
+                    slot,
+                    view * world.relative_to(entity.model, entity.origin),
+                    [colour[0], colour[1], colour[2], 1.0],
+                )
+            };
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device.cmd_bind_descriptor_sets(
+                    cmd,
+                    vk::PipelineBindPoint::GRAPHICS,
+                    pack.pass.layout,
+                    0,
+                    &[texture.descriptor_set, pack.set(slot)],
+                    &[],
+                )
+            };
             let Some(mesh) = self.meshes.slot(entity.mesh.0) else {
                 continue;
             };
             let (buffer, base) = self.meshes.location(mesh);
-            self.bind_vertices(cmd, buffer);
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { self.bind_vertices(cmd, buffer) };
             let mut quad = 0;
             let end = mesh.count / 4;
             while quad < end {
                 let n = (end - quad).min(mesh_arena::QUADS_PER_DRAW);
-                self.device
-                    .cmd_draw_indexed(cmd, n * 6, 1, 0, (base + quad * 4) as i32, 0);
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe {
+                    self.device
+                        .cmd_draw_indexed(cmd, n * 6, 1, 0, (base + quad * 4) as i32, 0)
+                };
                 quad += n;
             }
         }

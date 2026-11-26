@@ -6,6 +6,7 @@
 use ash::vk;
 use image::RgbaImage;
 
+use super::mapped::MappedBuffer;
 use super::staging::Staging;
 
 /// Where textures are sampled: pack GUI shaders read them in `.vsh` too.
@@ -65,11 +66,13 @@ pub unsafe fn prepare(
     updates: &[PendingUpdate],
 ) -> anyhow::Result<()> {
     let total = total(inits, updates);
-    staging.trim(device, total, 1 << 20);
+    // SAFETY: made by this device, and no frame in flight uses it any more.
+    unsafe { staging.trim(device, total, 1 << 20) };
     if total == 0 {
         return Ok(());
     }
-    staging.ensure(device, mem_props, total, 64 * 1024)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    unsafe { staging.ensure(device, mem_props, total, 64 * 1024) }
 }
 
 /// Copies `inits`, then `updates`, into `staging` and records their
@@ -90,12 +93,15 @@ pub unsafe fn record(
     if total == 0 {
         return Ok(());
     }
-    staging.ensure(device, mem_props, total, 64 * 1024)?;
-    let Some(mapped) = staging.mapped else {
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    unsafe { staging.ensure(device, mem_props, total, 64 * 1024) }?;
+    let Some(mapped) = staging.mapped() else {
         return Ok(());
     };
-    let offset = record_inits(device, cmd, staging.buffer, mapped, 0, inits);
-    record_updates(device, cmd, staging.buffer, mapped, offset, updates);
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    let offset = unsafe { record_inits(device, cmd, mapped, 0, inits) };
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe { record_updates(device, cmd, mapped, offset, updates) };
     Ok(())
 }
 
@@ -121,40 +127,57 @@ pub unsafe fn submit_now(
     let mut cmd = vk::CommandBuffer::null();
     let mut fence = vk::Fence::null();
     let result = (|| -> anyhow::Result<()> {
-        staging.ensure(device, mem_props, total, 0)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { staging.ensure(device, mem_props, total, 0) }?;
         let mapped = staging
-            .mapped
+            .mapped()
             .ok_or_else(|| anyhow::anyhow!("staging memory not mapped"))?;
-        cmd = device.allocate_command_buffers(
-            &vk::CommandBufferAllocateInfo::default()
-                .command_pool(command_pool)
-                .level(vk::CommandBufferLevel::PRIMARY)
-                .command_buffer_count(1),
-        )?[0];
-        device.begin_command_buffer(
-            cmd,
-            &vk::CommandBufferBeginInfo::default()
-                .flags(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT),
-        )?;
-        record_inits(device, cmd, staging.buffer, mapped, 0, inits);
-        device.end_command_buffer(cmd)?;
-        fence = device.create_fence(&vk::FenceCreateInfo::default(), None)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        cmd = unsafe {
+            device.allocate_command_buffers(
+                &vk::CommandBufferAllocateInfo::default()
+                    .command_pool(command_pool)
+                    .level(vk::CommandBufferLevel::PRIMARY)
+                    .command_buffer_count(1),
+            )
+        }?[0];
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe {
+            device.begin_command_buffer(
+                cmd,
+                &vk::CommandBufferBeginInfo::default()
+                    .flags(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT),
+            )
+        }?;
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { record_inits(device, cmd, mapped, 0, inits) };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { device.end_command_buffer(cmd) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        fence = unsafe { device.create_fence(&vk::FenceCreateInfo::default(), None) }?;
         let cmds = [cmd];
-        device.queue_submit(
-            queue,
-            &[vk::SubmitInfo::default().command_buffers(&cmds)],
-            fence,
-        )?;
-        device.wait_for_fences(&[fence], true, u64::MAX)?;
+        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+        unsafe {
+            device.queue_submit(
+                queue,
+                &[vk::SubmitInfo::default().command_buffers(&cmds)],
+                fence,
+            )
+        }?;
+        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+        unsafe { device.wait_for_fences(&[fence], true, u64::MAX) }?;
         Ok(())
     })();
     if fence != vk::Fence::null() {
-        device.destroy_fence(fence, None);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { device.destroy_fence(fence, None) };
     }
     if cmd != vk::CommandBuffer::null() {
-        device.free_command_buffers(command_pool, &[cmd]);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { device.free_command_buffers(command_pool, &[cmd]) };
     }
-    staging.destroy(device);
+    // SAFETY: made by this device, and no frame in flight uses it any more.
+    unsafe { staging.destroy(device) };
     result
 }
 
@@ -163,14 +186,14 @@ pub unsafe fn submit_now(
 unsafe fn record_inits(
     device: &ash::Device,
     cmd: vk::CommandBuffer,
-    buffer: vk::Buffer,
-    mapped: std::ptr::NonNull<u8>,
+    mapped: &MappedBuffer,
     mut offset: u64,
     inits: &[PendingInit],
 ) -> u64 {
     if inits.is_empty() {
         return offset;
     }
+    let buffer = mapped.buffer;
     let barriers = |old, new, src, dst| -> Vec<vk::ImageMemoryBarrier> {
         inits
             .iter()
@@ -192,31 +215,31 @@ unsafe fn record_inits(
             })
             .collect()
     };
-    device.cmd_pipeline_barrier(
-        cmd,
-        vk::PipelineStageFlags::TOP_OF_PIPE,
-        vk::PipelineStageFlags::TRANSFER,
-        vk::DependencyFlags::empty(),
-        &[],
-        &[],
-        &barriers(
-            vk::ImageLayout::UNDEFINED,
-            vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-            vk::AccessFlags::empty(),
-            vk::AccessFlags::TRANSFER_WRITE,
-        ),
-    );
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe {
+        device.cmd_pipeline_barrier(
+            cmd,
+            vk::PipelineStageFlags::TOP_OF_PIPE,
+            vk::PipelineStageFlags::TRANSFER,
+            vk::DependencyFlags::empty(),
+            &[],
+            &[],
+            &barriers(
+                vk::ImageLayout::UNDEFINED,
+                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                vk::AccessFlags::empty(),
+                vk::AccessFlags::TRANSFER_WRITE,
+            ),
+        )
+    };
     for init in inits {
         let regions: Vec<vk::BufferImageCopy> = init
             .parts
             .iter()
             .map(|(layer, level, image)| {
                 let bytes = image.as_raw();
-                std::ptr::copy_nonoverlapping(
-                    bytes.as_ptr(),
-                    mapped.as_ptr().add(offset as usize),
-                    bytes.len(),
-                );
+                // SAFETY: the caller's staging buffer, which no submitted frame still reads.
+                unsafe { mapped.write(offset as usize, bytes) };
                 let region = vk::BufferImageCopy::default()
                     .buffer_offset(offset)
                     .image_subresource(vk::ImageSubresourceLayers {
@@ -234,28 +257,34 @@ unsafe fn record_inits(
                 region
             })
             .collect();
-        device.cmd_copy_buffer_to_image(
-            cmd,
-            buffer,
-            init.image,
-            vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-            &regions,
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_copy_buffer_to_image(
+                cmd,
+                buffer,
+                init.image,
+                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                &regions,
+            )
+        };
     }
-    device.cmd_pipeline_barrier(
-        cmd,
-        vk::PipelineStageFlags::TRANSFER,
-        SAMPLED_IN,
-        vk::DependencyFlags::empty(),
-        &[],
-        &[],
-        &barriers(
-            vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-            vk::AccessFlags::TRANSFER_WRITE,
-            vk::AccessFlags::SHADER_READ,
-        ),
-    );
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe {
+        device.cmd_pipeline_barrier(
+            cmd,
+            vk::PipelineStageFlags::TRANSFER,
+            SAMPLED_IN,
+            vk::DependencyFlags::empty(),
+            &[],
+            &[],
+            &barriers(
+                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+                vk::AccessFlags::TRANSFER_WRITE,
+                vk::AccessFlags::SHADER_READ,
+            ),
+        )
+    };
     offset
 }
 
@@ -263,14 +292,14 @@ unsafe fn record_inits(
 unsafe fn record_updates(
     device: &ash::Device,
     cmd: vk::CommandBuffer,
-    buffer: vk::Buffer,
-    mapped: std::ptr::NonNull<u8>,
+    mapped: &MappedBuffer,
     mut offset: u64,
     updates: &[PendingUpdate],
 ) {
     if updates.is_empty() {
         return;
     }
+    let buffer = mapped.buffer;
     let mut images: Vec<vk::Image> = Vec::new();
     for update in updates {
         if !images.contains(&update.image) {
@@ -298,28 +327,28 @@ unsafe fn record_updates(
             })
             .collect()
     };
-    device.cmd_pipeline_barrier(
-        cmd,
-        SAMPLED_IN,
-        vk::PipelineStageFlags::TRANSFER,
-        vk::DependencyFlags::empty(),
-        &[],
-        &[],
-        &barriers(
-            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-            vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-            vk::AccessFlags::SHADER_READ,
-            vk::AccessFlags::TRANSFER_WRITE,
-        ),
-    );
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe {
+        device.cmd_pipeline_barrier(
+            cmd,
+            SAMPLED_IN,
+            vk::PipelineStageFlags::TRANSFER,
+            vk::DependencyFlags::empty(),
+            &[],
+            &[],
+            &barriers(
+                vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                vk::AccessFlags::SHADER_READ,
+                vk::AccessFlags::TRANSFER_WRITE,
+            ),
+        )
+    };
     let mut regions: Vec<Vec<vk::BufferImageCopy>> = vec![Vec::new(); images.len()];
     for update in updates {
         let bytes = update.pixels.as_raw();
-        std::ptr::copy_nonoverlapping(
-            bytes.as_ptr(),
-            mapped.as_ptr().add(offset as usize),
-            bytes.len(),
-        );
+        // SAFETY: the caller's staging buffer, which no submitted frame still reads.
+        unsafe { mapped.write(offset as usize, bytes) };
         let (width, height) = update.pixels.dimensions();
         let image = images
             .iter()
@@ -348,26 +377,32 @@ unsafe fn record_updates(
         offset += bytes.len() as u64;
     }
     for (&image, regions) in images.iter().zip(&regions) {
-        device.cmd_copy_buffer_to_image(
-            cmd,
-            buffer,
-            image,
-            vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-            regions,
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_copy_buffer_to_image(
+                cmd,
+                buffer,
+                image,
+                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                regions,
+            )
+        };
     }
-    device.cmd_pipeline_barrier(
-        cmd,
-        vk::PipelineStageFlags::TRANSFER,
-        SAMPLED_IN,
-        vk::DependencyFlags::empty(),
-        &[],
-        &[],
-        &barriers(
-            vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-            vk::AccessFlags::TRANSFER_WRITE,
-            vk::AccessFlags::SHADER_READ,
-        ),
-    );
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe {
+        device.cmd_pipeline_barrier(
+            cmd,
+            vk::PipelineStageFlags::TRANSFER,
+            SAMPLED_IN,
+            vk::DependencyFlags::empty(),
+            &[],
+            &[],
+            &barriers(
+                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+                vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+                vk::AccessFlags::TRANSFER_WRITE,
+                vk::AccessFlags::SHADER_READ,
+            ),
+        )
+    };
 }

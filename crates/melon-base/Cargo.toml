@@ -15,7 +15,7 @@ ash = "0.38.0"
 ash-window = "0.13.0"
 image = { version = "0.25.10", default-features = false, features = ["png"] }
 # The GPU's vendor and architecture from its PCI ids, for vendor paths at run time.
-numerobis = { version = "0.5.4", default-features = false, features = ["vulkan"] }
+numerobis = { version = "0.5.6", default-features = false, features = ["vulkan"] }
 open = "5.4.5"
 raw-window-handle = "0.6.2"
 serde = { version = "1.0.229", features = ["derive"] }
@@ -33,3 +33,7 @@ windows-sys = { version = "0.61.2", features = ["Win32_Security_Credentials"] }
 [target.'cfg(target_os = "macos")'.dependencies]
 # The login Keychain keeps the account tokens.
 security-framework = "3.7.0"
+
+[lints.clippy]
+# Every `unsafe {}` says why it holds.
+undocumented_unsafe_blocks = "warn"

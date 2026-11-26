@@ -2,14 +2,13 @@
 
 use std::time::Duration;
 
-use ash::vk;
+use numerobis::vulkan::swapchain::PresentMode as Mode;
 use winit::window::Fullscreen;
 
 use super::RunningState;
 use crate::i18n::Lang;
 use crate::i18n::languages::Language;
 use crate::network::ClientInfo;
-use crate::renderer::FIFO_LATEST_READY;
 use crate::settings::options::{self, Config, PresentMode};
 
 impl RunningState {
@@ -17,10 +16,10 @@ impl RunningState {
     pub(super) fn apply_display_options(&mut self) {
         let requested = match self.env.config.present_mode {
             PresentMode::Auto => None,
-            PresentMode::Fifo => Some(vk::PresentModeKHR::FIFO),
-            PresentMode::Mailbox => Some(vk::PresentModeKHR::MAILBOX),
-            PresentMode::Immediate => Some(vk::PresentModeKHR::IMMEDIATE),
-            PresentMode::FifoLatestReady => Some(FIFO_LATEST_READY),
+            PresentMode::Fifo => Some(Mode::Fifo),
+            PresentMode::Mailbox => Some(Mode::Mailbox),
+            PresentMode::Immediate => Some(Mode::Immediate),
+            PresentMode::FifoLatestReady => Some(Mode::FifoLatestReady),
         };
         if let Err(e) = self.renderer.set_present(self.env.config.vsync, requested) {
             crate::warn!("Present mode not changed: {e:#}");

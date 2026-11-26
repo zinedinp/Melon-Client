@@ -17,7 +17,8 @@ pub const OBS_CAPTURE_ENV: &str = "MELON_OBS_CAPTURE";
 /// As `ash::Entry::load`: the library found must be a Vulkan loader.
 pub unsafe fn load() -> Result<ash::Entry, ash::LoadingError> {
     keep_obs_out();
-    ash::Entry::load()
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    unsafe { ash::Entry::load() }
 }
 
 /// Sets OBS's off switch, unless the user opted in or set the switch themselves.

@@ -1,40 +1,65 @@
 //! The uniform blocks vanilla's GUI shaders read (`DynamicTransforms`, `Projection`).
 
 use ash::vk;
+use numerobis::elem::Pod;
 
-use super::vk_util::{self, MAPPED_FOR_GPU, create_buffer_in};
+use super::mapped::MappedBuffer;
+use super::vk_util::Place;
 
 /// Each block's binding in set 1, by the name a shader declares it with.
 pub const BLOCKS: [&str; 3] = ["DynamicTransforms", "Projection", "Globals"];
 
 /// Room for each block; `minUniformBufferOffsetAlignment` is at most 256.
-const STRIDE: u64 = 256;
+pub const STRIDE: u64 = 256;
 
 /// `dynamictransforms.glsl`, std140.
 #[repr(C)]
 #[derive(Clone, Copy)]
-struct DynamicTransforms {
-    model_view: [f32; 16],
-    texture: [f32; 16],
-    color_modulator: [f32; 4],
+pub struct DynamicTransforms {
+    pub model_view: [f32; 16],
+    pub texture: [f32; 16],
+    pub color_modulator: [f32; 4],
     /// `vec3 ModelOffset` and its padding.
-    model_offset: [f32; 4],
+    pub model_offset: [f32; 4],
 }
+
+const _: () = assert!(std::mem::size_of::<DynamicTransforms>() == 160);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl Pod for DynamicTransforms {}
 
 /// `globals.glsl`, std140.
 #[repr(C)]
 #[derive(Clone, Copy)]
-struct Globals {
-    camera_block_pos: [i32; 3],
-    glint_alpha: f32,
-    camera_offset: [f32; 3],
-    game_time: f32,
-    screen_size: [f32; 2],
-    menu_blur_radius: i32,
-    use_rgss: i32,
+pub struct Globals {
+    pub camera_block_pos: [i32; 3],
+    pub glint_alpha: f32,
+    pub camera_offset: [f32; 3],
+    pub game_time: f32,
+    pub screen_size: [f32; 2],
+    pub menu_blur_radius: i32,
+    pub use_rgss: i32,
 }
 
-const IDENTITY: [f32; 16] = [
+const _: () = assert!(std::mem::size_of::<Globals>() == 48);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl Pod for Globals {}
+
+impl Globals {
+    /// The GUI's globals: no camera, the glint scrolling by `glint_millis`.
+    pub fn gui(glint_millis: f32, game_time: f32, screen_size: (f32, f32)) -> Self {
+        Self {
+            camera_block_pos: [0; 3],
+            glint_alpha: 1.0,
+            camera_offset: [glint_millis, 0.0, 0.0],
+            game_time,
+            screen_size: [screen_size.0, screen_size.1],
+            menu_blur_radius: 5,
+            use_rgss: 0,
+        }
+    }
+}
+
+pub const IDENTITY: [f32; 16] = [
     1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
 ];
 
@@ -100,9 +125,7 @@ pub struct GuiUniforms {
 }
 
 struct Frame {
-    buffer: vk::Buffer,
-    memory: vk::DeviceMemory,
-    ptr: *mut u8,
+    buffer: MappedBuffer,
     set: vk::DescriptorSet,
 }
 
@@ -131,10 +154,13 @@ pub unsafe fn create_layout(device: &ash::Device) -> anyhow::Result<vk::Descript
             .descriptor_count(1)
             .stage_flags(vk::ShaderStageFlags::FRAGMENT),
     );
-    Ok(device.create_descriptor_set_layout(
-        &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_descriptor_set_layout(
+            &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
+            None,
+        )
+    }?)
 }
 
 impl GuiUniforms {
@@ -160,33 +186,41 @@ impl GuiUniforms {
                 descriptor_count: frames as u32,
             },
         ];
-        let pool = device.create_descriptor_pool(
-            &vk::DescriptorPoolCreateInfo::default()
-                .pool_sizes(&sizes)
-                .max_sets(frames as u32),
-            None,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let pool = unsafe {
+            device.create_descriptor_pool(
+                &vk::DescriptorPoolCreateInfo::default()
+                    .pool_sizes(&sizes)
+                    .max_sets(frames as u32),
+                None,
+            )
+        }?;
         let layouts = vec![layout; frames];
-        let sets = device.allocate_descriptor_sets(
-            &vk::DescriptorSetAllocateInfo::default()
-                .descriptor_pool(pool)
-                .set_layouts(&layouts),
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let sets = unsafe {
+            device.allocate_descriptor_sets(
+                &vk::DescriptorSetAllocateInfo::default()
+                    .descriptor_pool(pool)
+                    .set_layouts(&layouts),
+            )
+        }?;
         let size = STRIDE * u64::from(blocks);
         let mut out = Vec::with_capacity(frames);
         for set in sets {
-            let (buffer, memory) = create_buffer_in(
-                device,
-                mem_props,
-                size,
-                vk::BufferUsageFlags::UNIFORM_BUFFER,
-                &MAPPED_FOR_GPU,
-            )?;
-            let ptr = device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty())? as *mut u8;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            let buffer = unsafe {
+                MappedBuffer::new(
+                    device,
+                    mem_props,
+                    size,
+                    vk::BufferUsageFlags::UNIFORM_BUFFER,
+                    Place::UPLOAD,
+                )
+            }?;
             let infos: Vec<[vk::DescriptorBufferInfo; 1]> = (0..u64::from(blocks))
                 .map(|i| {
                     [vk::DescriptorBufferInfo::default()
-                        .buffer(buffer)
+                        .buffer(buffer.buffer)
                         .offset(i * STRIDE)
                         .range(STRIDE)]
                 })
@@ -202,18 +236,17 @@ impl GuiUniforms {
                         .buffer_info(info)
                 })
                 .collect();
-            device.update_descriptor_sets(&writes, &[]);
-            let frame = Frame {
-                buffer,
-                memory,
-                ptr,
-                set,
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { device.update_descriptor_sets(&writes, &[]) };
+            let frame = Frame { buffer, set };
+            // SAFETY: the frame was just mapped, and the GPU hasn't used it yet.
+            unsafe {
+                frame.write(&GuiFrame {
+                    gui_size: (1.0, 1.0),
+                    screen_size: (1.0, 1.0),
+                    game_time: 0.0,
+                })
             };
-            frame.write(&GuiFrame {
-                gui_size: (1.0, 1.0),
-                screen_size: (1.0, 1.0),
-                game_time: 0.0,
-            });
             out.push(frame);
         }
         Ok(Self {
@@ -229,7 +262,8 @@ impl GuiUniforms {
     ///
     /// No submitted frame may still read frame `frame`'s blocks.
     pub unsafe fn write(&self, frame: usize, gui: &GuiFrame) {
-        self.frames[frame].write(gui);
+        // SAFETY: this frame's fence was waited on, so the GPU no longer reads its uniform slot.
+        unsafe { self.frames[frame].write(gui) };
     }
 
     /// Binds `view` sampled by `sampler` as the item glint, every frame.
@@ -248,14 +282,17 @@ impl GuiUniforms {
                 .sampler(sampler)
                 .image_view(view)
                 .image_layout(vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL)];
-            device.update_descriptor_sets(
-                &[vk::WriteDescriptorSet::default()
-                    .dst_set(frame.set)
-                    .dst_binding(GLINT_BINDING)
-                    .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-                    .image_info(&info)],
-                &[],
-            );
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe {
+                device.update_descriptor_sets(
+                    &[vk::WriteDescriptorSet::default()
+                        .dst_set(frame.set)
+                        .dst_binding(GLINT_BINDING)
+                        .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
+                        .image_info(&info)],
+                    &[],
+                )
+            };
         }
     }
 
@@ -270,12 +307,14 @@ impl GuiUniforms {
     /// `device` must be live and done with them.
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
         for frame in self.frames.drain(..) {
-            device.unmap_memory(frame.memory);
-            device.destroy_buffer(frame.buffer, None);
-            vk_util::free_memory(device, frame.memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { frame.buffer.destroy(device) };
         }
-        device.destroy_descriptor_pool(self.pool, None);
-        device.destroy_descriptor_set_layout(self.layout, None);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe {
+            device.destroy_descriptor_pool(self.pool, None);
+            device.destroy_descriptor_set_layout(self.layout, None);
+        }
     }
 }
 
@@ -287,25 +326,15 @@ impl Frame {
             color_modulator: [1.0; 4],
             model_offset: [0.0; 4],
         };
-        let globals = Globals {
-            camera_block_pos: [0; 3],
-            glint_alpha: 1.0,
-            camera_offset: [glint_millis(), 0.0, 0.0],
-            game_time: gui.game_time,
-            screen_size: [gui.screen_size.0, gui.screen_size.1],
-            menu_blur_radius: 5,
-            use_rgss: 0,
-        };
+        let globals = Globals::gui(glint_millis(), gui.game_time, gui.screen_size);
         let projection = projection(gui.gui_size.0, gui.gui_size.1);
-        self.ptr.cast::<DynamicTransforms>().write(transforms);
-        self.ptr
-            .add(STRIDE as usize)
-            .cast::<[f32; 16]>()
-            .write(projection);
-        self.ptr
-            .add(2 * STRIDE as usize)
-            .cast::<Globals>()
-            .write(globals);
+        let stride = STRIDE as usize;
+        // SAFETY: the caller keeps the GPU off this frame's blocks (its fence was waited on).
+        unsafe {
+            self.buffer.write_one(0, &transforms);
+            self.buffer.write_one(stride, &projection);
+            self.buffer.write_one(2 * stride, &globals);
+        }
     }
 }
 

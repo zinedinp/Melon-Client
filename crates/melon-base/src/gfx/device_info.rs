@@ -16,8 +16,10 @@ pub unsafe fn read_device_info(
     physical_device: vk::PhysicalDevice,
     api: ApiVersion,
 ) -> DeviceInfo {
-    let props = instance.get_physical_device_properties(physical_device);
-    let name = CStr::from_ptr(props.device_name.as_ptr())
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let props = unsafe { instance.get_physical_device_properties(physical_device) };
+    // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
+    let name = unsafe { CStr::from_ptr(props.device_name.as_ptr()) }
         .to_string_lossy()
         .into_owned();
     let type_suffix = match props.device_type {
@@ -40,12 +42,15 @@ pub unsafe fn read_device_info(
             vk::api_version_patch(version)
         )
     };
-    let driver_detail = if driver_properties(instance, physical_device, api) {
+    // SAFETY: `instance` is live, and the physical device is its own.
+    let driver_detail = if unsafe { driver_properties(instance, physical_device, api) } {
         let mut driver = vk::PhysicalDeviceDriverProperties::default();
         let mut props2 = vk::PhysicalDeviceProperties2::default().push_next(&mut driver);
-        instance.get_physical_device_properties2(physical_device, &mut props2);
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        unsafe { instance.get_physical_device_properties2(physical_device, &mut props2) };
         let text = |raw: &[std::ffi::c_char]| {
-            CStr::from_ptr(raw.as_ptr())
+            // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
+            unsafe { CStr::from_ptr(raw.as_ptr()) }
                 .to_string_lossy()
                 .trim()
                 .to_owned()
@@ -84,16 +89,20 @@ unsafe fn driver_properties(
     physical_device: vk::PhysicalDevice,
     api: ApiVersion,
 ) -> bool {
-    let device = instance.get_physical_device_properties(physical_device);
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let device = unsafe { instance.get_physical_device_properties(physical_device) };
     let api = api.min(super::api::device_version(device.api_version));
     api >= ApiVersion::V1_2
         || api >= ApiVersion::V1_1
-            && instance
-                .enumerate_device_extension_properties(physical_device)
+            // SAFETY: `instance` is live, and the physical device and surface are its own.
+            && unsafe { instance
+                .enumerate_device_extension_properties(physical_device) }
                 .unwrap_or_default()
                 .iter()
                 .any(|e| {
-                    CStr::from_ptr(e.extension_name.as_ptr()) == ash::khr::driver_properties::NAME
+                    // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
+                    (unsafe { CStr::from_ptr(e.extension_name.as_ptr()) })
+                        == ash::khr::driver_properties::NAME
                 })
 }
 
@@ -104,16 +113,20 @@ mod tests {
     /// Prints what the log would say about each GPU; passes without Vulkan too.
     #[test]
     fn reads_the_driver() {
+        // SAFETY: loading the system Vulkan loader for this test.
         let Ok(entry) = (unsafe { crate::gfx::loader::load() }) else {
             return;
         };
         let api = crate::gfx::api::instance_version(&entry);
         let app = vk::ApplicationInfo::default().api_version(api.raw());
         let create = vk::InstanceCreateInfo::default().application_info(&app);
+        // SAFETY: `entry` holds the loaded Vulkan loader.
         let Ok(instance) = (unsafe { entry.create_instance(&create, None) }) else {
             return;
         };
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
         for physical in unsafe { instance.enumerate_physical_devices() }.unwrap_or_default() {
+            // SAFETY: `instance` is live, and the physical device and surface are its own.
             let info = unsafe { super::read_device_info(&instance, physical, api) };
             println!(
                 "{}{} | {} | {} | {} | {}",
@@ -125,6 +138,7 @@ mod tests {
                 info.driver_detail
             );
         }
+        // SAFETY: the test's own instance, with nothing made from it left.
         unsafe { instance.destroy_instance(None) };
     }
 }

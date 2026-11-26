@@ -1,8 +1,9 @@
 //! A one-off copy of a finished frame to the CPU: the world's `icon.png`
 
 use super::Renderer;
-use super::vk_util::{self, READBACK, create_buffer_in};
+use super::vk_util::Place;
 use ash::vk;
+use melon_base::gfx::mapped::MappedBuffer;
 
 #[derive(Default)]
 pub(super) struct Capture {
@@ -12,8 +13,10 @@ pub(super) struct Capture {
 
 /// The host buffer one frame was copied to.
 pub(super) struct Readback {
-    buffer: vk::Buffer,
-    memory: vk::DeviceMemory,
+    buffer: MappedBuffer,
+    /// The swapchain's size and byte order when it was copied: a resize may come before the read.
+    extent: vk::Extent2D,
+    bgra: bool,
 }
 
 const COLOR: vk::ImageSubresourceRange = vk::ImageSubresourceRange {
@@ -59,13 +62,16 @@ impl Renderer {
         let device = &self.device;
         let extent = self.swapchain.extent;
         let size = u64::from(extent.width) * u64::from(extent.height) * 4;
-        let (buffer, memory) = create_buffer_in(
-            device,
-            &self.mem_props,
-            size,
-            vk::BufferUsageFlags::TRANSFER_DST,
-            &READBACK,
-        )
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let buffer = unsafe {
+            MappedBuffer::new(
+                device,
+                &self.mem_props,
+                size,
+                vk::BufferUsageFlags::TRANSFER_DST,
+                Place::READBACK,
+            )
+        }
         .ok()?;
         let image = self.swapchain.images[image_index];
         let barrier = |old, new, src, dst| {
@@ -79,90 +85,102 @@ impl Renderer {
                 .dst_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
                 .subresource_range(COLOR)
         };
-        device.cmd_pipeline_barrier(
-            cmd,
-            vk::PipelineStageFlags::ALL_COMMANDS,
-            vk::PipelineStageFlags::TRANSFER,
-            vk::DependencyFlags::empty(),
-            &[],
-            &[],
-            &[barrier(
-                vk::ImageLayout::PRESENT_SRC_KHR,
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::ALL_COMMANDS,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::DependencyFlags::empty(),
+                &[],
+                &[],
+                &[barrier(
+                    vk::ImageLayout::PRESENT_SRC_KHR,
+                    vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                    vk::AccessFlags::MEMORY_WRITE,
+                    vk::AccessFlags::TRANSFER_READ,
+                )],
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_copy_image_to_buffer(
+                cmd,
+                image,
                 vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                vk::AccessFlags::MEMORY_WRITE,
-                vk::AccessFlags::TRANSFER_READ,
-            )],
-        );
-        device.cmd_copy_image_to_buffer(
-            cmd,
-            image,
-            vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-            buffer,
-            &[vk::BufferImageCopy {
-                buffer_offset: 0,
-                buffer_row_length: 0,
-                buffer_image_height: 0,
-                image_subresource: vk::ImageSubresourceLayers {
-                    aspect_mask: vk::ImageAspectFlags::COLOR,
-                    mip_level: 0,
-                    base_array_layer: 0,
-                    layer_count: 1,
-                },
-                image_offset: vk::Offset3D::default(),
-                image_extent: vk::Extent3D {
-                    width: extent.width,
-                    height: extent.height,
-                    depth: 1,
-                },
-            }],
-        );
-        device.cmd_pipeline_barrier(
-            cmd,
-            vk::PipelineStageFlags::TRANSFER,
-            vk::PipelineStageFlags::BOTTOM_OF_PIPE,
-            vk::DependencyFlags::empty(),
-            &[],
-            &[],
-            &[barrier(
-                vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                vk::ImageLayout::PRESENT_SRC_KHR,
-                vk::AccessFlags::TRANSFER_READ,
-                vk::AccessFlags::empty(),
-            )],
-        );
-        Some(Readback { buffer, memory })
-    }
-
-    /// Reads the copy once the GPU finished it.
-    pub(super) unsafe fn finish_capture(&mut self, readback: Readback) {
-        let extent = self.swapchain.extent;
-        let len = extent.width as usize * extent.height as usize * 4;
+                buffer.buffer,
+                &[vk::BufferImageCopy {
+                    buffer_offset: 0,
+                    buffer_row_length: 0,
+                    buffer_image_height: 0,
+                    image_subresource: vk::ImageSubresourceLayers {
+                        aspect_mask: vk::ImageAspectFlags::COLOR,
+                        mip_level: 0,
+                        base_array_layer: 0,
+                        layer_count: 1,
+                    },
+                    image_offset: vk::Offset3D::default(),
+                    image_extent: vk::Extent3D {
+                        width: extent.width,
+                        height: extent.height,
+                        depth: 1,
+                    },
+                }],
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::PipelineStageFlags::BOTTOM_OF_PIPE,
+                vk::DependencyFlags::empty(),
+                &[],
+                &[],
+                &[barrier(
+                    vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                    vk::ImageLayout::PRESENT_SRC_KHR,
+                    vk::AccessFlags::TRANSFER_READ,
+                    vk::AccessFlags::empty(),
+                )],
+            )
+        };
         let bgra = matches!(
             self.swapchain.format,
             vk::Format::B8G8R8A8_UNORM | vk::Format::B8G8R8A8_SRGB
         );
-        let mapped =
-            self.device
-                .map_memory(readback.memory, 0, len as u64, vk::MemoryMapFlags::empty());
-        if let Ok(pointer) = mapped {
-            let mut pixels = std::slice::from_raw_parts(pointer.cast::<u8>(), len).to_vec();
-            self.device.unmap_memory(readback.memory);
-            for pixel in pixels.as_chunks_mut::<4>().0 {
-                if bgra {
-                    pixel.swap(0, 2);
-                }
-                pixel[3] = 255;
+        Some(Readback {
+            buffer,
+            extent,
+            bgra,
+        })
+    }
+
+    /// Reads the copy once the GPU finished it.
+    pub(super) unsafe fn finish_capture(&mut self, readback: Readback) {
+        let Readback {
+            buffer,
+            extent,
+            bgra,
+        } = readback;
+        // SAFETY: the copy's frame fence was waited on, so the GPU is done writing.
+        let mut pixels = unsafe { buffer.read(0, buffer.size()) };
+        for pixel in pixels.as_chunks_mut::<4>().0 {
+            if bgra {
+                pixel.swap(0, 2);
             }
-            self.capture.image = image::RgbaImage::from_raw(extent.width, extent.height, pixels);
+            pixel[3] = 255;
         }
-        self.drop_capture(Some(readback));
+        self.capture.image = image::RgbaImage::from_raw(extent.width, extent.height, pixels);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { buffer.destroy(&self.device) };
     }
 
     /// Frees the copy's buffer, read or not: no frame in flight may still write it.
     pub(super) unsafe fn drop_capture(&self, readback: Option<Readback>) {
         if let Some(readback) = readback {
-            self.device.destroy_buffer(readback.buffer, None);
-            vk_util::free_memory(&self.device, readback.memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { readback.buffer.destroy(&self.device) };
         }
     }
 }

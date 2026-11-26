@@ -36,10 +36,13 @@ struct Target {
 
 impl Target {
     unsafe fn destroy(&self, device: &ash::Device) {
-        device.destroy_framebuffer(self.framebuffer, None);
-        device.destroy_image_view(self.depth.2, None);
-        device.destroy_image(self.depth.0, None);
-        vk_util::free_memory(device, self.depth.1);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe {
+            device.destroy_framebuffer(self.framebuffer, None);
+            device.destroy_image_view(self.depth.2, None);
+            device.destroy_image(self.depth.0, None);
+            vk_util::free_memory(device, self.depth.1);
+        }
     }
 }
 
@@ -60,7 +63,8 @@ impl Pictures {
         Ok(Self {
             // Made as the frame's pass is, so the world's pipelines fit it:
             // render passes are compatible only with the same dependencies.
-            pass: create_render_pass(device, format, depth_format, PassStart::Picture)?,
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            pass: unsafe { create_render_pass(device, format, depth_format, PassStart::Picture) }?,
             targets: FxHashMap::default(),
             retired: Vec::new(),
         })
@@ -68,14 +72,17 @@ impl Pictures {
 
     pub(super) unsafe fn destroy(&mut self, device: &ash::Device) {
         for target in self.targets.values() {
-            target.destroy(device);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { target.destroy(device) };
         }
         for (_, target) in &self.retired {
-            target.destroy(device);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { target.destroy(device) };
         }
         self.targets.clear();
         self.retired.clear();
-        device.destroy_render_pass(self.pass, None);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { device.destroy_render_pass(self.pass, None) };
     }
 }
 
@@ -87,6 +94,7 @@ impl Renderer {
             width: width.max(1),
             height: height.max(1),
         };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
         let (tex, target) = unsafe { self.make_picture(extent)? };
         let id = self.put_texture(tex);
         self.pictures.targets.insert(id.0, target);
@@ -98,25 +106,34 @@ impl Renderer {
         extent: vk::Extent2D,
     ) -> anyhow::Result<(texture::Texture, Target)> {
         let device = &self.device;
-        let color = blur::create_image(
-            device,
-            &self.mem_props,
-            self.swapchain.format,
-            extent,
-            vk::ImageUsageFlags::COLOR_ATTACHMENT | vk::ImageUsageFlags::SAMPLED,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let color = unsafe {
+            blur::create_image(
+                device,
+                &self.mem_props,
+                self.swapchain.format,
+                extent,
+                vk::ImageUsageFlags::COLOR_ATTACHMENT | vk::ImageUsageFlags::SAMPLED,
+            )
+        }?;
         let destroy_color = || {
-            device.destroy_image_view(color.view, None);
-            device.destroy_image(color.image, None);
-            vk_util::free_memory(device, color.memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe {
+                device.destroy_image_view(color.view, None);
+                device.destroy_image(color.image, None);
+                vk_util::free_memory(device, color.memory);
+            }
         };
-        let depth = match create_depth_image(
-            device,
-            &self.mem_props,
-            self.swapchain.depth_format,
-            extent,
-            false,
-        ) {
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let depth = match unsafe {
+            create_depth_image(
+                device,
+                &self.mem_props,
+                self.swapchain.depth_format,
+                extent,
+                false,
+            )
+        } {
             Ok(depth) => depth,
             Err(e) => {
                 destroy_color();
@@ -124,20 +141,26 @@ impl Renderer {
             }
         };
         let destroy_depth = || {
-            device.destroy_image_view(depth.2, None);
-            device.destroy_image(depth.0, None);
-            vk_util::free_memory(device, depth.1);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe {
+                device.destroy_image_view(depth.2, None);
+                device.destroy_image(depth.0, None);
+                vk_util::free_memory(device, depth.1);
+            }
         };
         let attachments = [color.view, depth.2];
-        let framebuffer = match device.create_framebuffer(
-            &vk::FramebufferCreateInfo::default()
-                .render_pass(self.pictures.pass)
-                .attachments(&attachments)
-                .width(extent.width)
-                .height(extent.height)
-                .layers(1),
-            None,
-        ) {
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let framebuffer = match unsafe {
+            device.create_framebuffer(
+                &vk::FramebufferCreateInfo::default()
+                    .render_pass(self.pictures.pass)
+                    .attachments(&attachments)
+                    .width(extent.width)
+                    .height(extent.height)
+                    .layers(1),
+                None,
+            )
+        } {
             Ok(framebuffer) => framebuffer,
             Err(e) => {
                 destroy_depth();
@@ -150,14 +173,16 @@ impl Renderer {
             depth,
             framebuffer,
         };
-        let set = match self
-            .textures
-            .descriptor_pools
-            .allocate(device, self.pipelines.layout)
-        {
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let set = match unsafe {
+            self.textures
+                .descriptor_pools
+                .allocate(device, self.pipelines.layout)
+        } {
             Ok(set) => set,
             Err(e) => {
-                target.destroy(device);
+                // SAFETY: made by this device, and no frame in flight uses it any more.
+                unsafe { target.destroy(device) };
                 destroy_color();
                 return Err(e);
             }
@@ -166,17 +191,20 @@ impl Renderer {
             .image_layout(vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL)
             .image_view(color.view)
             .sampler(self.textures.nearest_sampler)];
-        device.update_descriptor_sets(
-            &[vk::WriteDescriptorSet::default()
-                .dst_set(set)
-                .dst_binding(0)
-                .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-                .image_info(&image_info)],
-            &[],
-        );
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe {
+            device.update_descriptor_sets(
+                &[vk::WriteDescriptorSet::default()
+                    .dst_set(set)
+                    .dst_binding(0)
+                    .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
+                    .image_info(&image_info)],
+                &[],
+            )
+        };
         let tex = texture::Texture {
             image: color.image,
-            memory: color.memory,
+            memory: melon_base::gfx::suballoc::Allocation::whole(color.memory),
             view: color.view,
             descriptor_set: set,
             mip_levels: 1,
@@ -206,6 +234,7 @@ impl Renderer {
             if !all && *frame >= oldest_in_flight {
                 return true;
             }
+            // SAFETY: its frame is past `oldest_in_flight` (or the device was waited idle for `all`).
             unsafe { target.destroy(device) };
             false
         });
@@ -220,7 +249,8 @@ impl Renderer {
             let Some(texture) = self.textures.list.get(picture.target.0) else {
                 continue;
             };
-            self.record_picture(cmd, picture, target, texture.image);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe { self.record_picture(cmd, picture, target, texture.image) };
         }
     }
 
@@ -246,28 +276,35 @@ impl Renderer {
             offset: vk::Offset2D::default(),
             extent: target.extent,
         };
-        self.device.cmd_begin_render_pass(
-            cmd,
-            &vk::RenderPassBeginInfo::default()
-                .render_pass(self.pictures.pass)
-                .framebuffer(target.framebuffer)
-                .render_area(area)
-                .clear_values(&clear_values),
-            vk::SubpassContents::INLINE,
-        );
-        self.device.cmd_set_viewport(
-            cmd,
-            0,
-            &[vk::Viewport {
-                x: 0.0,
-                y: 0.0,
-                width: target.extent.width as f32,
-                height: target.extent.height as f32,
-                min_depth: 0.0,
-                max_depth: 1.0,
-            }],
-        );
-        self.device.cmd_set_scissor(cmd, 0, &[area]);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_begin_render_pass(
+                cmd,
+                &vk::RenderPassBeginInfo::default()
+                    .render_pass(self.pictures.pass)
+                    .framebuffer(target.framebuffer)
+                    .render_area(area)
+                    .clear_values(&clear_values),
+                vk::SubpassContents::INLINE,
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_set_viewport(
+                cmd,
+                0,
+                &[vk::Viewport {
+                    x: 0.0,
+                    y: 0.0,
+                    width: target.extent.width as f32,
+                    height: target.extent.height as f32,
+                    min_depth: 0.0,
+                    max_depth: 1.0,
+                }],
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.device.cmd_set_scissor(cmd, 0, &[area]) };
         self.recording.forget_all();
         // Opaque first, then the blended ones, as the world's entities.
         let mut entities: Vec<&EntityDraw> = picture.entities.iter().collect();
@@ -284,8 +321,10 @@ impl Renderer {
             let at = (picture.view_proj * entity.model, Vec3::ZERO);
             let [r, g, b] = entity.light.unwrap_or([1.0; 3]);
             let light = DrawLight::tint([r, g, b, entity.alpha]).overlaid(entity.overlay);
-            if self.bind_world_pass(cmd, entity.atlas, mode) {
-                self.draw_world_mesh(cmd, layout, entity.mesh, at, &light, None);
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            if unsafe { self.bind_world_pass(cmd, entity.atlas, mode) } {
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe { self.draw_world_mesh(cmd, layout, entity.mesh, at, &light, None) };
             }
             if entity.glint.on() {
                 let glint = if entity.glint.is_armor() {
@@ -294,20 +333,25 @@ impl Renderer {
                     picture.glint_item
                 };
                 if let Some(glint) = glint
-                    && self.bind_glint_pass(cmd, entity.atlas, glint)
+                    // SAFETY: `device` is live, and the infos name only its own live handles.
+                    && unsafe { self.bind_glint_pass(cmd, entity.atlas, glint) }
                 {
-                    self.draw_world_mesh(
-                        cmd,
-                        self.pipelines.glint.layout,
-                        entity.mesh,
-                        at,
-                        &light.glinted(entity.glint.scale()),
-                        None,
-                    );
+                    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                    unsafe {
+                        self.draw_world_mesh(
+                            cmd,
+                            self.pipelines.glint.layout,
+                            entity.mesh,
+                            at,
+                            &light.glinted(entity.glint.scale()),
+                            None,
+                        )
+                    };
                 }
             }
         }
-        self.device.cmd_end_render_pass(cmd);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.device.cmd_end_render_pass(cmd) };
         // The UI samples it in the frame's pass.
         let barrier = vk::ImageMemoryBarrier::default()
             .src_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
@@ -318,15 +362,18 @@ impl Renderer {
             .dst_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
             .image(image)
             .subresource_range(blur::COLOR);
-        self.device.cmd_pipeline_barrier(
-            cmd,
-            vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
-            vk::PipelineStageFlags::FRAGMENT_SHADER,
-            vk::DependencyFlags::empty(),
-            &[],
-            &[],
-            &[barrier],
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
+                vk::PipelineStageFlags::FRAGMENT_SHADER,
+                vk::DependencyFlags::empty(),
+                &[],
+                &[],
+                &[barrier],
+            )
+        };
     }
 }
 

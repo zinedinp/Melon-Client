@@ -33,18 +33,22 @@ pub unsafe fn pick(
     surface: vk::SurfaceKHR,
 ) -> anyhow::Result<Gpu> {
     let (physical, queue_family) =
-        crate::gfx::device_pick::pick(instance, surface_loader, surface)?;
-    let timestamp_bits = instance
-        .get_physical_device_queue_family_properties(physical)
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { crate::gfx::device_pick::pick(instance, surface_loader, surface) }?;
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let timestamp_bits = unsafe { instance.get_physical_device_queue_family_properties(physical) }
         .get(queue_family as usize)
         .map_or(0, |family| family.timestamp_valid_bits);
     Ok(Gpu {
         physical,
         queue_family,
-        mem_props: instance.get_physical_device_memory_properties(physical),
-        limits: instance.get_physical_device_properties(physical).limits,
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        mem_props: unsafe { instance.get_physical_device_memory_properties(physical) },
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        limits: unsafe { instance.get_physical_device_properties(physical) }.limits,
         timestamp_bits,
-        info: read_device_info(instance, physical, api),
+        // SAFETY: `instance` is live, and the physical device is its own.
+        info: unsafe { read_device_info(instance, physical, api) },
     })
 }
 
@@ -62,9 +66,11 @@ pub unsafe fn create(
     let queue_infos = [vk::DeviceQueueCreateInfo::default()
         .queue_family_index(gpu.queue_family)
         .queue_priorities(&queue_priorities)];
-    let device = create_with(instance, gpu.physical, &queue_infos, features)?;
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let device = unsafe { create_with(instance, gpu.physical, &queue_infos, features) }?;
     crate::gfx::vk_util::set_allocation_limit(gpu.limits.max_memory_allocation_count);
-    let queue = device.get_device_queue(gpu.queue_family, 0);
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let queue = unsafe { device.get_device_queue(gpu.queue_family, 0) };
     Ok((device, queue))
 }
 
@@ -94,5 +100,6 @@ pub unsafe fn create_with(
     } else {
         info.p_next = chain.features2().cast_const();
     }
-    Ok(instance.create_device(physical, &info, None)?)
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    Ok(unsafe { instance.create_device(physical, &info, None) }?)
 }

@@ -28,7 +28,8 @@ impl RenderPasses {
             self.resume,
             self.resume_keep,
         ] {
-            device.destroy_render_pass(pass, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { device.destroy_render_pass(pass, None) };
         }
     }
 }
@@ -38,7 +39,8 @@ pub(super) unsafe fn create_render_passes(
     surface_format: vk::Format,
     depth_format: vk::Format,
 ) -> anyhow::Result<RenderPasses> {
-    let pass = |start| create_render_pass(device, surface_format, depth_format, start);
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let pass = |start| unsafe { create_render_pass(device, surface_format, depth_format, start) };
     Ok(RenderPasses {
         clear: pass(PassStart::Clear)?,
         overwrite: pass(PassStart::Overwrite)?,
@@ -58,12 +60,17 @@ pub(super) struct SetLayouts {
 
 pub(super) unsafe fn create_set_layouts(device: &ash::Device) -> anyhow::Result<SetLayouts> {
     Ok(SetLayouts {
-        texture: pipeline::create_descriptor_set_layout(device)?,
-        gui: crate::renderer::gui_uniforms::create_layout(device)?,
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        texture: unsafe { pipeline::create_descriptor_set_layout(device) }?,
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        gui: unsafe { crate::renderer::gui_uniforms::create_layout(device) }?,
         world: Layouts {
-            table: crate::renderer::quad_table::create_layout(device)?,
-            draws: crate::renderer::indirect::create_layout(device)?,
-            globals: crate::renderer::globals::create_layout(device)?,
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            table: unsafe { crate::renderer::quad_table::create_layout(device) }?,
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            draws: unsafe { crate::renderer::indirect::create_layout(device) }?,
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            globals: unsafe { crate::renderer::globals::create_layout(device) }?,
         },
     })
 }
@@ -78,7 +85,8 @@ pub(super) unsafe fn create(
 ) -> anyhow::Result<Pipelines> {
     let texture = layouts.texture;
     let in_pass = |pass, mode, geometry| {
-        pipeline::world::create(device, pass, texture, &layouts.world, mode, geometry)
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { pipeline::world::create(device, pass, texture, &layouts.world, mode, geometry) }
     };
     let world = |mode| in_pass(render_pass, mode, Geometry::Vertices);
     let terrain = |mode| {
@@ -93,24 +101,31 @@ pub(super) unsafe fn create(
     Ok(Pipelines {
         layout: texture,
         ui: pipeline::ui::UiPipelines {
-            built_in: pipeline::ui::create_all(
-                device,
-                render_pass,
-                texture,
-                layouts.gui,
-                pipeline::ui::BUILT_IN,
-            )?,
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            built_in: unsafe {
+                pipeline::ui::create_all(
+                    device,
+                    render_pass,
+                    texture,
+                    layouts.gui,
+                    pipeline::ui::BUILT_IN,
+                )
+            }?,
             pack: [None, None, None],
-            glint: pipeline::ui::create(
-                device,
-                render_pass,
-                texture,
-                layouts.gui,
-                crate::renderer::quad::BlendMode::Alpha,
-                pipeline::ui::GLINT,
-            )?,
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            glint: unsafe {
+                pipeline::ui::create(
+                    device,
+                    render_pass,
+                    texture,
+                    layouts.gui,
+                    crate::renderer::quad::BlendMode::Alpha,
+                    pipeline::ui::GLINT,
+                )
+            }?,
         },
-        sky: pipeline::sky::create(device, render_pass, texture)?,
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        sky: unsafe { pipeline::sky::create(device, render_pass, texture) }?,
         solid: world(Mode::Solid)?,
         world: world(Mode::Opaque)?,
         translucent: world(Mode::Translucent)?,

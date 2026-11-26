@@ -5,9 +5,9 @@ use ash::vk;
 
 use crate::renderer::{
     DepthImage, FrameWaits, Frames, MAX_FRAMES_IN_FLIGHT, SkyCube, Swapchain, TextureId, Textures,
-    UiVertices, VERTEX_CAPACITY, create_sampler, descriptor_pools::DescriptorPools, pipeline, quad,
-    staging::Staging, vk_util,
+    create_sampler, descriptor_pools::DescriptorPools, pipeline, staging::Staging,
 };
+use melon_base::gfx::mapped;
 
 /// The samplers every texture picks from.
 pub(super) struct Samplers {
@@ -24,11 +24,16 @@ pub(super) unsafe fn create_samplers(device: &ash::Device) -> anyhow::Result<Sam
     use vk::SamplerAddressMode as Address;
     let clamp = Address::CLAMP_TO_EDGE;
     Ok(Samplers {
-        nearest: create_sampler(device, NEAREST, false, clamp)?,
-        mipmap: create_sampler(device, NEAREST, true, clamp)?,
-        linear: create_sampler(device, LINEAR, false, clamp)?,
-        repeat: create_sampler(device, NEAREST, false, Address::REPEAT)?,
-        linear_repeat: create_sampler(device, LINEAR, false, Address::REPEAT)?,
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        nearest: unsafe { create_sampler(device, NEAREST, false, clamp) }?,
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        mipmap: unsafe { create_sampler(device, NEAREST, true, clamp) }?,
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        linear: unsafe { create_sampler(device, LINEAR, false, clamp) }?,
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        repeat: unsafe { create_sampler(device, NEAREST, false, Address::REPEAT) }?,
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        linear_repeat: unsafe { create_sampler(device, LINEAR, false, Address::REPEAT) }?,
     })
 }
 
@@ -62,26 +67,37 @@ pub(super) unsafe fn create_frames(
     device: &ash::Device,
     queue_family: u32,
 ) -> anyhow::Result<Frames> {
-    let command_pool = device.create_command_pool(
-        &vk::CommandPoolCreateInfo::default()
-            .queue_family_index(queue_family)
-            .flags(vk::CommandPoolCreateFlags::RESET_COMMAND_BUFFER),
-        None,
-    )?;
-    let command_buffers = device.allocate_command_buffers(
-        &vk::CommandBufferAllocateInfo::default()
-            .command_pool(command_pool)
-            .level(vk::CommandBufferLevel::PRIMARY)
-            .command_buffer_count(MAX_FRAMES_IN_FLIGHT as u32),
-    )?;
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let command_pool = unsafe {
+        device.create_command_pool(
+            &vk::CommandPoolCreateInfo::default()
+                .queue_family_index(queue_family)
+                .flags(vk::CommandPoolCreateFlags::RESET_COMMAND_BUFFER),
+            None,
+        )
+    }?;
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let command_buffers = unsafe {
+        device.allocate_command_buffers(
+            &vk::CommandBufferAllocateInfo::default()
+                .command_pool(command_pool)
+                .level(vk::CommandBufferLevel::PRIMARY)
+                .command_buffer_count(MAX_FRAMES_IN_FLIGHT as u32),
+        )
+    }?;
     let mut image_available = Vec::new();
     let mut in_flight = Vec::new();
     for _ in 0..MAX_FRAMES_IN_FLIGHT {
-        image_available.push(device.create_semaphore(&vk::SemaphoreCreateInfo::default(), None)?);
-        in_flight.push(device.create_fence(
-            &vk::FenceCreateInfo::default().flags(vk::FenceCreateFlags::SIGNALED),
-            None,
-        )?);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        image_available
+            .push(unsafe { device.create_semaphore(&vk::SemaphoreCreateInfo::default(), None) }?);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        in_flight.push(unsafe {
+            device.create_fence(
+                &vk::FenceCreateInfo::default().flags(vk::FenceCreateFlags::SIGNALED),
+                None,
+            )
+        }?);
     }
     Ok(Frames {
         command_pool,
@@ -98,73 +114,15 @@ pub(super) unsafe fn create_frames(
     })
 }
 
-/// A mapped UI vertex buffer per frame in flight, and the shared indices.
-pub(super) unsafe fn create_ui_vertices(
-    device: &ash::Device,
-    mem_props: &vk::PhysicalDeviceMemoryProperties,
-) -> anyhow::Result<UiVertices> {
-    let mut vertices = UiVertices {
-        buffers: Vec::new(),
-        memories: Vec::new(),
-        mapped: Vec::new(),
-        indices: create_quad_indices(device, mem_props)?,
-    };
-    let size = (VERTEX_CAPACITY * std::mem::size_of::<quad::Vertex>()) as vk::DeviceSize;
-    for _ in 0..MAX_FRAMES_IN_FLIGHT {
-        let (buffer, memory) = vk_util::create_buffer_in(
-            device,
-            mem_props,
-            size,
-            vk::BufferUsageFlags::VERTEX_BUFFER,
-            &vk_util::MAPPED_FOR_GPU,
-        )?;
-        let mapped = device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty())? as *mut u8;
-        vertices.buffers.push(buffer);
-        vertices.memories.push(memory);
-        vertices.mapped.push(mapped);
-    }
-    Ok(vertices)
-}
-
-/// The UI's index buffer: vanilla's `QUADS` pattern (0, 1, 2, 2, 3, 0).
-unsafe fn create_quad_indices(
-    device: &ash::Device,
-    mem_props: &vk::PhysicalDeviceMemoryProperties,
-) -> anyhow::Result<(vk::Buffer, vk::DeviceMemory)> {
-    let indices: Vec<u32> = (0..(VERTEX_CAPACITY / 4) as u32)
-        .flat_map(|quad| [0, 1, 2, 2, 3, 0].map(|corner| quad * 4 + corner))
-        .collect();
-    let size = std::mem::size_of_val(indices.as_slice()) as vk::DeviceSize;
-    let (buffer, memory) = vk_util::create_buffer_in(
-        device,
-        mem_props,
-        size,
-        vk::BufferUsageFlags::INDEX_BUFFER,
-        &vk_util::MAPPED_FOR_GPU,
-    )?;
-    let mapped = device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty())?;
-    std::ptr::copy_nonoverlapping(indices.as_ptr(), mapped.cast::<u32>(), indices.len());
-    device.unmap_memory(memory);
-    Ok((buffer, memory))
-}
-
 /// The skybox's cube, uploaded once.
 pub(super) unsafe fn create_sky_cube(
     device: &ash::Device,
     mem_props: &vk::PhysicalDeviceMemoryProperties,
 ) -> anyhow::Result<SkyCube> {
+    let usage = vk::BufferUsageFlags::VERTEX_BUFFER;
     let cube = &pipeline::sky::CUBE_VERTICES;
-    let size = std::mem::size_of_val(cube) as vk::DeviceSize;
-    let (buffer, memory) = vk_util::create_buffer_in(
-        device,
-        mem_props,
-        size,
-        vk::BufferUsageFlags::VERTEX_BUFFER,
-        &vk_util::MAPPED_FOR_GPU,
-    )?;
-    let mapped = device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty())? as *mut u8;
-    std::ptr::copy_nonoverlapping(cube.as_ptr() as *const u8, mapped, size as usize);
-    device.unmap_memory(memory);
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let (buffer, memory) = unsafe { mapped::upload(device, mem_props, usage, cube) }?;
     Ok(SkyCube { buffer, memory })
 }
 
@@ -182,7 +140,7 @@ pub(super) fn swapchain(
         vsync: true,
         requested: None,
         latest_ready,
-        present_mode: vk::PresentModeKHR::FIFO,
+        present_mode: numerobis::vulkan::swapchain::PresentMode::Fifo,
         images: Vec::new(),
         views: Vec::new(),
         format,

@@ -2424,6 +2424,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "keinbonus"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "efaf10688d3524d8290ccf95c3a48f28092efedea8555a2adc189045ff743584"
+dependencies = [
+ "libm",
+]
+
+[[package]]
 name = "kqueue"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3029,10 +3038,11 @@ dependencies = [
 
 [[package]]
 name = "numerobis"
-version = "0.5.4"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1aec8d43d6dd2ad3816bc2a1292b33cf202f6164de45fc438bfc95f299be0ec5"
+checksum = "b2057d8ca06a390dd2231bd3ea0b45e60457f4d2fc5d0c2da5f08f79f357ceaf"
 dependencies = [
+ "keinbonus",
  "libc",
  "miraculix",
 ]

@@ -2,9 +2,7 @@
 
 use super::{Renderer, choose_surface_format, create_depth_image, vk_util};
 use ash::vk;
-
-/// `VK_PRESENT_MODE_FIFO_LATEST_READY_KHR` (same value as the `EXT` one);
-pub const FIFO_LATEST_READY: vk::PresentModeKHR = vk::PresentModeKHR::from_raw(1000361000);
+use numerobis::vulkan::swapchain::{self as present, Pacing, PresentMode};
 
 impl Renderer {
     pub(super) unsafe fn create_swapchain(
@@ -12,69 +10,43 @@ impl Renderer {
         width: u32,
         height: u32,
     ) -> anyhow::Result<()> {
-        let capabilities = self
-            .surface_loader
-            .get_physical_device_surface_capabilities(self.physical_device, self.surface)?;
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        let capabilities = unsafe {
+            self.surface_loader
+                .get_physical_device_surface_capabilities(self.physical_device, self.surface)
+        }?;
         let format =
             choose_surface_format(&self.surface_loader, self.physical_device, self.surface)?;
-        let modes = self
-            .surface_loader
-            .get_physical_device_surface_present_modes(self.physical_device, self.surface)
-            .unwrap_or_default();
-        let requested = self.swapchain.requested.filter(|mode| {
-            let offered = *mode == vk::PresentModeKHR::FIFO
-                || (modes.contains(mode)
-                    && (*mode != FIFO_LATEST_READY || self.swapchain.latest_ready));
-            if !offered {
-                crate::warn!(
-                    "vulkan: present mode {} unavailable ({:?}), choosing one",
-                    mode_name(*mode),
-                    modes
-                );
-            }
-            offered
-        });
-        let present_mode = requested.unwrap_or(if self.swapchain.vsync {
-            vk::PresentModeKHR::FIFO
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        let modes = unsafe {
+            self.surface_loader
+                .get_physical_device_surface_present_modes(self.physical_device, self.surface)
+        }
+        .unwrap_or_default();
+        let offered: Vec<u32> = modes.iter().map(|mode| mode.as_raw() as u32).collect();
+        let pacing = if self.swapchain.vsync {
+            Pacing::Vsync
         } else {
-            [vk::PresentModeKHR::IMMEDIATE, vk::PresentModeKHR::MAILBOX]
-                .into_iter()
-                .find(|mode| modes.contains(mode))
-                .unwrap_or(vk::PresentModeKHR::FIFO)
-        });
+            Pacing::Uncapped
+        };
+        let requested = self.swapchain.requested;
+        let present_mode =
+            present::present_mode(&offered, pacing, requested, self.swapchain.latest_ready);
+        if let Some(asked) = requested
+            && asked != present_mode
+        {
+            crate::warn!("vulkan: present mode {asked} unavailable ({modes:?}), choosing one");
+        }
         self.swapchain.present_mode = present_mode;
 
-        let current = capabilities.current_extent;
-        if (current.width == 0 || current.height == 0)
-            && self.swapchain.handle != vk::SwapchainKHR::null()
-        {
+        let window = vk::Extent2D { width, height };
+        let has_old = self.swapchain.handle != vk::SwapchainKHR::null();
+        let Some(shape) = vk_util::swapchain_shape(&capabilities, window, 3, has_old) else {
             // Minimized on Windows: no extent is valid, keep the old
             // swapchain until the window has a size again.
             return Ok(());
-        }
-        let extent = if current.width != u32::MAX {
-            current
-        } else {
-            vk::Extent2D {
-                width: width.clamp(
-                    capabilities.min_image_extent.width,
-                    capabilities.max_image_extent.width,
-                ),
-                height: height.clamp(
-                    capabilities.min_image_extent.height,
-                    capabilities.max_image_extent.height,
-                ),
-            }
         };
-        let extent = vk::Extent2D {
-            width: extent.width.max(1),
-            height: extent.height.max(1),
-        };
-
-        let mut image_count = (capabilities.min_image_count + 1).max(3);
-        if capabilities.max_image_count > 0 {
-            image_count = image_count.min(capabilities.max_image_count);
-        }
+        let extent = shape.extent;
 
         let can_copy = capabilities
             .supported_usage_flags
@@ -88,7 +60,7 @@ impl Renderer {
         let old_swapchain = self.swapchain.handle;
         let create_info = vk::SwapchainCreateInfoKHR::default()
             .surface(self.surface)
-            .min_image_count(image_count)
+            .min_image_count(shape.image_count)
             .image_format(format.format)
             .image_color_space(format.color_space)
             .image_extent(extent)
@@ -96,17 +68,18 @@ impl Renderer {
             .image_usage(usage)
             .image_sharing_mode(vk::SharingMode::EXCLUSIVE)
             .pre_transform(capabilities.current_transform)
-            .composite_alpha(super::vk_util::composite_alpha(
-                capabilities.supported_composite_alpha,
-            ))
-            .present_mode(present_mode)
+            .composite_alpha(shape.composite_alpha)
+            .present_mode(vk::PresentModeKHR::from_raw(present_mode.raw() as i32))
             .clipped(true)
             .old_swapchain(old_swapchain);
-        let swapchain = self.swapchain.loader.create_swapchain(&create_info, None)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let swapchain = unsafe { self.swapchain.loader.create_swapchain(&create_info, None) }?;
 
-        self.destroy_swapchain_resources();
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.destroy_swapchain_resources() };
         if old_swapchain != vk::SwapchainKHR::null() {
-            self.swapchain.loader.destroy_swapchain(old_swapchain, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.swapchain.loader.destroy_swapchain(old_swapchain, None) };
         }
         // Kept at once: a failure below leaves the new swapchain without
         // framebuffers, which the next frame recreates, not a freed handle.
@@ -115,7 +88,8 @@ impl Renderer {
         self.swapchain.format = format.format;
         self.swapchain.can_copy = can_copy;
 
-        let images = self.swapchain.loader.get_swapchain_images(swapchain)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let images = unsafe { self.swapchain.loader.get_swapchain_images(swapchain) }?;
         let mut views = Vec::with_capacity(images.len());
         for &image in &images {
             let view_info = vk::ImageViewCreateInfo::default()
@@ -129,16 +103,20 @@ impl Renderer {
                     base_array_layer: 0,
                     layer_count: 1,
                 });
-            views.push(self.device.create_image_view(&view_info, None)?);
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            views.push(unsafe { self.device.create_image_view(&view_info, None) }?);
         }
 
-        let (image, memory, depth_view) = create_depth_image(
-            &self.device,
-            &self.mem_props,
-            self.swapchain.depth_format,
-            extent,
-            self.swapchain.depth_sampled,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let (image, memory, depth_view) = unsafe {
+            create_depth_image(
+                &self.device,
+                &self.mem_props,
+                self.swapchain.depth_format,
+                extent,
+                self.swapchain.depth_sampled,
+            )
+        }?;
         let depth = super::DepthImage {
             image,
             memory,
@@ -154,14 +132,18 @@ impl Renderer {
                 .width(extent.width)
                 .height(extent.height)
                 .layers(1);
-            framebuffers.push(self.device.create_framebuffer(&fb_info, None)?);
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            framebuffers.push(unsafe { self.device.create_framebuffer(&fb_info, None) }?);
         }
 
         let mut render_finished = Vec::with_capacity(images.len());
         for _ in 0..images.len() {
             render_finished.push(
-                self.device
-                    .create_semaphore(&vk::SemaphoreCreateInfo::default(), None)?,
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                unsafe {
+                    self.device
+                        .create_semaphore(&vk::SemaphoreCreateInfo::default(), None)
+                }?,
             );
         }
 
@@ -171,41 +153,55 @@ impl Renderer {
         self.frames.render_finished = render_finished;
         self.frames.images_in_flight = vec![vk::Fence::null(); images.len()];
         self.swapchain.images = images;
-        self.resize_post()?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.resize_post() }?;
         if let Some(occlusion) = &mut self.occlusion {
-            occlusion.resize(
-                &self.device,
-                &self.mem_props,
-                self.swapchain.depth.image,
-                self.swapchain.depth_format,
-                extent,
-            )?;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe {
+                occlusion.resize(
+                    &self.device,
+                    &self.mem_props,
+                    self.swapchain.depth.image,
+                    self.swapchain.depth_format,
+                    extent,
+                )
+            }?;
         }
         Ok(())
     }
 
     pub(super) unsafe fn destroy_swapchain_resources(&mut self) {
-        self.blur.destroy_targets(&self.device);
-        self.post.release_sized(&self.device);
+        // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
+        unsafe {
+            self.blur.destroy_targets(&self.device);
+            self.post.release_sized(&self.device);
+        }
         if let Some(occlusion) = &mut self.occlusion {
-            occlusion.release_sized(&self.device);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { occlusion.release_sized(&self.device) };
         }
         for &fb in &self.swapchain.framebuffers {
-            self.device.destroy_framebuffer(fb, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.device.destroy_framebuffer(fb, None) };
         }
         self.swapchain.framebuffers.clear();
         for &view in &self.swapchain.views {
-            self.device.destroy_image_view(view, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.device.destroy_image_view(view, None) };
         }
         self.swapchain.views.clear();
         let depth = std::mem::take(&mut self.swapchain.depth);
         if depth.image != vk::Image::null() {
-            self.device.destroy_image_view(depth.view, None);
-            self.device.destroy_image(depth.image, None);
-            vk_util::free_memory(&self.device, depth.memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe {
+                self.device.destroy_image_view(depth.view, None);
+                self.device.destroy_image(depth.image, None);
+                vk_util::free_memory(&self.device, depth.memory);
+            }
         }
         for &sem in &self.frames.render_finished {
-            self.device.destroy_semaphore(sem, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.device.destroy_semaphore(sem, None) };
         }
         self.frames.render_finished.clear();
     }
@@ -219,7 +215,7 @@ impl Renderer {
     pub fn set_present(
         &mut self,
         vsync: bool,
-        requested: Option<vk::PresentModeKHR>,
+        requested: Option<PresentMode>,
     ) -> anyhow::Result<()> {
         if (vsync, requested) == (self.swapchain.vsync, self.swapchain.requested) {
             return Ok(());
@@ -227,6 +223,7 @@ impl Renderer {
         self.swapchain.vsync = vsync;
         self.swapchain.requested = requested;
         let (width, height) = (self.swapchain.extent.width, self.swapchain.extent.height);
+        // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {
             self.device.device_wait_idle()?;
             self.create_swapchain(width.max(1), height.max(1))?;
@@ -236,28 +233,18 @@ impl Renderer {
 
     /// The present mode in use, for F3: `fifo`, `immediate` or `mailbox`.
     pub fn present_mode_name(&self) -> &'static str {
-        mode_name(self.swapchain.present_mode)
+        self.swapchain.present_mode.name()
     }
 
     pub fn resize(&mut self, width: u32, height: u32) -> anyhow::Result<()> {
         if width == 0 || height == 0 {
             return Ok(());
         }
+        // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {
             self.device.device_wait_idle()?;
             self.create_swapchain(width, height)?;
         }
         Ok(())
-    }
-}
-
-/// A present mode's short name, for F3 and the log.
-fn mode_name(mode: vk::PresentModeKHR) -> &'static str {
-    match mode {
-        vk::PresentModeKHR::IMMEDIATE => "immediate",
-        vk::PresentModeKHR::MAILBOX => "mailbox",
-        vk::PresentModeKHR::FIFO_RELAXED => "fifo_relaxed",
-        FIFO_LATEST_READY => "fifo_latest_ready",
-        _ => "fifo",
     }
 }

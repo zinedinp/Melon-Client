@@ -1,5 +1,9 @@
 //! Vulkan renderer: device, swapchain, textures, meshes and six pipelines.
-#![allow(unsafe_op_in_unsafe_fn)]
+//!
+//! Every `unsafe` block leans on three rules: each Vulkan handle is made by the
+//! one device and outlives its uses; nothing a frame in flight reads is changed
+//! or destroyed before that frame's fence (or a device wait); a command buffer
+//! is recorded by one thread at a time.
 
 mod blur;
 mod capture;
@@ -31,10 +35,9 @@ pub use mesh_arena::quad_index_list;
 #[cfg(test)]
 pub use mesh_arena::quads_of_index_list;
 pub use picture::{PictureDraw, pixel_projection};
-pub use swapchain::FIFO_LATEST_READY;
 use vk_util::{
-    PassStart, choose_surface_format, create_buffer, create_depth_image, create_render_pass,
-    create_sampler, find_depth_format, find_memory_type,
+    PassStart, Place, choose_surface_format, create_buffer, create_depth_image, create_render_pass,
+    create_sampler, find_depth_format,
 };
 
 pub use frame::{
@@ -45,13 +48,15 @@ pub use frame::{
 };
 
 use ash::vk;
+use melon_base::gfx::suballoc;
+use melon_base::gfx::ui_vertices::{UiVertices, VERTEX_CAPACITY};
+use numerobis::vulkan::swapchain::PresentMode;
 
 const MAX_FRAMES_IN_FLIGHT: usize = 2;
 /// Descriptor sets for 2D textures and cube maps in the first pool. Every
 /// baked item icon is one; a full pool is followed by one twice its size
 /// (see [`descriptor_pools`]).
 const MAX_TEXTURES: u32 = 4096;
-const VERTEX_CAPACITY: usize = 1 << 16;
 
 /// A resource pack's replacement for one of vanilla's GUI shaders, compiled to SPIR-V.
 pub struct GuiShader {
@@ -153,11 +158,11 @@ struct Swapchain {
     /// `Options.enableVsync`.
     vsync: bool,
     /// A present mode asked for by name, overriding `vsync` when offered.
-    requested: Option<vk::PresentModeKHR>,
+    requested: Option<PresentMode>,
     /// Whether `VK_KHR/EXT_present_mode_fifo_latest_ready` is enabled on the device.
     latest_ready: bool,
     /// What the current swapchain presents with.
-    present_mode: vk::PresentModeKHR,
+    present_mode: PresentMode,
     images: Vec<vk::Image>,
     views: Vec<vk::ImageView>,
     format: vk::Format,
@@ -285,15 +290,6 @@ pub struct FrameWaits {
     pub prepare: std::time::Duration,
 }
 
-/// One host-visible UI vertex buffer per frame in flight, mapped for good.
-struct UiVertices {
-    buffers: Vec<vk::Buffer>,
-    memories: Vec<vk::DeviceMemory>,
-    mapped: Vec<*mut u8>,
-    /// Six indices per quad, shared by every frame.
-    indices: (vk::Buffer, vk::DeviceMemory),
-}
-
 struct SkyCube {
     buffer: vk::Buffer,
     memory: vk::DeviceMemory,
@@ -366,16 +362,11 @@ pub fn is_device_lost(e: &anyhow::Error) -> bool {
 
 impl Drop for Renderer {
     fn drop(&mut self) {
+        // SAFETY: the device is waited idle first, and every handle freed is this renderer's own.
         unsafe {
             let _ = self.device.device_wait_idle();
 
-            for &buf in &self.ui_vertices.buffers {
-                self.device.destroy_buffer(buf, None);
-            }
-            for &mem in &self.ui_vertices.memories {
-                self.device.unmap_memory(mem);
-                vk_util::free_memory(&self.device, mem);
-            }
+            self.ui_vertices.destroy(&self.device);
             self.device.destroy_buffer(self.sky_cube.buffer, None);
             vk_util::free_memory(&self.device, self.sky_cube.memory);
             self.meshes.destroy(&self.device);
@@ -391,8 +382,6 @@ impl Drop for Renderer {
             }
             self.globals.destroy(&self.device);
             self.gui_uniforms.destroy(&self.device);
-            self.device.destroy_buffer(self.ui_vertices.indices.0, None);
-            vk_util::free_memory(&self.device, self.ui_vertices.indices.1);
             if let Some(table) = self.quad_table.take() {
                 table.destroy(&self.device);
             }
@@ -410,7 +399,7 @@ impl Drop for Renderer {
                 }
                 self.device.destroy_image_view(tex.view, None);
                 self.device.destroy_image(tex.image, None);
-                vk_util::free_memory(&self.device, tex.memory);
+                suballoc::release(&self.device, tex.memory);
             }
 
             for &sem in &self.frames.image_available {
@@ -457,7 +446,7 @@ impl Drop for Renderer {
             self.pipelines.sky_glow.destroy(&self.device);
             self.pipelines.crumbling.destroy(&self.device);
             self.pipelines.water_mask.destroy(&self.device);
-            if let Some(mut pack) = self.pack_outline.take() {
+            if let Some(pack) = self.pack_outline.take() {
                 pack.destroy(&self.device);
             }
             self.pipelines.outline.destroy(&self.device);
@@ -491,6 +480,7 @@ impl Drop for Renderer {
             self.textures.descriptor_pools.destroy(&self.device);
             self.pictures.destroy(&self.device);
             self.passes.destroy(&self.device);
+            suballoc::forget(&self.device);
             self.device.destroy_device(None);
 
             self.surface_loader.destroy_surface(self.surface, None);
@@ -516,8 +506,11 @@ unsafe fn free_effect_texture(
     pools: &descriptor_pools::DescriptorPools,
     texture: texture::Texture,
 ) {
-    device.destroy_image_view(texture.view, None);
-    device.destroy_image(texture.image, None);
-    vk_util::free_memory(device, texture.memory);
-    pools.free(device, texture.descriptor_set);
+    // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
+    unsafe {
+        device.destroy_image_view(texture.view, None);
+        device.destroy_image(texture.image, None);
+        suballoc::release(device, texture.memory);
+        pools.free(device, texture.descriptor_set);
+    }
 }

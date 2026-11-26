@@ -115,8 +115,7 @@ fn check(bits: u8, words: &[u64], len: usize) {
     all(target_arch = "aarch64", target_endian = "little")
 ))]
 fn as_bytes(words: &[u64]) -> &[u8] {
-    // SAFETY: any `u64` is eight valid bytes; same allocation and lifetime.
-    unsafe { std::slice::from_raw_parts(words.as_ptr().cast(), size_of_val(words)) }
+    numerobis::elem::as_bytes(words)
 }
 
 /// The palette indices of `row`'s 16 blocks along x. A row is `16 * bits`

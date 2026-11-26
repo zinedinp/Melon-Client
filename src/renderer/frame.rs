@@ -1,6 +1,7 @@
 //! Contract between the three layers.
 
 use glam::Mat4;
+use numerobis::elem::Pod;
 
 use super::quad::DrawList;
 use super::{CubeMapId, IndexMeshId, MeshId, ParticleMeshId, QuadMeshId, TextureId};
@@ -530,6 +531,8 @@ impl TerrainQuad {
 }
 
 const _: () = assert!(std::mem::size_of::<TerrainQuad>() == 20);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl Pod for TerrainQuad {}
 
 /// One vertex of a terrain or entity mesh.
 #[repr(C)]
@@ -635,6 +638,8 @@ fn octahedron_encode(v: glam::Vec3) -> [f32; 2] {
 }
 
 const _: () = assert!(std::mem::size_of::<WorldVertex>() == 28);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl Pod for WorldVertex {}
 
 /// One particle quad, read per instance by `shaders/particle.vert`: corners
 /// at `center ± right ± up`. The axes are the quad's own, so F16 is exact enough.
@@ -654,6 +659,8 @@ pub struct ParticleQuad {
 }
 
 const _: () = assert!(std::mem::size_of::<ParticleQuad>() == 40);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl Pod for ParticleQuad {}
 
 impl ParticleQuad {
     /// A quad without its axes, which [`Self::encode_axes`] fills in.
@@ -747,6 +754,8 @@ impl From<WorldVertex> for QuadCorner {
 }
 
 const _: () = assert!(std::mem::size_of::<QuadCorner>() == 24);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl Pod for QuadCorner {}
 
 // A 16-byte corner (one `uvec4` load in `terrain.vert`), tried 2026-11-13 and
 // left off: on an RTX 3080 at 4K it made no measurable difference, at

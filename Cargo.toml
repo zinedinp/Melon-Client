@@ -70,7 +70,7 @@ shaderc = "0.10.1"
 zip = { version = "9.8.1", default-features = false, features = ["deflate-flate2"] }
 miraculix = "0.7.0"
 # The GPU's vendor and architecture, for vendor paths (see melon-base).
-numerobis = { version = "0.5.4", default-features = false, features = ["vulkan"] }
+numerobis = { version = "0.5.6", default-features = false, features = ["vulkan"] }
 
 [target.'cfg(windows)'.dependencies]
 # SRV records through the system resolver.
@@ -115,3 +115,7 @@ inherits = "release"
 lto = "fat"
 codegen-units = 1
 strip = "symbols"
+
+[lints.clippy]
+# Every `unsafe {}` says why it holds.
+undocumented_unsafe_blocks = "warn"

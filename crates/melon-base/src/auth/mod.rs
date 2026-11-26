@@ -412,6 +412,7 @@ mod tests {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let prev = std::env::var_os("MELON_MS_CLIENT_ID");
+        // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
         unsafe { std::env::remove_var("MELON_MS_CLIENT_ID") };
         let dir = std::env::temp_dir().join(format!(
             "melon-client-id-{}-{}",
@@ -426,6 +427,7 @@ mod tests {
         let id = microsoft_client_id(&dir);
         let _ = std::fs::remove_dir_all(&dir);
         if let Some(v) = prev {
+            // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
             unsafe { std::env::set_var("MELON_MS_CLIENT_ID", v) }
         }
         assert_eq!(id.as_deref(), Some("abc-own-app"));
@@ -437,6 +439,7 @@ mod tests {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let prev = std::env::var_os("MELON_MS_CLIENT_ID");
+        // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
         unsafe { std::env::remove_var("MELON_MS_CLIENT_ID") };
         let dir = std::env::temp_dir().join(format!(
             "melon-public-id-{}-{}",
@@ -450,6 +453,7 @@ mod tests {
         let id = microsoft_client_id(&dir);
         let _ = std::fs::remove_dir_all(&dir);
         if let Some(v) = prev {
+            // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
             unsafe { std::env::set_var("MELON_MS_CLIENT_ID", v) }
         }
         assert_eq!(id.as_deref(), Some(PUBLIC_CLIENT_ID));

@@ -2,7 +2,7 @@
 
 use ash::vk;
 
-use super::{QuadCorner, Renderer, WorldVertex, create_buffer, mesh_arena, vk_util};
+use super::{QuadCorner, Renderer, WorldVertex, create_buffer, vk_util};
 
 /// The table's buffer and the descriptor set binding it (set 1 of the terrain pipelines).
 pub(super) struct QuadTable {
@@ -14,9 +14,12 @@ pub(super) struct QuadTable {
 
 impl QuadTable {
     pub unsafe fn destroy(self, device: &ash::Device) {
-        device.destroy_descriptor_pool(self.pool, None);
-        device.destroy_buffer(self.buffer, None);
-        vk_util::free_memory(device, self.memory);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe {
+            device.destroy_descriptor_pool(self.pool, None);
+            device.destroy_buffer(self.buffer, None);
+            vk_util::free_memory(device, self.memory);
+        }
     }
 }
 
@@ -29,15 +32,19 @@ pub(super) unsafe fn create_layout(
         .descriptor_type(vk::DescriptorType::STORAGE_BUFFER)
         .descriptor_count(1)
         .stage_flags(vk::ShaderStageFlags::VERTEX)];
-    Ok(device.create_descriptor_set_layout(
-        &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_descriptor_set_layout(
+            &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
+            None,
+        )
+    }?)
 }
 
 impl Renderer {
     /// Uploads the baked quads' corners, four per quad in index order.
     pub fn set_quad_table(&mut self, corners: &[WorldVertex]) -> anyhow::Result<()> {
+        // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {
             if let Some(old) = self.quad_table.take() {
                 self.device.device_wait_idle()?;
@@ -46,14 +53,14 @@ impl Renderer {
                 old.destroy(&self.device);
             }
             let corners: Vec<QuadCorner> = corners.iter().map(|&v| v.into()).collect();
-            let bytes = mesh_arena::as_bytes(&corners);
+            let bytes = numerobis::elem::as_bytes(&corners);
             let size = (bytes.len() as u64).max(std::mem::size_of::<QuadCorner>() as u64);
             let (buffer, memory) = create_buffer(
                 &self.device,
                 &self.mem_props,
                 size,
                 vk::BufferUsageFlags::STORAGE_BUFFER | vk::BufferUsageFlags::TRANSFER_DST,
-                vk::MemoryPropertyFlags::DEVICE_LOCAL,
+                super::Place::DEVICE,
             )?;
             let pool_sizes = [vk::DescriptorPoolSize {
                 ty: vk::DescriptorType::STORAGE_BUFFER,
@@ -129,13 +136,16 @@ impl QuadSets {
             ty: vk::DescriptorType::STORAGE_BUFFER,
             descriptor_count: MAX_QUAD_BUFFERS,
         }];
-        let pool = device.create_descriptor_pool(
-            &vk::DescriptorPoolCreateInfo::default()
-                .flags(vk::DescriptorPoolCreateFlags::FREE_DESCRIPTOR_SET)
-                .pool_sizes(&sizes)
-                .max_sets(MAX_QUAD_BUFFERS),
-            None,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let pool = unsafe {
+            device.create_descriptor_pool(
+                &vk::DescriptorPoolCreateInfo::default()
+                    .flags(vk::DescriptorPoolCreateFlags::FREE_DESCRIPTOR_SET)
+                    .pool_sizes(&sizes)
+                    .max_sets(MAX_QUAD_BUFFERS),
+                None,
+            )
+        }?;
         Ok(Self {
             pool,
             sets: Vec::new(),
@@ -153,23 +163,29 @@ impl QuadSets {
             if self.get(buffer).is_some() {
                 continue;
             }
-            let set = device.allocate_descriptor_sets(
-                &vk::DescriptorSetAllocateInfo::default()
-                    .descriptor_pool(self.pool)
-                    .set_layouts(&[layout]),
-            )?[0];
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            let set = unsafe {
+                device.allocate_descriptor_sets(
+                    &vk::DescriptorSetAllocateInfo::default()
+                        .descriptor_pool(self.pool)
+                        .set_layouts(&[layout]),
+                )
+            }?[0];
             let info = [vk::DescriptorBufferInfo::default()
                 .buffer(buffer)
                 .offset(0)
                 .range(vk::WHOLE_SIZE)];
-            device.update_descriptor_sets(
-                &[vk::WriteDescriptorSet::default()
-                    .dst_set(set)
-                    .dst_binding(0)
-                    .descriptor_type(vk::DescriptorType::STORAGE_BUFFER)
-                    .buffer_info(&info)],
-                &[],
-            );
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe {
+                device.update_descriptor_sets(
+                    &[vk::WriteDescriptorSet::default()
+                        .dst_set(set)
+                        .dst_binding(0)
+                        .descriptor_type(vk::DescriptorType::STORAGE_BUFFER)
+                        .buffer_info(&info)],
+                    &[],
+                )
+            };
             self.sets.push((buffer, set));
         }
         Ok(())
@@ -188,13 +204,15 @@ impl QuadSets {
     pub unsafe fn forget(&mut self, device: &ash::Device, buffer: vk::Buffer) {
         if let Some(i) = self.sets.iter().position(|&(b, _)| b == buffer) {
             let (_, set) = self.sets.swap_remove(i);
-            if let Err(e) = device.free_descriptor_sets(self.pool, &[set]) {
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            if let Err(e) = unsafe { device.free_descriptor_sets(self.pool, &[set]) } {
                 crate::warn!("Mesh descriptor not freed: {e}");
             }
         }
     }
 
     pub unsafe fn destroy(&self, device: &ash::Device) {
-        device.destroy_descriptor_pool(self.pool, None);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { device.destroy_descriptor_pool(self.pool, None) };
     }
 }

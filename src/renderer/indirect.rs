@@ -1,13 +1,33 @@
 //! The terrain's quad draws as indirect multi-draws.
 
 use ash::vk;
+use melon_base::gfx::mapped::MappedBuffer;
+use numerobis::elem::Pod;
 
 use super::mesh_arena::{self, MeshArena};
-use super::vk_util::{self, MAPPED_FOR_GPU, create_buffer_in};
+use super::vk_util::Place;
 use super::{ChunkDraw, TerrainMesh, WorldDraw};
 
+/// `VkDrawIndexedIndirectCommand` as a `Pod` (ash's own type can't be one here).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct DrawCommand {
+    pub index_count: u32,
+    pub instance_count: u32,
+    pub first_index: u32,
+    pub vertex_offset: i32,
+    pub first_instance: u32,
+}
+
+const _: () = assert!(std::mem::size_of::<DrawCommand>() == 20);
+const _: () = assert!(
+    std::mem::size_of::<DrawCommand>() == std::mem::size_of::<vk::DrawIndexedIndirectCommand>()
+);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl Pod for DrawCommand {}
+
 /// Bytes of one `VkDrawIndexedIndirectCommand`.
-pub const COMMAND_SIZE: u32 = std::mem::size_of::<vk::DrawIndexedIndirectCommand>() as u32;
+pub const COMMAND_SIZE: u32 = std::mem::size_of::<DrawCommand>() as u32;
 /// Bytes of one section offset: a `vec4`.
 const OFFSET_SIZE: u32 = 16;
 /// Bytes of one draw's [`Gathered::bounds`]: a `vec4`.
@@ -17,13 +37,9 @@ pub(super) const NO_SLOT: u32 = u32::MAX;
 /// Draws a frame's buffers hold at first.
 const MIN_DRAWS: u32 = 4096;
 
-/// A host-visible, mapped buffer.
+/// A host-visible, mapped buffer, once [`Indirect::prepare`] made one.
 #[derive(Default)]
-struct Mapped {
-    buffer: vk::Buffer,
-    memory: vk::DeviceMemory,
-    ptr: Option<std::ptr::NonNull<u8>>,
-}
+struct Mapped(Option<MappedBuffer>);
 
 impl Mapped {
     unsafe fn new(
@@ -32,22 +48,23 @@ impl Mapped {
         size: u64,
         usage: vk::BufferUsageFlags,
     ) -> anyhow::Result<Self> {
-        let (buffer, memory) = create_buffer_in(device, mem_props, size, usage, &MAPPED_FOR_GPU)?;
-        let ptr = device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty())? as *mut u8;
-        Ok(Self {
-            buffer,
-            memory,
-            ptr: std::ptr::NonNull::new(ptr),
-        })
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { MappedBuffer::new(device, mem_props, size, usage, Place::UPLOAD) }
+            .map(|buffer| Self(Some(buffer)))
+    }
+
+    /// The buffer; null before the first [`Indirect::prepare`].
+    fn buffer(&self) -> vk::Buffer {
+        self.0
+            .as_ref()
+            .map_or(vk::Buffer::null(), |mapped| mapped.buffer)
     }
 
     unsafe fn destroy(&mut self, device: &ash::Device) {
-        if self.buffer != vk::Buffer::null() {
-            device.unmap_memory(self.memory);
-            device.destroy_buffer(self.buffer, None);
-            vk_util::free_memory(device, self.memory);
+        if let Some(buffer) = self.0.take() {
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { buffer.destroy(device) };
         }
-        *self = Self::default();
     }
 }
 
@@ -89,7 +106,8 @@ impl FrameDraws {
             &mut self.run_table,
             &mut self.counts,
         ] {
-            mapped.destroy(device);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { mapped.destroy(device) };
         }
         self.capacity = 0;
     }
@@ -129,7 +147,7 @@ pub(super) enum Pass {
 /// the frame slot's buffers, and copied in whole once it can't.
 #[derive(Default)]
 struct Gathered {
-    commands: Vec<vk::DrawIndexedIndirectCommand>,
+    commands: Vec<DrawCommand>,
     offsets: Vec<[f32; 4]>,
     /// Per draw: its section's lowest corner relative to the camera's block,
     /// and its occlusion slot as `f32` bits ([`NO_SLOT`] for none).
@@ -137,7 +155,7 @@ struct Gathered {
     runs: [Vec<Run>; 2],
     /// One pass's draws before they are grouped by buffer: (buffer's
     /// place among `buffers`, command, offset, bounds).
-    pending: Vec<(u32, vk::DrawIndexedIndirectCommand, [f32; 3], [f32; 4])>,
+    pending: Vec<(u32, DrawCommand, [f32; 3], [f32; 4])>,
     buffers: Vec<vk::Buffer>,
     /// [`Self::finish`]'s draws per buffer, then where each buffer's go.
     places: Vec<u32>,
@@ -160,7 +178,7 @@ impl Gathered {
     fn queue(
         &mut self,
         buffer: vk::Buffer,
-        command: vk::DrawIndexedIndirectCommand,
+        command: DrawCommand,
         offset: [f32; 3],
         bounds: [f32; 4],
     ) {
@@ -200,8 +218,7 @@ impl Gathered {
         }
         let total = self.pending.len();
         let new_len = self.commands.len() + total;
-        self.commands
-            .resize(new_len, vk::DrawIndexedIndirectCommand::default());
+        self.commands.resize(new_len, DrawCommand::default());
         self.offsets.resize(new_len, [0.0; 4]);
         self.bounds.resize(new_len, [0.0; 4]);
         for &(place, command, offset, bounds) in &self.pending {
@@ -209,7 +226,7 @@ impl Gathered {
             let index = *at;
             *at += 1;
             // `terrain.vert` finds the draw's offset by it.
-            self.commands[index as usize] = vk::DrawIndexedIndirectCommand {
+            self.commands[index as usize] = DrawCommand {
                 first_instance: index,
                 ..command
             };
@@ -226,13 +243,13 @@ impl Gathered {
         &mut self,
         pass: Pass,
         buffer: vk::Buffer,
-        command: vk::DrawIndexedIndirectCommand,
+        command: DrawCommand,
         offset: [f32; 3],
         bounds: [f32; 4],
     ) {
         let index = self.commands.len() as u32;
         // `terrain.vert` finds the draw's offset by it.
-        self.commands.push(vk::DrawIndexedIndirectCommand {
+        self.commands.push(DrawCommand {
             first_instance: index,
             ..command
         });
@@ -276,10 +293,13 @@ pub(super) unsafe fn create_layout(
         .descriptor_type(vk::DescriptorType::STORAGE_BUFFER)
         .descriptor_count(1)
         .stage_flags(vk::ShaderStageFlags::VERTEX)];
-    Ok(device.create_descriptor_set_layout(
-        &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_descriptor_set_layout(
+            &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
+            None,
+        )
+    }?)
 }
 
 impl DrawBuffers {
@@ -292,18 +312,24 @@ impl DrawBuffers {
             ty: vk::DescriptorType::STORAGE_BUFFER,
             descriptor_count: frames as u32,
         }];
-        let pool = device.create_descriptor_pool(
-            &vk::DescriptorPoolCreateInfo::default()
-                .pool_sizes(&sizes)
-                .max_sets(frames as u32),
-            None,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let pool = unsafe {
+            device.create_descriptor_pool(
+                &vk::DescriptorPoolCreateInfo::default()
+                    .pool_sizes(&sizes)
+                    .max_sets(frames as u32),
+                None,
+            )
+        }?;
         let layouts = vec![layout; frames];
-        let sets = device.allocate_descriptor_sets(
-            &vk::DescriptorSetAllocateInfo::default()
-                .descriptor_pool(pool)
-                .set_layouts(&layouts),
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let sets = unsafe {
+            device.allocate_descriptor_sets(
+                &vk::DescriptorSetAllocateInfo::default()
+                    .descriptor_pool(pool)
+                    .set_layouts(&layouts),
+            )
+        }?;
         Ok(Self {
             pool,
             gathered: Gathered::default(),
@@ -330,44 +356,60 @@ impl DrawBuffers {
             return Ok(());
         }
         let capacity = draws.next_power_of_two().max(MIN_DRAWS);
-        slot.destroy(device);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { slot.destroy(device) };
         let storage = vk::BufferUsageFlags::STORAGE_BUFFER;
         let indirect = vk::BufferUsageFlags::INDIRECT_BUFFER | storage;
         let capacity_64 = u64::from(capacity);
-        slot.commands = Mapped::new(
-            device,
-            mem_props,
-            3 * capacity_64 * u64::from(COMMAND_SIZE),
-            indirect,
-        )?;
-        slot.keep = Mapped::new(device, mem_props, 2 * capacity_64 * 4, storage)?;
-        slot.run_table = Mapped::new(device, mem_props, capacity_64 * 8, storage)?;
-        slot.counts = Mapped::new(device, mem_props, 2 * capacity_64 * 4, indirect)?;
-        slot.offsets = Mapped::new(
-            device,
-            mem_props,
-            u64::from(capacity) * u64::from(OFFSET_SIZE),
-            vk::BufferUsageFlags::STORAGE_BUFFER,
-        )?;
-        slot.bounds = Mapped::new(
-            device,
-            mem_props,
-            u64::from(capacity) * u64::from(BOUNDS_SIZE),
-            vk::BufferUsageFlags::STORAGE_BUFFER,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        slot.commands = unsafe {
+            Mapped::new(
+                device,
+                mem_props,
+                3 * capacity_64 * u64::from(COMMAND_SIZE),
+                indirect,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        slot.keep = unsafe { Mapped::new(device, mem_props, 2 * capacity_64 * 4, storage) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        slot.run_table = unsafe { Mapped::new(device, mem_props, capacity_64 * 8, storage) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        slot.counts = unsafe { Mapped::new(device, mem_props, 2 * capacity_64 * 4, indirect) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        slot.offsets = unsafe {
+            Mapped::new(
+                device,
+                mem_props,
+                u64::from(capacity) * u64::from(OFFSET_SIZE),
+                vk::BufferUsageFlags::STORAGE_BUFFER,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        slot.bounds = unsafe {
+            Mapped::new(
+                device,
+                mem_props,
+                u64::from(capacity) * u64::from(BOUNDS_SIZE),
+                vk::BufferUsageFlags::STORAGE_BUFFER,
+            )
+        }?;
         slot.capacity = capacity;
         let info = [vk::DescriptorBufferInfo::default()
-            .buffer(slot.offsets.buffer)
+            .buffer(slot.offsets.buffer())
             .offset(0)
             .range(vk::WHOLE_SIZE)];
-        device.update_descriptor_sets(
-            &[vk::WriteDescriptorSet::default()
-                .dst_set(slot.set)
-                .dst_binding(0)
-                .descriptor_type(vk::DescriptorType::STORAGE_BUFFER)
-                .buffer_info(&info)],
-            &[],
-        );
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe {
+            device.update_descriptor_sets(
+                &[vk::WriteDescriptorSet::default()
+                    .dst_set(slot.set)
+                    .dst_binding(0)
+                    .descriptor_type(vk::DescriptorType::STORAGE_BUFFER)
+                    .buffer_info(&info)],
+                &[],
+            )
+        };
         Ok(())
     }
 
@@ -378,18 +420,18 @@ impl DrawBuffers {
 
     /// The commands buffer of frame `frame`, for `cmd_draw_indexed_indirect`.
     pub fn commands(&self, frame: usize) -> vk::Buffer {
-        self.frames[frame].commands.buffer
+        self.frames[frame].commands.buffer()
     }
 
     /// Frame `frame`'s buffers the occlusion culling reads and writes.
     pub fn culling_buffers(&self, frame: usize) -> CullingBuffers {
         let slot = &self.frames[frame];
         CullingBuffers {
-            commands: slot.commands.buffer,
-            bounds: slot.bounds.buffer,
-            keep: slot.keep.buffer,
-            runs: slot.run_table.buffer,
-            counts: slot.counts.buffer,
+            commands: slot.commands.buffer(),
+            bounds: slot.bounds.buffer(),
+            keep: slot.keep.buffer(),
+            runs: slot.run_table.buffer(),
+            counts: slot.counts.buffer(),
         }
     }
 
@@ -413,7 +455,7 @@ impl DrawBuffers {
 
     /// The frame's draw counts, for `cmd_draw_indexed_indirect_count`.
     pub fn counts(&self, frame: usize) -> vk::Buffer {
-        self.frames[frame].counts.buffer
+        self.frames[frame].counts.buffer()
     }
 
     /// One past the highest occlusion slot the gathered draws use.
@@ -454,45 +496,39 @@ impl DrawBuffers {
         let slot = &self.frames[frame];
         let gathered = &self.gathered;
         let (Some(commands), Some(offsets), Some(bounds), Some(run_table)) = (
-            slot.commands.ptr,
-            slot.offsets.ptr,
-            slot.bounds.ptr,
-            slot.run_table.ptr,
+            &slot.commands.0,
+            &slot.offsets.0,
+            &slot.bounds.0,
+            &slot.run_table.0,
         ) else {
             return;
         };
         let count = gathered.commands.len().min(slot.capacity as usize);
         debug_assert_eq!(count, gathered.commands.len(), "prepared too small");
-        std::ptr::copy_nonoverlapping(
-            gathered.commands.as_ptr(),
-            commands.as_ptr().cast::<vk::DrawIndexedIndirectCommand>(),
-            count,
-        );
-        std::ptr::copy_nonoverlapping(
-            gathered.offsets.as_ptr(),
-            offsets.as_ptr().cast::<[f32; 4]>(),
-            count,
-        );
+        // SAFETY: this frame's fence was waited on (this fn's contract), so the GPU is off its buffers.
+        unsafe {
+            commands.write(0, &gathered.commands[..count]);
+            offsets.write(0, &gathered.offsets[..count]);
+        }
         if !culling {
             return;
         }
-        let run_table = run_table.as_ptr().cast::<[u32; 2]>();
         for (i, run) in gathered.runs.iter().flatten().enumerate().take(count) {
-            run_table.add(i).write([run.first, run.count]);
+            // SAFETY: as above.
+            unsafe { run_table.write_one(i * 8, &[run.first, run.count]) };
         }
-        std::ptr::copy_nonoverlapping(
-            gathered.bounds.as_ptr(),
-            bounds.as_ptr().cast::<[f32; 4]>(),
-            count,
-        );
+        // SAFETY: as above.
+        unsafe { bounds.write(0, &gathered.bounds[..count]) };
     }
 
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
         self.gathered = Gathered::default();
         for slot in &mut self.frames {
-            slot.destroy(device);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { slot.destroy(device) };
         }
-        device.destroy_descriptor_pool(self.pool, None);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { device.destroy_descriptor_pool(self.pool, None) };
     }
 }
 
@@ -528,7 +564,7 @@ fn gather_pass(
         for (first, quads) in quad_draws(&chunk.range.into(), slot.count) {
             gathered.queue(
                 buffer,
-                vk::DrawIndexedIndirectCommand {
+                DrawCommand {
                     index_count: quads * 6,
                     instance_count: 1,
                     first_index: 0,
@@ -548,8 +584,8 @@ mod tests {
     use super::*;
     use ash::vk::Handle;
 
-    fn command() -> vk::DrawIndexedIndirectCommand {
-        vk::DrawIndexedIndirectCommand::default()
+    fn command() -> DrawCommand {
+        DrawCommand::default()
     }
 
     #[test]
@@ -616,7 +652,7 @@ mod tests {
             let mut draws = Vec::new();
             for i in 0..2000u32 {
                 let buffer = vk::Buffer::from_raw(1 + random() % 9);
-                let command = vk::DrawIndexedIndirectCommand {
+                let command = DrawCommand {
                     index_count: 6 * (i + 1),
                     instance_count: 1,
                     first_index: 0,
@@ -639,7 +675,7 @@ mod tests {
                 expected.push(pass, buffer, command, offset, bounds);
             }
         }
-        let fields = |c: &vk::DrawIndexedIndirectCommand| {
+        let fields = |c: &DrawCommand| {
             (
                 c.index_count,
                 c.instance_count,

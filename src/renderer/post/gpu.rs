@@ -11,8 +11,9 @@ use super::shader::Compiled;
 use super::uniform::Std140;
 use crate::renderer::blur::{Image, create_image};
 use crate::renderer::texture::Texture;
-use crate::renderer::vk_util::{self, MAPPED_FOR_GPU, create_buffer_in};
+use crate::renderer::vk_util::{self, Place};
 use crate::renderer::{pipeline, post::config::Pass};
+use melon_base::gfx::mapped::MappedBuffer;
 
 /// Most inputs a pass may have, and uniform blocks.
 const MAX_INPUTS: u32 = 16;
@@ -56,9 +57,7 @@ pub(in crate::renderer) struct GpuPass {
     pub bilinear: Vec<bool>,
     pub output: Dest,
     /// `SamplerInfo` then the JSON's blocks, at [`BLOCK_STRIDE`] apart.
-    ubo: vk::Buffer,
-    ubo_memory: vk::DeviceMemory,
-    ubo_ptr: *mut u8,
+    ubo: MappedBuffer,
     /// The JSON's blocks, built once.
     blocks: Vec<Vec<u8>>,
 }
@@ -126,11 +125,16 @@ pub(in crate::renderer) struct Post {
 
 impl Post {
     pub unsafe fn new(device: &ash::Device, format: vk::Format) -> anyhow::Result<Self> {
-        let color_pass = create_pass(device, format, PassKind::Target)?;
-        let main_pass = create_pass(device, format, PassKind::Main)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let color_pass = unsafe { create_pass(device, format, PassKind::Target) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let main_pass = unsafe { create_pass(device, format, PassKind::Main) }?;
         let clamp = vk::SamplerAddressMode::CLAMP_TO_EDGE;
-        let nearest = vk_util::create_sampler(device, vk::Filter::NEAREST, false, clamp)?;
-        let linear = vk_util::create_sampler(device, vk::Filter::LINEAR, false, clamp)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let nearest =
+            unsafe { vk_util::create_sampler(device, vk::Filter::NEAREST, false, clamp) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let linear = unsafe { vk_util::create_sampler(device, vk::Filter::LINEAR, false, clamp) }?;
         let sizes = [
             vk::DescriptorPoolSize {
                 ty: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
@@ -141,13 +145,16 @@ impl Post {
                 descriptor_count: POOL_SETS * 4,
             },
         ];
-        let pool = device.create_descriptor_pool(
-            &vk::DescriptorPoolCreateInfo::default()
-                .flags(vk::DescriptorPoolCreateFlags::FREE_DESCRIPTOR_SET)
-                .max_sets(POOL_SETS)
-                .pool_sizes(&sizes),
-            None,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let pool = unsafe {
+            device.create_descriptor_pool(
+                &vk::DescriptorPoolCreateInfo::default()
+                    .flags(vk::DescriptorPoolCreateFlags::FREE_DESCRIPTOR_SET)
+                    .max_sets(POOL_SETS)
+                    .pool_sizes(&sizes),
+                None,
+            )
+        }?;
         let layout = |count: u32, ty, stages| -> anyhow::Result<vk::DescriptorSetLayout> {
             let bindings: Vec<_> = (0..count)
                 .map(|binding| {
@@ -158,10 +165,13 @@ impl Post {
                         .stage_flags(stages)
                 })
                 .collect();
-            Ok(device.create_descriptor_set_layout(
-                &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
-                None,
-            )?)
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            Ok(unsafe {
+                device.create_descriptor_set_layout(
+                    &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
+                    None,
+                )
+            }?)
         };
         let mut sampler_layouts = Vec::new();
         for count in 0..=MAX_INPUTS {
@@ -209,9 +219,12 @@ impl Post {
         compiled: Option<&Compiled>,
     ) -> anyhow::Result<()> {
         if let Some((pass, set)) = self.blit.take() {
-            let _ = device.device_wait_idle();
-            pass.destroy(device);
-            let _ = device.free_descriptor_sets(self.pool, &[set]);
+            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+            let _ = unsafe { device.device_wait_idle() };
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { pass.destroy(device) };
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            let _ = unsafe { device.free_descriptor_sets(self.pool, &[set]) };
         }
         let Some(compiled) = compiled else {
             return Ok(());
@@ -233,36 +246,44 @@ impl Post {
             .src_alpha_blend_factor(vk::BlendFactor::ZERO)
             .dst_alpha_blend_factor(vk::BlendFactor::ONE)
             .alpha_blend_op(vk::BlendOp::ADD);
-        let pass = pipeline::PipelineDesc {
-            vert: &vert,
-            frag: &frag,
-            push_constant_size: 0,
-            push_stages: vk::ShaderStageFlags::empty(),
-            vertex_stride: 0,
-            attributes: &[],
-            instance: None,
-            used_locations: None,
-            cull: vk::CullModeFlags::NONE,
-            depth: pipeline::depth_disabled(),
-            blend,
-            extra_sets: &[],
-            depth_bias: None,
-        }
-        .build(device, render_pass, layout)?;
+        // SAFETY: `device` is live, and the layout, pass and shaders named are its own.
+        let pass = unsafe {
+            pipeline::PipelineDesc {
+                vert: &vert,
+                frag: &frag,
+                push_constant_size: 0,
+                push_stages: vk::ShaderStageFlags::empty(),
+                vertex_stride: 0,
+                attributes: &[],
+                instance: None,
+                used_locations: None,
+                cull: vk::CullModeFlags::NONE,
+                depth: pipeline::depth_disabled(),
+                blend,
+                extra_sets: &[],
+                depth_bias: None,
+            }
+            .build(device, render_pass, layout)
+        }?;
         let layouts = [layout];
-        let sets = device.allocate_descriptor_sets(
-            &vk::DescriptorSetAllocateInfo::default()
-                .descriptor_pool(self.pool)
-                .set_layouts(&layouts),
-        );
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let sets = unsafe {
+            device.allocate_descriptor_sets(
+                &vk::DescriptorSetAllocateInfo::default()
+                    .descriptor_pool(self.pool)
+                    .set_layouts(&layouts),
+            )
+        };
         match sets {
             Ok(sets) => self.blit = Some((pass, sets[0])),
             Err(e) => {
-                pass.destroy(device);
+                // SAFETY: made by this device, and no frame in flight uses it any more.
+                unsafe { pass.destroy(device) };
                 return Err(e.into());
             }
         }
-        self.write_blit(device);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.write_blit(device) };
         Ok(())
     }
 
@@ -276,14 +297,17 @@ impl Post {
             image_view: outline.view,
             image_layout: vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
         }];
-        device.update_descriptor_sets(
-            &[vk::WriteDescriptorSet::default()
-                .dst_set(*set)
-                .dst_binding(0)
-                .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-                .image_info(&info)],
-            &[],
-        );
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe {
+            device.update_descriptor_sets(
+                &[vk::WriteDescriptorSet::default()
+                    .dst_set(*set)
+                    .dst_binding(0)
+                    .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
+                    .image_info(&info)],
+                &[],
+            )
+        };
     }
 
     /// The layout of a pass's set 0 with `count` samplers.
@@ -312,18 +336,22 @@ impl Post {
         sources: Vec<(ChainSource, Vec<SizedTexture>)>,
         free_texture: &dyn Fn(Texture),
     ) -> Vec<(String, anyhow::Error)> {
-        self.clear_chains(device, free_texture);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.clear_chains(device, free_texture) };
         let mut failed = Vec::new();
         for (source, textures) in sources {
             let id = source.id.clone();
-            match self.build_chain(
-                device,
-                mem_props,
-                gui_layout,
-                source,
-                textures,
-                free_texture,
-            ) {
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            match unsafe {
+                self.build_chain(
+                    device,
+                    mem_props,
+                    gui_layout,
+                    source,
+                    textures,
+                    free_texture,
+                )
+            } {
                 Ok(chain) => {
                     self.chains.insert(id, chain);
                 }
@@ -332,7 +360,8 @@ impl Post {
         }
         if self.extent.width > 0 {
             let extent = self.extent;
-            if let Err(e) = self.bind_all(device, mem_props, extent) {
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            if let Err(e) = unsafe { self.bind_all(device, mem_props, extent) } {
                 crate::warn!("Post effects: {e:#}");
             }
         }
@@ -374,9 +403,12 @@ impl Post {
             passes: Vec::new(),
             config,
         };
-        let built = self.build_passes(device, mem_props, gui_layout, &mut chain, &shaders);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let built =
+            unsafe { self.build_passes(device, mem_props, gui_layout, &mut chain, &shaders) };
         if let Err(e) = built {
-            self.destroy_chain(device, &mut chain, free_texture);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.destroy_chain(device, &mut chain, free_texture) };
             return Err(e);
         }
         Ok(chain)
@@ -418,60 +450,62 @@ impl Post {
             let bytes =
                 |words: &[u32]| -> Vec<u8> { words.iter().flat_map(|w| w.to_le_bytes()).collect() };
             let (vert, frag) = (bytes(&compiled.vertex), bytes(&compiled.fragment));
-            let pipeline = pipeline::PipelineDesc {
-                vert: &vert,
-                frag: &frag,
-                push_constant_size: 0,
-                push_stages: vk::ShaderStageFlags::empty(),
-                vertex_stride: 0,
-                attributes: &[],
-                instance: None,
-                used_locations: None,
-                cull: vk::CullModeFlags::NONE,
-                depth: pipeline::depth_disabled(),
-                blend: vk::PipelineColorBlendAttachmentState::default()
-                    .color_write_mask(vk::ColorComponentFlags::RGBA)
-                    .blend_enable(false),
-                extra_sets: &[gui_layout, block_layout],
-                depth_bias: None,
-            }
-            .build(device, self.color_pass, sampler_layout)?;
+            // SAFETY: `device` is live, and the layout, pass and shaders named are its own.
+            let pipeline = unsafe {
+                pipeline::PipelineDesc {
+                    vert: &vert,
+                    frag: &frag,
+                    push_constant_size: 0,
+                    push_stages: vk::ShaderStageFlags::empty(),
+                    vertex_stride: 0,
+                    attributes: &[],
+                    instance: None,
+                    used_locations: None,
+                    cull: vk::CullModeFlags::NONE,
+                    depth: pipeline::depth_disabled(),
+                    blend: vk::PipelineColorBlendAttachmentState::default()
+                        .color_write_mask(vk::ColorComponentFlags::RGBA)
+                        .blend_enable(false),
+                    extra_sets: &[gui_layout, block_layout],
+                    depth_bias: None,
+                }
+                .build(device, self.color_pass, sampler_layout)
+            }?;
             let layouts = [sampler_layout, block_layout];
-            let sets = device.allocate_descriptor_sets(
-                &vk::DescriptorSetAllocateInfo::default()
-                    .descriptor_pool(self.pool)
-                    .set_layouts(&layouts),
-            );
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            let sets = unsafe {
+                device.allocate_descriptor_sets(
+                    &vk::DescriptorSetAllocateInfo::default()
+                        .descriptor_pool(self.pool)
+                        .set_layouts(&layouts),
+                )
+            };
             let sets = match sets {
                 Ok(sets) => sets,
                 Err(e) => {
-                    pipeline.destroy(device);
+                    // SAFETY: made by this device, and no frame in flight uses it any more.
+                    unsafe { pipeline.destroy(device) };
                     return Err(e.into());
                 }
             };
             let size = BLOCK_STRIDE * block_count as u64;
-            let ubo = create_buffer_in(
-                device,
-                mem_props,
-                size,
-                vk::BufferUsageFlags::UNIFORM_BUFFER,
-                &MAPPED_FOR_GPU,
-            )
-            .and_then(|(ubo, memory)| {
-                match device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty()) {
-                    Ok(ptr) => Ok((ubo, memory, ptr.cast::<u8>())),
-                    Err(e) => {
-                        device.destroy_buffer(ubo, None);
-                        vk_util::free_memory(device, memory);
-                        Err(e.into())
-                    }
-                }
-            });
-            let (ubo, ubo_memory, ubo_ptr) = match ubo {
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            let ubo = unsafe {
+                MappedBuffer::new(
+                    device,
+                    mem_props,
+                    size,
+                    vk::BufferUsageFlags::UNIFORM_BUFFER,
+                    Place::UPLOAD,
+                )
+            };
+            let ubo = match ubo {
                 Ok(ubo) => ubo,
                 Err(e) => {
-                    pipeline.destroy(device);
-                    let _ = device.free_descriptor_sets(self.pool, &sets);
+                    // SAFETY: made by this device, and no frame in flight uses it any more.
+                    unsafe { pipeline.destroy(device) };
+                    // SAFETY: made by this device, and no frame in flight uses it any more.
+                    let _ = unsafe { device.free_descriptor_sets(self.pool, &sets) };
                     return Err(e);
                 }
             };
@@ -494,8 +528,6 @@ impl Post {
                 bilinear,
                 output,
                 ubo,
-                ubo_memory,
-                ubo_ptr,
                 blocks,
             });
         }
@@ -511,46 +543,59 @@ impl Post {
         views: &[vk::ImageView],
         depth: Option<(vk::Image, vk::Format)>,
     ) -> anyhow::Result<()> {
-        self.destroy_sized(device);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.destroy_sized(device) };
         self.extent = extent;
         if !self.is_active() || extent.width == 0 {
             return Ok(());
         }
         let usage = vk::ImageUsageFlags::COLOR_ATTACHMENT | vk::ImageUsageFlags::SAMPLED;
-        let outline = create_image(device, mem_props, self.format, extent, usage)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let outline = unsafe { create_image(device, mem_props, self.format, extent, usage) }?;
         let outline_view = outline.view;
         // Kept first, so `destroy_sized` frees it if the framebuffer fails.
         self.outline = Some(outline);
-        self.outline_framebuffer = framebuffer(device, self.color_pass, outline_view, extent)?;
-        self.snapshot = Some(create_image(
-            device,
-            mem_props,
-            self.format,
-            extent,
-            vk::ImageUsageFlags::TRANSFER_DST | vk::ImageUsageFlags::SAMPLED,
-        )?);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        self.outline_framebuffer =
+            unsafe { framebuffer(device, self.color_pass, outline_view, extent) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        self.snapshot = Some(unsafe {
+            create_image(
+                device,
+                mem_props,
+                self.format,
+                extent,
+                vk::ImageUsageFlags::TRANSFER_DST | vk::ImageUsageFlags::SAMPLED,
+            )
+        }?);
         for &view in views {
             self.main_framebuffers
-                .push(framebuffer(device, self.main_pass, view, extent)?);
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                .push(unsafe { framebuffer(device, self.main_pass, view, extent) }?);
         }
         if let Some((image, format)) = depth {
-            self.depth_view = device.create_image_view(
-                &vk::ImageViewCreateInfo::default()
-                    .image(image)
-                    .view_type(vk::ImageViewType::TYPE_2D)
-                    .format(format)
-                    .subresource_range(vk::ImageSubresourceRange {
-                        aspect_mask: vk::ImageAspectFlags::DEPTH,
-                        base_mip_level: 0,
-                        level_count: 1,
-                        base_array_layer: 0,
-                        layer_count: 1,
-                    }),
-                None,
-            )?;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            self.depth_view = unsafe {
+                device.create_image_view(
+                    &vk::ImageViewCreateInfo::default()
+                        .image(image)
+                        .view_type(vk::ImageViewType::TYPE_2D)
+                        .format(format)
+                        .subresource_range(vk::ImageSubresourceRange {
+                            aspect_mask: vk::ImageAspectFlags::DEPTH,
+                            base_mip_level: 0,
+                            level_count: 1,
+                            base_array_layer: 0,
+                            layer_count: 1,
+                        }),
+                    None,
+                )
+            }?;
         }
-        self.write_blit(device);
-        self.bind_all(device, mem_props, extent)?;
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.write_blit(device) };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.bind_all(device, mem_props, extent) }?;
         self.needs_init.set(true);
         self.main_dirty.set(true);
         Ok(())
@@ -577,13 +622,19 @@ impl Post {
                     if internal.image.is_some() && internal.extent == size {
                         continue;
                     }
-                    destroy_internal(device, internal);
-                    let image = create_image(device, mem_props, self.format, size, usage)?;
-                    internal.framebuffer = framebuffer(device, self.color_pass, image.view, size)?;
+                    // SAFETY: made by this device, and no frame in flight uses it any more.
+                    unsafe { destroy_internal(device, internal) };
+                    // SAFETY: `device` is live, and the infos name only its own live handles.
+                    let image =
+                        unsafe { create_image(device, mem_props, self.format, size, usage) }?;
+                    // SAFETY: `device` is live, and the infos name only its own live handles.
+                    internal.framebuffer =
+                        unsafe { framebuffer(device, self.color_pass, image.view, size) }?;
                     internal.image = Some(image);
                     internal.extent = size;
                 }
-                self.write_sets(device, chain, extent);
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                unsafe { self.write_sets(device, chain, extent) };
             }
             Ok(())
         })();
@@ -657,7 +708,8 @@ impl Post {
                 })
                 .collect();
             if !writes.is_empty() {
-                device.update_descriptor_sets(&writes, &[]);
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                unsafe { device.update_descriptor_sets(&writes, &[]) };
             }
 
             let out = match pass.output {
@@ -677,13 +729,11 @@ impl Post {
             ranges.extend(pass.blocks.iter().cloned());
             let mut buffers = Vec::with_capacity(ranges.len());
             for (i, bytes) in ranges.iter().enumerate() {
-                std::ptr::copy_nonoverlapping(
-                    bytes.as_ptr(),
-                    pass.ubo_ptr.add(i * BLOCK_STRIDE as usize),
-                    bytes.len().min(BLOCK_STRIDE as usize),
-                );
+                let bytes = &bytes[..bytes.len().min(BLOCK_STRIDE as usize)];
+                // SAFETY: the sets are written while no frame is in flight (after a device wait).
+                unsafe { pass.ubo.write(i * BLOCK_STRIDE as usize, bytes) };
                 buffers.push([vk::DescriptorBufferInfo {
-                    buffer: pass.ubo,
+                    buffer: pass.ubo.buffer,
                     offset: i as u64 * BLOCK_STRIDE,
                     range: bytes.len().min(BLOCK_STRIDE as usize) as u64,
                 }]);
@@ -699,7 +749,8 @@ impl Post {
                         .buffer_info(info)
                 })
                 .collect();
-            device.update_descriptor_sets(&writes, &[]);
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { device.update_descriptor_sets(&writes, &[]) };
         }
     }
 
@@ -731,31 +782,38 @@ impl Post {
 
     /// Frees what is sized with the swapchain, before its views go.
     pub unsafe fn release_sized(&mut self, device: &ash::Device) {
-        self.destroy_sized(device);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.destroy_sized(device) };
     }
 
     unsafe fn destroy_sized(&mut self, device: &ash::Device) {
-        let _ = device.device_wait_idle();
+        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+        let _ = unsafe { device.device_wait_idle() };
         for fb in self.main_framebuffers.drain(..) {
-            device.destroy_framebuffer(fb, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { device.destroy_framebuffer(fb, None) };
         }
         if self.outline_framebuffer != vk::Framebuffer::null() {
-            device.destroy_framebuffer(self.outline_framebuffer, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { device.destroy_framebuffer(self.outline_framebuffer, None) };
             self.outline_framebuffer = vk::Framebuffer::null();
         }
         for image in [self.outline.take(), self.snapshot.take()]
             .into_iter()
             .flatten()
         {
-            destroy_image(device, &image);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { destroy_image(device, &image) };
         }
         if self.depth_view != vk::ImageView::null() {
-            device.destroy_image_view(self.depth_view, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { device.destroy_image_view(self.depth_view, None) };
             self.depth_view = vk::ImageView::null();
         }
         for chain in self.chains.values_mut() {
             for internal in &mut chain.internal {
-                destroy_internal(device, internal);
+                // SAFETY: made by this device, and no frame in flight uses it any more.
+                unsafe { destroy_internal(device, internal) };
             }
         }
     }
@@ -767,14 +825,18 @@ impl Post {
         free_texture: &dyn Fn(Texture),
     ) {
         for internal in &mut chain.internal {
-            destroy_internal(device, internal);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { destroy_internal(device, internal) };
         }
         for pass in chain.passes.drain(..) {
-            pass.pipeline.destroy(device);
-            let _ = device.free_descriptor_sets(self.pool, &[pass.sampler_set, pass.block_set]);
-            device.unmap_memory(pass.ubo_memory);
-            device.destroy_buffer(pass.ubo, None);
-            vk_util::free_memory(device, pass.ubo_memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { pass.pipeline.destroy(device) };
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            let _ = unsafe {
+                device.free_descriptor_sets(self.pool, &[pass.sampler_set, pass.block_set])
+            };
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { pass.ubo.destroy(device) };
         }
         for texture in chain.textures.drain(..) {
             free_texture(texture.texture);
@@ -782,29 +844,38 @@ impl Post {
     }
 
     unsafe fn clear_chains(&mut self, device: &ash::Device, free_texture: &dyn Fn(Texture)) {
-        let _ = device.device_wait_idle();
+        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+        let _ = unsafe { device.device_wait_idle() };
         let chains = std::mem::take(&mut self.chains);
         for (_, mut chain) in chains {
-            self.destroy_chain(device, &mut chain, free_texture);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.destroy_chain(device, &mut chain, free_texture) };
         }
     }
 
     pub unsafe fn destroy(&mut self, device: &ash::Device, free_texture: &dyn Fn(Texture)) {
-        self.clear_chains(device, free_texture);
-        let _ = self.set_blit(device, vk::RenderPass::null(), None);
-        self.destroy_sized(device);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.clear_chains(device, free_texture) };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        let _ = unsafe { self.set_blit(device, vk::RenderPass::null(), None) };
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.destroy_sized(device) };
         for layout in self
             .sampler_layouts
             .drain(..)
             .chain(self.block_layouts.drain(..))
         {
-            device.destroy_descriptor_set_layout(layout, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { device.destroy_descriptor_set_layout(layout, None) };
         }
-        device.destroy_descriptor_pool(self.pool, None);
-        device.destroy_sampler(self.nearest, None);
-        device.destroy_sampler(self.linear, None);
-        device.destroy_render_pass(self.color_pass, None);
-        device.destroy_render_pass(self.main_pass, None);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe {
+            device.destroy_descriptor_pool(self.pool, None);
+            device.destroy_sampler(self.nearest, None);
+            device.destroy_sampler(self.linear, None);
+            device.destroy_render_pass(self.color_pass, None);
+            device.destroy_render_pass(self.main_pass, None);
+        }
     }
 }
 
@@ -929,13 +1000,16 @@ unsafe fn create_pass(
                     | vk::AccessFlags::COLOR_ATTACHMENT_READ,
             ),
     ];
-    Ok(device.create_render_pass(
-        &vk::RenderPassCreateInfo::default()
-            .attachments(&attachments)
-            .subpasses(&subpasses)
-            .dependencies(&dependencies),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_render_pass(
+            &vk::RenderPassCreateInfo::default()
+                .attachments(&attachments)
+                .subpasses(&subpasses)
+                .dependencies(&dependencies),
+            None,
+        )
+    }?)
 }
 
 unsafe fn framebuffer(
@@ -945,27 +1019,35 @@ unsafe fn framebuffer(
     extent: vk::Extent2D,
 ) -> anyhow::Result<vk::Framebuffer> {
     let attachments = [view];
-    Ok(device.create_framebuffer(
-        &vk::FramebufferCreateInfo::default()
-            .render_pass(pass)
-            .attachments(&attachments)
-            .width(extent.width)
-            .height(extent.height)
-            .layers(1),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_framebuffer(
+            &vk::FramebufferCreateInfo::default()
+                .render_pass(pass)
+                .attachments(&attachments)
+                .width(extent.width)
+                .height(extent.height)
+                .layers(1),
+            None,
+        )
+    }?)
 }
 
 unsafe fn destroy_image(device: &ash::Device, image: &Image) {
-    device.destroy_image_view(image.view, None);
-    device.destroy_image(image.image, None);
-    vk_util::free_memory(device, image.memory);
+    // SAFETY: made by this device, and no frame in flight uses it any more.
+    unsafe {
+        device.destroy_image_view(image.view, None);
+        device.destroy_image(image.image, None);
+        vk_util::free_memory(device, image.memory);
+    }
 }
 
 unsafe fn destroy_internal(device: &ash::Device, internal: &mut Internal) {
     if let Some(image) = internal.image.take() {
-        device.destroy_framebuffer(internal.framebuffer, None);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { device.destroy_framebuffer(internal.framebuffer, None) };
         internal.framebuffer = vk::Framebuffer::null();
-        destroy_image(device, &image);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { destroy_image(device, &image) };
     }
 }

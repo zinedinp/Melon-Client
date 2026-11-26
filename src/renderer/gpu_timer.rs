@@ -100,6 +100,7 @@ impl GpuTimer {
             .query_count(MAX_MARKS);
         let pools = if supported {
             (0..frames)
+                // SAFETY: `device` is live, and the infos name only its own live handles.
                 .map_while(|_| unsafe { device.create_query_pool(&info, None) }.ok())
                 .collect()
         } else {
@@ -111,6 +112,7 @@ impl GpuTimer {
             .pipeline_statistics(COUNTED);
         let count_pools: Vec<vk::QueryPool> = if statistics {
             (0..frames)
+                // SAFETY: `device` is live, and the infos name only its own live handles.
                 .map_while(|_| unsafe { device.create_query_pool(&count_info, None) }.ok())
                 .collect()
         } else {
@@ -149,6 +151,7 @@ impl GpuTimer {
 
     pub(super) unsafe fn destroy(&mut self, device: &ash::Device) {
         for pool in self.pools.drain(..).chain(self.count_pools.drain(..)) {
+            // SAFETY: made by this device, and no frame in flight uses it any more.
             unsafe { device.destroy_query_pool(pool, None) };
         }
     }
@@ -163,6 +166,7 @@ impl GpuTimer {
         self.cmd.set(cmd);
         self.label_open.set(false);
         self.count_open.set(false);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.begin_counting(device, cmd, slot) };
         let Some(&pool) = self.pools.get(slot) else {
             return;
@@ -170,6 +174,7 @@ impl GpuTimer {
         let written = std::mem::take(&mut self.written[slot]);
         if written.len() > 1 {
             let mut ticks = vec![0u64; written.len()];
+            // SAFETY: the slot's last frame finished (its fence was waited on), so its queries are written.
             let read = unsafe {
                 device.get_query_pool_results(pool, 0, &mut ticks, vk::QueryResultFlags::TYPE_64)
             };
@@ -177,10 +182,12 @@ impl GpuTimer {
                 self.take_in(&written, &ticks);
             }
         }
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { device.cmd_reset_query_pool(cmd, pool, 0, MAX_MARKS) };
         self.pool.set(pool);
         self.cmd.set(cmd);
         self.labels.borrow_mut().clear();
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.write(device, vk::PipelineStageFlags::TOP_OF_PIPE, "start") };
     }
 
@@ -193,6 +200,7 @@ impl GpuTimer {
         let written = std::mem::take(&mut self.counted_written[slot]);
         if !written.is_empty() {
             let mut results = vec![[0u64; 3]; written.len()];
+            // SAFETY: the slot's last frame finished (its fence was waited on), so its queries are written.
             let read = unsafe {
                 device.get_query_pool_results(pool, 0, &mut results, vk::QueryResultFlags::TYPE_64)
             };
@@ -211,13 +219,16 @@ impl GpuTimer {
             self.count_pool.set(vk::QueryPool::null());
             return;
         }
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { device.cmd_reset_query_pool(cmd, pool, 0, MAX_COUNTED) };
         self.count_pool.set(pool);
     }
 
     /// Ends the GPU work named `label`, which ran since the last mark.
     pub(super) unsafe fn mark(&self, device: &ash::Device, label: &'static str) {
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.close_pass() };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.write(device, vk::PipelineStageFlags::BOTTOM_OF_PIPE, label) };
     }
 
@@ -233,12 +244,14 @@ impl GpuTimer {
         if cmd == vk::CommandBuffer::null() {
             return;
         }
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.close_pass() };
         let mut name = [0u8; 32];
         let len = label.len().min(name.len() - 1);
         name[..len].copy_from_slice(&label.as_bytes()[..len]);
         let name = CStr::from_bytes_until_nul(&name).unwrap_or_default();
         let info = vk::DebugUtilsLabelEXT::default().label_name(name);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { api.cmd_begin_debug_utils_label(cmd, &info) };
         self.label_open.set(true);
     }
@@ -248,6 +261,7 @@ impl GpuTimer {
     /// render pass that lasts until then: a pipeline statistics query must
     /// end in the subpass it began in.
     pub(super) unsafe fn counted_pass(&self, label: &'static str) {
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.pass(label) };
         let (Some(device), pool) = (&self.device, self.count_pool.get()) else {
             return;
@@ -257,6 +271,7 @@ impl GpuTimer {
             return;
         }
         let cmd = self.cmd.get();
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe {
             device.cmd_begin_query(
                 cmd,
@@ -275,17 +290,20 @@ impl GpuTimer {
             && self.count_open.replace(false)
         {
             let index = self.counted.borrow().len() as u32 - 1;
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
             unsafe { device.cmd_end_query(self.cmd.get(), self.count_pool.get(), index) };
         }
         if let Some(api) = &self.pass_labels
             && self.label_open.replace(false)
         {
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
             unsafe { api.cmd_end_debug_utils_label(self.cmd.get()) };
         }
     }
 
     /// Ends the frame's recording; its times are read when its slot comes round again.
     pub(super) fn end(&mut self, slot: usize) {
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.close_pass() };
         self.cmd.set(vk::CommandBuffer::null());
         if let Some(written) = self.written.get_mut(slot) {
@@ -309,6 +327,7 @@ impl GpuTimer {
         if pool == vk::QueryPool::null() || labels.len() >= MAX_MARKS as usize {
             return;
         }
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { device.cmd_write_timestamp(self.cmd.get(), stage, pool, labels.len() as u32) };
         labels.push(label);
     }

@@ -60,30 +60,37 @@ impl Renderer {
                 continue;
             }
             if let Some(label) = layer_label(layer) {
-                self.gpu_timer.counted_pass(label);
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe { self.gpu_timer.counted_pass(label) };
             }
             if layer.clears_depth() {
-                self.clear_depth(cmd);
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe { self.clear_depth(cmd) };
             }
             match layer {
                 RenderLayer::Sky => {
                     if let Some(sky) = &scene.sky {
-                        self.record_sky(cmd, sky, scene.world.as_ref());
+                        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                        unsafe { self.record_sky(cmd, sky, scene.world.as_ref()) };
                     }
                 }
                 RenderLayer::Terrain | RenderLayer::Translucent => {
                     let Some(world) = &scene.world else { continue };
                     let view_proj = self.world_view_projection(world, layer);
-                    self.record_terrain(cmd, world, layer, view_proj);
+                    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                    unsafe { self.record_terrain(cmd, world, layer, view_proj) };
                     if layer == RenderLayer::Translucent {
                         let fog = self.model_fog(world, layer);
-                        self.draw_lines(
-                            cmd,
-                            scene,
-                            world,
-                            (view_proj, fog),
-                            LineStyle::TranslucentAfterTerrain,
-                        );
+                        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                        unsafe {
+                            self.draw_lines(
+                                cmd,
+                                scene,
+                                world,
+                                (view_proj, fog),
+                                LineStyle::TranslucentAfterTerrain,
+                            )
+                        };
                     }
                 }
                 RenderLayer::Atmosphere => {
@@ -91,29 +98,37 @@ impl Renderer {
                     let view_proj = self.world_view_projection(world, layer);
                     let fog = FogInput::Chunk;
                     if let Some(clouds) = &scene.clouds
-                        && self.bind_world_pass(cmd, clouds.draw.atlas, Mode::Clouds)
+                        // SAFETY: `device` is live, and the infos name only its own live handles.
+                        && unsafe { self.bind_world_pass(cmd, clouds.draw.atlas, Mode::Clouds) }
                     {
                         let at = world
                             .relative_to(clouds.draw.model, clouds.draw.origin)
                             .w_axis
                             .truncate();
-                        self.draw_world_mesh(
-                            cmd,
-                            self.pipelines.clouds.layout,
-                            clouds.draw.mesh,
-                            (view_proj, at),
-                            &world.light(clouds.color).fogged(fog),
-                            None,
-                        );
+                        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                        unsafe {
+                            self.draw_world_mesh(
+                                cmd,
+                                self.pipelines.clouds.layout,
+                                clouds.draw.mesh,
+                                (view_proj, at),
+                                &world.light(clouds.color).fogged(fog),
+                                None,
+                            )
+                        };
                     }
                     for weather in &scene.weather {
-                        if self.bind_world_pass(cmd, weather.atlas, Mode::Weather) {
-                            self.draw_weather(
-                                cmd,
-                                weather,
-                                view_proj * world.relative_to(weather.model, weather.origin),
-                                &world.light([1.0, 1.0, 1.0, 1.0]).fogged(fog),
-                            );
+                        // SAFETY: `device` is live, and the infos name only its own live handles.
+                        if unsafe { self.bind_world_pass(cmd, weather.atlas, Mode::Weather) } {
+                            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                            unsafe {
+                                self.draw_weather(
+                                    cmd,
+                                    weather,
+                                    view_proj * world.relative_to(weather.model, weather.origin),
+                                    &world.light([1.0, 1.0, 1.0, 1.0]).fogged(fog),
+                                )
+                            };
                         }
                     }
                 }
@@ -156,7 +171,10 @@ impl Renderer {
                         if !lines_drawn && entity.blend != Blending::Opaque {
                             lines_drawn = true;
                             for style in [LineStyle::Opaque, LineStyle::OpaqueDepthBias] {
-                                self.draw_lines(cmd, scene, world, (view_proj, fog), style);
+                                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                                unsafe {
+                                    self.draw_lines(cmd, scene, world, (view_proj, fog), style)
+                                };
                             }
                         }
                         let (mode, pass) = match entity.blend {
@@ -192,8 +210,19 @@ impl Renderer {
                                 .overlaid(entity.overlay)
                                 .scrolled(entity.scroll)
                         };
-                        if self.bind_world_pass(cmd, entity.atlas, mode) {
-                            self.draw_world_mesh(cmd, pass.layout, entity.mesh, at, &light, None);
+                        // SAFETY: `device` is live, and the infos name only its own live handles.
+                        if unsafe { self.bind_world_pass(cmd, entity.atlas, mode) } {
+                            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                            unsafe {
+                                self.draw_world_mesh(
+                                    cmd,
+                                    pass.layout,
+                                    entity.mesh,
+                                    at,
+                                    &light,
+                                    None,
+                                )
+                            };
                         }
                         if entity.glint.on() {
                             let glint = if entity.glint.is_armor() {
@@ -202,47 +231,60 @@ impl Renderer {
                                 scene.glint_item
                             };
                             if let Some(glint) = glint
-                                && self.bind_glint_pass(cmd, entity.atlas, glint)
+                                // SAFETY: `device` is live, and the infos name only its own live handles.
+                                && unsafe { self.bind_glint_pass(cmd, entity.atlas, glint) }
                             {
-                                self.draw_world_mesh(
-                                    cmd,
-                                    self.pipelines.glint.layout,
-                                    entity.mesh,
-                                    at,
-                                    &light.glinted(entity.glint.scale()),
-                                    None,
-                                );
+                                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                                unsafe {
+                                    self.draw_world_mesh(
+                                        cmd,
+                                        self.pipelines.glint.layout,
+                                        entity.mesh,
+                                        at,
+                                        &light.glinted(entity.glint.scale()),
+                                        None,
+                                    )
+                                };
                             }
                         }
                     }
                     if layer == RenderLayer::Particles {
-                        self.draw_particles(cmd, scene, world, (view_proj, fog));
+                        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                        unsafe { self.draw_particles(cmd, scene, world, (view_proj, fog)) };
                     }
                     if !lines_drawn {
                         for style in [LineStyle::Opaque, LineStyle::OpaqueDepthBias] {
-                            self.draw_lines(cmd, scene, world, (view_proj, fog), style);
+                            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                            unsafe { self.draw_lines(cmd, scene, world, (view_proj, fog), style) };
                         }
                     }
                     if layer == RenderLayer::Hand {
-                        self.draw_lines(cmd, scene, world, (view_proj, fog), LineStyle::Hud);
+                        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                        unsafe {
+                            self.draw_lines(cmd, scene, world, (view_proj, fog), LineStyle::Hud)
+                        };
                     }
                 }
                 RenderLayer::WaterMask => {
                     let Some(world) = &scene.world else { continue };
                     let view_proj = self.world_view_projection(world, layer);
                     for entity in scene.entities.iter().filter(|e| e.layer == layer) {
-                        if self.bind_world_pass(cmd, entity.atlas, Mode::WaterMask) {
-                            self.draw_world_mesh(
-                                cmd,
-                                self.pipelines.water_mask.layout,
-                                entity.mesh,
-                                (
-                                    view_proj * world.relative_to(entity.model, entity.origin),
-                                    Vec3::ZERO,
-                                ),
-                                &DrawLight::tint([1.0; 4]),
-                                None,
-                            );
+                        // SAFETY: `device` is live, and the infos name only its own live handles.
+                        if unsafe { self.bind_world_pass(cmd, entity.atlas, Mode::WaterMask) } {
+                            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                            unsafe {
+                                self.draw_world_mesh(
+                                    cmd,
+                                    self.pipelines.water_mask.layout,
+                                    entity.mesh,
+                                    (
+                                        view_proj * world.relative_to(entity.model, entity.origin),
+                                        Vec3::ZERO,
+                                    ),
+                                    &DrawLight::tint([1.0; 4]),
+                                    None,
+                                )
+                            };
                         }
                     }
                 }
@@ -250,18 +292,22 @@ impl Renderer {
                     let Some(world) = &scene.world else { continue };
                     let view_proj = self.world_view_projection(world, layer);
                     for entity in scene.entities.iter().filter(|e| e.layer == layer) {
-                        if self.bind_world_pass(cmd, entity.atlas, Mode::Crumbling) {
-                            self.draw_world_mesh(
-                                cmd,
-                                self.pipelines.crumbling.layout,
-                                entity.mesh,
-                                (
-                                    view_proj * world.relative_to(entity.model, entity.origin),
-                                    Vec3::ZERO,
-                                ),
-                                &DrawLight::tint([1.0; 4]),
-                                None,
-                            );
+                        // SAFETY: `device` is live, and the infos name only its own live handles.
+                        if unsafe { self.bind_world_pass(cmd, entity.atlas, Mode::Crumbling) } {
+                            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                            unsafe {
+                                self.draw_world_mesh(
+                                    cmd,
+                                    self.pipelines.crumbling.layout,
+                                    entity.mesh,
+                                    (
+                                        view_proj * world.relative_to(entity.model, entity.origin),
+                                        Vec3::ZERO,
+                                    ),
+                                    &DrawLight::tint([1.0; 4]),
+                                    None,
+                                )
+                            };
                         }
                     }
                 }
@@ -270,33 +316,40 @@ impl Renderer {
                     let view_proj = self.world_view_projection(world, layer);
                     let fog = self.model_fog(world, layer);
                     for entity in scene.entities.iter().filter(|e| e.layer == layer) {
-                        if self.bind_world_pass(cmd, entity.atlas, Mode::Translucent) {
-                            self.draw_world_mesh(
-                                cmd,
-                                self.pipelines.translucent.layout,
-                                entity.mesh,
-                                (
-                                    view_proj * world.relative_to(entity.model, entity.origin),
-                                    Vec3::ZERO,
-                                ),
-                                &DrawLight::tint([1.0; 4]).fogged(fog),
-                                None,
-                            );
+                        // SAFETY: `device` is live, and the infos name only its own live handles.
+                        if unsafe { self.bind_world_pass(cmd, entity.atlas, Mode::Translucent) } {
+                            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                            unsafe {
+                                self.draw_world_mesh(
+                                    cmd,
+                                    self.pipelines.translucent.layout,
+                                    entity.mesh,
+                                    (
+                                        view_proj * world.relative_to(entity.model, entity.origin),
+                                        Vec3::ZERO,
+                                    ),
+                                    &DrawLight::tint([1.0; 4]).fogged(fog),
+                                    None,
+                                )
+                            };
                         }
                     }
                     // Vanilla's `shapeOutlines`, then `translucentGizmos`.
                     for style in [LineStyle::Translucent, LineStyle::TranslucentNoDepthWrite] {
-                        self.draw_lines(cmd, scene, world, (view_proj, fog), style);
+                        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                        unsafe { self.draw_lines(cmd, scene, world, (view_proj, fog), style) };
                     }
                 }
             }
             if let Some(label) = layer_label(layer) {
-                self.gpu_timer.mark(&self.device, label);
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe { self.gpu_timer.mark(&self.device, label) };
             }
         }
         // A layer that had nothing to draw left its counted pass open: it
         // has to end in this render pass.
-        self.gpu_timer.close_pass();
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.gpu_timer.close_pass() };
     }
 
     /// How the fog finds the distance of a model drawn in `layer`.
@@ -350,7 +403,8 @@ impl Renderer {
             base_array_layer: 0,
             layer_count: 1,
         };
-        self.device.cmd_clear_attachments(cmd, &[clear], &[rect]);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.device.cmd_clear_attachments(cmd, &[clear], &[rect]) };
     }
 
     pub(in crate::renderer) unsafe fn record_sky(
@@ -371,31 +425,46 @@ impl Renderer {
             let view_proj = projection * sky.view;
             let push = view_proj.to_cols_array();
 
-            self.device.cmd_bind_pipeline(
-                cmd,
-                vk::PipelineBindPoint::GRAPHICS,
-                self.pipelines.sky.pipeline,
-            );
-            self.device.cmd_push_constants(
-                cmd,
-                self.pipelines.sky.layout,
-                vk::ShaderStageFlags::VERTEX,
-                0,
-                pipeline::push_constant_bytes(&push, pipeline::sky::PUSH_CONSTANT_SIZE),
-            );
-            self.device
-                .cmd_bind_vertex_buffers(cmd, 0, &[self.sky_cube.buffer], &[0]);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device.cmd_bind_pipeline(
+                    cmd,
+                    vk::PipelineBindPoint::GRAPHICS,
+                    self.pipelines.sky.pipeline,
+                )
+            };
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device.cmd_push_constants(
+                    cmd,
+                    self.pipelines.sky.layout,
+                    vk::ShaderStageFlags::VERTEX,
+                    0,
+                    pipeline::push_constant_bytes(&push, pipeline::sky::PUSH_CONSTANT_SIZE),
+                )
+            };
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device
+                    .cmd_bind_vertex_buffers(cmd, 0, &[self.sky_cube.buffer], &[0])
+            };
             self.recording.vertex_buffer.set(self.sky_cube.buffer);
-            self.device.cmd_bind_descriptor_sets(
-                cmd,
-                vk::PipelineBindPoint::GRAPHICS,
-                self.pipelines.sky.layout,
-                0,
-                &[texture.descriptor_set],
-                &[],
-            );
-            self.device
-                .cmd_draw(cmd, pipeline::sky::CUBE_VERTICES.len() as u32, 1, 0, 0);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device.cmd_bind_descriptor_sets(
+                    cmd,
+                    vk::PipelineBindPoint::GRAPHICS,
+                    self.pipelines.sky.layout,
+                    0,
+                    &[texture.descriptor_set],
+                    &[],
+                )
+            };
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device
+                    .cmd_draw(cmd, pipeline::sky::CUBE_VERTICES.len() as u32, 1, 0, 0)
+            };
         }
 
         if sky.celestials.is_empty() {
@@ -404,15 +473,19 @@ impl Renderer {
         let far = world.map_or(200.0, |w| w.far);
         let view_proj = world_projection(sky.fov_y_degrees, self.aspect_ratio(), far) * sky.view;
         for body in &sky.celestials {
-            if self.bind_sky_pass(cmd, body.atlas, body.kind) {
-                self.draw_world_mesh(
-                    cmd,
-                    self.pipelines.celestial.layout,
-                    body.mesh,
-                    (view_proj * body.model, Vec3::ZERO),
-                    &DrawLight::tint(body.tint),
-                    None,
-                );
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            if unsafe { self.bind_sky_pass(cmd, body.atlas, body.kind) } {
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe {
+                    self.draw_world_mesh(
+                        cmd,
+                        self.pipelines.celestial.layout,
+                        body.mesh,
+                        (view_proj * body.model, Vec3::ZERO),
+                        &DrawLight::tint(body.tint),
+                        None,
+                    )
+                };
             }
         }
     }
@@ -443,21 +516,27 @@ impl Renderer {
             .iter()
             .filter(|line| line.style == style)
             .peekable();
-        if lines.peek().is_none() || !self.bind_world_pass(cmd, self.white_texture(), mode) {
+        if lines.peek().is_none()
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            || !unsafe { self.bind_world_pass(cmd, self.white_texture(), mode) }
+        {
             return;
         }
         let light = DrawLight::tint([1.0; 4]).fogged(fog);
         for line in lines {
             let model = world.relative_to(line.model, line.origin);
             let eye = model.inverse().transform_point3(world.eye_fraction());
-            self.draw_world_mesh(
-                cmd,
-                pass.layout,
-                line.mesh,
-                (view_proj * model, eye),
-                &light,
-                None,
-            );
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.draw_world_mesh(
+                    cmd,
+                    pass.layout,
+                    line.mesh,
+                    (view_proj * model, eye),
+                    &light,
+                    None,
+                )
+            };
         }
     }
 
@@ -480,16 +559,22 @@ impl Renderer {
                 let Some(slot) = self.particle_meshes.slot(draw.mesh.0) else {
                     continue;
                 };
-                if !self.bind_world_pipeline(cmd, draw.atlas, pass) {
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                if !unsafe { self.bind_world_pipeline(cmd, draw.atlas, pass) } {
                     continue;
                 }
                 let (buffer, base) = self.particle_meshes.location(slot);
                 let mvp = view_proj * world.relative_to(Mat4::IDENTITY, draw.origin);
-                self.push_world(cmd, pass.layout, mvp, Vec3::ZERO, &light);
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe { self.push_world(cmd, pass.layout, mvp, Vec3::ZERO, &light) };
                 let offset = u64::from(base) * std::mem::size_of::<ParticleQuad>() as u64;
-                self.device
-                    .cmd_bind_vertex_buffers(cmd, 1, &[buffer], &[offset]);
-                self.device.cmd_draw_indexed(cmd, 6, slot.count, 0, 0, 0);
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe {
+                    self.device
+                        .cmd_bind_vertex_buffers(cmd, 1, &[buffer], &[offset])
+                };
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe { self.device.cmd_draw_indexed(cmd, 6, slot.count, 0, 0, 0) };
             }
         }
     }
@@ -525,7 +610,8 @@ impl Renderer {
             Mode::LinesNoDepthWrite => &self.pipelines.lines[3],
             Mode::Glint => return false,
         };
-        self.bind_world_pipeline(cmd, atlas, pass)
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.bind_world_pipeline(cmd, atlas, pass) }
     }
 
     /// Binds `pass`, built like the world pipeline, with `atlas`. `false` if
@@ -539,24 +625,34 @@ impl Renderer {
         let Some(texture) = self.textures.list.get(atlas.0) else {
             return false;
         };
-        self.device
-            .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device
+                .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline)
+        };
         self.recording.forget_pushes();
-        self.device.cmd_bind_descriptor_sets(
-            cmd,
-            vk::PipelineBindPoint::GRAPHICS,
-            self.pipelines.world.layout,
-            0,
-            &[texture.descriptor_set],
-            &[],
-        );
-        self.bind_globals(cmd, self.pipelines.world.layout);
-        self.device.cmd_bind_index_buffer(
-            cmd,
-            self.meshes.index_buffer(),
-            0,
-            vk::IndexType::UINT16,
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_descriptor_sets(
+                cmd,
+                vk::PipelineBindPoint::GRAPHICS,
+                self.pipelines.world.layout,
+                0,
+                &[texture.descriptor_set],
+                &[],
+            )
+        };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.bind_globals(cmd, self.pipelines.world.layout) };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_index_buffer(
+                cmd,
+                self.meshes.index_buffer(),
+                0,
+                vk::IndexType::UINT16,
+            )
+        };
         true
     }
 
@@ -574,37 +670,50 @@ impl Renderer {
             return false;
         };
         let pass = &self.pipelines.glint;
-        self.device
-            .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device
+                .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline)
+        };
         self.recording.forget_pushes();
-        self.device.cmd_bind_descriptor_sets(
-            cmd,
-            vk::PipelineBindPoint::GRAPHICS,
-            pass.layout,
-            0,
-            &[item.descriptor_set, glint.descriptor_set],
-            &[],
-        );
-        self.bind_globals(cmd, pass.layout);
-        self.device.cmd_bind_index_buffer(
-            cmd,
-            self.meshes.index_buffer(),
-            0,
-            vk::IndexType::UINT16,
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_descriptor_sets(
+                cmd,
+                vk::PipelineBindPoint::GRAPHICS,
+                pass.layout,
+                0,
+                &[item.descriptor_set, glint.descriptor_set],
+                &[],
+            )
+        };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.bind_globals(cmd, pass.layout) };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_index_buffer(
+                cmd,
+                self.meshes.index_buffer(),
+                0,
+                vk::IndexType::UINT16,
+            )
+        };
         true
     }
 
     /// Binds this frame's globals (set 3) for the pipeline layout `layout`.
     unsafe fn bind_globals(&self, cmd: vk::CommandBuffer, layout: vk::PipelineLayout) {
-        self.device.cmd_bind_descriptor_sets(
-            cmd,
-            vk::PipelineBindPoint::GRAPHICS,
-            layout,
-            3,
-            &[self.globals.set(self.frames.current)],
-            &[],
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_descriptor_sets(
+                cmd,
+                vk::PipelineBindPoint::GRAPHICS,
+                layout,
+                3,
+                &[self.globals.set(self.frames.current)],
+                &[],
+            )
+        };
     }
 
     /// Binds the terrain quad pipeline for `mode` (solid, cutout or translucent).
@@ -642,25 +751,35 @@ impl Renderer {
             | Mode::LinesTranslucent
             | Mode::LinesNoDepthWrite => return false,
         };
-        self.device
-            .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device
+                .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline)
+        };
         self.recording.forget_pushes();
-        self.device.cmd_bind_descriptor_sets(
-            cmd,
-            vk::PipelineBindPoint::GRAPHICS,
-            pass.layout,
-            0,
-            &[texture.descriptor_set, table.set],
-            &[],
-        );
-        self.bind_globals(cmd, pass.layout);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_descriptor_sets(
+                cmd,
+                vk::PipelineBindPoint::GRAPHICS,
+                pass.layout,
+                0,
+                &[texture.descriptor_set, table.set],
+                &[],
+            )
+        };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.bind_globals(cmd, pass.layout) };
         self.recording.quads.set(vk::Buffer::null());
-        self.device.cmd_bind_index_buffer(
-            cmd,
-            self.meshes.index_buffer(),
-            0,
-            vk::IndexType::UINT16,
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_index_buffer(
+                cmd,
+                self.meshes.index_buffer(),
+                0,
+                vk::IndexType::UINT16,
+            )
+        };
         true
     }
 
@@ -679,24 +798,34 @@ impl Renderer {
             SkyKind::Glow => &self.pipelines.sky_glow,
             SkyKind::Celestial => &self.pipelines.celestial,
         };
-        self.device
-            .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device
+                .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline)
+        };
         self.recording.forget_pushes();
-        self.device.cmd_bind_descriptor_sets(
-            cmd,
-            vk::PipelineBindPoint::GRAPHICS,
-            pass.layout,
-            0,
-            &[texture.descriptor_set],
-            &[],
-        );
-        self.bind_globals(cmd, pass.layout);
-        self.device.cmd_bind_index_buffer(
-            cmd,
-            self.meshes.index_buffer(),
-            0,
-            vk::IndexType::UINT16,
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_descriptor_sets(
+                cmd,
+                vk::PipelineBindPoint::GRAPHICS,
+                pass.layout,
+                0,
+                &[texture.descriptor_set],
+                &[],
+            )
+        };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.bind_globals(cmd, pass.layout) };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_index_buffer(
+                cmd,
+                self.meshes.index_buffer(),
+                0,
+                vk::IndexType::UINT16,
+            )
+        };
         true
     }
 
@@ -719,14 +848,20 @@ impl Renderer {
             return;
         }
         let (buffer, base) = self.meshes.location(slot);
-        self.bind_vertices(cmd, buffer);
-        self.push_world(cmd, layout, mvp, offset, light);
+        // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
+        unsafe {
+            self.bind_vertices(cmd, buffer);
+            self.push_world(cmd, layout, mvp, offset, light);
+        }
         let mut quad = range.start / 4;
         let end = range.end / 4;
         while quad < end {
             let n = (end - quad).min(mesh_arena::QUADS_PER_DRAW);
-            self.device
-                .cmd_draw_indexed(cmd, n * 6, 1, 0, (base + quad * 4) as i32, 0);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device
+                    .cmd_draw_indexed(cmd, n * 6, 1, 0, (base + quad * 4) as i32, 0)
+            };
             quad += n;
         }
     }
@@ -753,14 +888,22 @@ impl Renderer {
         }
         let (buffer, base) = self.meshes.location(template);
         let (piece_buffer, piece_base) = self.meshes.location(pieces);
-        self.bind_vertices(cmd, buffer);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.bind_vertices(cmd, buffer) };
         let offset = u64::from(piece_base) * std::mem::size_of::<WorldVertex>() as u64;
-        self.device
-            .cmd_bind_vertex_buffers(cmd, 1, &[piece_buffer], &[offset]);
-        self.push_world(cmd, self.pipelines.weather.layout, mvp, Vec3::ZERO, light);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device
+                .cmd_bind_vertex_buffers(cmd, 1, &[piece_buffer], &[offset])
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.push_world(cmd, self.pipelines.weather.layout, mvp, Vec3::ZERO, light) };
         let quads = quads.min(mesh_arena::QUADS_PER_DRAW);
-        self.device
-            .cmd_draw_indexed(cmd, quads * 6, instances, 0, base as i32, 0);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device
+                .cmd_draw_indexed(cmd, quads * 6, instances, 0, base as i32, 0)
+        };
     }
 
     /// Binds `buffer` as the vertex buffer unless it already is.
@@ -770,7 +913,8 @@ impl Renderer {
         buffer: vk::Buffer,
     ) {
         if self.recording.vertex_buffer.replace(buffer) != buffer {
-            self.device.cmd_bind_vertex_buffers(cmd, 0, &[buffer], &[0]);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe { self.device.cmd_bind_vertex_buffers(cmd, 0, &[buffer], &[0]) };
         }
     }
 
@@ -787,25 +931,31 @@ impl Renderer {
         if self.recording.push.get() != Some(push) {
             self.recording.push.set(Some(push));
             let push = push.0;
-            self.device.cmd_push_constants(
-                cmd,
-                layout,
-                pipeline::world::PUSH_STAGES,
-                0,
-                pipeline::push_constant_bytes(&push, pipeline::world::OFFSET_AT),
-            );
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device.cmd_push_constants(
+                    cmd,
+                    layout,
+                    pipeline::world::PUSH_STAGES,
+                    0,
+                    pipeline::push_constant_bytes(&push, pipeline::world::OFFSET_AT),
+                )
+            };
         }
         let offset = offset.extend(light.overlay);
         if self.recording.offset.get() != Some(offset) {
             self.recording.offset.set(Some(offset));
             let offset = offset.to_array();
-            self.device.cmd_push_constants(
-                cmd,
-                layout,
-                pipeline::world::PUSH_STAGES,
-                pipeline::world::OFFSET_AT,
-                pipeline::push_constant_bytes(&offset, pipeline::world::OFFSET_SIZE),
-            );
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device.cmd_push_constants(
+                    cmd,
+                    layout,
+                    pipeline::world::PUSH_STAGES,
+                    pipeline::world::OFFSET_AT,
+                    pipeline::push_constant_bytes(&offset, pipeline::world::OFFSET_SIZE),
+                )
+            };
         }
         let mut view = light.fog.bytes();
         view[3] = light.glint_scale;
@@ -813,13 +963,16 @@ impl Renderer {
         if self.recording.view.get() != Some(view) {
             self.recording.view.set(Some(view));
             let view = view.0;
-            self.device.cmd_push_constants(
-                cmd,
-                layout,
-                pipeline::world::PUSH_STAGES,
-                pipeline::world::VIEW_AT,
-                pipeline::push_constant_bytes(&view, pipeline::world::OFFSET_SIZE),
-            );
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device.cmd_push_constants(
+                    cmd,
+                    layout,
+                    pipeline::world::PUSH_STAGES,
+                    pipeline::world::VIEW_AT,
+                    pipeline::push_constant_bytes(&view, pipeline::world::OFFSET_SIZE),
+                )
+            };
         }
     }
 }

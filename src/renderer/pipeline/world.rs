@@ -521,43 +521,48 @@ pub unsafe fn create(
         (_, Geometry::Vertices | Geometry::Particles) => &layouts.sets(),
         (_, Geometry::Quads { .. }) => &quad_sets,
     };
-    PipelineDesc {
-        vert,
-        frag: match mode {
-            Mode::Solid => SOLID_FRAG_SPV,
-            Mode::Opaque if matches!(geometry, Geometry::Quads { .. }) => CUTOUT_TERRAIN_FRAG_SPV,
-            Mode::Clouds => CLOUDS_FRAG_SPV,
-            Mode::Weather => WEATHER_FRAG_SPV,
-            Mode::SkyDisc => SKY_DISC_FRAG_SPV,
-            Mode::Crumbling => CRUMBLING_FRAG_SPV,
-            Mode::Outline => OUTLINE_FRAG_SPV,
-            Mode::WaterMask => WATER_MASK_FRAG_SPV,
-            Mode::Glint => GLINT_FRAG_SPV,
-            Mode::EnergySwirl | Mode::Scrolled => SCROLL_FRAG_SPV,
-            _ => FRAG_SPV,
-        },
-        push_constant_size: PUSH_CONSTANT_SIZE,
-        push_stages: PUSH_STAGES,
-        vertex_stride: vertex_stride as u32,
-        attributes,
-        instance,
-        // `weather.vert` leaves the template's colour unread.
-        used_locations: (mode == Mode::Weather).then_some(&[0, 1, 3][..]),
-        cull,
-        depth,
-        blend,
-        extra_sets,
-        depth_bias: match mode {
-            Mode::Crumbling => Some((40.0, 3.0)),
-            // Vanilla's `DepthStencilState(GREATER_THAN_OR_EQUAL, true, 1, 1)`.
-            Mode::LinesDepthBias => Some((1.0, 1.0)),
-            // Only text is offset; entities, cutout terrain and the glint
-            // over them have none, as vanilla (`DepthStencilState.DEFAULT`).
-            // A slope bias pulled faces seen edge-on (a box's inner sides
-            // under armor or leaves) through the faces they meet.
-            Mode::Text => Some((16.0, 2.0)),
-            _ => None,
-        },
+    // SAFETY: `device` is live, and the layout, pass and shaders named are its own.
+    unsafe {
+        PipelineDesc {
+            vert,
+            frag: match mode {
+                Mode::Solid => SOLID_FRAG_SPV,
+                Mode::Opaque if matches!(geometry, Geometry::Quads { .. }) => {
+                    CUTOUT_TERRAIN_FRAG_SPV
+                }
+                Mode::Clouds => CLOUDS_FRAG_SPV,
+                Mode::Weather => WEATHER_FRAG_SPV,
+                Mode::SkyDisc => SKY_DISC_FRAG_SPV,
+                Mode::Crumbling => CRUMBLING_FRAG_SPV,
+                Mode::Outline => OUTLINE_FRAG_SPV,
+                Mode::WaterMask => WATER_MASK_FRAG_SPV,
+                Mode::Glint => GLINT_FRAG_SPV,
+                Mode::EnergySwirl | Mode::Scrolled => SCROLL_FRAG_SPV,
+                _ => FRAG_SPV,
+            },
+            push_constant_size: PUSH_CONSTANT_SIZE,
+            push_stages: PUSH_STAGES,
+            vertex_stride: vertex_stride as u32,
+            attributes,
+            instance,
+            // `weather.vert` leaves the template's colour unread.
+            used_locations: (mode == Mode::Weather).then_some(&[0, 1, 3][..]),
+            cull,
+            depth,
+            blend,
+            extra_sets,
+            depth_bias: match mode {
+                Mode::Crumbling => Some((40.0, 3.0)),
+                // Vanilla's `DepthStencilState(GREATER_THAN_OR_EQUAL, true, 1, 1)`.
+                Mode::LinesDepthBias => Some((1.0, 1.0)),
+                // Only text is offset; entities, cutout terrain and the glint
+                // over them have none, as vanilla (`DepthStencilState.DEFAULT`).
+                // A slope bias pulled faces seen edge-on (a box's inner sides
+                // under armor or leaves) through the faces they meet.
+                Mode::Text => Some((16.0, 2.0)),
+                _ => None,
+            },
+        }
+        .build(device, render_pass, descriptor_set_layout)
     }
-    .build(device, render_pass, descriptor_set_layout)
 }

@@ -321,6 +321,7 @@ mod win_memory {
             cb: std::mem::size_of::<ProcessMemoryCounters>() as u32,
             ..Default::default()
         };
+        // SAFETY: `c` is a zeroed `PROCESS_MEMORY_COUNTERS` with its size in `cb`.
         let ok = unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut c, c.cb) };
         (ok != 0).then_some(c)
     }
@@ -573,6 +574,7 @@ mod win_threads {
         static FOUND: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
         let address = (*FOUND.get_or_init(|| {
             let name: Vec<u16> = "kernel32.dll\0".encode_utf16().collect();
+            // SAFETY: a NUL-terminated module name, and kernel32 stays loaded for the whole process.
             unsafe {
                 let module = GetModuleHandleW(name.as_ptr());
                 if module == 0 {
@@ -590,6 +592,7 @@ mod win_threads {
     fn times(thread: isize) -> Option<(u64, u64)> {
         let mut t = [FileTime::default(); 4];
         let [creation, exit, kernel, user] = &mut t;
+        // SAFETY: `thread` is a live thread handle, and the four `FILETIME`s are ours to write.
         let ok = unsafe { GetThreadTimes(thread, creation, exit, kernel, user) };
         (ok != 0).then(|| (user.nanos(), kernel.nanos()))
     }
@@ -610,6 +613,7 @@ mod win_threads {
     }
 
     pub fn current() -> Option<(u64, u64)> {
+        // SAFETY: `GetCurrentThread` returns a pseudo handle valid in the calling thread.
         times(unsafe { GetCurrentThread() })
     }
 
@@ -619,6 +623,7 @@ mod win_threads {
 
     /// Sets the calling thread's priority; `what` names it in the warning.
     pub fn set_priority(priority: i32, what: &str) {
+        // SAFETY: the current thread's pseudo handle, with a priority from the THREAD_PRIORITY range.
         if unsafe { SetThreadPriority(GetCurrentThread(), priority) } == 0 {
             crate::warn!(
                 "Thread priority not {what}: {}",
@@ -629,6 +634,7 @@ mod win_threads {
 
     pub fn all() -> Vec<(String, u64)> {
         let mut out = Vec::new();
+        // SAFETY: the snapshot handle is closed before returning, and each entry has its `dwSize` set.
         unsafe {
             let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
             if snapshot == INVALID_HANDLE_VALUE {
@@ -680,6 +686,7 @@ pub fn lower_thread_priority() {
             fn setpriority(which: i32, who: u32, prio: i32) -> i32;
         }
         const PRIO_PROCESS: i32 = 0;
+        // SAFETY: `getpriority`/`setpriority` only read and set the calling thread's nice value.
         unsafe {
             if getpriority(PRIO_PROCESS, 0) >= BACKGROUND_NICE {
                 return;
@@ -750,20 +757,25 @@ mod dialog_tests {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let prev_desktop = std::env::var_os("XDG_CURRENT_DESKTOP");
         let prev_session = std::env::var_os("DESKTOP_SESSION");
+        // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
         unsafe {
             std::env::set_var("XDG_CURRENT_DESKTOP", "KDE");
             std::env::remove_var("DESKTOP_SESSION");
         }
         assert!(super::linux_is_kde());
+        // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
         unsafe { std::env::set_var("XDG_CURRENT_DESKTOP", "GNOME") };
         assert!(!super::linux_is_kde());
-        match prev_desktop {
-            Some(v) => unsafe { std::env::set_var("XDG_CURRENT_DESKTOP", v) },
-            None => unsafe { std::env::remove_var("XDG_CURRENT_DESKTOP") },
-        }
-        match prev_session {
-            Some(v) => unsafe { std::env::set_var("DESKTOP_SESSION", v) },
-            None => unsafe { std::env::remove_var("DESKTOP_SESSION") },
+        // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
+        unsafe {
+            match prev_desktop {
+                Some(v) => std::env::set_var("XDG_CURRENT_DESKTOP", v),
+                None => std::env::remove_var("XDG_CURRENT_DESKTOP"),
+            }
+            match prev_session {
+                Some(v) => std::env::set_var("DESKTOP_SESSION", v),
+                None => std::env::remove_var("DESKTOP_SESSION"),
+            }
         }
     }
 }
@@ -775,6 +787,7 @@ mod tests {
     }
 
     fn own_nice() -> i32 {
+        // SAFETY: `getpriority`/`setpriority` only read and set the calling thread's nice value.
         unsafe { getpriority(0, 0) }
     }
 

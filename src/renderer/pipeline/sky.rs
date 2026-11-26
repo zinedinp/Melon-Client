@@ -20,6 +20,10 @@ pub struct Vertex {
     pub pos: [f32; 3],
 }
 
+const _: () = assert!(std::mem::size_of::<Vertex>() == 12);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl numerobis::elem::Pod for Vertex {}
+
 /// Vanilla `CubeMap.initializeVertices()`: six quads as a triangle list.
 pub const CUBE_VERTICES: [Vertex; 36] = {
     const fn v(x: f32, y: f32, z: f32) -> Vertex {
@@ -70,22 +74,25 @@ pub unsafe fn create(
     render_pass: vk::RenderPass,
     descriptor_set_layout: vk::DescriptorSetLayout,
 ) -> anyhow::Result<Pass> {
-    PipelineDesc {
-        vert: VERT_SPV,
-        frag: FRAG_SPV,
-        push_constant_size: PUSH_CONSTANT_SIZE,
-        push_stages: vk::ShaderStageFlags::VERTEX,
-        vertex_stride: std::mem::size_of::<Vertex>() as u32,
-        attributes: &[(vk::Format::R32G32B32_SFLOAT, 0)],
-        instance: None,
-        used_locations: None,
-        cull: vk::CullModeFlags::NONE,
-        depth: depth_disabled(),
-        blend: vk::PipelineColorBlendAttachmentState::default()
-            .color_write_mask(vk::ColorComponentFlags::RGBA)
-            .blend_enable(false),
-        extra_sets: &[],
-        depth_bias: None,
+    // SAFETY: `device` is live, and the layout, pass and shaders named are its own.
+    unsafe {
+        PipelineDesc {
+            vert: VERT_SPV,
+            frag: FRAG_SPV,
+            push_constant_size: PUSH_CONSTANT_SIZE,
+            push_stages: vk::ShaderStageFlags::VERTEX,
+            vertex_stride: std::mem::size_of::<Vertex>() as u32,
+            attributes: &[(vk::Format::R32G32B32_SFLOAT, 0)],
+            instance: None,
+            used_locations: None,
+            cull: vk::CullModeFlags::NONE,
+            depth: depth_disabled(),
+            blend: vk::PipelineColorBlendAttachmentState::default()
+                .color_write_mask(vk::ColorComponentFlags::RGBA)
+                .blend_enable(false),
+            extra_sets: &[],
+            depth_bias: None,
+        }
+        .build(device, render_pass, descriptor_set_layout)
     }
-    .build(device, render_pass, descriptor_set_layout)
 }

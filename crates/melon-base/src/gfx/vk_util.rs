@@ -1,8 +1,11 @@
 //! Small Vulkan helpers.
 
 use ash::vk;
+use numerobis::vulkan::alloc::{AllocationCount, Usage};
+use numerobis::vulkan::format::{self, Depth};
+use numerobis::vulkan::memory::Memory;
+use numerobis::vulkan::swapchain::{self, Encoding, Extent, SurfaceFormat, result};
 use std::ffi::CStr;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 /// `mipmapped`.
 ///
@@ -20,69 +23,53 @@ pub unsafe fn create_sampler(
     } else {
         (vk::SamplerMipmapMode::NEAREST, 0.0)
     };
-    Ok(device.create_sampler(
-        &vk::SamplerCreateInfo::default()
-            .mag_filter(filter)
-            .min_filter(filter)
-            .mipmap_mode(mode)
-            .address_mode_u(address)
-            .address_mode_v(address)
-            .address_mode_w(address)
-            .max_lod(max_lod),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_sampler(
+            &vk::SamplerCreateInfo::default()
+                .mag_filter(filter)
+                .min_filter(filter)
+                .mipmap_mode(mode)
+                .address_mode_u(address)
+                .address_mode_v(address)
+                .address_mode_w(address)
+                .max_lod(max_lod),
+            None,
+        )
+    }?)
 }
 
-/// Memory for buffers the CPU writes through a mapping and the GPU reads
-/// every frame: VRAM the CPU can map (resizable BAR, or the 256 MiB window
-/// most GPUs expose) where there is one, else host memory over PCIe. The
-/// mapping is write-combined either way, so it's only ever written.
-pub const MAPPED_FOR_GPU: [vk::MemoryPropertyFlags; 2] = [
-    vk::MemoryPropertyFlags::from_raw(
-        vk::MemoryPropertyFlags::DEVICE_LOCAL.as_raw()
-            | vk::MemoryPropertyFlags::HOST_VISIBLE.as_raw()
-            | vk::MemoryPropertyFlags::HOST_COHERENT.as_raw(),
-    ),
-    vk::MemoryPropertyFlags::from_raw(
-        vk::MemoryPropertyFlags::HOST_VISIBLE.as_raw()
-            | vk::MemoryPropertyFlags::HOST_COHERENT.as_raw(),
-    ),
-];
+/// Where a resource's memory goes: numerobis's waterfall for `usage`, host
+/// memory first when `host_first` (VRAM past its budget, or a staging copy
+/// the BAR window is better kept for).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Place {
+    pub usage: Usage,
+    pub host_first: bool,
+}
 
-/// Memory for what the GPU reads and only a copy writes (meshes): VRAM,
-/// else, while another program holds the VRAM, host memory over PCIe:
-/// slower to draw from, but drawn.
-pub const DEVICE_OR_HOST: [vk::MemoryPropertyFlags; 2] = [
-    vk::MemoryPropertyFlags::DEVICE_LOCAL,
-    vk::MemoryPropertyFlags::from_raw(
-        vk::MemoryPropertyFlags::HOST_VISIBLE.as_raw()
-            | vk::MemoryPropertyFlags::HOST_COHERENT.as_raw(),
-    ),
-];
+impl Place {
+    /// Written by the CPU every frame, read by the GPU: VRAM it maps, else host memory.
+    pub const UPLOAD: Self = Self::new(Usage::Upload);
+    /// Written by the CPU once, copied by the GPU: host memory, so the BAR stays for [`Self::UPLOAD`].
+    pub const STAGING: Self = Self {
+        usage: Usage::Upload,
+        host_first: true,
+    };
+    /// Written by the GPU, read back by the CPU: cached host memory.
+    pub const READBACK: Self = Self::new(Usage::Readback);
+    /// Only the GPU touches it, a copy fills it: VRAM, else host memory.
+    pub const DEVICE: Self = Self::new(Usage::Device);
 
-/// Memory for meshes when the CPU maps all of VRAM: VRAM it maps, so
-/// uploads write there directly, else as [`DEVICE_OR_HOST`].
-pub const MAPPED_VRAM_FIRST: [vk::MemoryPropertyFlags; 3] =
-    [MAPPED_FOR_GPU[0], DEVICE_OR_HOST[0], DEVICE_OR_HOST[1]];
+    pub const fn new(usage: Usage) -> Self {
+        Self {
+            usage,
+            host_first: false,
+        }
+    }
+}
 
-/// Memory for meshes past the VRAM budget: host memory, else VRAM.
-pub const HOST_FIRST: [vk::MemoryPropertyFlags; 2] = [DEVICE_OR_HOST[1], DEVICE_OR_HOST[0]];
-
-/// Memory for buffers the GPU writes and the CPU reads back: cached, as
-/// reading uncached (write-combined) memory costs the CPU many times more.
-pub const READBACK: [vk::MemoryPropertyFlags; 2] = [
-    vk::MemoryPropertyFlags::from_raw(
-        vk::MemoryPropertyFlags::HOST_VISIBLE.as_raw()
-            | vk::MemoryPropertyFlags::HOST_COHERENT.as_raw()
-            | vk::MemoryPropertyFlags::HOST_CACHED.as_raw(),
-    ),
-    vk::MemoryPropertyFlags::from_raw(
-        vk::MemoryPropertyFlags::HOST_VISIBLE.as_raw()
-            | vk::MemoryPropertyFlags::HOST_COHERENT.as_raw(),
-    ),
-];
-
-/// A buffer with its own memory, bound.
+/// A buffer with its own memory from `place`, bound.
 ///
 /// # Safety
 ///
@@ -92,30 +79,14 @@ pub unsafe fn create_buffer(
     mem_props: &vk::PhysicalDeviceMemoryProperties,
     size: u64,
     usage: vk::BufferUsageFlags,
-    flags: vk::MemoryPropertyFlags,
+    place: Place,
 ) -> anyhow::Result<(vk::Buffer, vk::DeviceMemory)> {
-    create_buffer_in(device, mem_props, size, usage, &[flags])
-}
-
-/// A buffer with its own memory, bound, from the first of `choices` that a
-/// memory type has and whose heap has room: a small heap such as the BAR
-/// window can run out where host memory still has plenty.
-///
-/// # Safety
-///
-/// `device` must be live, `mem_props` its physical device's.
-pub unsafe fn create_buffer_in(
-    device: &ash::Device,
-    mem_props: &vk::PhysicalDeviceMemoryProperties,
-    size: u64,
-    usage: vk::BufferUsageFlags,
-    choices: &[vk::MemoryPropertyFlags],
-) -> anyhow::Result<(vk::Buffer, vk::DeviceMemory)> {
-    create_buffer_placed(device, mem_props, size, usage, choices)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    unsafe { create_buffer_placed(device, mem_props, size, usage, place) }
         .map(|(buffer, memory, _)| (buffer, memory))
 }
 
-/// [`create_buffer_in`], and the flags of the memory type it took.
+/// [`create_buffer`], and the flags of the memory type it took.
 ///
 /// # Safety
 ///
@@ -125,125 +96,198 @@ pub unsafe fn create_buffer_placed(
     mem_props: &vk::PhysicalDeviceMemoryProperties,
     size: u64,
     usage: vk::BufferUsageFlags,
-    choices: &[vk::MemoryPropertyFlags],
+    place: Place,
 ) -> anyhow::Result<(vk::Buffer, vk::DeviceMemory, vk::MemoryPropertyFlags)> {
-    let buffer = device.create_buffer(
-        &vk::BufferCreateInfo::default()
-            .size(size)
-            .usage(usage)
-            .sharing_mode(vk::SharingMode::EXCLUSIVE),
-        None,
-    )?;
-    let requirements = device.get_buffer_memory_requirements(buffer);
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let buffer = unsafe {
+        device.create_buffer(
+            &vk::BufferCreateInfo::default()
+                .size(size)
+                .usage(usage)
+                .sharing_mode(vk::SharingMode::EXCLUSIVE),
+            None,
+        )
+    }?;
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let requirements = unsafe { device.get_buffer_memory_requirements(buffer) };
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let bound = unsafe { allocate_for(device, mem_props, requirements, place) }.and_then(
+        |(memory, flags)| {
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            match unsafe { device.bind_buffer_memory(buffer, memory, 0) } {
+                Ok(()) => Ok((memory, flags)),
+                Err(e) => {
+                    // SAFETY: made by this device, and nothing uses it yet.
+                    unsafe { free_memory(device, memory) };
+                    Err(e.into())
+                }
+            }
+        },
+    );
+    match bound {
+        Ok((memory, flags)) => Ok((buffer, memory, flags)),
+        Err(e) => {
+            // SAFETY: made by this device, and nothing uses it yet.
+            unsafe { device.destroy_buffer(buffer, None) };
+            Err(e)
+        }
+    }
+}
+
+/// Memory for `requirements` from the first of `place`'s memory types that
+/// has room, and that type's flags: a full heap (the VRAM, the BAR window)
+/// falls through to the next type.
+///
+/// # Safety
+///
+/// `device` must be live, `mem_props` its physical device's.
+pub unsafe fn allocate_for(
+    device: &ash::Device,
+    mem_props: &vk::PhysicalDeviceMemoryProperties,
+    requirements: vk::MemoryRequirements,
+    place: Place,
+) -> anyhow::Result<(vk::DeviceMemory, vk::MemoryPropertyFlags)> {
     let mut last = anyhow::anyhow!("no suitable Vulkan memory type found");
     let mut out_of_memory = false;
-    for &flags in choices {
-        // Every type with the flags, not only the first: a full heap (the
-        // VRAM, the BAR window) can have a type the next heap shares flags with.
-        for index in memory_types(mem_props, requirements.memory_type_bits, flags) {
-            match allocate_memory(
-                device,
-                &vk::MemoryAllocateInfo::default()
-                    .allocation_size(requirements.size)
-                    .memory_type_index(index),
-            ) {
-                Ok(memory) => {
-                    if let Err(e) = device.bind_buffer_memory(buffer, memory, 0) {
-                        free_memory(device, memory);
-                        device.destroy_buffer(buffer, None);
-                        return Err(e.into());
-                    }
-                    if out_of_memory {
-                        note_memory_fallback(flags);
-                    }
-                    let taken = mem_props.memory_types[index as usize].property_flags;
-                    return Ok((buffer, memory, taken));
+    for index in memory_types(mem_props, requirements.memory_type_bits, place) {
+        let info = vk::MemoryAllocateInfo::default()
+            .allocation_size(requirements.size)
+            .memory_type_index(index);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        match unsafe { allocate_memory(device, &info) } {
+            Ok(memory) => {
+                let flags = mem_props.memory_types[index as usize].property_flags;
+                if out_of_memory {
+                    note_memory_fallback(flags);
                 }
-                Err(e) => {
-                    out_of_memory |= matches!(
-                        e,
-                        vk::Result::ERROR_OUT_OF_DEVICE_MEMORY
-                            | vk::Result::ERROR_OUT_OF_HOST_MEMORY
-                    );
-                    last = e.into();
-                }
+                return Ok((memory, flags));
+            }
+            Err(e) => {
+                out_of_memory |= is_out_of_memory(e);
+                last = e.into();
             }
         }
     }
-    device.destroy_buffer(buffer, None);
     Err(last)
 }
 
+/// The memory types among `type_bits` for `place`, in the order to try them.
+pub fn memory_types(
+    mem_props: &vk::PhysicalDeviceMemoryProperties,
+    type_bits: u32,
+    place: Place,
+) -> Vec<u32> {
+    // SAFETY: ash's `PhysicalDeviceMemoryProperties` is the C struct numerobis reads.
+    let memory = unsafe { Memory::from_properties(std::ptr::from_ref(mem_props).cast()) };
+    memory.map_or_else(Vec::new, |memory| {
+        memory.types_for(type_bits, place.usage, place.host_first)
+    })
+}
+
+/// Whether `e` says a heap is full, so the next memory type may still have room.
+pub fn is_out_of_memory(e: vk::Result) -> bool {
+    matches!(
+        e,
+        vk::Result::ERROR_OUT_OF_DEVICE_MEMORY | vk::Result::ERROR_OUT_OF_HOST_MEMORY
+    )
+}
+
+/// A UNORM format, as vanilla's GL framebuffer stores colour (an `_SRGB` one
+/// would encode it a second time), by numerobis's order.
 pub fn choose_surface_format(
     surface_loader: &ash::khr::surface::Instance,
     physical_device: vk::PhysicalDevice,
     surface: vk::SurfaceKHR,
 ) -> anyhow::Result<vk::SurfaceFormatKHR> {
     let formats =
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
         unsafe { surface_loader.get_physical_device_surface_formats(physical_device, surface)? };
-    pick_surface_format(&formats).ok_or_else(|| anyhow::anyhow!("the surface offers no format"))
+    let offered: Vec<SurfaceFormat> = formats
+        .iter()
+        .map(|f| SurfaceFormat {
+            format: f.format.as_raw() as u32,
+            color_space: f.color_space.as_raw() as u32,
+        })
+        .collect();
+    let chosen = swapchain::surface_format(&offered, Encoding::Unorm)
+        .ok_or_else(|| anyhow::anyhow!("the surface offers no format"))?;
+    Ok(vk::SurfaceFormatKHR {
+        format: vk::Format::from_raw(chosen.format as i32),
+        color_space: vk::ColorSpaceKHR::from_raw(chosen.color_space as i32),
+    })
 }
 
-/// A UNORM format, as vanilla's GL framebuffer stores colour (an `_SRGB` one
-/// would encode it a second time): BGRA, then RGBA, then whatever else is offered.
-fn pick_surface_format(formats: &[vk::SurfaceFormatKHR]) -> Option<vk::SurfaceFormatKHR> {
-    let srgb = |f: &vk::SurfaceFormatKHR| {
-        matches!(
-            f.format,
-            vk::Format::B8G8R8A8_SRGB
-                | vk::Format::R8G8B8A8_SRGB
-                | vk::Format::A8B8G8R8_SRGB_PACK32
-        )
+/// What a new swapchain takes from the surface.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SwapchainShape {
+    pub extent: vk::Extent2D,
+    pub image_count: u32,
+    pub composite_alpha: vk::CompositeAlphaFlagsKHR,
+}
+
+/// The shape for a `window` of that size and at least `images` images.
+/// `None` while the surface has no pixels (minimized) and an old swapchain
+/// can stay (`has_old`); without one, 1x1.
+pub fn swapchain_shape(
+    capabilities: &vk::SurfaceCapabilitiesKHR,
+    window: vk::Extent2D,
+    images: u32,
+    has_old: bool,
+) -> Option<SwapchainShape> {
+    let capabilities = surface_capabilities(capabilities);
+    let extent = match capabilities.extent(extent_in(window)) {
+        Some(extent) => extent,
+        None if has_old => return None,
+        None => Extent::new(1, 1),
     };
-    let nonlinear = |f: &&vk::SurfaceFormatKHR| f.color_space == vk::ColorSpaceKHR::SRGB_NONLINEAR;
-    [vk::Format::B8G8R8A8_UNORM, vk::Format::R8G8B8A8_UNORM]
-        .into_iter()
-        .find_map(|wanted| {
-            formats
-                .iter()
-                .filter(nonlinear)
-                .find(|f| f.format == wanted)
-        })
-        .or_else(|| formats.iter().filter(nonlinear).find(|f| !srgb(f)))
-        .or_else(|| {
-            formats
-                .iter()
-                .find(|f| !srgb(f) && f.format != vk::Format::UNDEFINED)
-        })
-        .or(formats.first())
-        .copied()
+    Some(SwapchainShape {
+        extent: extent_out(extent),
+        image_count: capabilities.image_count(images),
+        composite_alpha: vk::CompositeAlphaFlagsKHR::from_raw(capabilities.composite_alpha()),
+    })
 }
 
-/// Opaque when the surface offers it, else the first mode it does (the spec
-/// wants one of `supportedCompositeAlpha`).
-pub fn composite_alpha(supported: vk::CompositeAlphaFlagsKHR) -> vk::CompositeAlphaFlagsKHR {
-    [
-        vk::CompositeAlphaFlagsKHR::OPAQUE,
-        vk::CompositeAlphaFlagsKHR::INHERIT,
-        vk::CompositeAlphaFlagsKHR::PRE_MULTIPLIED,
-        vk::CompositeAlphaFlagsKHR::POST_MULTIPLIED,
-    ]
-    .into_iter()
-    .find(|&mode| supported.contains(mode))
-    .unwrap_or(vk::CompositeAlphaFlagsKHR::OPAQUE)
+fn surface_capabilities(c: &vk::SurfaceCapabilitiesKHR) -> swapchain::SurfaceCapabilities {
+    swapchain::SurfaceCapabilities {
+        min_image_count: c.min_image_count,
+        max_image_count: c.max_image_count,
+        current_extent: extent_in(c.current_extent),
+        min_image_extent: extent_in(c.min_image_extent),
+        max_image_extent: extent_in(c.max_image_extent),
+        max_image_array_layers: c.max_image_array_layers,
+        supported_transforms: c.supported_transforms.as_raw(),
+        current_transform: c.current_transform.as_raw(),
+        supported_composite_alpha: c.supported_composite_alpha.as_raw(),
+        supported_usage_flags: c.supported_usage_flags.as_raw(),
+    }
 }
 
-/// Whether a `vkQueuePresentKHR` result asks for a new swapchain: always when out of date,
-/// when suboptimal only if the surface's size (`surface_extent`) differs from `extent`.
-/// Mesa on X11 reports suboptimal on every present, so that alone doesn't recreate.
+fn extent_in(e: vk::Extent2D) -> Extent {
+    Extent::new(e.width, e.height)
+}
+
+fn extent_out(e: Extent) -> vk::Extent2D {
+    vk::Extent2D {
+        width: e.width,
+        height: e.height,
+    }
+}
+
+/// Whether a `vkQueuePresentKHR` result asks for a new swapchain, by
+/// numerobis's policy: always when out of date, when suboptimal only if the
+/// surface's size (`surface_extent`) differs from `extent`.
 pub fn recreate_after_present(
     presented: ash::prelude::VkResult<bool>,
     extent: vk::Extent2D,
     surface_extent: impl FnOnce() -> Option<vk::Extent2D>,
 ) -> ash::prelude::VkResult<bool> {
-    match presented {
-        Ok(false) => Ok(false),
-        Ok(true) => Ok(
-            surface_extent().is_some_and(|now| now.width > 0 && now.height > 0 && now != extent)
-        ),
-        Err(vk::Result::ERROR_OUT_OF_DATE_KHR) => Ok(true),
-        Err(e) => Err(e),
-    }
+    let raw = match presented {
+        Ok(false) => result::SUCCESS,
+        Ok(true) => result::SUBOPTIMAL,
+        Err(e) => e.as_raw(),
+    };
+    swapchain::recreate(raw, extent_in(extent), || surface_extent().map(extent_in))
+        .map_err(vk::Result::from_raw)
 }
 
 /// The surface's `currentExtent`; `None` where the swapchain picks it (Wayland) or it can't be read.
@@ -256,11 +300,13 @@ pub unsafe fn surface_extent(
     physical_device: vk::PhysicalDevice,
     surface: vk::SurfaceKHR,
 ) -> Option<vk::Extent2D> {
-    let capabilities = loader
-        .get_physical_device_surface_capabilities(physical_device, surface)
-        .ok()?;
-    let current = capabilities.current_extent;
-    (current.width != u32::MAX).then_some(current)
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let capabilities =
+        unsafe { loader.get_physical_device_surface_capabilities(physical_device, surface) }
+            .ok()?;
+    surface_capabilities(&capabilities)
+        .current()
+        .map(extent_out)
 }
 
 /// How a frame's render pass starts.
@@ -387,10 +433,12 @@ pub unsafe fn create_render_pass(
         .attachments(&attachments)
         .subpasses(&subpasses)
         .dependencies(&dependencies);
-    Ok(device.create_render_pass(&info, None)?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe { device.create_render_pass(&info, None) }?)
 }
 
-/// First supported candidate with `DEPTH_STENCIL_ATTACHMENT` optimal-tiling support.
+/// The depth format: numerobis's first candidate shaders can also sample,
+/// else the first the device can attach at all.
 ///
 /// # Safety
 ///
@@ -399,20 +447,26 @@ pub unsafe fn find_depth_format(
     instance: &ash::Instance,
     physical_device: vk::PhysicalDevice,
 ) -> anyhow::Result<vk::Format> {
-    for format in [
-        vk::Format::D32_SFLOAT,
-        vk::Format::D32_SFLOAT_S8_UINT,
-        vk::Format::D24_UNORM_S8_UINT,
-    ] {
-        let props = instance.get_physical_device_format_properties(physical_device, format);
-        if props
-            .optimal_tiling_features
-            .contains(vk::FormatFeatureFlags::DEPTH_STENCIL_ATTACHMENT)
-        {
-            return Ok(format);
-        }
-    }
-    anyhow::bail!("no supported depth buffer format")
+    let optimal = |raw: u32| {
+        let format = vk::Format::from_raw(raw as i32);
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        let props =
+            unsafe { instance.get_physical_device_format_properties(physical_device, format) };
+        props.optimal_tiling_features.as_raw()
+    };
+    let sampled = Depth {
+        stencil: false,
+        sampled: true,
+    };
+    format::depth(sampled, optimal)
+        .or_else(|| format::depth(Depth::default(), optimal))
+        .map(|raw| vk::Format::from_raw(raw as i32))
+        .ok_or_else(|| anyhow::anyhow!("no supported depth buffer format"))
+}
+
+/// The aspects of a view of all of `format`: depth, and stencil when it has one.
+pub fn aspect_mask(format: vk::Format) -> vk::ImageAspectFlags {
+    vk::ImageAspectFlags::from_raw(format::aspect_mask(format.as_raw() as u32))
 }
 
 /// A depth image with its memory and view; `sampled` lets shaders read it.
@@ -427,36 +481,44 @@ pub unsafe fn create_depth_image(
     extent: vk::Extent2D,
     sampled: bool,
 ) -> anyhow::Result<(vk::Image, vk::DeviceMemory, vk::ImageView)> {
-    let image = device.create_image(
-        &vk::ImageCreateInfo::default()
-            .image_type(vk::ImageType::TYPE_2D)
-            .format(format)
-            .extent(vk::Extent3D {
-                width: extent.width,
-                height: extent.height,
-                depth: 1,
-            })
-            .mip_levels(1)
-            .array_layers(1)
-            .samples(vk::SampleCountFlags::TYPE_1)
-            .tiling(vk::ImageTiling::OPTIMAL)
-            .usage(if sampled {
-                vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT | vk::ImageUsageFlags::SAMPLED
-            } else {
-                vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT
-                    | vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
-            })
-            .sharing_mode(vk::SharingMode::EXCLUSIVE)
-            .initial_layout(vk::ImageLayout::UNDEFINED),
-        None,
-    )?;
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let image = unsafe {
+        device.create_image(
+            &vk::ImageCreateInfo::default()
+                .image_type(vk::ImageType::TYPE_2D)
+                .format(format)
+                .extent(vk::Extent3D {
+                    width: extent.width,
+                    height: extent.height,
+                    depth: 1,
+                })
+                .mip_levels(1)
+                .array_layers(1)
+                .samples(vk::SampleCountFlags::TYPE_1)
+                .tiling(vk::ImageTiling::OPTIMAL)
+                .usage(if sampled {
+                    vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT | vk::ImageUsageFlags::SAMPLED
+                } else {
+                    vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT
+                        | vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
+                })
+                .sharing_mode(vk::SharingMode::EXCLUSIVE)
+                .initial_layout(vk::ImageLayout::UNDEFINED),
+            None,
+        )
+    }?;
     let mut memory = vk::DeviceMemory::null();
-    let view = depth_memory_and_view(device, mem_props, image, format, sampled, &mut memory);
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let view =
+        unsafe { depth_memory_and_view(device, mem_props, image, format, sampled, &mut memory) };
     match view {
         Ok(view) => Ok((image, memory, view)),
         Err(e) => {
-            free_memory(device, memory);
-            device.destroy_image(image, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe {
+                free_memory(device, memory);
+                device.destroy_image(image, None);
+            }
             Err(e)
         }
     }
@@ -471,69 +533,42 @@ unsafe fn depth_memory_and_view(
     sampled: bool,
     memory: &mut vk::DeviceMemory,
 ) -> anyhow::Result<vk::ImageView> {
-    let req = device.get_image_memory_requirements(image);
-    let wanted = if sampled {
-        vk::MemoryPropertyFlags::DEVICE_LOCAL
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let req = unsafe { device.get_image_memory_requirements(image) };
+    // Nothing samples an unsampled depth buffer: tilers may never back it.
+    let usage = if sampled {
+        Usage::Device
     } else {
-        vk::MemoryPropertyFlags::LAZILY_ALLOCATED
+        Usage::Transient
     };
-    let type_index = find_memory_type(mem_props, req.memory_type_bits, wanted).or_else(|_| {
-        find_memory_type(
-            mem_props,
-            req.memory_type_bits,
-            vk::MemoryPropertyFlags::DEVICE_LOCAL,
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    *memory = unsafe { allocate_for(device, mem_props, req, Place::new(usage)) }?.0;
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    unsafe { device.bind_image_memory(image, *memory, 0) }?;
+
+    let aspect_mask = aspect_mask(format);
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_image_view(
+            &vk::ImageViewCreateInfo::default()
+                .image(image)
+                .view_type(vk::ImageViewType::TYPE_2D)
+                .format(format)
+                .subresource_range(vk::ImageSubresourceRange {
+                    aspect_mask,
+                    base_mip_level: 0,
+                    level_count: 1,
+                    base_array_layer: 0,
+                    layer_count: 1,
+                }),
+            None,
         )
-    })?;
-    *memory = allocate_memory(
-        device,
-        &vk::MemoryAllocateInfo::default()
-            .allocation_size(req.size)
-            .memory_type_index(type_index),
-    )?;
-    device.bind_image_memory(image, *memory, 0)?;
-
-    let has_stencil = matches!(
-        format,
-        vk::Format::D32_SFLOAT_S8_UINT | vk::Format::D24_UNORM_S8_UINT
-    );
-    let aspect_mask = if has_stencil {
-        vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
-    } else {
-        vk::ImageAspectFlags::DEPTH
-    };
-    Ok(device.create_image_view(
-        &vk::ImageViewCreateInfo::default()
-            .image(image)
-            .view_type(vk::ImageViewType::TYPE_2D)
-            .format(format)
-            .subresource_range(vk::ImageSubresourceRange {
-                aspect_mask,
-                base_mip_level: 0,
-                level_count: 1,
-                base_array_layer: 0,
-                layer_count: 1,
-            }),
-        None,
-    )?)
-}
-
-/// The memory types with `flags` among `type_bits`, in the device's order.
-fn memory_types(
-    props: &vk::PhysicalDeviceMemoryProperties,
-    type_bits: u32,
-    flags: vk::MemoryPropertyFlags,
-) -> impl Iterator<Item = u32> + '_ {
-    (0..props.memory_type_count).filter(move |&i| {
-        (type_bits & (1 << i)) != 0
-            && props.memory_types[i as usize]
-                .property_flags
-                .contains(flags)
-    })
+    }?)
 }
 
 /// Once per run: a buffer went to a fallback memory because the preferred
 /// one was full (another program on the GPU), which can cost frame time.
-fn note_memory_fallback(flags: vk::MemoryPropertyFlags) {
+pub(super) fn note_memory_fallback(flags: vk::MemoryPropertyFlags) {
     static NOTED: std::sync::Once = std::sync::Once::new();
     NOTED.call_once(|| {
         crate::warn!(
@@ -543,25 +578,16 @@ fn note_memory_fallback(flags: vk::MemoryPropertyFlags) {
     });
 }
 
-/// Live `vkAllocateMemory` allocations, of every device.
-static LIVE_ALLOCATIONS: AtomicU32 = AtomicU32::new(0);
-/// The device's `maxMemoryAllocationCount`; until one is made, 4096, the usual Windows value.
-static ALLOCATION_LIMIT: AtomicU32 = AtomicU32::new(4096);
-/// The count reached [`near_allocation_limit`] and wasn't low again since.
-static ALLOCATION_WARNED: AtomicBool = AtomicBool::new(false);
+/// Live `vkAllocateMemory` allocations, of every device, against the
+/// device's `maxMemoryAllocationCount`.
+static ALLOCATIONS: AllocationCount = AllocationCount::new(AllocationCount::DEFAULT_LIMIT);
 
 /// Sets the limit [`allocate_memory`] warns against.
 pub fn set_allocation_limit(limit: u32) {
-    ALLOCATION_LIMIT.store(limit, Ordering::Relaxed);
-}
-
-/// Whether `live` allocations are close to `limit`: three quarters of it.
-fn near_allocation_limit(live: u32, limit: u32) -> bool {
-    live >= limit - limit / 4
+    ALLOCATIONS.set_limit(limit);
 }
 
 /// `vkAllocateMemory`, counted; warns once the count nears `maxMemoryAllocationCount`.
-/// Every texture and buffer has its own allocation (no sub-allocation yet).
 ///
 /// # Safety
 ///
@@ -570,11 +596,13 @@ pub unsafe fn allocate_memory(
     device: &ash::Device,
     info: &vk::MemoryAllocateInfo<'_>,
 ) -> ash::prelude::VkResult<vk::DeviceMemory> {
-    let memory = device.allocate_memory(info, None)?;
-    let live = LIVE_ALLOCATIONS.fetch_add(1, Ordering::Relaxed) + 1;
-    let limit = ALLOCATION_LIMIT.load(Ordering::Relaxed);
-    if near_allocation_limit(live, limit) && !ALLOCATION_WARNED.swap(true, Ordering::Relaxed) {
-        crate::warn!("vulkan: {live} memory allocations live, the device allows {limit}");
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let memory = unsafe { device.allocate_memory(info, None) }?;
+    if let Some(live) = ALLOCATIONS.allocated() {
+        crate::warn!(
+            "vulkan: {live} memory allocations live, the device allows {}",
+            ALLOCATIONS.limit()
+        );
     }
     Ok(memory)
 }
@@ -588,33 +616,9 @@ pub unsafe fn free_memory(device: &ash::Device, memory: vk::DeviceMemory) {
     if memory == vk::DeviceMemory::null() {
         return;
     }
-    device.free_memory(memory, None);
-    let live = LIVE_ALLOCATIONS
-        .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
-            Some(n.saturating_sub(1))
-        })
-        .unwrap_or(0)
-        .saturating_sub(1);
-    if live < ALLOCATION_LIMIT.load(Ordering::Relaxed) / 2 {
-        ALLOCATION_WARNED.store(false, Ordering::Relaxed);
-    }
-}
-
-pub fn find_memory_type(
-    props: &vk::PhysicalDeviceMemoryProperties,
-    type_bits: u32,
-    flags: vk::MemoryPropertyFlags,
-) -> anyhow::Result<u32> {
-    for i in 0..props.memory_type_count {
-        if (type_bits & (1 << i)) != 0
-            && props.memory_types[i as usize]
-                .property_flags
-                .contains(flags)
-        {
-            return Ok(i);
-        }
-    }
-    anyhow::bail!("no suitable Vulkan memory type found")
+    // SAFETY: made by this device, and no frame in flight uses it any more.
+    unsafe { device.free_memory(memory, None) };
+    ALLOCATIONS.freed();
 }
 
 /// The debug messenger's callback: the validation layer's warnings and errors to the log.
@@ -628,7 +632,8 @@ pub unsafe extern "system" fn debug_callback(
     data: *const vk::DebugUtilsMessengerCallbackDataEXT,
     _user_data: *mut std::ffi::c_void,
 ) -> vk::Bool32 {
-    let message = CStr::from_ptr((*data).p_message).to_string_lossy();
+    // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
+    let message = unsafe { CStr::from_ptr((*data).p_message) }.to_string_lossy();
     crate::warn!("[vulkan] {message}");
     vk::FALSE
 }
@@ -662,12 +667,5 @@ mod tests {
             recreate(Err(vk::Result::ERROR_DEVICE_LOST), None),
             Err(vk::Result::ERROR_DEVICE_LOST)
         );
-    }
-
-    #[test]
-    fn allocations_near_the_limit_at_three_quarters() {
-        assert!(!near_allocation_limit(3071, 4096));
-        assert!(near_allocation_limit(3072, 4096));
-        assert!(near_allocation_limit(u32::MAX, u32::MAX));
     }
 }

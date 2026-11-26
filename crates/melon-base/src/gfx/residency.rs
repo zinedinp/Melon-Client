@@ -9,10 +9,11 @@ use std::time::Duration;
 use ash::vk;
 use numerobis::pci::bar::{self, ResizableBar};
 use numerobis::vulkan::Memory;
+use numerobis::vulkan::alloc::Usage;
 use numerobis::vulkan::memory::{BudgetCache, bytes};
 
 use super::features::Features;
-use super::vk_util::{DEVICE_OR_HOST, HOST_FIRST, MAPPED_VRAM_FIRST};
+use super::vk_util::Place;
 
 /// How old the budget may get before it is read again.
 const BUDGET_AGE: Duration = Duration::from_secs(1);
@@ -72,16 +73,17 @@ impl Residency {
         self.room
     }
 
-    /// The memory to try, in order, for a mesh buffer of `size` bytes:
-    /// host memory first once VRAM is past the budget, as the OS would
-    /// otherwise move other allocations out of VRAM to make room.
-    pub fn mesh_memory(&self, size: u64) -> &'static [vk::MemoryPropertyFlags] {
-        if self.room.is_some_and(|room| size > room) {
-            &HOST_FIRST
-        } else if self.direct {
-            &MAPPED_VRAM_FIRST
-        } else {
-            &DEVICE_OR_HOST
+    /// Where a mesh buffer of `size` bytes goes: VRAM the CPU maps when
+    /// [`Self::direct`]; host memory first once VRAM is past the budget, as
+    /// the OS would otherwise move other allocations out of VRAM to make room.
+    pub fn mesh_memory(&self, size: u64) -> Place {
+        Place {
+            usage: if self.direct {
+                Usage::DeviceMapped
+            } else {
+                Usage::Device
+            },
+            host_first: self.room.is_some_and(|room| size > room),
         }
     }
 
@@ -109,8 +111,10 @@ impl Residency {
         }
         // A budget is only read through the 1.1 entry point.
         let memory = cache.refresh(|memory2| {
-            let memory2 = &mut *memory2.cast::<vk::PhysicalDeviceMemoryProperties2>();
-            instance.get_physical_device_memory_properties2(physical, memory2);
+            // SAFETY: the cache lends its own `VkPhysicalDeviceMemoryProperties2` for this call.
+            let memory2 = unsafe { &mut *memory2.cast::<vk::PhysicalDeviceMemoryProperties2>() };
+            // SAFETY: `instance` is live, and the physical device and surface are its own.
+            unsafe { instance.get_physical_device_memory_properties2(physical, memory2) };
         });
         self.room = memory.and_then(Memory::available_vram);
     }

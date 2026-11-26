@@ -8,6 +8,7 @@ use std::time::Instant;
 
 impl Renderer {
     pub fn render(&mut self, frame: &Frame<'_>) -> anyhow::Result<()> {
+        // SAFETY: the renderer owns its device and frames, and `&mut self` keeps recording on one thread.
         unsafe { self.render_inner(frame) }
     }
 
@@ -54,32 +55,42 @@ impl Renderer {
     /// draws copied in; once the frame slot is free.
     unsafe fn prepare_frame(&mut self) -> anyhow::Result<()> {
         let current = self.frames.current;
-        super::texture_update::prepare(
-            &mut self.textures.update_staging[current],
-            &self.device,
-            &self.mem_props,
-            &self.textures.pending_inits,
-            &self.textures.pending_updates,
-        )?;
-        self.residency.refresh(&self.instance, self.physical_device);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe {
+            super::texture_update::prepare(
+                &mut self.textures.update_staging[current],
+                &self.device,
+                &self.mem_props,
+                &self.textures.pending_inits,
+                &self.textures.pending_updates,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.residency.refresh(&self.instance, self.physical_device) };
         for arena in [
             &mut self.meshes,
             &mut self.quad_meshes,
             &mut self.particle_meshes,
             &mut self.index_lists,
         ] {
-            arena.prepare(&self.device, &self.mem_props, current)?;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { arena.prepare(&self.device, &self.mem_props, current) }?;
         }
         if let Some(indirect) = &mut self.indirect {
             let draws = indirect.gathered();
-            indirect.prepare(&self.device, &self.mem_props, current, draws)?;
-            indirect.upload(current, self.occlusion.is_some());
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { indirect.prepare(&self.device, &self.mem_props, current, draws) }?;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { indirect.upload(current, self.occlusion.is_some()) };
             if let Some(occlusion) = &mut self.occlusion
                 && draws > 0
             {
                 let buffers = indirect.culling_buffers(current);
                 let slots = indirect.slots();
-                occlusion.prepare(&self.device, &self.mem_props, current, slots, buffers)?;
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                unsafe {
+                    occlusion.prepare(&self.device, &self.mem_props, current, slots, buffers)
+                }?;
             }
         }
         Ok(())
@@ -109,7 +120,8 @@ impl Renderer {
         waits.gather = started.elapsed();
         let started = Instant::now();
         let fence = self.frames.in_flight[self.frames.current];
-        self.device.wait_for_fences(&[fence], true, u64::MAX)?;
+        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+        unsafe { self.device.wait_for_fences(&[fence], true, u64::MAX) }?;
         self.frames.submitted[self.frames.current] = 0;
         self.frames.number += 1;
         self.destroy_retired_textures();
@@ -118,8 +130,10 @@ impl Renderer {
         if self.swapchain.framebuffers.is_empty() {
             // A recreate failed half-way (out of memory): try again.
             let (w, h) = (self.swapchain.extent.width, self.swapchain.extent.height);
-            self.device.device_wait_idle()?;
-            self.create_swapchain(w, h)?;
+            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+            unsafe { self.device.device_wait_idle() }?;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { self.create_swapchain(w, h) }?;
             return Ok(());
         }
         // Every allocation the frame needs, before an image is acquired:
@@ -127,24 +141,30 @@ impl Renderer {
         // semaphore signalled with nothing to wait on it. Out of memory
         // (another program holding the VRAM) now just skips the frame.
         let started = Instant::now();
-        self.prepare_frame()?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.prepare_frame() }?;
         waits.prepare = started.elapsed();
 
         let started = Instant::now();
-        let acquire = self.swapchain.loader.acquire_next_image(
-            self.swapchain.handle,
-            u64::MAX,
-            self.frames.image_available[self.frames.current],
-            vk::Fence::null(),
-        );
+        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+        let acquire = unsafe {
+            self.swapchain.loader.acquire_next_image(
+                self.swapchain.handle,
+                u64::MAX,
+                self.frames.image_available[self.frames.current],
+                vk::Fence::null(),
+            )
+        };
         let image_index = match acquire {
             Ok((idx, _suboptimal)) => idx,
             Err(vk::Result::ERROR_OUT_OF_DATE_KHR) => {
                 let (w, h) = (self.swapchain.extent.width, self.swapchain.extent.height);
                 // The other frame in flight may still draw into the
                 // framebuffers and depth buffer this destroys.
-                self.device.device_wait_idle()?;
-                self.create_swapchain(w, h)?;
+                // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+                unsafe { self.device.device_wait_idle() }?;
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                unsafe { self.create_swapchain(w, h) }?;
                 return Ok(());
             }
             Err(e) => return Err(e.into()),
@@ -154,17 +174,18 @@ impl Renderer {
         let started = Instant::now();
         let img_fence = self.frames.images_in_flight[image_index as usize];
         if img_fence != vk::Fence::null() {
-            self.device.wait_for_fences(&[img_fence], true, u64::MAX)?;
+            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+            unsafe { self.device.wait_for_fences(&[img_fence], true, u64::MAX) }?;
         }
         waits.gpu += started.elapsed();
         let recording = Instant::now();
         self.frames.images_in_flight[image_index as usize] = fence;
 
-        std::ptr::copy_nonoverlapping(
-            frame.ui.vertices.as_ptr() as *const u8,
-            self.ui_vertices.mapped[self.frames.current],
-            ui_vertices * std::mem::size_of::<quad::Vertex>(),
-        );
+        // SAFETY: the image's fence was waited on, so the GPU no longer reads this frame's vertices.
+        unsafe {
+            self.ui_vertices
+                .write(self.frames.current, &frame.ui.vertices)
+        };
 
         let mut globals = frame
             .scene
@@ -178,37 +199,53 @@ impl Renderer {
             0.0,
             0.0,
         ];
-        self.globals.write(self.frames.current, &globals);
-        self.gui_uniforms.write(
-            self.frames.current,
-            &super::gui_uniforms::GuiFrame {
-                gui_size: frame.ui_size,
-                screen_size: (
-                    self.swapchain.extent.width as f32,
-                    self.swapchain.extent.height as f32,
-                ),
-                game_time: super::gui_uniforms::game_time(),
-            },
-        );
+        // SAFETY: this frame's fence was waited on, so the GPU no longer reads its uniform slot.
+        unsafe { self.globals.write(self.frames.current, &globals) };
+        // SAFETY: this frame's fence was waited on, so the GPU no longer reads its uniform slot.
+        unsafe {
+            self.gui_uniforms.write(
+                self.frames.current,
+                &super::gui_uniforms::GuiFrame {
+                    gui_size: frame.ui_size,
+                    screen_size: (
+                        self.swapchain.extent.width as f32,
+                        self.swapchain.extent.height as f32,
+                    ),
+                    game_time: super::gui_uniforms::game_time(),
+                },
+            )
+        };
 
         let cmd = self.frames.command_buffers[self.frames.current];
-        self.device
-            .reset_command_buffer(cmd, vk::CommandBufferResetFlags::empty())?;
-        self.device
-            .begin_command_buffer(cmd, &vk::CommandBufferBeginInfo::default())?;
-        self.gpu_timer.begin(&self.device, cmd, self.frames.current);
-        self.gpu_timer.pass("upload");
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe {
+            self.device
+                .reset_command_buffer(cmd, vk::CommandBufferResetFlags::empty())
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe {
+            self.device
+                .begin_command_buffer(cmd, &vk::CommandBufferBeginInfo::default())
+        }?;
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.gpu_timer.begin(&self.device, cmd, self.frames.current);
+            self.gpu_timer.pass("upload");
+        }
         let inits = std::mem::take(&mut self.textures.pending_inits);
         self.textures.pending_init_bytes = 0;
         let updates = std::mem::take(&mut self.textures.pending_updates);
-        super::texture_update::record(
-            &mut self.textures.update_staging[self.frames.current],
-            &self.device,
-            &self.mem_props,
-            cmd,
-            &inits,
-            &updates,
-        )?;
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            super::texture_update::record(
+                &mut self.textures.update_staging[self.frames.current],
+                &self.device,
+                &self.mem_props,
+                cmd,
+                &inits,
+                &updates,
+            )
+        }?;
         let oldest_in_flight = self.frames.oldest_in_flight();
         for arena in [
             &mut self.meshes,
@@ -216,23 +253,30 @@ impl Renderer {
             &mut self.particle_meshes,
             &mut self.index_lists,
         ] {
-            arena.record(
-                &self.device,
-                &self.mem_props,
-                cmd,
-                self.frames.current,
-                oldest_in_flight,
-            )?;
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                arena.record(
+                    &self.device,
+                    &self.mem_props,
+                    cmd,
+                    self.frames.current,
+                    oldest_in_flight,
+                )
+            }?;
         }
         self.meshes.take_destroyed();
         self.index_lists.take_destroyed();
         self.particle_meshes.take_destroyed();
         for buffer in self.quad_meshes.take_destroyed() {
-            self.quad_sets.forget(&self.device, buffer);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.quad_sets.forget(&self.device, buffer) };
         }
 
-        self.gpu_timer.mark(&self.device, "upload");
-        self.record_pictures(cmd, frame.pictures);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.gpu_timer.mark(&self.device, "upload");
+            self.record_pictures(cmd, frame.pictures);
+        }
 
         // The terrain's occlusion culling: phase 1 picked before the scene's pass.
         let (draws, runs) = self
@@ -247,9 +291,12 @@ impl Renderer {
             .framebuffer
             .set(self.swapchain.framebuffers[image_index as usize]);
         if occluding && let Some(occlusion) = &mut self.occlusion {
-            self.gpu_timer.pass("occlusion");
-            occlusion.record_select(&self.device, cmd, self.frames.current, (draws, runs));
-            self.gpu_timer.mark(&self.device, "occlusion");
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.gpu_timer.pass("occlusion");
+                occlusion.record_select(&self.device, cmd, self.frames.current, (draws, runs));
+                self.gpu_timer.mark(&self.device, "occlusion");
+            }
         }
 
         let clear_values = [
@@ -292,8 +339,11 @@ impl Renderer {
                 extent: self.swapchain.extent,
             })
             .clear_values(&clear_values);
-        self.device
-            .cmd_begin_render_pass(cmd, &render_pass_info, vk::SubpassContents::INLINE);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device
+                .cmd_begin_render_pass(cmd, &render_pass_info, vk::SubpassContents::INLINE)
+        };
 
         let viewport = vk::Viewport {
             x: 0.0,
@@ -307,13 +357,17 @@ impl Renderer {
             offset: vk::Offset2D::default(),
             extent: self.swapchain.extent,
         };
-        self.device.cmd_set_viewport(cmd, 0, &[viewport]);
-        self.device.cmd_set_scissor(cmd, 0, &[full_scissor]);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_set_viewport(cmd, 0, &[viewport]);
+            self.device.cmd_set_scissor(cmd, 0, &[full_scissor]);
+        }
 
         let blur = frame
             .blur
             .filter(|blur| blur.radius > 0.0)
-            .filter(|_| self.prepare_blur());
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            .filter(|_| unsafe { self.prepare_blur() });
         let (early, late) = match blur {
             Some(blur) => calls.split_at(blur.ui_split.min(calls.len())),
             None => (calls, &[][..]),
@@ -326,48 +380,67 @@ impl Renderer {
                 ScenePart::All
             };
             let started = Instant::now();
-            self.record_scene(cmd, scene, part);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe { self.record_scene(cmd, scene, part) };
             waits.record_scene = started.elapsed();
             if split {
-                self.device.cmd_end_render_pass(cmd);
-                self.record_post(cmd, image_index as usize, scene, &chains);
-                self.device.cmd_begin_render_pass(
-                    cmd,
-                    &vk::RenderPassBeginInfo::default()
-                        .render_pass(self.passes.resume)
-                        .framebuffer(self.swapchain.framebuffers[image_index as usize])
-                        .render_area(full_scissor),
-                    vk::SubpassContents::INLINE,
-                );
-                self.device.cmd_set_viewport(cmd, 0, &[viewport]);
-                self.device.cmd_set_scissor(cmd, 0, &[full_scissor]);
-                self.record_outline_blit(cmd, &chains);
-                self.record_scene(cmd, scene, ScenePart::Hand);
+                // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
+                unsafe {
+                    self.device.cmd_end_render_pass(cmd);
+                    self.record_post(cmd, image_index as usize, scene, &chains);
+                }
+                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+                unsafe {
+                    self.device.cmd_begin_render_pass(
+                        cmd,
+                        &vk::RenderPassBeginInfo::default()
+                            .render_pass(self.passes.resume)
+                            .framebuffer(self.swapchain.framebuffers[image_index as usize])
+                            .render_area(full_scissor),
+                        vk::SubpassContents::INLINE,
+                    )
+                };
+                // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
+                unsafe {
+                    self.device.cmd_set_viewport(cmd, 0, &[viewport]);
+                    self.device.cmd_set_scissor(cmd, 0, &[full_scissor]);
+                    self.record_outline_blit(cmd, &chains);
+                    self.record_scene(cmd, scene, ScenePart::Hand);
+                }
             }
         }
-        self.gpu_timer.counted_pass("ui");
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.gpu_timer.counted_pass("ui") };
         let started = Instant::now();
-        self.record_ui(cmd, frame, early, full_scissor);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.record_ui(cmd, frame, early, full_scissor) };
         waits.record_ui = started.elapsed();
-        self.gpu_timer.mark(&self.device, "ui");
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.gpu_timer.mark(&self.device, "ui") };
 
-        self.device.cmd_end_render_pass(cmd);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.device.cmd_end_render_pass(cmd) };
         if let Some(blur) = blur {
-            self.record_blur(cmd, image_index as usize, blur.radius, frame, late);
-            self.gpu_timer.mark(&self.device, "menu");
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.record_blur(cmd, image_index as usize, blur.radius, frame, late);
+                self.gpu_timer.mark(&self.device, "menu");
+            }
         }
         let readback = if self.capturing() {
-            self.record_capture(cmd, image_index as usize)
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe { self.record_capture(cmd, image_index as usize) }
         } else {
             None
         };
         self.gpu_timer.end(self.frames.current);
-        let ended = self
-            .device
-            .end_command_buffer(cmd)
-            .and_then(|()| self.device.reset_fences(&[fence]));
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let ended = unsafe { self.device.end_command_buffer(cmd) }
+            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+            .and_then(|()| unsafe { self.device.reset_fences(&[fence]) });
         if let Err(e) = ended {
-            self.drop_capture(readback);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.drop_capture(readback) };
             return Err(e.into());
         }
 
@@ -381,8 +454,10 @@ impl Renderer {
             .command_buffers(&command_buffers)
             .signal_semaphores(&signal_semaphores);
         let submitting = Instant::now();
-        if let Err(e) = self.device.queue_submit(self.queue, &[submit], fence) {
-            self.drop_capture(readback);
+        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+        if let Err(e) = unsafe { self.device.queue_submit(self.queue, &[submit], fence) } {
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.drop_capture(readback) };
             return Err(e.into());
         }
         waits.submit = submitting.elapsed();
@@ -398,13 +473,17 @@ impl Renderer {
             arena.submitted();
         }
         if let Some(readback) = readback {
-            if let Err(e) = self.device.wait_for_fences(&[fence], true, u64::MAX) {
+            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+            if let Err(e) = unsafe { self.device.wait_for_fences(&[fence], true, u64::MAX) } {
                 // The copy may still run: let it end (or the device be lost) first.
-                let _ = self.device.device_wait_idle();
-                self.drop_capture(Some(readback));
+                // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+                let _ = unsafe { self.device.device_wait_idle() };
+                // SAFETY: made by this device, and no frame in flight uses it any more.
+                unsafe { self.drop_capture(Some(readback)) };
                 return Err(e.into());
             }
-            self.finish_capture(readback);
+            // SAFETY: the frame that copied into the readback finished: its fence was waited on above.
+            unsafe { self.finish_capture(readback) };
         }
 
         let swapchains = [self.swapchain.handle];
@@ -414,21 +493,28 @@ impl Renderer {
             .swapchains(&swapchains)
             .image_indices(&image_indices);
         let started = Instant::now();
-        let present_result = self
-            .swapchain
-            .loader
-            .queue_present(self.queue, &present_info);
+        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+        let present_result = unsafe {
+            self.swapchain
+                .loader
+                .queue_present(self.queue, &present_info)
+        };
         waits.present = started.elapsed();
         self.frames.last_waits = waits;
         let extent = self.swapchain.extent;
         let recreate = vk_util::recreate_after_present(present_result, extent, || {
-            vk_util::surface_extent(&self.surface_loader, self.physical_device, self.surface)
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe {
+                vk_util::surface_extent(&self.surface_loader, self.physical_device, self.surface)
+            }
         })?;
         if recreate {
             // The frame just submitted still uses the framebuffer, the
             // depth buffer and the semaphore this destroys.
-            self.device.device_wait_idle()?;
-            self.create_swapchain(extent.width, extent.height)?;
+            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+            unsafe { self.device.device_wait_idle() }?;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { self.create_swapchain(extent.width, extent.height) }?;
         }
 
         self.frames.current = (self.frames.current + 1) % MAX_FRAMES_IN_FLIGHT;

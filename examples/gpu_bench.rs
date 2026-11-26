@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, bail};
 use glam::Vec3;
+use numerobis::vulkan::swapchain::PresentMode;
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::WindowEvent;
@@ -94,10 +95,10 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
         std::env::var("MELON_BENCH_PRESENT")
             .ok()
             .and_then(|name| match name.as_str() {
-                "fifo" => Some(ash::vk::PresentModeKHR::FIFO),
-                "mailbox" => Some(ash::vk::PresentModeKHR::MAILBOX),
-                "immediate" => Some(ash::vk::PresentModeKHR::IMMEDIATE),
-                "latest" => Some(melon::renderer::FIFO_LATEST_READY),
+                "fifo" => Some(PresentMode::Fifo),
+                "mailbox" => Some(PresentMode::Mailbox),
+                "immediate" => Some(PresentMode::Immediate),
+                "latest" => Some(PresentMode::FifoLatestReady),
                 _ => None,
             });
     renderer.set_present(false, requested)?;

@@ -149,10 +149,13 @@ mod tests {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let prev = std::env::var_os("MELON_HOME");
+        // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
         unsafe { std::env::set_var("MELON_HOME", "/tmp/melon-home-test") };
         assert_eq!(dir(), PathBuf::from("/tmp/melon-home-test"));
         match prev {
+            // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
             Some(v) => unsafe { std::env::set_var("MELON_HOME", v) },
+            // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
             None => unsafe { std::env::remove_var("MELON_HOME") },
         }
     }
@@ -181,10 +184,12 @@ mod tests {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let prev = std::env::var_os("MELON_HOME");
+        // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
         unsafe { std::env::remove_var("MELON_HOME") };
         let assets = default_assets_dir();
         assert_eq!(assets, platform_data().join("assets"));
         if let Some(v) = prev {
+            // SAFETY: the test holds `ENV_LOCK`, so no other test touches the environment meanwhile.
             unsafe { std::env::set_var("MELON_HOME", v) }
         }
     }

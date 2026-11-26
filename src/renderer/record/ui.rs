@@ -18,12 +18,15 @@ impl Renderer {
             cmd,
             pipelines: &self.pipelines.ui,
             gui_set: self.gui_uniforms.set(self.frames.current),
-            vertices: self.ui_vertices.buffers[self.frames.current],
-            indices: self.ui_vertices.indices.0,
+            vertices: self.ui_vertices.buffer(self.frames.current),
+            indices: self.ui_vertices.indices,
             extent: self.swapchain.extent,
         };
-        pipeline::ui::record(&target, frame.ui_size, calls, full_scissor, |texture| {
-            self.textures.list[texture.0].descriptor_set
-        });
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            pipeline::ui::record(&target, frame.ui_size, calls, full_scissor, |texture| {
+                self.textures.list[texture.0].descriptor_set
+            })
+        };
     }
 }

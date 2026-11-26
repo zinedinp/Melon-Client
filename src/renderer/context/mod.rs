@@ -17,6 +17,7 @@ use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
 impl Renderer {
     pub fn new(window: &winit::window::Window, enable_validation: bool) -> anyhow::Result<Self> {
+        // SAFETY: the renderer makes every handle itself, so the module's rules start out true.
         unsafe { Self::new_inner(window, enable_validation) }
     }
 
@@ -25,127 +26,181 @@ impl Renderer {
         enable_validation: bool,
     ) -> anyhow::Result<Self> {
         residency::warm_up();
-        let entry = melon_base::gfx::loader::load()?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let entry = unsafe { melon_base::gfx::loader::load() }?;
         let display = window.display_handle()?.as_raw();
         let instance::Instance {
             instance,
             debug,
             labels,
             api,
-        } = instance::create(&entry, display, enable_validation)?;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+        } = unsafe { instance::create(&entry, display, enable_validation) }?;
         let (surface_loader, surface) =
-            instance::create_surface(&entry, &instance, display, window.window_handle()?.as_raw())?;
+            // SAFETY: `instance` is live, and the physical device and surface are its own.
+            unsafe { instance::create_surface(&entry, &instance, display, window.window_handle()?.as_raw()) }?;
 
-        let gpu = device::pick(&instance, api, &surface_loader, surface)?;
-        let features = features::probe(&instance, gpu.physical, api, features::GAME);
-        let (device, queue) = device::create(&instance, &gpu, &features)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let gpu = unsafe { device::pick(&instance, api, &surface_loader, surface) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let features = unsafe { features::probe(&instance, gpu.physical, api, features::GAME) };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let (device, queue) = unsafe { device::create(&instance, &gpu, &features) }?;
         let mem_props = gpu.mem_props;
         let residency = residency::Residency::new(&features, gpu.info.gpu);
 
-        let depth_format = find_depth_format(&instance, gpu.physical)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let depth_format = unsafe { find_depth_format(&instance, gpu.physical) }?;
         let surface_format = choose_surface_format(&surface_loader, gpu.physical, surface)?.format;
-        let passes = pipelines::create_render_passes(&device, surface_format, depth_format)?;
-        let post = super::post::gpu::Post::new(&device, surface_format)?;
-        let pictures = super::picture::Pictures::new(&device, surface_format, depth_format)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let passes =
+            unsafe { pipelines::create_render_passes(&device, surface_format, depth_format) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let post = unsafe { super::post::gpu::Post::new(&device, surface_format) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let pictures =
+            unsafe { super::picture::Pictures::new(&device, surface_format, depth_format) }?;
 
-        let layouts = pipelines::create_set_layouts(&device)?;
-        let gui_uniforms = super::gui_uniforms::GuiUniforms::new(
-            &device,
-            &mem_props,
-            layouts.gui,
-            MAX_FRAMES_IN_FLIGHT,
-        )?;
-        let indirect = if features.multi_draw() {
-            Some(super::indirect::DrawBuffers::new(
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let layouts = unsafe { pipelines::create_set_layouts(&device) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let gui_uniforms = unsafe {
+            super::gui_uniforms::GuiUniforms::new(
                 &device,
+                &mem_props,
+                layouts.gui,
                 MAX_FRAMES_IN_FLIGHT,
-                layouts.world.draws,
-            )?)
+            )
+        }?;
+        let indirect = if features.multi_draw() {
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            Some(unsafe {
+                super::indirect::DrawBuffers::new(
+                    &device,
+                    MAX_FRAMES_IN_FLIGHT,
+                    layouts.world.draws,
+                )
+            }?)
         } else {
             None
         };
         // Level 0 of its pyramid is read from the depth buffer.
-        let depth_readable = instance
-            .get_physical_device_format_properties(gpu.physical, depth_format)
-            .optimal_tiling_features
-            .contains(vk::FormatFeatureFlags::SAMPLED_IMAGE);
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        let depth_readable =
+            unsafe { instance.get_physical_device_format_properties(gpu.physical, depth_format) }
+                .optimal_tiling_features
+                .contains(vk::FormatFeatureFlags::SAMPLED_IMAGE);
         let draw_count = features.draw_count();
         let occlusion = if let Some(draw_count) = draw_count
             && indirect.is_some()
             && depth_readable
             && super::occlusion::wanted()
         {
-            Some(super::occlusion::Occlusion::new(
-                &device,
-                &mem_props,
-                MAX_FRAMES_IN_FLIGHT,
-                Some(draw_count.load(&instance, &device)),
-            )?)
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            Some(unsafe {
+                super::occlusion::Occlusion::new(
+                    &device,
+                    &mem_props,
+                    MAX_FRAMES_IN_FLIGHT,
+                    Some(draw_count.load(&instance, &device)),
+                )
+            }?)
         } else {
             None
         };
-        let globals = super::globals::GlobalBuffers::new(
-            &device,
-            &mem_props,
-            layouts.world.globals,
-            MAX_FRAMES_IN_FLIGHT,
-        )?;
-        let pipelines = pipelines::create(
-            &device,
-            passes.clear,
-            post.color_pass,
-            &layouts,
-            features.multi_draw(),
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let globals = unsafe {
+            super::globals::GlobalBuffers::new(
+                &device,
+                &mem_props,
+                layouts.world.globals,
+                MAX_FRAMES_IN_FLIGHT,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let pipelines = unsafe {
+            pipelines::create(
+                &device,
+                passes.clear,
+                post.color_pass,
+                &layouts,
+                features.multi_draw(),
+            )
+        }?;
 
         let descriptor_pools =
-            super::descriptor_pools::DescriptorPools::new(&device, MAX_TEXTURES)?;
-        let samplers = resources::create_samplers(&device)?;
-        let blur = blur::Blur::new(
-            (&instance, gpu.physical),
-            &device,
-            surface_format,
-            passes.clear,
-            layouts.texture,
-            &descriptor_pools,
-            samplers.linear,
-        )?;
-        let frames = resources::create_frames(&device, gpu.queue_family)?;
-        let ui_vertices = resources::create_ui_vertices(&device, &mem_props)?;
-        let sky_cube = resources::create_sky_cube(&device, &mem_props)?;
-        let meshes = mesh_arena::MeshArena::new::<super::WorldVertex>(
-            &device,
-            &mem_props,
-            MAX_FRAMES_IN_FLIGHT,
-            mesh_arena::Kind::Vertices,
-        )?;
-        let quad_meshes = mesh_arena::MeshArena::new::<super::TerrainQuad>(
-            &device,
-            &mem_props,
-            MAX_FRAMES_IN_FLIGHT,
-            mesh_arena::Kind::Quads,
-        )?;
-        let particle_meshes = mesh_arena::MeshArena::new::<super::ParticleQuad>(
-            &device,
-            &mem_props,
-            MAX_FRAMES_IN_FLIGHT,
-            mesh_arena::Kind::Instances,
-        )?;
-        let index_lists = mesh_arena::MeshArena::new::<u32>(
-            &device,
-            &mem_props,
-            MAX_FRAMES_IN_FLIGHT,
-            mesh_arena::Kind::Indices,
-        )?;
-        let quad_sets = super::quad_table::QuadSets::new(&device)?;
-        let gpu_timer = super::gpu_timer::GpuTimer::new(
-            &device,
-            &gpu.limits,
-            gpu.timestamp_bits,
-            MAX_FRAMES_IN_FLIGHT,
-            labels.then(|| ash::ext::debug_utils::Device::new(&instance, &device)),
-            features.statistics(),
-        );
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { super::descriptor_pools::DescriptorPools::new(&device, MAX_TEXTURES) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let samplers = unsafe { resources::create_samplers(&device) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let blur = unsafe {
+            blur::Blur::new(
+                (&instance, gpu.physical),
+                &device,
+                surface_format,
+                passes.clear,
+                layouts.texture,
+                &descriptor_pools,
+                samplers.linear,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let frames = unsafe { resources::create_frames(&device, gpu.queue_family) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let ui_vertices =
+            unsafe { super::UiVertices::new(&device, &mem_props, MAX_FRAMES_IN_FLIGHT) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let sky_cube = unsafe { resources::create_sky_cube(&device, &mem_props) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let meshes = unsafe {
+            mesh_arena::MeshArena::new::<super::WorldVertex>(
+                &device,
+                &mem_props,
+                MAX_FRAMES_IN_FLIGHT,
+                mesh_arena::Kind::Vertices,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let quad_meshes = unsafe {
+            mesh_arena::MeshArena::new::<super::TerrainQuad>(
+                &device,
+                &mem_props,
+                MAX_FRAMES_IN_FLIGHT,
+                mesh_arena::Kind::Quads,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let particle_meshes = unsafe {
+            mesh_arena::MeshArena::new::<super::ParticleQuad>(
+                &device,
+                &mem_props,
+                MAX_FRAMES_IN_FLIGHT,
+                mesh_arena::Kind::Instances,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let index_lists = unsafe {
+            mesh_arena::MeshArena::new::<u32>(
+                &device,
+                &mem_props,
+                MAX_FRAMES_IN_FLIGHT,
+                mesh_arena::Kind::Indices,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let quad_sets = unsafe { super::quad_table::QuadSets::new(&device) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let gpu_timer = unsafe {
+            super::gpu_timer::GpuTimer::new(
+                &device,
+                &gpu.limits,
+                gpu.timestamp_bits,
+                MAX_FRAMES_IN_FLIGHT,
+                labels.then(|| ash::ext::debug_utils::Device::new(&instance, &device)),
+                features.statistics(),
+            )
+        };
         let swapchain = resources::swapchain(
             ash::khr::swapchain::Device::new(&instance, &device),
             features.latest_ready(),
@@ -195,7 +250,8 @@ impl Renderer {
 
         renderer.swapchain.depth_sampled = renderer.occlusion.is_some();
         let size = window.inner_size();
-        renderer.create_swapchain(size.width.max(1), size.height.max(1))?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { renderer.create_swapchain(size.width.max(1), size.height.max(1)) }?;
 
         let white = RgbaImage::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
         renderer.textures.white = renderer.load_texture(&white)?;

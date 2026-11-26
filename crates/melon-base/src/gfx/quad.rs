@@ -31,6 +31,8 @@ pub struct Vertex {
 }
 
 const _: () = assert!(std::mem::size_of::<Vertex>() == 20);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl numerobis::elem::Pod for Vertex {}
 
 /// `0..=1` as a byte, rounded to the nearest; `+ 0.5` and a cast, as x86-64
 /// has no inline `round` before SSE4.1.

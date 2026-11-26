@@ -12,6 +12,7 @@
 //! and every draw issued twice) costs more than it saves in open terrain.
 
 use ash::vk;
+use numerobis::elem::as_bytes;
 
 use super::pipeline::create_shader_module;
 use super::vk_util::{self, create_buffer, create_sampler};
@@ -75,10 +76,14 @@ impl Pyramid {
 
     unsafe fn destroy(&self, device: &ash::Device) {
         for &view in self.levels.iter().chain([&self.whole, &self.depth]) {
-            device.destroy_image_view(view, None);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { device.destroy_image_view(view, None) };
         }
-        device.destroy_image(self.image, None);
-        vk_util::free_memory(device, self.memory);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe {
+            device.destroy_image(self.image, None);
+            vk_util::free_memory(device, self.memory);
+        }
     }
 }
 
@@ -134,10 +139,13 @@ unsafe fn set_layout(
                 .stage_flags(vk::ShaderStageFlags::COMPUTE)
         })
         .collect();
-    Ok(device.create_descriptor_set_layout(
-        &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_descriptor_set_layout(
+            &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
+            None,
+        )
+    }?)
 }
 
 unsafe fn pipeline_layout(
@@ -149,12 +157,15 @@ unsafe fn pipeline_layout(
         .stage_flags(vk::ShaderStageFlags::COMPUTE)
         .size(push_size)];
     let sets = [set];
-    Ok(device.create_pipeline_layout(
-        &vk::PipelineLayoutCreateInfo::default()
-            .set_layouts(&sets)
-            .push_constant_ranges(&ranges),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_pipeline_layout(
+            &vk::PipelineLayoutCreateInfo::default()
+                .set_layouts(&sets)
+                .push_constant_ranges(&ranges),
+            None,
+        )
+    }?)
 }
 
 unsafe fn compute_pipeline(
@@ -162,7 +173,8 @@ unsafe fn compute_pipeline(
     layout: vk::PipelineLayout,
     spirv: &[u8],
 ) -> anyhow::Result<vk::Pipeline> {
-    let module = create_shader_module(device, spirv)?;
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let module = unsafe { create_shader_module(device, spirv) }?;
     let stage = vk::PipelineShaderStageCreateInfo::default()
         .stage(vk::ShaderStageFlags::COMPUTE)
         .module(module)
@@ -170,8 +182,11 @@ unsafe fn compute_pipeline(
     let info = vk::ComputePipelineCreateInfo::default()
         .stage(stage)
         .layout(layout);
-    let result = device.create_compute_pipelines(vk::PipelineCache::null(), &[info], None);
-    device.destroy_shader_module(module, None);
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let result =
+        unsafe { device.create_compute_pipelines(vk::PipelineCache::null(), &[info], None) };
+    // SAFETY: made by this device, and no frame in flight uses it any more.
+    unsafe { device.destroy_shader_module(module, None) };
     match result {
         Ok(pipelines) => Ok(pipelines[0]),
         Err((_, e)) => Err(e.into()),
@@ -183,13 +198,16 @@ unsafe fn create_visible(
     mem_props: &vk::PhysicalDeviceMemoryProperties,
     slots: u32,
 ) -> anyhow::Result<Visible> {
-    let (buffer, memory) = create_buffer(
-        device,
-        mem_props,
-        u64::from(slots) * 4,
-        vk::BufferUsageFlags::STORAGE_BUFFER | vk::BufferUsageFlags::TRANSFER_DST,
-        vk::MemoryPropertyFlags::DEVICE_LOCAL,
-    )?;
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    let (buffer, memory) = unsafe {
+        create_buffer(
+            device,
+            mem_props,
+            u64::from(slots) * 4,
+            vk::BufferUsageFlags::STORAGE_BUFFER | vk::BufferUsageFlags::TRANSFER_DST,
+            super::Place::DEVICE,
+        )
+    }?;
     Ok(Visible {
         buffer,
         memory,
@@ -208,15 +226,18 @@ unsafe fn memory_barrier(
     let barrier = vk::MemoryBarrier::default()
         .src_access_mask(src_access)
         .dst_access_mask(dst_access);
-    device.cmd_pipeline_barrier(
-        cmd,
-        src_stage,
-        dst_stage,
-        vk::DependencyFlags::empty(),
-        &[barrier],
-        &[],
-        &[],
-    );
+    // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+    unsafe {
+        device.cmd_pipeline_barrier(
+            cmd,
+            src_stage,
+            dst_stage,
+            vk::DependencyFlags::empty(),
+            &[barrier],
+            &[],
+            &[],
+        )
+    };
 }
 
 impl Occlusion {
@@ -228,26 +249,38 @@ impl Occlusion {
         draw_count: Option<vk::PFN_vkCmdDrawIndexedIndirectCount>,
     ) -> anyhow::Result<Self> {
         use vk::DescriptorType as Ty;
-        let reduce_layout = set_layout(device, &[Ty::COMBINED_IMAGE_SAMPLER, Ty::STORAGE_IMAGE])?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let reduce_layout =
+            unsafe { set_layout(device, &[Ty::COMBINED_IMAGE_SAMPLER, Ty::STORAGE_IMAGE]) }?;
         // `occlusion.glsl`'s bindings.
-        let cull_layout = set_layout(
-            device,
-            &[
-                Ty::STORAGE_BUFFER,
-                Ty::STORAGE_BUFFER,
-                Ty::STORAGE_BUFFER,
-                Ty::COMBINED_IMAGE_SAMPLER,
-                Ty::STORAGE_BUFFER,
-                Ty::STORAGE_BUFFER,
-                Ty::STORAGE_BUFFER,
-            ],
-        )?;
-        let reduce_pipeline_layout = pipeline_layout(device, reduce_layout, HIZ_PUSH_SIZE)?;
-        let cull_pipeline_layout = pipeline_layout(device, cull_layout, CULL_PUSH_SIZE)?;
-        let hiz = compute_pipeline(device, reduce_pipeline_layout, HIZ_SPV)?;
-        let select = compute_pipeline(device, cull_pipeline_layout, SELECT_SPV)?;
-        let cull = compute_pipeline(device, cull_pipeline_layout, CULL_SPV)?;
-        let compact = compute_pipeline(device, cull_pipeline_layout, COMPACT_SPV)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let cull_layout = unsafe {
+            set_layout(
+                device,
+                &[
+                    Ty::STORAGE_BUFFER,
+                    Ty::STORAGE_BUFFER,
+                    Ty::STORAGE_BUFFER,
+                    Ty::COMBINED_IMAGE_SAMPLER,
+                    Ty::STORAGE_BUFFER,
+                    Ty::STORAGE_BUFFER,
+                    Ty::STORAGE_BUFFER,
+                ],
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let reduce_pipeline_layout =
+            unsafe { pipeline_layout(device, reduce_layout, HIZ_PUSH_SIZE) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let cull_pipeline_layout = unsafe { pipeline_layout(device, cull_layout, CULL_PUSH_SIZE) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let hiz = unsafe { compute_pipeline(device, reduce_pipeline_layout, HIZ_SPV) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let select = unsafe { compute_pipeline(device, cull_pipeline_layout, SELECT_SPV) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let cull = unsafe { compute_pipeline(device, cull_pipeline_layout, CULL_SPV) }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let compact = unsafe { compute_pipeline(device, cull_pipeline_layout, COMPACT_SPV) }?;
         let frames = frames as u32;
         let sizes = [
             vk::DescriptorPoolSize {
@@ -263,28 +296,37 @@ impl Occlusion {
                 descriptor_count: 6 * frames,
             },
         ];
-        let pool = device.create_descriptor_pool(
-            &vk::DescriptorPoolCreateInfo::default()
-                .pool_sizes(&sizes)
-                .max_sets(MAX_LEVELS + frames),
-            None,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let pool = unsafe {
+            device.create_descriptor_pool(
+                &vk::DescriptorPoolCreateInfo::default()
+                    .pool_sizes(&sizes)
+                    .max_sets(MAX_LEVELS + frames),
+                None,
+            )
+        }?;
         let allocate = |layout, count: u32| {
             let layouts = vec![layout; count as usize];
-            device.allocate_descriptor_sets(
-                &vk::DescriptorSetAllocateInfo::default()
-                    .descriptor_pool(pool)
-                    .set_layouts(&layouts),
-            )
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe {
+                device.allocate_descriptor_sets(
+                    &vk::DescriptorSetAllocateInfo::default()
+                        .descriptor_pool(pool)
+                        .set_layouts(&layouts),
+                )
+            }
         };
         let reduce_sets = allocate(reduce_layout, MAX_LEVELS)?;
         let cull_sets = allocate(cull_layout, frames)?;
-        let sampler = create_sampler(
-            device,
-            vk::Filter::NEAREST,
-            true,
-            vk::SamplerAddressMode::CLAMP_TO_EDGE,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let sampler = unsafe {
+            create_sampler(
+                device,
+                vk::Filter::NEAREST,
+                true,
+                vk::SamplerAddressMode::CLAMP_TO_EDGE,
+            )
+        }?;
         Ok(Self {
             reduce_layout,
             cull_layout,
@@ -298,7 +340,8 @@ impl Occlusion {
             sampler,
             reduce_sets,
             cull_sets,
-            visible: create_visible(device, mem_props, MIN_SLOTS)?,
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            visible: unsafe { create_visible(device, mem_props, MIN_SLOTS) }?,
             pyramid: None,
             draw_count,
         })
@@ -318,51 +361,47 @@ impl Occlusion {
         depth_format: vk::Format,
         screen: vk::Extent2D,
     ) -> anyhow::Result<()> {
-        self.release_sized(device);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.release_sized(device) };
         if screen.width == 0 || screen.height == 0 {
             return Ok(());
         }
         let levels = level_count(screen);
         let base = base_size(screen);
         let format = vk::Format::R32_SFLOAT;
-        let image = device.create_image(
-            &vk::ImageCreateInfo::default()
-                .image_type(vk::ImageType::TYPE_2D)
-                .format(format)
-                .extent(vk::Extent3D {
-                    width: base.width,
-                    height: base.height,
-                    depth: 1,
-                })
-                .mip_levels(levels)
-                .array_layers(1)
-                .samples(vk::SampleCountFlags::TYPE_1)
-                .tiling(vk::ImageTiling::OPTIMAL)
-                .usage(vk::ImageUsageFlags::STORAGE | vk::ImageUsageFlags::SAMPLED)
-                .sharing_mode(vk::SharingMode::EXCLUSIVE)
-                .initial_layout(vk::ImageLayout::UNDEFINED),
-            None,
-        )?;
-        let req = device.get_image_memory_requirements(image);
-        let memory = match super::find_memory_type(
-            mem_props,
-            req.memory_type_bits,
-            vk::MemoryPropertyFlags::DEVICE_LOCAL,
-        )
-        .and_then(|index| {
-            Ok(vk_util::allocate_memory(
-                device,
-                &vk::MemoryAllocateInfo::default()
-                    .allocation_size(req.size)
-                    .memory_type_index(index),
-            )?)
-        }) {
-            Ok(memory) => memory,
-            Err(e) => {
-                device.destroy_image(image, None);
-                return Err(e);
-            }
-        };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let image = unsafe {
+            device.create_image(
+                &vk::ImageCreateInfo::default()
+                    .image_type(vk::ImageType::TYPE_2D)
+                    .format(format)
+                    .extent(vk::Extent3D {
+                        width: base.width,
+                        height: base.height,
+                        depth: 1,
+                    })
+                    .mip_levels(levels)
+                    .array_layers(1)
+                    .samples(vk::SampleCountFlags::TYPE_1)
+                    .tiling(vk::ImageTiling::OPTIMAL)
+                    .usage(vk::ImageUsageFlags::STORAGE | vk::ImageUsageFlags::SAMPLED)
+                    .sharing_mode(vk::SharingMode::EXCLUSIVE)
+                    .initial_layout(vk::ImageLayout::UNDEFINED),
+                None,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let req = unsafe { device.get_image_memory_requirements(image) };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let memory =
+            match unsafe { vk_util::allocate_for(device, mem_props, req, super::Place::DEVICE) } {
+                Ok((memory, _)) => memory,
+                Err(e) => {
+                    // SAFETY: made by this device, and no frame in flight uses it any more.
+                    unsafe { device.destroy_image(image, None) };
+                    return Err(e);
+                }
+            };
         let mut pyramid = Pyramid {
             image,
             memory,
@@ -370,33 +409,30 @@ impl Occlusion {
             whole: vk::ImageView::null(),
             depth: vk::ImageView::null(),
             depth_image: depth,
-            depth_aspect: if matches!(
-                depth_format,
-                vk::Format::D32_SFLOAT_S8_UINT | vk::Format::D24_UNORM_S8_UINT
-            ) {
-                vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
-            } else {
-                vk::ImageAspectFlags::DEPTH
-            },
+            depth_aspect: vk_util::aspect_mask(depth_format),
             screen,
         };
         let built = (|| -> anyhow::Result<()> {
-            device.bind_image_memory(image, memory, 0)?;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { device.bind_image_memory(image, memory, 0) }?;
             let view = |image, format, aspect, base_mip_level, level_count| {
-                device.create_image_view(
-                    &vk::ImageViewCreateInfo::default()
-                        .image(image)
-                        .view_type(vk::ImageViewType::TYPE_2D)
-                        .format(format)
-                        .subresource_range(vk::ImageSubresourceRange {
-                            aspect_mask: aspect,
-                            base_mip_level,
-                            level_count,
-                            base_array_layer: 0,
-                            layer_count: 1,
-                        }),
-                    None,
-                )
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                unsafe {
+                    device.create_image_view(
+                        &vk::ImageViewCreateInfo::default()
+                            .image(image)
+                            .view_type(vk::ImageViewType::TYPE_2D)
+                            .format(format)
+                            .subresource_range(vk::ImageSubresourceRange {
+                                aspect_mask: aspect,
+                                base_mip_level,
+                                level_count,
+                                base_array_layer: 0,
+                                layer_count: 1,
+                            }),
+                        None,
+                    )
+                }
             };
             let color = vk::ImageAspectFlags::COLOR;
             for level in 0..levels {
@@ -413,11 +449,15 @@ impl Occlusion {
                 .chain([&pyramid.whole, &pyramid.depth])
             {
                 if view != vk::ImageView::null() {
-                    device.destroy_image_view(view, None);
+                    // SAFETY: made by this device, and no frame in flight uses it any more.
+                    unsafe { device.destroy_image_view(view, None) };
                 }
             }
-            device.destroy_image(image, None);
-            vk_util::free_memory(device, memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe {
+                device.destroy_image(image, None);
+                vk_util::free_memory(device, memory);
+            }
             return Err(e);
         }
         for level in 0..levels {
@@ -437,21 +477,24 @@ impl Occlusion {
                 .image_view(pyramid.levels[level as usize])
                 .image_layout(vk::ImageLayout::GENERAL)];
             let set = self.reduce_sets[level as usize];
-            device.update_descriptor_sets(
-                &[
-                    vk::WriteDescriptorSet::default()
-                        .dst_set(set)
-                        .dst_binding(0)
-                        .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-                        .image_info(&src_info),
-                    vk::WriteDescriptorSet::default()
-                        .dst_set(set)
-                        .dst_binding(1)
-                        .descriptor_type(vk::DescriptorType::STORAGE_IMAGE)
-                        .image_info(&dst_info),
-                ],
-                &[],
-            );
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe {
+                device.update_descriptor_sets(
+                    &[
+                        vk::WriteDescriptorSet::default()
+                            .dst_set(set)
+                            .dst_binding(0)
+                            .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
+                            .image_info(&src_info),
+                        vk::WriteDescriptorSet::default()
+                            .dst_set(set)
+                            .dst_binding(1)
+                            .descriptor_type(vk::DescriptorType::STORAGE_IMAGE)
+                            .image_info(&dst_info),
+                    ],
+                    &[],
+                )
+            };
         }
         self.pyramid = Some(pyramid);
         Ok(())
@@ -460,7 +503,8 @@ impl Occlusion {
     /// Drops the pyramid; no frame in flight may use it.
     pub unsafe fn release_sized(&mut self, device: &ash::Device) {
         if let Some(pyramid) = self.pyramid.take() {
-            pyramid.destroy(device);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { pyramid.destroy(device) };
         }
     }
 
@@ -477,11 +521,16 @@ impl Occlusion {
     ) -> anyhow::Result<()> {
         if slots > self.visible.slots {
             // Only while a world loads, a few times at most.
-            device.device_wait_idle()?;
-            let grown = create_visible(device, mem_props, slots.next_power_of_two())?;
+            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+            unsafe { device.device_wait_idle() }?;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            let grown = unsafe { create_visible(device, mem_props, slots.next_power_of_two()) }?;
             let old = std::mem::replace(&mut self.visible, grown);
-            device.destroy_buffer(old.buffer, None);
-            vk_util::free_memory(device, old.memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe {
+                device.destroy_buffer(old.buffer, None);
+                vk_util::free_memory(device, old.memory);
+            }
         }
         let Some(pyramid) = &self.pyramid else {
             return Ok(());
@@ -514,18 +563,21 @@ impl Occlusion {
                 .descriptor_type(ty)
         };
         use vk::DescriptorType as Ty;
-        device.update_descriptor_sets(
-            &[
-                write(0, Ty::STORAGE_BUFFER).buffer_info(&commands),
-                write(1, Ty::STORAGE_BUFFER).buffer_info(&bounds),
-                write(2, Ty::STORAGE_BUFFER).buffer_info(&visible),
-                write(3, Ty::COMBINED_IMAGE_SAMPLER).image_info(&hiz),
-                write(4, Ty::STORAGE_BUFFER).buffer_info(&keep),
-                write(5, Ty::STORAGE_BUFFER).buffer_info(&runs),
-                write(6, Ty::STORAGE_BUFFER).buffer_info(&counts),
-            ],
-            &[],
-        );
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe {
+            device.update_descriptor_sets(
+                &[
+                    write(0, Ty::STORAGE_BUFFER).buffer_info(&commands),
+                    write(1, Ty::STORAGE_BUFFER).buffer_info(&bounds),
+                    write(2, Ty::STORAGE_BUFFER).buffer_info(&visible),
+                    write(3, Ty::COMBINED_IMAGE_SAMPLER).image_info(&hiz),
+                    write(4, Ty::STORAGE_BUFFER).buffer_info(&keep),
+                    write(5, Ty::STORAGE_BUFFER).buffer_info(&runs),
+                    write(6, Ty::STORAGE_BUFFER).buffer_info(&counts),
+                ],
+                &[],
+            )
+        };
         Ok(())
     }
 
@@ -540,55 +592,69 @@ impl Occlusion {
     ) {
         if !self.visible.cleared {
             self.visible.cleared = true;
-            device.cmd_fill_buffer(cmd, self.visible.buffer, 0, vk::WHOLE_SIZE, 0);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe { device.cmd_fill_buffer(cmd, self.visible.buffer, 0, vk::WHOLE_SIZE, 0) };
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                memory_barrier(
+                    device,
+                    cmd,
+                    (
+                        vk::PipelineStageFlags::TRANSFER,
+                        vk::AccessFlags::TRANSFER_WRITE,
+                    ),
+                    (
+                        vk::PipelineStageFlags::COMPUTE_SHADER,
+                        vk::AccessFlags::SHADER_READ,
+                    ),
+                )
+            };
+        }
+        // The last frame's results.
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
             memory_barrier(
                 device,
                 cmd,
                 (
-                    vk::PipelineStageFlags::TRANSFER,
-                    vk::AccessFlags::TRANSFER_WRITE,
+                    vk::PipelineStageFlags::COMPUTE_SHADER,
+                    vk::AccessFlags::SHADER_WRITE,
                 ),
                 (
                     vk::PipelineStageFlags::COMPUTE_SHADER,
                     vk::AccessFlags::SHADER_READ,
                 ),
-            );
-        }
-        // The last frame's results.
-        memory_barrier(
-            device,
-            cmd,
-            (
-                vk::PipelineStageFlags::COMPUTE_SHADER,
-                vk::AccessFlags::SHADER_WRITE,
-            ),
-            (
-                vk::PipelineStageFlags::COMPUTE_SHADER,
-                vk::AccessFlags::SHADER_READ,
-            ),
-        );
+            )
+        };
         let words = push(Default::default(), count, [0.0; 2], 0);
-        self.dispatch(
-            device,
-            cmd,
-            self.select,
-            frame,
-            &words,
-            count.div_ceil(DRAWS_PER_GROUP),
-        );
-        self.record_compact(device, cmd, frame, (count, runs), 0);
-        memory_barrier(
-            device,
-            cmd,
-            (
-                vk::PipelineStageFlags::COMPUTE_SHADER,
-                vk::AccessFlags::SHADER_WRITE,
-            ),
-            (
-                vk::PipelineStageFlags::DRAW_INDIRECT | vk::PipelineStageFlags::COMPUTE_SHADER,
-                vk::AccessFlags::INDIRECT_COMMAND_READ | vk::AccessFlags::SHADER_READ,
-            ),
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.dispatch(
+                device,
+                cmd,
+                self.select,
+                frame,
+                &words,
+                count.div_ceil(DRAWS_PER_GROUP),
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.record_compact(device, cmd, frame, (count, runs), 0) };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            memory_barrier(
+                device,
+                cmd,
+                (
+                    vk::PipelineStageFlags::COMPUTE_SHADER,
+                    vk::AccessFlags::SHADER_WRITE,
+                ),
+                (
+                    vk::PipelineStageFlags::DRAW_INDIRECT | vk::PipelineStageFlags::COMPUTE_SHADER,
+                    vk::AccessFlags::INDIRECT_COMMAND_READ | vk::AccessFlags::SHADER_READ,
+                ),
+            )
+        };
     }
 
     /// Packs phase `phase`'s kept draws, after a barrier for what picked them.
@@ -600,20 +666,24 @@ impl Occlusion {
         (count, runs): (u32, u32),
         phase: u32,
     ) {
-        memory_barrier(
-            device,
-            cmd,
-            (
-                vk::PipelineStageFlags::COMPUTE_SHADER,
-                vk::AccessFlags::SHADER_WRITE,
-            ),
-            (
-                vk::PipelineStageFlags::COMPUTE_SHADER,
-                vk::AccessFlags::SHADER_READ,
-            ),
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            memory_barrier(
+                device,
+                cmd,
+                (
+                    vk::PipelineStageFlags::COMPUTE_SHADER,
+                    vk::AccessFlags::SHADER_WRITE,
+                ),
+                (
+                    vk::PipelineStageFlags::COMPUTE_SHADER,
+                    vk::AccessFlags::SHADER_READ,
+                ),
+            )
+        };
         let words = push(Default::default(), count, [0.0; 2], phase);
-        self.dispatch(device, cmd, self.compact, frame, &words, runs);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.dispatch(device, cmd, self.compact, frame, &words, runs) };
     }
 
     /// Builds the pyramid from the depth phase 1 left and picks phase 2's
@@ -661,16 +731,20 @@ impl Occlusion {
                 .image(pyramid.image)
                 .subresource_range(range(vk::ImageAspectFlags::COLOR, 0, levels)),
         ];
-        device.cmd_pipeline_barrier(
-            cmd,
-            vk::PipelineStageFlags::ALL_GRAPHICS | vk::PipelineStageFlags::COMPUTE_SHADER,
-            vk::PipelineStageFlags::COMPUTE_SHADER,
-            vk::DependencyFlags::empty(),
-            &[],
-            &[],
-            &barriers,
-        );
-        device.cmd_bind_pipeline(cmd, vk::PipelineBindPoint::COMPUTE, self.hiz);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::ALL_GRAPHICS | vk::PipelineStageFlags::COMPUTE_SHADER,
+                vk::PipelineStageFlags::COMPUTE_SHADER,
+                vk::DependencyFlags::empty(),
+                &[],
+                &[],
+                &barriers,
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { device.cmd_bind_pipeline(cmd, vk::PipelineBindPoint::COMPUTE, self.hiz) };
         for level in 0..levels {
             let dst = pyramid.size(level);
             let src = if level == 0 {
@@ -678,28 +752,71 @@ impl Occlusion {
             } else {
                 pyramid.size(level - 1)
             };
-            device.cmd_bind_descriptor_sets(
-                cmd,
-                vk::PipelineBindPoint::COMPUTE,
-                self.reduce_pipeline_layout,
-                0,
-                &[self.reduce_sets[level as usize]],
-                &[],
-            );
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_bind_descriptor_sets(
+                    cmd,
+                    vk::PipelineBindPoint::COMPUTE,
+                    self.reduce_pipeline_layout,
+                    0,
+                    &[self.reduce_sets[level as usize]],
+                    &[],
+                )
+            };
             let sizes = [dst.width, dst.height, src.width, src.height].map(|v| v as i32);
-            device.cmd_push_constants(
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_push_constants(
+                    cmd,
+                    self.reduce_pipeline_layout,
+                    vk::ShaderStageFlags::COMPUTE,
+                    0,
+                    as_bytes(&sizes),
+                )
+            };
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_dispatch(
+                    cmd,
+                    dst.width.div_ceil(HIZ_GROUP),
+                    dst.height.div_ceil(HIZ_GROUP),
+                    1,
+                )
+            };
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                memory_barrier(
+                    device,
+                    cmd,
+                    (
+                        vk::PipelineStageFlags::COMPUTE_SHADER,
+                        vk::AccessFlags::SHADER_WRITE,
+                    ),
+                    (
+                        vk::PipelineStageFlags::COMPUTE_SHADER,
+                        vk::AccessFlags::SHADER_READ,
+                    ),
+                )
+            };
+        }
+        let screen = [pyramid.screen.width as f32, pyramid.screen.height as f32];
+        let words = push(*view_proj, count, screen, levels);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.dispatch(
+                device,
                 cmd,
-                self.reduce_pipeline_layout,
-                vk::ShaderStageFlags::COMPUTE,
-                0,
-                bytes_of(&sizes),
-            );
-            device.cmd_dispatch(
-                cmd,
-                dst.width.div_ceil(HIZ_GROUP),
-                dst.height.div_ceil(HIZ_GROUP),
-                1,
-            );
+                self.cull,
+                frame,
+                &words,
+                count.div_ceil(DRAWS_PER_GROUP),
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.record_compact(device, cmd, frame, (count, runs), 1) };
+        // Phase 2 reads the commands, and writes the depth this read.
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
             memory_barrier(
                 device,
                 cmd,
@@ -708,37 +825,13 @@ impl Occlusion {
                     vk::AccessFlags::SHADER_WRITE,
                 ),
                 (
-                    vk::PipelineStageFlags::COMPUTE_SHADER,
-                    vk::AccessFlags::SHADER_READ,
+                    vk::PipelineStageFlags::DRAW_INDIRECT
+                        | vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS
+                        | vk::PipelineStageFlags::LATE_FRAGMENT_TESTS,
+                    vk::AccessFlags::INDIRECT_COMMAND_READ,
                 ),
-            );
-        }
-        let screen = [pyramid.screen.width as f32, pyramid.screen.height as f32];
-        let words = push(*view_proj, count, screen, levels);
-        self.dispatch(
-            device,
-            cmd,
-            self.cull,
-            frame,
-            &words,
-            count.div_ceil(DRAWS_PER_GROUP),
-        );
-        self.record_compact(device, cmd, frame, (count, runs), 1);
-        // Phase 2 reads the commands, and writes the depth this read.
-        memory_barrier(
-            device,
-            cmd,
-            (
-                vk::PipelineStageFlags::COMPUTE_SHADER,
-                vk::AccessFlags::SHADER_WRITE,
-            ),
-            (
-                vk::PipelineStageFlags::DRAW_INDIRECT
-                    | vk::PipelineStageFlags::EARLY_FRAGMENT_TESTS
-                    | vk::PipelineStageFlags::LATE_FRAGMENT_TESTS,
-                vk::AccessFlags::INDIRECT_COMMAND_READ,
-            ),
-        );
+            )
+        };
     }
 
     /// Runs `pipeline` in `groups` workgroups with the push constants `push`.
@@ -751,40 +844,55 @@ impl Occlusion {
         push: &[u32; 20],
         groups: u32,
     ) {
-        device.cmd_bind_pipeline(cmd, vk::PipelineBindPoint::COMPUTE, pipeline);
-        device.cmd_bind_descriptor_sets(
-            cmd,
-            vk::PipelineBindPoint::COMPUTE,
-            self.cull_pipeline_layout,
-            0,
-            &[self.cull_sets[frame]],
-            &[],
-        );
-        device.cmd_push_constants(
-            cmd,
-            self.cull_pipeline_layout,
-            vk::ShaderStageFlags::COMPUTE,
-            0,
-            bytes_of(push),
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { device.cmd_bind_pipeline(cmd, vk::PipelineBindPoint::COMPUTE, pipeline) };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_bind_descriptor_sets(
+                cmd,
+                vk::PipelineBindPoint::COMPUTE,
+                self.cull_pipeline_layout,
+                0,
+                &[self.cull_sets[frame]],
+                &[],
+            )
+        };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_push_constants(
+                cmd,
+                self.cull_pipeline_layout,
+                vk::ShaderStageFlags::COMPUTE,
+                0,
+                as_bytes(push),
+            )
+        };
         if groups > 0 {
-            device.cmd_dispatch(cmd, groups, 1, 1);
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe { device.cmd_dispatch(cmd, groups, 1, 1) };
         }
     }
 
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
-        self.release_sized(device);
-        device.destroy_buffer(self.visible.buffer, None);
-        vk_util::free_memory(device, self.visible.memory);
-        device.destroy_sampler(self.sampler, None);
-        device.destroy_descriptor_pool(self.pool, None);
-        for pipeline in [self.hiz, self.select, self.cull, self.compact] {
-            device.destroy_pipeline(pipeline, None);
+        // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
+        unsafe {
+            self.release_sized(device);
+            device.destroy_buffer(self.visible.buffer, None);
+            vk_util::free_memory(device, self.visible.memory);
+            device.destroy_sampler(self.sampler, None);
+            device.destroy_descriptor_pool(self.pool, None);
         }
-        device.destroy_pipeline_layout(self.reduce_pipeline_layout, None);
-        device.destroy_pipeline_layout(self.cull_pipeline_layout, None);
-        device.destroy_descriptor_set_layout(self.reduce_layout, None);
-        device.destroy_descriptor_set_layout(self.cull_layout, None);
+        for pipeline in [self.hiz, self.select, self.cull, self.compact] {
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { device.destroy_pipeline(pipeline, None) };
+        }
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe {
+            device.destroy_pipeline_layout(self.reduce_pipeline_layout, None);
+            device.destroy_pipeline_layout(self.cull_pipeline_layout, None);
+            device.destroy_descriptor_set_layout(self.reduce_layout, None);
+            device.destroy_descriptor_set_layout(self.cull_layout, None);
+        }
     }
 }
 
@@ -799,11 +907,6 @@ fn push(view_proj: glam::Mat4, count: u32, screen: [f32; 2], extra: u32) -> [u32
     words[18] = count;
     words[19] = extra;
     words
-}
-
-fn bytes_of<T: Copy, const N: usize>(words: &[T; N]) -> &[u8] {
-    // SAFETY: plain 4-byte integers, no padding.
-    unsafe { std::slice::from_raw_parts(words.as_ptr().cast(), std::mem::size_of_val(words)) }
 }
 
 #[cfg(test)]

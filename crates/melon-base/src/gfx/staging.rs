@@ -2,14 +2,12 @@
 
 use ash::vk;
 
-use super::{create_buffer, vk_util};
+use super::mapped::MappedBuffer;
+use super::vk_util::Place;
 
 #[derive(Default)]
 pub struct Staging {
-    pub buffer: vk::Buffer,
-    memory: vk::DeviceMemory,
-    pub mapped: Option<std::ptr::NonNull<u8>>,
-    capacity: u64,
+    mapped: Option<MappedBuffer>,
     /// Frames in a row that needed a quarter of the buffer at most.
     slack: u32,
 }
@@ -29,13 +27,15 @@ impl Staging {
     ///
     /// `device` must be live; no frame in flight may read the buffer.
     pub unsafe fn trim(&mut self, device: &ash::Device, size: u64, keep: u64) {
-        if self.capacity <= keep || size.saturating_mul(4) > self.capacity {
+        let capacity = self.capacity();
+        if capacity <= keep || size.saturating_mul(4) > capacity {
             self.slack = 0;
             return;
         }
         self.slack += 1;
         if self.slack >= TRIM_AFTER_FRAMES {
-            self.destroy(device);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.destroy(device) };
         }
     }
 
@@ -51,28 +51,33 @@ impl Staging {
         size: u64,
         min_capacity: u64,
     ) -> anyhow::Result<()> {
-        if size <= self.capacity {
+        if size <= self.capacity() {
             return Ok(());
         }
-        self.destroy(device);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.destroy(device) };
         let capacity = size.next_power_of_two().max(min_capacity);
-        let (buffer, memory) = create_buffer(
-            device,
-            mem_props,
-            capacity,
-            vk::BufferUsageFlags::TRANSFER_SRC,
-            vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-        )?;
+        let usage = vk::BufferUsageFlags::TRANSFER_SRC;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
         let mapped =
-            device.map_memory(memory, 0, capacity, vk::MemoryMapFlags::empty())? as *mut u8;
+            unsafe { MappedBuffer::new(device, mem_props, capacity, usage, Place::STAGING) }?;
         *self = Self {
-            buffer,
-            memory,
-            mapped: std::ptr::NonNull::new(mapped),
-            capacity,
+            mapped: Some(mapped),
             slack: 0,
         };
         Ok(())
+    }
+
+    /// Bytes of the buffer; 0 before [`Self::ensure`].
+    fn capacity(&self) -> u64 {
+        self.mapped
+            .as_ref()
+            .map_or(0, |mapped| mapped.size() as u64)
+    }
+
+    /// The buffer, once [`Self::ensure`] made one.
+    pub fn mapped(&self) -> Option<&MappedBuffer> {
+        self.mapped.as_ref()
     }
 
     /// Frees the buffer.
@@ -81,10 +86,9 @@ impl Staging {
     ///
     /// `device` must be live and done with it.
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
-        if self.buffer != vk::Buffer::null() {
-            device.unmap_memory(self.memory);
-            device.destroy_buffer(self.buffer, None);
-            vk_util::free_memory(device, self.memory);
+        if let Some(mapped) = self.mapped.take() {
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { mapped.destroy(device) };
         }
         *self = Self::default();
     }

@@ -73,15 +73,21 @@ pub unsafe fn pick(
 ) -> anyhow::Result<(vk::PhysicalDevice, u32)> {
     let mut devices = Vec::new();
     let mut candidates = Vec::new();
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
     for pd in unsafe { instance.enumerate_physical_devices()? } {
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
         let props = unsafe { instance.get_physical_device_properties(pd) };
+        // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
         let name = unsafe { CStr::from_ptr(props.device_name.as_ptr()) }
             .to_string_lossy()
             .into_owned();
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
         let has_swapchain = unsafe { instance.enumerate_device_extension_properties(pd) }
             .unwrap_or_default()
             .iter()
+            // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
             .any(|e| unsafe { CStr::from_ptr(e.extension_name.as_ptr()) } == ash::khr::swapchain::NAME);
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
         let family = unsafe { instance.get_physical_device_queue_family_properties(pd) }
             .iter()
             .enumerate()
@@ -89,6 +95,7 @@ pub unsafe fn pick(
                 let idx = idx as u32;
                 let graphics = p.queue_flags.contains(vk::QueueFlags::GRAPHICS);
                 let present =
+                    // SAFETY: `instance` is live, and the physical device and surface are its own.
                     unsafe { surface_loader.get_physical_device_surface_support(pd, idx, surface) }
                         .unwrap_or(false);
                 (graphics && present).then_some(idx)
@@ -98,6 +105,7 @@ pub unsafe fn pick(
             crate::warn!("vulkan: {name} unusable (no present or swapchain)");
             continue;
         };
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
         let memory = unsafe { instance.get_physical_device_memory_properties(pd) };
         let local_memory = memory.memory_heaps[..memory.memory_heap_count as usize]
             .iter()

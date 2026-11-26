@@ -10,6 +10,7 @@ use std::ptr::NonNull;
 
 use ash::vk;
 use melon_base::gfx::residency::Residency;
+use numerobis::elem::{Pod, as_bytes};
 
 use super::create_buffer;
 use super::staging::Staging;
@@ -189,7 +190,7 @@ pub struct MeshArena {
 
 impl MeshArena {
     /// An arena for `T`s of `kind`.
-    pub unsafe fn new<T: Copy>(
+    pub unsafe fn new<T: Pod>(
         device: &ash::Device,
         mem_props: &vk::PhysicalDeviceMemoryProperties,
         frames_in_flight: usize,
@@ -220,13 +221,16 @@ impl MeshArena {
                 .flat_map(|q| QUAD_INDICES.map(|i| (q * 4) as u16 + i))
                 .collect();
             let size = std::mem::size_of_val(indices.as_slice()) as u64;
-            let (buffer, memory) = create_buffer(
-                device,
-                mem_props,
-                size,
-                vk::BufferUsageFlags::INDEX_BUFFER | vk::BufferUsageFlags::TRANSFER_DST,
-                vk::MemoryPropertyFlags::DEVICE_LOCAL,
-            )?;
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            let (buffer, memory) = unsafe {
+                create_buffer(
+                    device,
+                    mem_props,
+                    size,
+                    vk::BufferUsageFlags::INDEX_BUFFER | vk::BufferUsageFlags::TRANSFER_DST,
+                    super::Place::DEVICE,
+                )
+            }?;
             arena.index = Some((buffer, memory));
             arena.queue_copy(buffer, 0, as_bytes(&indices));
         }
@@ -324,7 +328,7 @@ impl MeshArena {
     /// Places `elements` in a block and writes them there, or queues their
     /// upload; returns the mesh's id. A new block goes where `residency`
     /// says, and counts against its VRAM room.
-    pub unsafe fn upload<T: Copy>(
+    pub unsafe fn upload<T: Pod>(
         &mut self,
         device: &ash::Device,
         mem_props: &vk::PhysicalDeviceMemoryProperties,
@@ -353,16 +357,19 @@ impl MeshArena {
                 None => {
                     let capacity = count.max(self.block_elements);
                     let size = u64::from(capacity) * self.element_size;
-                    let (buffer, memory, flags) = create_buffer_placed(
-                        device,
-                        mem_props,
-                        size,
-                        // `TRANSFER_SRC` so a block can be read back.
-                        self.usage
-                            | vk::BufferUsageFlags::TRANSFER_DST
-                            | vk::BufferUsageFlags::TRANSFER_SRC,
-                        residency.mesh_memory(size),
-                    )?;
+                    // SAFETY: `device` is live, and the infos name only its own live handles.
+                    let (buffer, memory, flags) = unsafe {
+                        create_buffer_placed(
+                            device,
+                            mem_props,
+                            size,
+                            // `TRANSFER_SRC` so a block can be read back.
+                            self.usage
+                                | vk::BufferUsageFlags::TRANSFER_DST
+                                | vk::BufferUsageFlags::TRANSFER_SRC,
+                            residency.mesh_memory(size),
+                        )
+                    }?;
                     residency.allocated(size, flags);
                     // A block that fails to map takes copies from staging.
                     let mapped = flags
@@ -370,7 +377,10 @@ impl MeshArena {
                             vk::MemoryPropertyFlags::HOST_VISIBLE
                                 | vk::MemoryPropertyFlags::HOST_COHERENT,
                         )
-                        .then(|| device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty()))
+                        // SAFETY: `device` is live, and the infos name only its own live handles.
+                        .then(|| unsafe {
+                            device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty())
+                        })
                         .and_then(Result::ok)
                         .and_then(|at| NonNull::new(at.cast::<u8>()));
                     let mut free = FreeList::new(capacity);
@@ -404,11 +414,14 @@ impl MeshArena {
             let bytes = as_bytes(elements);
             match mapped {
                 // Sequential, as the memory is write-combined.
-                Some(base) => std::ptr::copy_nonoverlapping(
-                    bytes.as_ptr(),
-                    base.as_ptr().add(at as usize),
-                    bytes.len(),
-                ),
+                // SAFETY: the block is mapped, the mesh's range lies inside it, and no frame in flight reads it.
+                Some(base) => unsafe {
+                    std::ptr::copy_nonoverlapping(
+                        bytes.as_ptr(),
+                        base.as_ptr().add(at as usize),
+                        bytes.len(),
+                    )
+                },
                 None => self.queue_copy(dst, at, bytes),
             }
             Slot {
@@ -450,11 +463,13 @@ impl MeshArena {
         frame: usize,
     ) -> anyhow::Result<()> {
         let needed = self.pending_bytes.len() as u64;
-        self.staging[frame].trim(device, needed, STAGING_KEPT);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.staging[frame].trim(device, needed, STAGING_KEPT) };
         if self.pending.is_empty() {
             return Ok(());
         }
-        self.staging[frame].ensure(device, mem_props, needed, 1 << 20)
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.staging[frame].ensure(device, mem_props, needed, 1 << 20) }
     }
 
     /// The frame with the copies [`Self::record`] recorded was submitted:
@@ -481,56 +496,64 @@ impl MeshArena {
         frame: usize,
         oldest_in_flight: u64,
     ) -> anyhow::Result<()> {
-        self.release_retired(device, oldest_in_flight);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.release_retired(device, oldest_in_flight) };
         if self.pending.is_empty() {
             return Ok(());
         }
         let staging = &mut self.staging[frame];
-        staging.ensure(device, mem_props, self.pending_bytes.len() as u64, 1 << 20)?;
-        let Some(mapped) = staging.mapped else {
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { staging.ensure(device, mem_props, self.pending_bytes.len() as u64, 1 << 20) }?;
+        let Some(mapped) = staging.mapped() else {
             return Ok(());
         };
-        std::ptr::copy_nonoverlapping(
-            self.pending_bytes.as_ptr(),
-            mapped.as_ptr(),
-            self.pending_bytes.len(),
-        );
-        device.cmd_pipeline_barrier(
-            cmd,
-            vk::PipelineStageFlags::VERTEX_INPUT | vk::PipelineStageFlags::VERTEX_SHADER,
-            vk::PipelineStageFlags::TRANSFER,
-            vk::DependencyFlags::empty(),
-            &[],
-            &[],
-            &[],
-        );
-        for copy in &self.pending {
-            device.cmd_copy_buffer(
+        // SAFETY: this frame's staging buffer; its fence was waited on before recording.
+        unsafe { mapped.write(0, &self.pending_bytes) };
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_pipeline_barrier(
                 cmd,
-                staging.buffer,
-                copy.dst,
-                &[vk::BufferCopy {
-                    src_offset: copy.src_offset,
-                    dst_offset: copy.dst_offset,
-                    size: copy.size,
-                }],
-            );
+                vk::PipelineStageFlags::VERTEX_INPUT | vk::PipelineStageFlags::VERTEX_SHADER,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::DependencyFlags::empty(),
+                &[],
+                &[],
+                &[],
+            )
+        };
+        for copy in &self.pending {
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                device.cmd_copy_buffer(
+                    cmd,
+                    mapped.buffer,
+                    copy.dst,
+                    &[vk::BufferCopy {
+                        src_offset: copy.src_offset,
+                        dst_offset: copy.dst_offset,
+                        size: copy.size,
+                    }],
+                )
+            };
         }
-        device.cmd_pipeline_barrier(
-            cmd,
-            vk::PipelineStageFlags::TRANSFER,
-            vk::PipelineStageFlags::VERTEX_INPUT | vk::PipelineStageFlags::VERTEX_SHADER,
-            vk::DependencyFlags::empty(),
-            &[vk::MemoryBarrier::default()
-                .src_access_mask(vk::AccessFlags::TRANSFER_WRITE)
-                .dst_access_mask(
-                    vk::AccessFlags::VERTEX_ATTRIBUTE_READ
-                        | vk::AccessFlags::INDEX_READ
-                        | vk::AccessFlags::SHADER_READ,
-                )],
-            &[],
-            &[],
-        );
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            device.cmd_pipeline_barrier(
+                cmd,
+                vk::PipelineStageFlags::TRANSFER,
+                vk::PipelineStageFlags::VERTEX_INPUT | vk::PipelineStageFlags::VERTEX_SHADER,
+                vk::DependencyFlags::empty(),
+                &[vk::MemoryBarrier::default()
+                    .src_access_mask(vk::AccessFlags::TRANSFER_WRITE)
+                    .dst_access_mask(
+                        vk::AccessFlags::VERTEX_ATTRIBUTE_READ
+                            | vk::AccessFlags::INDEX_READ
+                            | vk::AccessFlags::SHADER_READ,
+                    )],
+                &[],
+                &[],
+            )
+        };
         self.recorded = true;
         Ok(())
     }
@@ -568,8 +591,11 @@ impl MeshArena {
             }
             // Every mesh in it was last drawn by a frame that is done:
             // nothing in flight reads the buffer any more.
-            device.destroy_buffer(block.buffer, None);
-            vk_util::free_memory(device, block.memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe {
+                device.destroy_buffer(block.buffer, None);
+                vk_util::free_memory(device, block.memory);
+            }
             self.destroyed.push(block.buffer);
             *entry = None;
         }
@@ -585,21 +611,24 @@ impl MeshArena {
 
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
         for block in self.blocks.drain(..).flatten() {
-            device.destroy_buffer(block.buffer, None);
-            vk_util::free_memory(device, block.memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe {
+                device.destroy_buffer(block.buffer, None);
+                vk_util::free_memory(device, block.memory);
+            }
         }
         for staging in &mut self.staging {
-            staging.destroy(device);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { staging.destroy(device) };
         }
         if let Some((buffer, memory)) = self.index.take() {
-            device.destroy_buffer(buffer, None);
-            vk_util::free_memory(device, memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe {
+                device.destroy_buffer(buffer, None);
+                vk_util::free_memory(device, memory);
+            }
         }
     }
-}
-
-pub(super) fn as_bytes<T: Copy>(data: &[T]) -> &[u8] {
-    unsafe { std::slice::from_raw_parts(data.as_ptr().cast(), std::mem::size_of_val(data)) }
 }
 
 #[cfg(test)]

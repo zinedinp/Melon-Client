@@ -13,6 +13,7 @@ use numerobis::vulkan::{ApiVersion, app_version};
 
 /// The `VkApplicationInfo::apiVersion` to create the instance with.
 pub fn instance_version(entry: &ash::Entry) -> ApiVersion {
+    // SAFETY: `entry` holds the loaded Vulkan loader.
     let loader = unsafe { entry.try_enumerate_instance_version() }
         .ok()
         .flatten()

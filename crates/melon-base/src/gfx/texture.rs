@@ -4,13 +4,13 @@ use ash::vk;
 use image::RgbaImage;
 
 use super::descriptor_pools::DescriptorPools;
+use super::suballoc::{self, Allocation};
 use super::texture_update::PendingInit;
-use super::{find_memory_type, vk_util};
 
 #[derive(Clone, Copy)]
 pub struct Texture {
     pub image: vk::Image,
-    pub memory: vk::DeviceMemory,
+    pub memory: Allocation,
     pub view: vk::ImageView,
     pub descriptor_set: vk::DescriptorSet,
     /// 1 plus the smaller levels below the full-size image.
@@ -36,7 +36,8 @@ impl Uploader<'_> {
     ///
     /// The uploader's handles must be live and from one device.
     pub unsafe fn image_2d(&self, rgba: &RgbaImage) -> anyhow::Result<(Texture, PendingInit)> {
-        self.upload(std::slice::from_ref(rgba), &[], vk::ImageViewType::TYPE_2D)
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.upload(std::slice::from_ref(rgba), &[], vk::ImageViewType::TYPE_2D) }
     }
 
     /// A 2D texture with its smaller levels, each half the size of the one before.
@@ -49,7 +50,8 @@ impl Uploader<'_> {
         rgba: &RgbaImage,
         mips: &[RgbaImage],
     ) -> anyhow::Result<(Texture, PendingInit)> {
-        self.upload(std::slice::from_ref(rgba), mips, vk::ImageViewType::TYPE_2D)
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.upload(std::slice::from_ref(rgba), mips, vk::ImageViewType::TYPE_2D) }
     }
 
     /// Six equal-size faces in Vulkan cubemap order (+X, -X, +Y, -Y, +Z, -Z).
@@ -58,7 +60,8 @@ impl Uploader<'_> {
     ///
     /// The uploader's handles must be live and from one device.
     pub unsafe fn cubemap(&self, faces: &[RgbaImage; 6]) -> anyhow::Result<(Texture, PendingInit)> {
-        self.upload(faces, &[], vk::ImageViewType::CUBE)
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { self.upload(faces, &[], vk::ImageViewType::CUBE) }
     }
 
     /// A device-local `R8G8B8A8_UNORM` image, its view and descriptor set,
@@ -105,18 +108,21 @@ impl Uploader<'_> {
         // fails (the descriptor pool full, the VRAM taken by another
         // program): an upload that fails must not leave its image behind.
         let mut made = Made::default();
-        let result = self.upload_parts(&parts, (width, height), view_type, &mut made);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let result = unsafe { self.upload_parts(&parts, (width, height), view_type, &mut made) };
         if result.is_err() {
-            self.descriptor_pools.free(device, made.set);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { self.descriptor_pools.free(device, made.set) };
             if made.view != vk::ImageView::null() {
-                device.destroy_image_view(made.view, None);
+                // SAFETY: made by this device, and no frame in flight uses it any more.
+                unsafe { device.destroy_image_view(made.view, None) };
             }
             if made.image != vk::Image::null() {
-                device.destroy_image(made.image, None);
+                // SAFETY: made by this device, and no frame in flight uses it any more.
+                unsafe { device.destroy_image(made.image, None) };
             }
-            if made.memory != vk::DeviceMemory::null() {
-                vk_util::free_memory(device, made.memory);
-            }
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { suballoc::release(device, made.memory) };
         }
         let texture = result?;
         Ok((
@@ -160,21 +166,12 @@ impl Uploader<'_> {
         if view_type == vk::ImageViewType::CUBE {
             image_info = image_info.flags(vk::ImageCreateFlags::CUBE_COMPATIBLE);
         }
-        let image = device.create_image(&image_info, None)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let image = unsafe { device.create_image(&image_info, None) }?;
         made.image = image;
-        let image_req = device.get_image_memory_requirements(image);
-        let memory = vk_util::allocate_memory(
-            device,
-            &vk::MemoryAllocateInfo::default()
-                .allocation_size(image_req.size)
-                .memory_type_index(find_memory_type(
-                    self.mem_props,
-                    image_req.memory_type_bits,
-                    vk::MemoryPropertyFlags::DEVICE_LOCAL,
-                )?),
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let memory = unsafe { suballoc::bind_image(device, self.mem_props, image) }?;
         made.memory = memory;
-        device.bind_image_memory(image, memory, 0)?;
 
         let subresource = vk::ImageSubresourceRange::default()
             .aspect_mask(vk::ImageAspectFlags::COLOR)
@@ -183,19 +180,24 @@ impl Uploader<'_> {
             .base_array_layer(0)
             .layer_count(layer_count);
 
-        let view = device.create_image_view(
-            &vk::ImageViewCreateInfo::default()
-                .image(image)
-                .view_type(view_type)
-                .format(vk::Format::R8G8B8A8_UNORM)
-                .subresource_range(subresource),
-            None,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let view = unsafe {
+            device.create_image_view(
+                &vk::ImageViewCreateInfo::default()
+                    .image(image)
+                    .view_type(view_type)
+                    .format(vk::Format::R8G8B8A8_UNORM)
+                    .subresource_range(subresource),
+                None,
+            )
+        }?;
         made.view = view;
 
-        let descriptor_set = self
-            .descriptor_pools
-            .allocate(device, self.descriptor_set_layout)?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let descriptor_set = unsafe {
+            self.descriptor_pools
+                .allocate(device, self.descriptor_set_layout)
+        }?;
         made.set = descriptor_set;
 
         let descriptor_image = [vk::DescriptorImageInfo::default()
@@ -208,7 +210,8 @@ impl Uploader<'_> {
             .dst_array_element(0)
             .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
             .image_info(&descriptor_image);
-        device.update_descriptor_sets(&[write], &[]);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        unsafe { device.update_descriptor_sets(&[write], &[]) };
 
         Ok(Texture {
             image,
@@ -225,7 +228,7 @@ impl Uploader<'_> {
 #[derive(Default)]
 struct Made {
     image: vk::Image,
-    memory: vk::DeviceMemory,
+    memory: Allocation,
     view: vk::ImageView,
     set: vk::DescriptorSet,
 }

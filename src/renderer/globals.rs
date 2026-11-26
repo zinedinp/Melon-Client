@@ -4,8 +4,10 @@ use ash::vk;
 use glam::Mat4;
 
 use super::frame::WorldDraw;
-use super::vk_util::{self, MAPPED_FOR_GPU, create_buffer_in};
+use super::vk_util::Place;
 use crate::world::fog::FogData;
+use melon_base::gfx::mapped::MappedBuffer;
+use numerobis::elem::Pod;
 
 /// `Globals` in `globals.glsl`, std140: ten `vec4`s.
 #[repr(C)]
@@ -30,6 +32,8 @@ pub struct Globals {
 }
 
 const _: () = assert!(std::mem::size_of::<Globals>() == 160);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl Pod for Globals {}
 
 impl Globals {
     /// No fog and the overworld's light: the title screen, menus.
@@ -106,9 +110,7 @@ pub(super) struct GlobalBuffers {
 }
 
 struct Frame {
-    buffer: vk::Buffer,
-    memory: vk::DeviceMemory,
-    ptr: *mut u8,
+    buffer: MappedBuffer,
     set: vk::DescriptorSet,
 }
 
@@ -121,10 +123,13 @@ pub(super) unsafe fn create_layout(
         .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
         .descriptor_count(1)
         .stage_flags(vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT)];
-    Ok(device.create_descriptor_set_layout(
-        &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
-        None,
-    )?)
+    // SAFETY: `device` is live, and the infos name only its own live handles.
+    Ok(unsafe {
+        device.create_descriptor_set_layout(
+            &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
+            None,
+        )
+    }?)
 }
 
 impl GlobalBuffers {
@@ -138,48 +143,55 @@ impl GlobalBuffers {
             ty: vk::DescriptorType::UNIFORM_BUFFER,
             descriptor_count: frames as u32,
         }];
-        let pool = device.create_descriptor_pool(
-            &vk::DescriptorPoolCreateInfo::default()
-                .pool_sizes(&sizes)
-                .max_sets(frames as u32),
-            None,
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let pool = unsafe {
+            device.create_descriptor_pool(
+                &vk::DescriptorPoolCreateInfo::default()
+                    .pool_sizes(&sizes)
+                    .max_sets(frames as u32),
+                None,
+            )
+        }?;
         let layouts = vec![layout; frames];
-        let sets = device.allocate_descriptor_sets(
-            &vk::DescriptorSetAllocateInfo::default()
-                .descriptor_pool(pool)
-                .set_layouts(&layouts),
-        )?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let sets = unsafe {
+            device.allocate_descriptor_sets(
+                &vk::DescriptorSetAllocateInfo::default()
+                    .descriptor_pool(pool)
+                    .set_layouts(&layouts),
+            )
+        }?;
         let size = std::mem::size_of::<Globals>() as u64;
         let mut out = Vec::with_capacity(frames);
         for set in sets {
-            let (buffer, memory) = create_buffer_in(
-                device,
-                mem_props,
-                size,
-                vk::BufferUsageFlags::UNIFORM_BUFFER,
-                &MAPPED_FOR_GPU,
-            )?;
-            let ptr = device.map_memory(memory, 0, size, vk::MemoryMapFlags::empty())? as *mut u8;
-            ptr.cast::<Globals>().write(Globals::plain());
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            let buffer = unsafe {
+                MappedBuffer::new(
+                    device,
+                    mem_props,
+                    size,
+                    vk::BufferUsageFlags::UNIFORM_BUFFER,
+                    Place::UPLOAD,
+                )
+            }?;
+            // SAFETY: the buffer is new, so no submit names it yet.
+            unsafe { buffer.write_one(0, &Globals::plain()) };
             let info = [vk::DescriptorBufferInfo::default()
-                .buffer(buffer)
+                .buffer(buffer.buffer)
                 .offset(0)
                 .range(size)];
-            device.update_descriptor_sets(
-                &[vk::WriteDescriptorSet::default()
-                    .dst_set(set)
-                    .dst_binding(0)
-                    .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-                    .buffer_info(&info)],
-                &[],
-            );
-            out.push(Frame {
-                buffer,
-                memory,
-                ptr,
-                set,
-            });
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe {
+                device.update_descriptor_sets(
+                    &[vk::WriteDescriptorSet::default()
+                        .dst_set(set)
+                        .dst_binding(0)
+                        .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
+                        .buffer_info(&info)],
+                    &[],
+                )
+            };
+            out.push(Frame { buffer, set });
         }
         Ok(Self {
             layout,
@@ -190,7 +202,8 @@ impl GlobalBuffers {
 
     /// Writes frame `frame`'s globals; call once its fence was waited on.
     pub unsafe fn write(&self, frame: usize, globals: &Globals) {
-        self.frames[frame].ptr.cast::<Globals>().write(*globals);
+        // SAFETY: the caller waited on this frame's fence (this fn's contract), so the GPU doesn't read it.
+        unsafe { self.frames[frame].buffer.write_one(0, globals) };
     }
 
     pub fn set(&self, frame: usize) -> vk::DescriptorSet {
@@ -199,12 +212,14 @@ impl GlobalBuffers {
 
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
         for frame in self.frames.drain(..) {
-            device.unmap_memory(frame.memory);
-            device.destroy_buffer(frame.buffer, None);
-            vk_util::free_memory(device, frame.memory);
+            // SAFETY: made by this device, and no frame in flight uses it any more.
+            unsafe { frame.buffer.destroy(device) };
         }
-        device.destroy_descriptor_pool(self.pool, None);
-        device.destroy_descriptor_set_layout(self.layout, None);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe {
+            device.destroy_descriptor_pool(self.pool, None);
+            device.destroy_descriptor_set_layout(self.layout, None);
+        }
     }
 }
 

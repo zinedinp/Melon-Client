@@ -130,34 +130,39 @@ pub unsafe fn probe(
             _ => true,
         })
         .collect();
-    let offered = instance
-        .enumerate_device_extension_properties(physical)
-        .unwrap_or_default();
-    let device_api = instance
-        .get_physical_device_properties(physical)
-        .api_version;
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let offered =
+        unsafe { instance.enumerate_device_extension_properties(physical) }.unwrap_or_default();
+    // SAFETY: `instance` is live, and the physical device and surface are its own.
+    let device_api = unsafe { instance.get_physical_device_properties(physical) }.api_version;
     let offer = vulkan::Offer::new(
         api,
         super::api::device_version(device_api),
         offered
             .iter()
-            .map(|e| CStr::from_ptr(e.extension_name.as_ptr())),
+            // SAFETY: Vulkan's fixed-size name arrays are NUL-terminated.
+            .map(|e| unsafe { CStr::from_ptr(e.extension_name.as_ptr()) }),
     );
     let at_1_0 = offer.api() < ApiVersion::V1_1;
     let mut probe = Probe::new(offer, &wanted);
     if at_1_0 {
         // No `pNext` chains on 1.0: the bare 1.0 struct.
-        *probe.core_features().cast::<vk::PhysicalDeviceFeatures>() =
-            instance.get_physical_device_features(physical);
+        // SAFETY: `instance` is live, and the physical device is its own.
+        let features = unsafe { instance.get_physical_device_features(physical) };
+        // SAFETY: the probe's core struct is a `VkPhysicalDeviceFeatures` it owns.
+        unsafe { *probe.core_features().cast::<vk::PhysicalDeviceFeatures>() = features };
     } else {
         // The chain is a `VkPhysicalDeviceFeatures2` of the plain C layout.
-        let features2 = &mut *probe.features2().cast::<vk::PhysicalDeviceFeatures2>();
-        instance.get_physical_device_features2(physical, features2);
+        // SAFETY: the probe's chain head is a `VkPhysicalDeviceFeatures2` it owns, alive with it.
+        let features2 = unsafe { &mut *probe.features2().cast::<vk::PhysicalDeviceFeatures2>() };
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        unsafe { instance.get_physical_device_features2(physical, features2) };
     }
     if probe.wants_subgroup() {
         let mut subgroup = vk::PhysicalDeviceSubgroupProperties::default();
         let mut props = vk::PhysicalDeviceProperties2::default().push_next(&mut subgroup);
-        instance.get_physical_device_properties2(physical, &mut props);
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        unsafe { instance.get_physical_device_properties2(physical, &mut props) };
         probe.set_subgroup(vulkan::subgroup::Subgroup {
             size: subgroup.subgroup_size,
             stages: subgroup.supported_stages.as_raw(),
@@ -165,15 +170,23 @@ pub unsafe fn probe(
         });
     }
     if at_1_0 {
-        *probe
-            .memory_properties()
-            .cast::<vk::PhysicalDeviceMemoryProperties>() =
-            instance.get_physical_device_memory_properties(physical);
+        // SAFETY: `instance` is live, and the physical device is its own.
+        let memory = unsafe { instance.get_physical_device_memory_properties(physical) };
+        // SAFETY: the probe's memory struct is a `VkPhysicalDeviceMemoryProperties` it owns.
+        unsafe {
+            *probe
+                .memory_properties()
+                .cast::<vk::PhysicalDeviceMemoryProperties>() = memory;
+        }
     } else {
-        let memory2 = &mut *probe
-            .memory_properties2()
-            .cast::<vk::PhysicalDeviceMemoryProperties2>();
-        instance.get_physical_device_memory_properties2(physical, memory2);
+        // SAFETY: the probe's memory chain is a `VkPhysicalDeviceMemoryProperties2` it owns.
+        let memory2 = unsafe {
+            &mut *probe
+                .memory_properties2()
+                .cast::<vk::PhysicalDeviceMemoryProperties2>()
+        };
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        unsafe { instance.get_physical_device_memory_properties2(physical, memory2) };
     }
     let plan = probe.plan();
     crate::info!("vulkan: {plan}");
