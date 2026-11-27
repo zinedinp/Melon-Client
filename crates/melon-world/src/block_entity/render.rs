@@ -11,7 +11,7 @@ use crate::block_models::BlockModels;
 use crate::culling::Culler;
 use crate::entity::skull;
 use crate::level::Level;
-use crate::math::angle::{self, HALF_PI, PI, Rotation, TAU};
+use melon_core::math::angle::{self, HALF_PI, PI, Rotation, TAU};
 use crate::mesh::WorldVertex as Vertex;
 use crate::model_part::{Sprite, emit};
 use glam::{DVec3, Mat4, Vec2, Vec3};

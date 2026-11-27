@@ -21,7 +21,7 @@ use glam::{Mat4, Vec3};
 
 use super::super::super::indirect::{Pass, Phase, Run, corner_offset, quad_draws};
 use crate::pipeline;
-use crate::world::mesh::wide_indices;
+use melon_world::mesh::wide_indices;
 
 /// How the terrain's quad meshes are drawn, fixed when the renderer is made.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

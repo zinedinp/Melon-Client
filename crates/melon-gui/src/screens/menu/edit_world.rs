@@ -1,7 +1,7 @@
 //! Vanilla `EditWorldScreen`.
 
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::singleplayer::{self, WorldEntry};
+use melon_net::singleplayer::{self, WorldEntry};
 use crate::widgets::Ui;
 use crate::widgets::button::Button;
 use crate::widgets::dialog::DialogScreen;
@@ -79,7 +79,7 @@ impl EditWorldScreen {
             return ScreenAction::None;
         }
         if let Err(e) = singleplayer::rename_world(ctx.game_dir, &self.folder, &name) {
-            crate::warn!("World not renamed ({}): {e:#}", self.folder);
+            melon_base::warn!("World not renamed ({}): {e:#}", self.folder);
         }
         ScreenAction::Back
     }
@@ -139,7 +139,7 @@ impl EditWorldScreen {
 
 fn open_folder(path: &std::path::Path) {
     if let Err(e) = open::that(path) {
-        crate::warn!("Folder not opened ({}): {e}", path.display());
+        melon_base::warn!("Folder not opened ({}): {e}", path.display());
     }
 }
 

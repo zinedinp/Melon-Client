@@ -2,27 +2,27 @@
 
 use super::InWorld;
 use crate::game::controls::WorldContext;
-use crate::gui::overlay::chat::input::ChatInput;
-use crate::gui::overlay::creative::CreativeOverlay;
-use crate::gui::overlay::game_mode_switcher::GameModeSwitcher;
-use crate::gui::overlay::inventory::InventoryOverlay;
-use crate::gui::overlay::recipe_book::RecipeAction;
-use crate::gui::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayKind};
-use crate::gui::screen::ScreenAction;
-use crate::i18n::Lang;
+use melon_gui::overlay::chat::input::ChatInput;
+use melon_gui::overlay::creative::CreativeOverlay;
+use melon_gui::overlay::game_mode_switcher::GameModeSwitcher;
+use melon_gui::overlay::inventory::InventoryOverlay;
+use melon_gui::overlay::recipe_book::RecipeAction;
+use melon_gui::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayKind};
+use melon_gui::screen::ScreenAction;
+use melon_assets::i18n::Lang;
 
 /// The menus the server opens and what the overlays keep of them.
 #[derive(Default)]
 pub(super) struct Menus {
     /// Server-opened menu (`OPEN_SCREEN`).
-    pub(super) open_container: Option<crate::world::inventory::OpenContainer>,
+    pub(super) open_container: Option<melon_world::inventory::OpenContainer>,
     /// Open the container overlay on the next tick, once `WorldContext` exists.
     pub(super) pending_container_overlay: bool,
     /// Close the container/inventory overlay on the next tick without telling
     /// the server.
     pub(super) pending_container_close: bool,
     /// The recipe the server asked the open menu to show (ghost items).
-    pub(super) ghost_recipe: Option<(i32, crate::world::recipes::RecipeDisplay)>,
+    pub(super) ghost_recipe: Option<(i32, melon_world::recipes::RecipeDisplay)>,
     /// The creative inventory's last tab, to reopen on.
     pub(super) creative_tab: usize,
 }
@@ -152,7 +152,7 @@ impl InWorld {
         }
         self.entities.rename_all();
         self.entities.resolve_names(&|name| {
-            crate::gui::text::StyledText::from_component(name, lang).to_plain()
+            melon_gui::text::StyledText::from_component(name, lang).to_plain()
         });
     }
 
@@ -240,7 +240,7 @@ impl InWorld {
                     .send_recipe_book_settings(book, open, filtering),
                 RecipeAction::Seen(recipe) => self.joined.session.send_recipe_seen(recipe),
             },
-            OverlayAction::Sound(event) => self.audio.push(crate::audio::SoundInstance::of(event)),
+            OverlayAction::Sound(event) => self.audio.push(melon_audio::SoundInstance::of(event)),
             OverlayAction::RenameItem(name) => self.joined.session.send_rename_item(&name),
             OverlayAction::SelectTrade(index) => self.joined.session.send_select_trade(index),
             OverlayAction::SetBeacon { primary, secondary } => {
@@ -267,7 +267,7 @@ impl InWorld {
             OverlayAction::OpenUrl(url) => {
                 return if ui.config.chat.links_prompt {
                     ScreenAction::open(
-                        crate::gui::screens::menu::confirm_link::confirm_link_screen(url),
+                        melon_gui::screens::menu::confirm_link::confirm_link_screen(url),
                     )
                 } else {
                     ScreenAction::OpenUrl(url)
@@ -275,9 +275,9 @@ impl InWorld {
             }
             OverlayAction::OpenFile(path) => return ScreenAction::OpenUrl(path),
             OverlayAction::Dialog(click) => {
-                return ScreenAction::Dialog(crate::gui::screens::dialog::DialogRequest::Run {
+                return ScreenAction::Dialog(melon_gui::screens::dialog::DialogRequest::Run {
                     click: Some(click),
-                    then: crate::dialog::AfterAction::None,
+                    then: melon_net::dialog::AfterAction::None,
                 });
             }
             OverlayAction::Copy(text) => return ScreenAction::Copy(text),

@@ -4,20 +4,20 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use melon::network::{self, Identity, WorldEvent};
-use melon::singleplayer::{self, server};
-use melon::world::block_models::BlockModels;
-use melon::world::block_tint::TintSettings;
-use melon::world::chunk::Chunk;
-use melon::world::culling::occlusion::{self, SectionState};
-use melon::world::culling::visgraph::VisibilitySet;
-use melon::world::fluid::FluidSprites;
-use melon::world::terrain::{self, MeshContext, Neighborhood};
+use melon_net::{self, Identity, WorldEvent};
+use melon_net::singleplayer::{self, server};
+use melon_world::block_models::BlockModels;
+use melon_world::block_tint::TintSettings;
+use melon_world::chunk::Chunk;
+use melon_world::culling::occlusion::{self, SectionState};
+use melon_world::culling::visgraph::VisibilitySet;
+use melon_world::fluid::FluidSprites;
+use melon_world::terrain::{self, MeshContext, Neighborhood};
 
 fn main() -> anyhow::Result<()> {
-    melon::platform::drop_cargo_stack();
+    melon_base::platform::drop_cargo_stack();
     let dir = std::env::args().nth(1).expect("save dir");
-    let assets = melon::assets::Assets::discover()?;
+    let assets = melon_assets::assets::Assets::discover()?;
 
     let t = Instant::now();
     let (models, _atlas) = BlockModels::bake(assets.root(), Vec::new(), 16384);
@@ -31,10 +31,10 @@ fn main() -> anyhow::Result<()> {
         lava_flow: s(FluidSprites::TEXTURES[4]),
     };
 
-    let tabs = &*melon::world::creative_tabs::TABS;
+    let tabs = &*melon_world::creative_tabs::TABS;
     let search = tabs
         .iter()
-        .find(|t| t.kind == melon::world::creative_tabs::TabType::Search)
+        .find(|t| t.kind == melon_world::creative_tabs::TabType::Search)
         .unwrap();
     let mut seen = std::collections::HashSet::new();
     let mut icon_times = Vec::new();
@@ -45,7 +45,7 @@ fn main() -> anyhow::Result<()> {
         .take(300)
     {
         let t = Instant::now();
-        std::hint::black_box(melon::gui::hud::item_icon::bake(
+        std::hint::black_box(melon_gui::hud::item_icon::bake(
             assets.root(),
             stack.item.registry_key,
         ));
@@ -73,7 +73,7 @@ fn main() -> anyhow::Result<()> {
         },
         view_distance: 8,
         simulation_distance: 8,
-        host: melon::singleplayer::server::Host {
+        host: melon_net::singleplayer::server::Host {
             uuid: Identity::Offline {
                 username: "Perf".into(),
             }
@@ -129,8 +129,8 @@ fn main() -> anyhow::Result<()> {
 
     let plains_tints = TintSettings::new(
         &session.info.biomes,
-        melon::world::colormap::ColorMaps::cached(),
-        melon::settings::options::BIOME_BLEND_DEFAULT,
+        melon_world::colormap::ColorMaps::cached(),
+        melon_settings::options::BIOME_BLEND_DEFAULT,
         std::env::var_os("MELON_PERF_NO_ZOOM")
             .is_none()
             .then_some(session.info.hashed_seed),
@@ -170,7 +170,7 @@ fn main() -> anyhow::Result<()> {
         visibility.insert(key, v);
         let t = Instant::now();
         let mut found = 0;
-        let kinds = &*melon::world::block_entity::KIND_STATES;
+        let kinds = &*melon_world::block_entity::KIND_STATES;
         for section in &chunk.sections {
             for id in section.iter() {
                 if kinds.contains(id) {
@@ -219,7 +219,7 @@ fn main() -> anyhow::Result<()> {
     let flat = sections.len() - packed.len() - uniform;
     println!(
         "byte tier {}: packed sections by bits 1={} 2={} 4={} 8={}, flat={flat}",
-        melon::math::simd::byte_tier().name(),
+        melon_core::math::simd::byte_tier().name(),
         by_bits[1],
         by_bits[2],
         by_bits[4],
@@ -227,7 +227,7 @@ fn main() -> anyhow::Result<()> {
     );
     let reps = 50u32;
     let per = |t: Instant| t.elapsed() / (reps * packed.len() as u32);
-    let mut blocks = Box::new([0u16; melon::world::section::BLOCKS_PER_SECTION]);
+    let mut blocks = Box::new([0u16; melon_world::section::BLOCKS_PER_SECTION]);
     let t = Instant::now();
     for _ in 0..reps {
         for s in &packed {
@@ -257,7 +257,7 @@ fn main() -> anyhow::Result<()> {
     let t = Instant::now();
     for _ in 0..reps {
         for solid in &solids {
-            std::hint::black_box(melon::world::culling::visgraph::compute_rows(solid));
+            std::hint::black_box(melon_world::culling::visgraph::compute_rows(solid));
         }
     }
     println!("per packed section: visgraph::compute_rows={:?}", per(t));
@@ -304,7 +304,7 @@ fn main() -> anyhow::Result<()> {
                 let pos = [chunk.x * 16 + x, -64 + s as i32 * 16 + y, chunk.z * 16 + z];
                 models.quads_at(id, pos, |quads| {
                     for quad in quads {
-                        if quad.tint != melon::world::block_tint::TintKind::None {
+                        if quad.tint != melon_world::block_tint::TintKind::None {
                             lookups.push((quad.tint, pos));
                         }
                     }
@@ -320,7 +320,7 @@ fn main() -> anyhow::Result<()> {
     for blend in [0u8, 2, 7] {
         let settings = TintSettings::new(
             &session.info.biomes,
-            melon::world::colormap::ColorMaps::cached(),
+            melon_world::colormap::ColorMaps::cached(),
             blend,
             std::env::var_os("MELON_PERF_NO_ZOOM")
                 .is_none()
@@ -369,7 +369,7 @@ fn main() -> anyhow::Result<()> {
                         let hidden = quad.cullface.is_some_and(|side| {
                             let [dx, dy, dz] = side.step();
                             n.block(s, x + dx, y + dy, z + dz)
-                                .is_some_and(melon::world::block::state_flags::is_solid)
+                                .is_some_and(melon_world::block::state_flags::is_solid)
                         });
                         if !hidden {
                             *by_block.entry(id).or_default() += 1;

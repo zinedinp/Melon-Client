@@ -24,7 +24,7 @@ mod mod_hints;
 mod tint;
 pub mod variants;
 
-use crate::math::angle::Rotation;
+use melon_core::math::angle::Rotation;
 use ao_shape::AoShape;
 use atlas::{PackedAtlas, pack_atlas};
 use block_state::{BlockState, ModelRef, Options, condition_holds, parse_block_state};
@@ -212,9 +212,9 @@ pub struct SpriteSheet {
 /// size; custom item packs use tall ones).
 pub fn pack_sprites(assets_root: &Path, ids: Vec<String>, max_side: u32) -> SpriteSheet {
     let loaded = atlas::parallel_map(ids, |id| {
-        let Some((png, meta)) = crate::assets::texture_with_meta(assets_root, &id) else {
+        let Some((png, meta)) = melon_assets::assets::texture_with_meta(assets_root, &id) else {
             // A paletted permutation: no file of its own.
-            let image = crate::assets::texture_image(assets_root, &id)?;
+            let image = melon_assets::assets::texture_image(assets_root, &id)?;
             return Some((id, Some(image)));
         };
         let animated = meta.as_ref().is_some_and(|m| m.get("animation").is_some());
@@ -222,7 +222,7 @@ pub fn pack_sprites(assets_root: &Path, ids: Vec<String>, max_side: u32) -> Spri
         let image = if animated {
             None
         } else {
-            Some(crate::assets::decode_png(&png)?)
+            Some(melon_assets::assets::decode_png(&png)?)
         };
         Some((id, image))
     });
@@ -578,7 +578,7 @@ impl ModelFiles<'_> {
         if let Some(json) = read().get(id) {
             return json.clone();
         }
-        let json = crate::assets::json_resource(self.assets_root, "models", id).map(Arc::new);
+        let json = melon_assets::assets::json_resource(self.assets_root, "models", id).map(Arc::new);
         read().insert(id.to_owned(), json.clone());
         json
     }
@@ -704,7 +704,7 @@ impl<'a> Baker<'a> {
         let mut models = Vec::new();
         let mut seen = HashSet::new();
         for (block, parsed) in parsed {
-            if crate::probe::enabled() {
+            if melon_core::probe::enabled() {
                 probe_block_state(assets_root, block, parsed.as_ref());
             }
             for model in parsed.iter().flat_map(BlockState::models) {
@@ -738,7 +738,7 @@ impl<'a> Baker<'a> {
             self.models.insert(id, resolved);
         }
         let existing = atlas::parallel_map(textures, |id| {
-            let exists = crate::assets::resource_exists(assets_root, "textures", &id, "png");
+            let exists = melon_assets::assets::resource_exists(assets_root, "textures", &id, "png");
             (id, exists)
         });
         self.existing_textures.extend(existing);
@@ -851,7 +851,7 @@ impl<'a> Baker<'a> {
         let assets_root = self.assets_root;
         let parsed = self.states.entry(block).or_insert_with(|| {
             let parsed = parse_block_state(assets_root, block);
-            if crate::probe::enabled() {
+            if melon_core::probe::enabled() {
                 probe_block_state(assets_root, block, parsed.as_ref());
             }
             parsed
@@ -892,8 +892,8 @@ impl<'a> Baker<'a> {
             .or_insert_with(|| resolve_model(assets_root, &model_ref.model))
             .clone()
         else {
-            if crate::probe::enabled() {
-                crate::probe::note("block.model_missing", &model_ref.model, || {
+            if melon_core::probe::enabled() {
+                melon_core::probe::note("block.model_missing", &model_ref.model, || {
                     format!("for {block}")
                 });
             }
@@ -907,8 +907,8 @@ impl<'a> Baker<'a> {
                 continue;
             };
             if !self.texture_exists(&texture_id) {
-                if crate::probe::enabled() {
-                    crate::probe::note("block.texture_missing", &texture_id, || {
+                if melon_core::probe::enabled() {
+                    melon_core::probe::note("block.texture_missing", &texture_id, || {
                         format!("in {}", model_ref.model)
                     });
                 }
@@ -957,7 +957,7 @@ impl<'a> Baker<'a> {
         *self
             .existing_textures
             .entry(id.to_owned())
-            .or_insert_with(|| crate::assets::resource_exists(assets_root, "textures", id, "png"))
+            .or_insert_with(|| melon_assets::assets::resource_exists(assets_root, "textures", id, "png"))
     }
 
     fn texture(&mut self, id: String) -> usize {
@@ -974,7 +974,7 @@ impl<'a> Baker<'a> {
 /// The tester.
 fn probe_block_state(assets_root: &Path, block: &str, parsed: Option<&BlockState>) {
     let name = block.trim_start_matches("minecraft:");
-    let from_pack = crate::assets::packs::active()
+    let from_pack = melon_assets::assets::packs::active()
         .find(
             assets_root,
             "minecraft",
@@ -983,7 +983,7 @@ fn probe_block_state(assets_root: &Path, block: &str, parsed: Option<&BlockState
         .is_some_and(|(_, layer)| layer > 0);
     let Some(parsed) = parsed else {
         if !name.contains("air") {
-            crate::probe::count("block.no_model", name);
+            melon_core::probe::count("block.no_model", name);
         }
         return;
     };
@@ -992,7 +992,7 @@ fn probe_block_state(assets_root: &Path, block: &str, parsed: Option<&BlockState
             BlockState::Variants(v) => format!("{} variants", v.len()),
             BlockState::Multipart(p) => format!("{} multipart parts", p.len()),
         };
-        crate::probe::note("block.pack_blockstate", name, || describe);
+        melon_core::probe::note("block.pack_blockstate", name, || describe);
     }
 }
 
@@ -1042,7 +1042,7 @@ mod tests {
     use serde_json::Value;
 
     fn assets() -> Option<std::path::PathBuf> {
-        let root = crate::assets::default_root();
+        let root = melon_assets::assets::default_root();
         root.join("minecraft/blockstates/stone.json")
             .exists()
             .then_some(root)

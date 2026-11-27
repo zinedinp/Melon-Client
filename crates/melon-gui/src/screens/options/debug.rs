@@ -4,7 +4,7 @@
 
 use crate::hud::debug::SharedEntries;
 use crate::hud::debug_entries::{Category, Entry, Profile, Status};
-use crate::math::argb;
+use melon_core::math::argb;
 use crate::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::text::{StyledText, TextStyle};
 use crate::widgets::button::Button;

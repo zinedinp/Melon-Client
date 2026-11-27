@@ -9,10 +9,10 @@ use crate::game::InWorld;
 use crate::game::camera::{Camera, CameraMode};
 use crate::game::gizmos::{DEFAULT_WIDTH, GizmoMesh, Gizmos, TextView};
 use crate::game::scene::OverlayInput;
-use crate::gui::hud::debug_entries::Category;
-use crate::math::argb;
-use crate::renderer::{EntityDraw, Renderer};
-use crate::world::physics::Aabb;
+use melon_gui::hud::debug_entries::Category;
+use melon_core::math::argb;
+use melon_render::{EntityDraw, Renderer};
+use melon_world::physics::Aabb;
 
 /// `Window`'s default line width, pixels.
 const THIN: f32 = 1.0;
@@ -23,7 +23,7 @@ const CELL: u32 = 0xFF00_9B9B;
 const YELLOW: u32 = 0xFFFF_FF00;
 
 /// Whether F3 was open and F3 + H on, kept between runs; which entries
-/// show is `debug-profile.json`'s ([`crate::gui::hud::debug_entries`]).
+/// show is `debug-profile.json`'s ([`melon_gui::hud::debug_entries`]).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DebugSettings {
@@ -48,8 +48,8 @@ impl DebugView {
     /// The settings in `game_dir`, or the defaults; also whether they were saved before.
     pub fn load(game_dir: &Path) -> (Self, bool) {
         let path = game_dir.join(FILE);
-        let saved: DebugSettings = crate::json_file::load(&path).unwrap_or_default();
-        crate::gui::hud::item_slot::set_advanced_tooltips(saved.advanced_tooltips);
+        let saved: DebugSettings = melon_base::json_file::load(&path).unwrap_or_default();
+        melon_gui::hud::item_slot::set_advanced_tooltips(saved.advanced_tooltips);
         (
             Self {
                 path: Some(path),
@@ -64,10 +64,10 @@ impl DebugView {
         let Some(path) = &self.path else { return };
         let settings = DebugSettings {
             overlay,
-            advanced_tooltips: crate::gui::hud::item_slot::advanced_tooltips(),
+            advanced_tooltips: melon_gui::hud::item_slot::advanced_tooltips(),
         };
-        if let Err(e) = crate::json_file::save(path, &settings) {
-            crate::warn!("F3 settings not saved: {e}");
+        if let Err(e) = melon_base::json_file::save(path, &settings) {
+            melon_base::warn!("F3 settings not saved: {e}");
         }
     }
 
@@ -100,7 +100,7 @@ impl InWorld {
         renderer: &mut Renderer,
         input: &OverlayInput<'_>,
         out: &mut Vec<EntityDraw>,
-        lines: &mut Vec<crate::renderer::LineDraw>,
+        lines: &mut Vec<melon_render::LineDraw>,
     ) {
         let OverlayInput {
             camera,
@@ -111,7 +111,7 @@ impl InWorld {
         } = *input;
         // Like culling's, never narrower than the fov option.
         let frustum = &camera.frustum_with_fov(input.aspect, camera.fov.max(input.fov_setting));
-        use crate::gui::hud::debug_entries::Entry;
+        use melon_gui::hud::debug_entries::Entry;
         let entries = self.debug.entries();
         let crosshair = entries.is_enabled(Entry::ThreeDimensionalCrosshair)
             && !self.hud_hidden
@@ -336,13 +336,13 @@ impl InWorld {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::math::angle::Rotation;
+    use melon_core::math::angle::Rotation;
 
     #[test]
     fn the_crosshair_stays_put_through_the_views_sway() {
         let mut camera = Camera::new(
             DVec3::new(10.0, 70.0, 5.0),
-            crate::math::euler::Look::new(-90.0, 0.0),
+            melon_core::math::euler::Look::new(-90.0, 0.0),
             70.0,
             256.0,
         );

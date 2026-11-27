@@ -3,7 +3,7 @@
 use super::{BlockEntities, Kind, kind_of};
 use crate::block::direction::Direction;
 use crate::level::Level;
-use crate::math::angle::{PI, TAU};
+use melon_core::math::angle::{PI, TAU};
 use glam::Vec3;
 
 impl BlockEntities {

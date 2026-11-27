@@ -1,13 +1,13 @@
 //! Vanilla `VideoSettingsScreen`, cut to the options Melon has.
 
-use crate::cycle::Cycle;
-use crate::i18n::Lang;
+use melon_core::cycle::Cycle;
+use melon_assets::i18n::Lang;
 use crate::screen::{ConfigChange, ScreenContext};
 use crate::screens::options::{
     biome_blend_label, entity_distance_label, gamma_label, on_off_label, percent_label,
     render_distance_label, simulation_distance_label, value_label,
 };
-use crate::settings::options::{self, Config, GraphicsPreset, InactivityFpsLimit};
+use melon_settings::options::{self, Config, GraphicsPreset, InactivityFpsLimit};
 use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 
 /// The accessibility sliders' steps: 1% each, as `UnitDouble` shows them.

@@ -2,7 +2,7 @@
 
 use crate::background;
 use crate::effects::AtlasSprite;
-use crate::math::argb;
+use melon_core::math::argb;
 use crate::screen::{Screen, ScreenAction, ScreenContext};
 use crate::widgets::Ui;
 

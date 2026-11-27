@@ -39,7 +39,7 @@ impl Renderer {
         if let Some(asked) = self.swapchain.requested
             && asked != mode
         {
-            crate::warn!("vulkan: present mode {asked} unavailable, presenting with {mode}");
+            melon_base::warn!("vulkan: present mode {asked} unavailable, presenting with {mode}");
         }
         // The old targets may still be drawn into by a frame in flight.
         // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.

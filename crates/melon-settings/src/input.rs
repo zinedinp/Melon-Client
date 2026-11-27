@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use winit::event::MouseButton;
 use winit::keyboard::KeyCode;
 
-use crate::i18n::Lang;
+use melon_assets::i18n::Lang;
 
 /// `InputConstants.UNKNOWN.getName`.
 pub const UNKNOWN: &str = "key.keyboard.unknown";

@@ -3,7 +3,7 @@
 use glam::DVec3;
 
 use crate::game::{InWorld, melon_yaw, minecraft_yaw};
-use crate::network::Teleport;
+use melon_net::Teleport;
 
 impl InWorld {
     /// `handleMovePlayer`, with its relative flags for position, rotation
@@ -31,13 +31,13 @@ impl InWorld {
                 velocity = rotate_motion(velocity, old_yaw - new_yaw, old_pitch - new_pitch);
             }
             let (x, y, z) = t.pos;
-            if crate::probe::enabled() {
+            if melon_core::probe::enabled() {
                 let (from, rel) = (feet, t.relative);
-                crate::probe::note(
+                melon_core::probe::note(
                     "teleport",
                     format!(
                         "to=({x:.2},{y:.2},{z:.2}) {}",
-                        crate::probe::relative_flags(rel)
+                        melon_core::probe::relative_flags(rel)
                     ),
                     || {
                         format!(
@@ -56,7 +56,7 @@ impl InWorld {
                     crate::game::tick::HOLD_TRACE_UNTIL
                         .store(now + 30, std::sync::atomic::Ordering::Relaxed);
                     let level = &self.level;
-                    crate::probe::note("hold", format!("{now}"), || {
+                    melon_core::probe::note("hold", format!("{now}"), || {
                         let (bx, by, bz) = (x.floor() as i32, y.floor() as i32, z.floor() as i32);
                         let mut cells = String::new();
                         for dy in (-1..=3).rev() {
@@ -64,12 +64,12 @@ impl InWorld {
                                 for dx in -1..=1 {
                                     let at = (bx + dx, by + dy, bz + dz);
                                     let id =
-                                        crate::world::physics::block_at(level, at.0, at.1, at.2);
+                                        melon_world::physics::block_at(level, at.0, at.1, at.2);
                                     if id == 0 {
                                         continue;
                                     }
                                     let boxes: Vec<String> =
-                                        crate::world::physics::block_shapes(level, at)
+                                        melon_world::physics::block_shapes(level, at)
                                             .map(|b| format!("y{:.3}..{:.3}", b.min.y, b.max.y))
                                             .collect();
                                     cells.push_str(&format!("\n  {at:?} state={id} {boxes:?}"));
@@ -78,13 +78,13 @@ impl InWorld {
                         }
                         format!(
                             "packets of the last 5 s: {}\nwe sent (last 5 s): {}\nour last moves:{}\nmove.log:{}\nblocks around the pin ({x:.2},{y:.2},{z:.2}), y-1..head+1:{cells}",
-                            crate::probe::recent_packets(5),
-                            crate::probe::recent_sent(
+                            melon_core::probe::recent_packets(5),
+                            melon_core::probe::recent_sent(
                                 5,
-                                crate::network::play::debug::serverbound_name
+                                melon_net::play::debug::serverbound_name
                             ),
-                            crate::probe::recent_moves(),
-                            crate::probe::recent_io()
+                            melon_core::probe::recent_moves(),
+                            melon_core::probe::recent_io()
                         )
                     });
                 }

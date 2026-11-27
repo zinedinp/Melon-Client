@@ -5,9 +5,9 @@ use std::time::Instant;
 use uuid::Uuid;
 
 use super::item_slot::ItemPainter;
-use crate::network::play::game::boss::{BossEvent, COLORS, OVERLAYS};
-use crate::renderer::Renderer;
-use crate::renderer::quad::DrawList;
+use melon_net::play::game::boss::{BossEvent, COLORS, OVERLAYS};
+use melon_render::Renderer;
+use melon_render::quad::DrawList;
 use crate::sprite::GuiSprite;
 use crate::text::{self, StyledText, TextPaint, colors};
 use melon_assets::assets::Assets;
@@ -77,7 +77,7 @@ pub struct BossBars(Vec<Bar>);
 
 impl BossBars {
     /// `BossHealthOverlay.update`.
-    pub fn apply(&mut self, event: BossEvent, lang: &crate::i18n::Lang) {
+    pub fn apply(&mut self, event: BossEvent, lang: &melon_assets::i18n::Lang) {
         let find = |bars: &mut Vec<Bar>, id: Uuid| bars.iter().position(|bar| bar.id == id);
         match event {
             BossEvent::Add {

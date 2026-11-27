@@ -1,22 +1,22 @@
 //! Vanilla `CreativeModeInventoryScreen`.
 
-use crate::world::item_model::KeyedStack;
-use crate::world::item_model::StackKey;
+use melon_world::item_model::KeyedStack;
+use melon_world::item_model::StackKey;
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::item_slot::{self};
-use crate::i18n::Lang;
+use melon_assets::i18n::Lang;
 use crate::overlay::container_input::{self, ContainerMouse, MouseButtonKind, SlotClick};
 use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
-use crate::renderer::{Renderer, TextureId};
+use melon_render::{Renderer, TextureId};
 use crate::screen::TextEvent;
-use crate::settings::input::InputBind;
+use melon_settings::input::InputBind;
 use crate::sprite::GuiSprite;
 use crate::widgets::text_input::{Edit, TextInput};
-use crate::world::creative_tabs::{CreativeTab, TabType, tabs};
-use crate::world::hotbars::{HOTBARS, Hotbars};
-use crate::world::inventory::{Inventory, SLOT_COUNT, empty};
+use melon_world::creative_tabs::{CreativeTab, TabType, tabs};
+use melon_world::hotbars::{HOTBARS, Hotbars};
+use melon_world::inventory::{Inventory, SLOT_COUNT, empty};
 use melon_assets::assets::Assets;
 
 /// `searchBox`: `EditBox(font, leftPos + 82, topPos + 6, 80, 9)`, borderless.
@@ -474,7 +474,7 @@ impl Overlay for CreativeOverlay {
                 .config
                 .input
                 .binds
-                .get(crate::settings::input::Action::Chat)
+                .get(melon_settings::input::Action::Chat)
                 == bind
             {
                 return Some("t");
@@ -516,7 +516,7 @@ impl Overlay for CreativeOverlay {
 
     /// `CreativeModeInventoryScreen.extractBackground`.
     fn entity_preview(&self) -> Option<crate::entity_preview::EntityPreview> {
-        (self.tab_type() == crate::world::creative_tabs::TabType::Inventory).then_some(
+        (self.tab_type() == melon_world::creative_tabs::TabType::Inventory).then_some(
             crate::entity_preview::EntityPreview {
                 x0: self.left + 73.0,
                 y0: self.top + 6.0,

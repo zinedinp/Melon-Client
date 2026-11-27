@@ -5,11 +5,11 @@
 
 use std::sync::Arc;
 
-use crate::component::ClickEvent;
-use crate::dialog::connection::{self, Request};
-use crate::dialog::{AfterAction, Dialog, DialogClick};
+use melon_protocol::component::ClickEvent;
+use melon_net::dialog::connection::{self, Request};
+use melon_net::dialog::{AfterAction, Dialog, DialogClick};
 use crate::game::InWorld;
-use crate::gui::screens::dialog::{DialogLayer, DialogRequest, DialogScreen, WaitingScreen};
+use melon_gui::screens::dialog::{DialogLayer, DialogRequest, DialogScreen, WaitingScreen};
 
 use super::RunningState;
 
@@ -110,29 +110,29 @@ impl RunningState {
             ClickEvent::RunCommand { command } => match &self.world {
                 Some(world) => world.run_command(&command),
                 // `ClientConfigurationPacketListenerImpl`'s dialog access.
-                None => crate::warn!("No commands in the configuration phase: {command}"),
+                None => melon_base::warn!("No commands in the configuration phase: {command}"),
             },
             ClickEvent::ShowDialog { dialog } => {
                 match Dialog::reference(&dialog).and_then(|r| connection::resolve(&r)) {
                     Some(dialog) => self.show_dialog(dialog),
-                    None => crate::warn!("Dialog not found: {dialog}"),
+                    None => melon_base::warn!("Dialog not found: {dialog}"),
                 }
             }
             ClickEvent::OpenUrl { url } => {
-                if !crate::component::is_trusted_url(&url) {
+                if !melon_protocol::component::is_trusted_url(&url) {
                     return;
                 }
                 if self.env.config.chat.links_prompt {
                     let ctx = self.env.ctx(self.scale());
-                    let screen = crate::gui::screens::menu::confirm_link::confirm_link_screen(url);
+                    let screen = melon_gui::screens::menu::confirm_link::confirm_link_screen(url);
                     self.screens.push(Box::new(screen), &ctx);
                 } else {
-                    crate::platform::open_url(&url);
+                    melon_base::platform::open_url(&url);
                 }
             }
-            ClickEvent::CopyToClipboard { value } => crate::platform::copy_to_clipboard(&value),
+            ClickEvent::CopyToClipboard { value } => melon_base::platform::copy_to_clipboard(&value),
             ClickEvent::Custom { id, payload } => {
-                let payload = payload.as_ref().map(crate::dialog::action::json_to_nbt);
+                let payload = payload.as_ref().map(melon_net::dialog::action::json_to_nbt);
                 connection::send_custom(&id, payload.as_ref());
             }
             // `SuggestCommand` goes into the screen's text, which a dialog
@@ -156,7 +156,7 @@ impl RunningState {
             return;
         }
         // Still configuring: the join fails behind the dialogs.
-        crate::assets::packs::server::close_connection();
+        melon_assets::assets::packs::server::close_connection();
         connection::end();
         while self
             .screens

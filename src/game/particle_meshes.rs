@@ -4,11 +4,11 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::particle::Particle;
-use crate::particle::base::Atlas;
-use crate::particle::mesh::{Batch, ParticleQuad, View, build};
-use crate::renderer::{ParticleDraw, ParticleMeshId, Renderer, TextureId};
-use crate::world::level::Level;
+use melon_world::particle::Particle;
+use melon_world::particle::base::Atlas;
+use melon_world::particle::mesh::{Batch, ParticleQuad, View, build};
+use melon_render::{ParticleDraw, ParticleMeshId, Renderer, TextureId};
+use melon_world::level::Level;
 
 /// The particles' GPU side.
 #[derive(Default)]
@@ -69,7 +69,7 @@ impl ParticleMeshes {
                         translucent,
                     });
                 }
-                Err(e) => crate::warn!("Particle mesh failed: {e:#}"),
+                Err(e) => melon_base::warn!("Particle mesh failed: {e:#}"),
             }
         }
         self.batches.retain(|_, batch| !batch.quads.is_empty());
@@ -90,12 +90,12 @@ impl ParticleMeshes {
 /// An item's particle texture (its model's `particle`, else `layer0`).
 fn item_texture(renderer: &mut Renderer, assets_root: &Path, item: u16) -> Option<TextureId> {
     let key = pumpkin_data::item::Item::from_id(item)?.registry_key;
-    let model = crate::world::item_model::ItemModel::resolve(assets_root, key, None)?;
+    let model = melon_world::item_model::ItemModel::resolve(assets_root, key, None)?;
     let id = model
         .model
         .texture("particle")
         .or_else(|| model.model.texture("layer0"))?;
-    let mut image = crate::assets::texture_image(assets_root, &id)?;
+    let mut image = melon_assets::assets::texture_image(assets_root, &id)?;
     if image.height() > image.width() {
         let side = image.width();
         image = image::imageops::crop_imm(&image, 0, 0, side, side).to_image();

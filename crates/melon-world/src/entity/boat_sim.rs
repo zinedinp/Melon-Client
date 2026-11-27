@@ -4,7 +4,7 @@ use glam::{DVec3, IVec3};
 
 use crate::fluid::{self, FluidKind};
 use crate::level::Level;
-use crate::math::angle::{DEG_TO_RAD, cos, sin};
+use melon_core::math::angle::{DEG_TO_RAD, cos, sin};
 use crate::physics::{self, Aabb};
 
 /// `AbstractBoat.getDefaultGravity`.

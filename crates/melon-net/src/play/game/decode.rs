@@ -5,13 +5,13 @@ use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use super::id;
-use crate::protocol::packet::Reader;
-use crate::protocol::reader::initial_capacity;
-use crate::world::border::BorderUpdate;
-use crate::world::clock::ClockUpdate;
-use crate::world::game_mode::GameMode;
-use crate::world::inventory::merchant::{Offer, Offers};
-use crate::world::level_settings::{LevelSetting, SpawnPoint};
+use melon_protocol::packet::Reader;
+use melon_protocol::reader::initial_capacity;
+use melon_world::border::BorderUpdate;
+use melon_world::clock::ClockUpdate;
+use melon_world::game_mode::GameMode;
+use melon_world::inventory::merchant::{Offer, Offers};
+use melon_world::level_settings::{LevelSetting, SpawnPoint};
 
 /// `ClientboundGameEventPacket` type ids.
 const GAME_EVENT_NO_RESPAWN_BLOCK: u8 = 0;
@@ -106,7 +106,7 @@ pub enum GameEvent {
     /// `ClientboundExplodePacket`.
     Explosion(super::sound::Explosion),
     /// `ClientboundLevelParticlesPacket`.
-    Particles(crate::particle::server::LevelParticles),
+    Particles(melon_world::particle::server::LevelParticles),
     /// `ClientboundAnimatePacket`.
     Animate {
         entity: i32,
@@ -125,7 +125,7 @@ pub enum GameEvent {
     /// `ClientboundBlockEntityDataPacket`.
     BlockEntityData {
         pos: [i32; 3],
-        head: Option<crate::world::head_profile::HeadProfile>,
+        head: Option<melon_world::head_profile::HeadProfile>,
     },
     /// `ClientboundBlockDestructionPacket`.
     BlockDestruction {
@@ -187,7 +187,7 @@ pub enum GameEvent {
     RainLevel(f32),
     ThunderLevel(f32),
     /// Spawning, moving, data, equipment and animations of any entity.
-    Entity(crate::world::entity::wire::EntityPacket),
+    Entity(melon_world::entity::wire::EntityPacket),
     /// `ClientboundUpdateMobEffectPacket`.
     MobEffect {
         entity_id: i32,
@@ -213,7 +213,7 @@ pub enum GameEvent {
     OpenScreen {
         container: i32,
         window_type: i32,
-        title: crate::component::Component,
+        title: melon_protocol::component::Component,
     },
     /// `ClientboundContainerClosePacket`.
     ContainerClose {
@@ -231,7 +231,7 @@ pub struct PlayerInfoUpdate {
     pub listed: Option<bool>,
     /// Milliseconds the server measured; negative while unknown.
     pub latency: Option<i32>,
-    pub display_name: Option<Option<crate::component::Component>>,
+    pub display_name: Option<Option<melon_protocol::component::Component>>,
     /// `tabListOrder`: higher comes first.
     pub list_order: Option<i32>,
     /// The face in the list shows the skin's hat layer.
@@ -313,7 +313,7 @@ fn read_player_info(r: &mut Reader) -> Result<Vec<PlayerInfoUpdate>> {
 /// Decodes `pid` if it is one of the packets above.
 pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
     let mut r = Reader::new(body);
-    if let Some(packet) = crate::world::entity::wire::decode(pid, &mut r)? {
+    if let Some(packet) = melon_world::entity::wire::decode(pid, &mut r)? {
         return Ok(Some(GameEvent::Entity(packet)));
     }
     if let Some(event) = super::recipes::decode(pid, &mut r)? {
@@ -453,7 +453,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
         }
         id::CB_UPDATE_MOB_EFFECT => {
             let (entity_id, effect, amplifier, duration, flags) =
-                crate::world::entity::wire::read_update_effect(&mut r)?;
+                melon_world::entity::wire::read_update_effect(&mut r)?;
             GameEvent::MobEffect {
                 entity_id,
                 effect,
@@ -463,7 +463,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
             }
         }
         id::CB_REMOVE_MOB_EFFECT => {
-            let (entity_id, effect) = crate::world::entity::wire::read_remove_effect(&mut r)?;
+            let (entity_id, effect) = melon_world::entity::wire::read_remove_effect(&mut r)?;
             GameEvent::RemoveMobEffect { entity_id, effect }
         }
         id::CB_SET_ENTITY_MOTION => {
@@ -545,7 +545,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
             let event = r.u8()?;
             if !(24..=28).contains(&event) {
                 return Ok(Some(GameEvent::Entity(
-                    crate::world::entity::wire::EntityPacket::Event {
+                    melon_world::entity::wire::EntityPacket::Event {
                         id: entity_id,
                         event,
                     },
@@ -559,7 +559,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
         id::CB_PLAYER_INFO_UPDATE => match read_player_info(&mut r) {
             Ok(players) => GameEvent::PlayerInfo(players),
             Err(e) => {
-                crate::warn!("Player list unreadable: {e:#}");
+                melon_base::warn!("Player list unreadable: {e:#}");
                 return Ok(None);
             }
         },
@@ -567,7 +567,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
             match crate::play::chat::commands::CommandTree::decode(body) {
                 Ok(tree) => GameEvent::Commands(tree),
                 Err(e) => {
-                    crate::warn!("Command tree unreadable: {e:#}");
+                    melon_base::warn!("Command tree unreadable: {e:#}");
                     return Ok(None);
                 }
             }
@@ -599,8 +599,8 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
                 Ok(Some(packet)) => return Ok(Some(GameEvent::Scores(packet))),
                 Ok(None) => {}
                 Err(e) => {
-                    crate::warn!("Scoreboard packet {pid} unreadable: {e:#}");
-                    crate::probe::note("decode.error", format!("scoreboard packet {pid}"), || {
+                    melon_base::warn!("Scoreboard packet {pid} unreadable: {e:#}");
+                    melon_core::probe::note("decode.error", format!("scoreboard packet {pid}"), || {
                         format!("{e:#}")
                     });
                     return Ok(None);
@@ -609,8 +609,8 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
             return Ok(match crate::play::chat::decode(pid, body) {
                 Ok(event) => event.map(GameEvent::Chat),
                 Err(e) => {
-                    crate::warn!("Chat packet {pid} unreadable: {e:#}");
-                    crate::probe::note("decode.error", format!("chat packet {pid}"), || {
+                    melon_base::warn!("Chat packet {pid} unreadable: {e:#}");
+                    melon_core::probe::note("decode.error", format!("chat packet {pid}"), || {
                         format!("{e:#}")
                     });
                     None
@@ -630,7 +630,7 @@ fn merchant_offers(r: &mut Reader<'_>) -> Result<Offers> {
         let cost_b = if r.bool()? {
             item_cost(r)?
         } else {
-            crate::world::inventory::empty()
+            melon_world::inventory::empty()
         };
         let out_of_stock = r.bool()?;
         let uses = r.i32_be()?;
@@ -775,7 +775,7 @@ mod block_packet_tests {
         use pumpkin_util::math::vector3::Vector3;
         let pos = BlockPos(Vector3::new(-1234, -60, 98765));
         assert_eq!(
-            crate::protocol::reader::unpack_block_pos(pos.as_long()),
+            melon_protocol::reader::unpack_block_pos(pos.as_long()),
             [-1234, -60, 98765]
         );
 
@@ -846,7 +846,7 @@ mod block_packet_tests {
 
     #[test]
     fn shared_flags_packet_reads_the_local_fire_bit() {
-        use crate::world::entity::wire::{EntityFlags, EntityPacket};
+        use melon_world::entity::wire::{EntityFlags, EntityPacket};
         let mut body = vec![1];
         body.extend_from_slice(&[0, 0, 1, 0xFF]);
         let Some(GameEvent::Entity(EntityPacket::Data { id, values })) =

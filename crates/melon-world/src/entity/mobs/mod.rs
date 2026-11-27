@@ -1831,7 +1831,7 @@ mod tests {
             input
         };
         let resting = bat.pose(&input(bat::REST, 3.0));
-        assert!((resting[head].pose.rotation.x - crate::math::angle::PI).abs() < 1e-4);
+        assert!((resting[head].pose.rotation.x - melon_core::math::angle::PI).abs() < 1e-4);
         let early = bat.pose(&input(bat::FLY, 1.0));
         let later = bat.pose(&input(bat::FLY, 4.0));
         assert!((early[wing].pose.rotation - later[wing].pose.rotation).length() > 0.1);

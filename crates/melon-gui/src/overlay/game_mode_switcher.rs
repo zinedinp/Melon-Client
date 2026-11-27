@@ -1,18 +1,18 @@
 //! Vanilla `GameModeSwitcherScreen` (F3 + F4).
 
-use crate::world::item_model::StackKey;
+use melon_world::item_model::StackKey;
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::item_slot::ItemPainter;
-use crate::i18n::Lang;
+use melon_assets::i18n::Lang;
 use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
-use crate::renderer::quad::DrawList;
-use crate::renderer::{Renderer, TextureId};
+use melon_render::quad::DrawList;
+use melon_render::{Renderer, TextureId};
 use crate::sprite::GuiSprite;
 use crate::text::{self, StyledText, TextStyle, colors};
-use crate::world::game_mode::{GameMode, LocalGameMode};
-use crate::world::inventory::Inventory;
+use melon_world::game_mode::{GameMode, LocalGameMode};
+use melon_world::inventory::Inventory;
 use melon_assets::assets::Assets;
 
 /// `GameModeIcon.values().length * 31 - 5`.

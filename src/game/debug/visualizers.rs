@@ -12,12 +12,12 @@ use pumpkin_data::tag::{self, Taggable};
 
 use crate::game::InWorld;
 use crate::game::gizmos::{DEFAULT_WIDTH, Fill, Gizmos, Line, TEXT_SCALE, WorldText};
-use crate::gui::hud::debug_entries::Entry;
-use crate::math::argb;
-use crate::world::block::direction::Direction;
-use crate::world::culling::frustum::Frustum;
-use crate::world::fluid::{FluidKind, fluid_of};
-use crate::world::physics::{self, Aabb};
+use melon_gui::hud::debug_entries::Entry;
+use melon_core::math::argb;
+use melon_world::block::direction::Direction;
+use melon_world::culling::frustum::Frustum;
+use melon_world::fluid::{FluidKind, fluid_of};
+use melon_world::physics::{self, Aabb};
 
 /// `CollisionBoxRenderer`'s and `SupportBlockRenderer`'s 100 ms.
 const REFRESH: Duration = Duration::from_millis(100);
@@ -182,9 +182,9 @@ impl InWorld {
             return;
         };
         let feet = self.player.feet();
-        let on = crate::world::block_motion::on_pos(&self.level, feet, Some(supporting), 1.0e-5);
+        let on = melon_world::block_motion::on_pos(&self.level, feet, Some(supporting), 1.0e-5);
         self.highlight(gizmos, on, 0.02, 0xFFFF_0000);
-        let legacy = crate::world::block_motion::on_pos(&self.level, feet, Some(supporting), 0.2);
+        let legacy = melon_world::block_motion::on_pos(&self.level, feet, Some(supporting), 0.2);
         if legacy != on {
             self.highlight(gizmos, legacy, 0.04, 0xFF00_FFFF);
         }
@@ -249,7 +249,7 @@ impl InWorld {
                     if sturdy.is_empty() {
                         continue;
                     }
-                    for shape in crate::world::pick::outline_shapes(&self.level, (x, y, z)) {
+                    for shape in melon_world::pick::outline_shapes(&self.level, (x, y, z)) {
                         let (min, max) = (
                             shape.min - DVec3::splat(0.002),
                             shape.max + DVec3::splat(0.002),
@@ -299,7 +299,7 @@ impl InWorld {
     /// `LightDebugRenderer`: the light within 10 as numbers, sky light
     /// (blue to cyan) where it is not full, block light (red to yellow)
     /// where there is any, and each section's sky light storage
-    /// ([`crate::world::level::Level::light_section_type`]) at its middle.
+    /// ([`melon_world::level::Level::light_section_type`]) at its middle.
     fn light_gizmos(&self, gizmos: &mut Gizmos, camera: DVec3, block: bool, sky: bool) {
         let at = camera.floor().as_ivec3();
         let mut sections = Vec::new();
@@ -453,7 +453,7 @@ impl InWorld {
                     if filled & (1 << y) == 0 || !mask.contains(pos) || !in_view(pos) {
                         continue;
                     }
-                    let crate::world::culling::occlusion::SectionState::Loaded(set) =
+                    let melon_world::culling::occlusion::SectionState::Loaded(set) =
                         self.level.section_state(pos)
                     else {
                         continue;
@@ -634,7 +634,7 @@ fn block_direction(direction: Direction) -> pumpkin_data::BlockDirection {
 
 /// `HeightMapRenderer`'s boxes for the 5×5 chunks around `(cx, cz)`, the
 /// client's three heightmaps: their tops, offset by the type's ordinal.
-fn heightmap_tops(level: &crate::world::level::Level, cx: i32, cz: i32) -> Vec<Fill> {
+fn heightmap_tops(level: &melon_world::level::Level, cx: i32, cz: i32) -> Vec<Fill> {
     let (min_y, sections) = level.height();
     let top = min_y + sections * 16;
     // `Heightmap.Types` ordinal and `HeightMapRenderer.getColor`.
@@ -676,7 +676,7 @@ fn heightmap_tops(level: &crate::world::level::Level, cx: i32, cz: i32) -> Vec<F
 /// World surface, motion blocking and motion blocking without leaves: one
 /// above the highest block that counts, in one walk down.
 fn column_heights(
-    level: &crate::world::level::Level,
+    level: &melon_world::level::Level,
     x: i32,
     z: i32,
     min_y: i32,

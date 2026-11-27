@@ -4,7 +4,7 @@ use super::DebugFont;
 use crate::game::InWorld;
 use crate::game::camera::Camera;
 use crate::game::world_resources::WorldResources;
-use crate::renderer::{EntityDraw, LineDraw, Renderer};
+use melon_render::{EntityDraw, LineDraw, Renderer};
 
 /// What the overlay layer draws from.
 pub(in crate::game) struct OverlayInput<'a> {

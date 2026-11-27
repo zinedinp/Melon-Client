@@ -2,11 +2,11 @@
 //! bottom right, each with an arrow toward where it came from when that is
 //! out of view, fading from white to grey over three seconds.
 
-use crate::audio::Heard;
+use melon_audio::Heard;
 use crate::hud::item_slot::ItemPainter;
-use crate::i18n::Lang;
-use crate::math::argb;
-use crate::renderer::quad::DrawList;
+use melon_assets::i18n::Lang;
+use melon_core::math::argb;
+use melon_render::quad::DrawList;
 use crate::text::{self, StyledText};
 use std::sync::Arc;
 use std::time::{Duration, Instant};

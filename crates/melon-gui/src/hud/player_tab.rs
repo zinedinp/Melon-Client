@@ -2,16 +2,16 @@
 
 use std::collections::HashMap;
 
-use crate::component::Component;
+use melon_protocol::component::Component;
 use crate::face::draw_face;
 use crate::hud::bars::hearts::{HeartKind, Sprites as HeartSprites};
 use crate::hud::item_slot::ItemPainter;
-use crate::i18n::Lang;
-use crate::renderer::quad::DrawList;
-use crate::renderer::{Renderer, TextureId};
+use melon_assets::i18n::Lang;
+use melon_render::quad::DrawList;
+use melon_render::{Renderer, TextureId};
 use crate::sprite::GuiSprite;
 use crate::text::{self, StyledText, colors};
-use crate::world::scoreboard::{NumberFormat, Objective, RenderType, Score};
+use melon_world::scoreboard::{NumberFormat, Objective, RenderType, Score};
 use melon_assets::assets::Assets;
 
 /// `PlayerTabOverlay.MAX_ROWS_PER_COL`.
@@ -189,7 +189,7 @@ impl PlayerTabOverlay {
             let text = StyledText::from_component(text.as_ref()?, frame.lang);
             let lines = (!text.to_plain().is_empty())
                 .then(|| text::wrap(font, &text, (screen_width - 50) as f32));
-            crate::probe::note(
+            melon_core::probe::note(
                 "tab.text",
                 format!("header/footer {:?}", text.to_plain()),
                 || {

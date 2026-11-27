@@ -101,7 +101,7 @@ impl Layer {
                     Ok(json) => {
                         self.read(&json);
                     }
-                    Err(e) => crate::warn!("Recipes: {}: {e}", file.display()),
+                    Err(e) => melon_base::warn!("Recipes: {}: {e}", file.display()),
                 }
             }
         }

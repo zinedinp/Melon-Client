@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use crate::dialog::Dialog;
-use crate::i18n::Lang;
+use melon_net::dialog::Dialog;
+use melon_assets::i18n::Lang;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::dialog::DialogRequest;
 use crate::screens::options::OptionsScreen;

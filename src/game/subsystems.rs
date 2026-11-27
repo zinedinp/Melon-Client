@@ -3,8 +3,8 @@
 use std::time::Instant;
 
 use super::thread_cpu::ThreadTimes;
-use crate::audio::stats::{AudioStats, AudioTotals};
-use crate::network::play::stats::{NetStats, NetTotals};
+use melon_audio::stats::{AudioStats, AudioTotals};
+use melon_net::play::stats::{NetStats, NetTotals};
 
 /// F3's lines are renewed this often.
 const F3_PERIOD_SECONDS: f64 = 1.0;

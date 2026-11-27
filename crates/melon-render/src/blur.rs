@@ -363,7 +363,7 @@ impl Renderer {
                 .ensure_targets(self.swapchain.format, self.swapchain.extent)
         };
         if let Err(e) = &made {
-            crate::warn!("Blur unavailable: {e:#}");
+            melon_base::warn!("Blur unavailable: {e:#}");
             self.swapchain.can_copy = false;
         }
         made.is_ok()

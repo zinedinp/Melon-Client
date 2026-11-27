@@ -6,16 +6,16 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow};
 
 use super::RunningState;
 use crate::game::{DebugFrame, InWorld};
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::widgets::Ui;
-use crate::renderer::{Blur, Frame};
+use melon_gui::hud::item_slot::ItemPainter;
+use melon_gui::widgets::Ui;
+use melon_render::{Blur, Frame};
 
 /// `Options.menuBackgroundBlurriness`'s default.
 const MENU_BACKGROUND_BLURRINESS: f32 = 5.0;
 
 impl RunningState {
     pub(super) fn redraw(&mut self, event_loop: &ActiveEventLoop) {
-        crate::probe::flush_if_due();
+        melon_core::probe::flush_if_due();
         let now = Instant::now();
         let dt = now.duration_since(self.last_frame);
         self.last_frame = now;
@@ -28,7 +28,7 @@ impl RunningState {
             self.apply(action, event_loop);
         }
         if let Some(reason) = self.world.as_mut().and_then(InWorld::ended) {
-            let reason = if reason == crate::network::play::TIMEOUT_REASON {
+            let reason = if reason == melon_net::play::TIMEOUT_REASON {
                 self.env.lang.get("disconnect.timeout").to_owned()
             } else {
                 reason
@@ -76,14 +76,14 @@ impl RunningState {
             let text = match &saved {
                 Ok(file) => super::screenshot::saved_message(lang, file),
                 Err(e) => {
-                    crate::gui::text::StyledText::plain(&lang.format("screenshot.failure", &[e]))
+                    melon_gui::text::StyledText::plain(&lang.format("screenshot.failure", &[e]))
                 }
             };
             match &mut self.world {
                 Some(world) => world.show_client_message(text, &self.env.gui_assets.font),
                 None => match saved {
-                    Ok(file) => crate::info!("Screenshot: {}", file.display()),
-                    Err(e) => crate::warn!("Screenshot not saved: {e}"),
+                    Ok(file) => melon_base::info!("Screenshot: {}", file.display()),
+                    Err(e) => melon_base::warn!("Screenshot not saved: {e}"),
                 },
             }
         }
@@ -105,7 +105,7 @@ impl RunningState {
         let size = scale.virtual_size();
         self.draw_list.clear();
         if scene.is_none() {
-            crate::gui::background::push_gradient(
+            melon_gui::background::push_gradient(
                 &mut self.draw_list,
                 self.env.gui_assets.white,
                 size.0,
@@ -127,7 +127,7 @@ impl RunningState {
             scene: scene.as_ref(),
             ui: &self.draw_list,
             ui_size: scale.projection_size(),
-            clear_color: crate::gui::background::CLEAR_COLOR,
+            clear_color: melon_gui::background::CLEAR_COLOR,
             blur,
             pictures: &[],
         };
@@ -276,7 +276,7 @@ impl RunningState {
             self.window
                 .current_monitor()
                 .and_then(|m| m.refresh_rate_millihertz())
-                .map(crate::gui::hud::debug::refresh_rate_label)
+                .map(melon_gui::hud::debug::refresh_rate_label)
         } else {
             None
         };
@@ -298,8 +298,8 @@ impl RunningState {
                 let (w, h) = self.renderer.framebuffer_size();
                 match env.config.debug_gui_scale {
                     -1 => scale.scale(),
-                    0 => crate::gui::screen::calculate_scale(0, w, h) / 2,
-                    n => crate::gui::screen::calculate_scale(n as u32, w, h),
+                    0 => melon_gui::screen::calculate_scale(0, w, h) / 2,
+                    n => melon_gui::screen::calculate_scale(n as u32, w, h),
                 }
             },
         };
@@ -316,7 +316,7 @@ impl RunningState {
             self.renderer.request_capture();
         }
         let probe_shot = if icon_path.is_none() {
-            crate::probe::screenshot_due()
+            melon_core::probe::screenshot_due()
         } else {
             None
         };
@@ -344,7 +344,7 @@ impl RunningState {
             if let Some(image) = self.renderer.take_capture()
                 && let Err(e) = image.save(&path)
             {
-                crate::warn!("Tester: {} not written: {e}", path.display());
+                melon_base::warn!("Tester: {} not written: {e}", path.display());
             }
         } else if let Some(path) = icon_path
             && let Some(image) = self.renderer.take_capture()
@@ -387,21 +387,21 @@ impl RunningState {
 
 /// Reports a frame that failed; whether the device is lost for good.
 fn render_failed(e: &anyhow::Error) -> bool {
-    if crate::renderer::is_device_lost(e) {
-        crate::warn!(
+    if melon_render::is_device_lost(e) {
+        melon_base::warn!(
             "Render error: the GPU lost the Vulkan device ({e:#}). \
              Melon leaves the world and quits; `journalctl -k` (Xid) has the cause."
         );
         return true;
     }
-    crate::warn!("Render error, frame skipped: {e:#}");
+    melon_base::warn!("Render error, frame skipped: {e:#}");
     false
 }
 
 /// The blur behind `screen`, if it has one.
 fn menu_blur(
-    screen: &dyn crate::gui::screen::Screen,
-    draw_list: &mut crate::renderer::quad::DrawList,
+    screen: &dyn melon_gui::screen::Screen,
+    draw_list: &mut melon_render::quad::DrawList,
     has_background: bool,
 ) -> Option<Blur> {
     (has_background && screen.blurs_background()).then(|| Blur {

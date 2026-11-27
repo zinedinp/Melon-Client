@@ -7,7 +7,7 @@ use std::collections::HashSet;
 #[derive(Default)]
 pub struct Entities {
     /// Entity ids are small server counters: no need for SipHash.
-    pub(super) by_id: HashMap<i32, ClientEntity, crate::math::ChunkHash>,
+    pub(super) by_id: HashMap<i32, ClientEntity, melon_core::math::ChunkHash>,
     /// Some entity was renamed since [`Self::resolve_names`].
     names_pending: bool,
     /// The dimension turns piglins into zombified ones.
@@ -18,7 +18,7 @@ pub struct Entities {
     /// The vehicle the local player steers, and its simulation.
     pub(super) driven: Option<super::drive::Driven>,
     /// Passenger lists whose vehicle has not spawned yet.
-    pending_passengers: HashMap<i32, Vec<i32>, crate::math::ChunkHash>,
+    pending_passengers: HashMap<i32, Vec<i32>, melon_core::math::ChunkHash>,
     /// Items flying into hands, and the sounds of them being taken.
     pub(super) pickups: Vec<super::pickup::Pickup>,
     pub(super) pickup_sounds: Vec<super::pickup::PickupSound>,

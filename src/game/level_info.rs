@@ -1,8 +1,8 @@
 //! What the server said of the level the player is in: its dimension and
 //! the registries that describe it.
 
-use crate::world::biome::Biomes;
-use crate::world::dimension::{DimensionType, DimensionTypes};
+use melon_world::biome::Biomes;
+use melon_world::dimension::{DimensionType, DimensionTypes};
 
 pub(super) struct LevelInfo {
     /// `Level.dimension().identifier()`, for the F3 overlay and the

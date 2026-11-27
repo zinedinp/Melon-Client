@@ -4,7 +4,7 @@ use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::{self, QuadrupedParts};
-use crate::math::angle::PI;
+use melon_core::math::angle::PI;
 use crate::model_part::{Cube, Pose};
 
 pub fn adult() -> LayerDefinition {

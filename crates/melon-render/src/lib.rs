@@ -28,13 +28,6 @@ mod swapchain;
 #[cfg(test)]
 mod vk_check;
 
-// The lower crates' modules, under the paths the moved code names them by.
-use melon_assets::assets;
-use melon_base::{home, info, warn};
-#[cfg(test)]
-use melon_core::math;
-use melon_world::{self as world, particle};
-
 pub use gpu_timer::PassStats;
 pub use melon_base::gfx::quad;
 use melon_base::gfx::residency::Residency;
@@ -52,11 +45,11 @@ pub use frame::{
     TerrainMesh, WeatherDraw, WorldDraw,
 };
 // The formats the world builds its meshes in, and its camera.
-pub use crate::particle::mesh::ParticleQuad;
+pub use melon_world::particle::mesh::ParticleQuad;
 #[cfg(test)]
-pub use crate::world::mesh::quads_of_index_list;
-pub use crate::world::mesh::{CornerLight, TerrainQuad, WorldVertex, quad_index_list};
-pub use crate::world::projection::{WORLD_Z_NEAR, world_projection};
+pub use melon_world::mesh::quads_of_index_list;
+pub use melon_world::mesh::{CornerLight, TerrainQuad, WorldVertex, quad_index_list};
+pub use melon_world::projection::{WORLD_Z_NEAR, world_projection};
 
 use ash::vk;
 use melon_base::gfx::suballoc;

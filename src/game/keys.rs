@@ -1,8 +1,8 @@
 //! The keys that steer the player, with vanilla's default bindings.
 
-use crate::network::play::game::PlayerInput;
-use crate::settings::input::{Action, InputBind, InputSettings};
-use crate::world::player::MoveInput;
+use melon_net::play::game::PlayerInput;
+use melon_settings::input::{Action, InputBind, InputSettings};
+use melon_world::player::MoveInput;
 
 /// WASD, Space, Left Shift (`keyShift`, sneak) and Left Control (`keySprint`).
 #[derive(Default)]
@@ -157,12 +157,12 @@ pub fn player_input(input: MoveInput) -> PlayerInput {
     }
 }
 
-pub use crate::gui::overlay::container_input::hotbar_key;
+pub use melon_gui::overlay::container_input::hotbar_key;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::input::InputBind;
+    use melon_settings::input::InputBind;
 
     #[test]
     fn clear_clicks_drops_leftover_attack() {

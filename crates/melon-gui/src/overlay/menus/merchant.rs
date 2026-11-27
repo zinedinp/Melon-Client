@@ -6,8 +6,8 @@ use super::{Frame, Loader, MenuDraw, MenuScreen};
 use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::{OverlayAction, OverlayContext};
 use crate::sprite::GuiSprite;
-use crate::world::inventory::OpenContainer;
-use crate::world::inventory::merchant::{self, Offer};
+use melon_world::inventory::OpenContainer;
+use melon_world::inventory::merchant::{self, Offer};
 
 const ROWS: usize = 7;
 /// A trade button: where the first is, its size and the pitch.

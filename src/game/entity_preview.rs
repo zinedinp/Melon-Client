@@ -12,19 +12,19 @@ use super::InWorld;
 use super::entities::{Avatar, submit_avatar};
 use super::entity_models::DrawStyle;
 use super::world_resources::WorldResources;
-use crate::gui::entity_preview::{self, EntityPreview, PreviewLayer};
-use crate::renderer::{
+use melon_gui::entity_preview::{self, EntityPreview, PreviewLayer};
+use melon_render::{
     EntityDraw, Glint, PictureDraw, RenderLayer, Renderer, TextureId, pixel_projection,
 };
-use crate::settings::options::Config;
-use crate::world::block_entity::models::SkullType;
-use crate::world::entity::kind::EntityKind;
-use crate::world::entity::mobs;
-use crate::world::entity::mobs::custom_head::HeadTransforms;
-use crate::world::entity::model::PartId;
-use crate::world::entity::player::{AvatarRenderState, PlayerModel};
-use crate::world::head_profile::HeadProfile;
-use crate::world::player::hands::Hand;
+use melon_settings::options::Config;
+use melon_world::block_entity::models::SkullType;
+use melon_world::entity::kind::EntityKind;
+use melon_world::entity::mobs;
+use melon_world::entity::mobs::custom_head::HeadTransforms;
+use melon_world::entity::model::PartId;
+use melon_world::entity::player::{AvatarRenderState, PlayerModel};
+use melon_world::head_profile::HeadProfile;
+use melon_world::player::hands::Hand;
 
 /// `Avatar.STANDING_DIMENSIONS`' and `POSES[CROUCHING]`'s heights.
 const STANDING_HEIGHT: f32 = 1.8;
@@ -145,7 +145,7 @@ impl InWorld {
                         target
                     }
                     Err(e) => {
-                        crate::warn!("Player preview not on the GPU, drawing it on the CPU: {e:#}");
+                        melon_base::warn!("Player preview not on the GPU, drawing it on the CPU: {e:#}");
                         self.preview.cpu_only = true;
                         return false;
                     }
@@ -207,7 +207,7 @@ impl InWorld {
                     texture
                 }
                 Err(e) => {
-                    crate::warn!("Player preview not uploaded: {e:#}");
+                    melon_base::warn!("Player preview not uploaded: {e:#}");
                     previews.current = None;
                     return;
                 }
@@ -325,7 +325,7 @@ impl InWorld {
             );
             if layer.translucent {
                 for draw in &mut out[first..] {
-                    draw.blend = crate::renderer::Blending::Translucent;
+                    draw.blend = melon_render::Blending::Translucent;
                 }
             }
         }
@@ -535,7 +535,7 @@ impl InWorld {
 /// turned toward the mouse.
 fn mob_specs(
     assets: &WorldResources,
-    entity: &crate::world::entity::tracker::ClientEntity,
+    entity: &melon_world::entity::tracker::ClientEntity,
     preview: &EntityPreview,
     translucent: bool,
 ) -> (Vec<mobs::LayerSpec>, mobs::PoseInput) {
@@ -559,9 +559,9 @@ fn pose_layers(
     assets: &WorldResources,
     specs: &[mobs::LayerSpec],
     input: &mobs::PoseInput,
-) -> Vec<crate::world::entity::model::ModelPose> {
+) -> Vec<melon_world::entity::model::ModelPose> {
     let mut posed = Vec::with_capacity(specs.len());
-    let mut body_pose: Option<(&mobs::MobModel, crate::world::entity::model::ModelPose)> = None;
+    let mut body_pose: Option<(&mobs::MobModel, melon_world::entity::model::ModelPose)> = None;
     for layer in specs {
         let (mob, _) = assets.mobs.get(layer.model);
         let pose = if layer.copy_humanoid {

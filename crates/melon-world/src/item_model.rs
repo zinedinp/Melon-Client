@@ -11,7 +11,7 @@ use pumpkin_data::item_stack::ItemStack;
 use serde_json::{Value, json};
 
 use crate::json_model::{Model, TextureCache, element_quads, vec3};
-use crate::math::angle::{self, DEG_TO_RAD, HALF_PI, PI, Rotation};
+use melon_core::math::angle::{self, DEG_TO_RAD, HALF_PI, PI, Rotation};
 use crate::mesh::WorldVertex;
 use crate::texture_animation;
 use crate::transparency::{AlphaMap, AlphaRule};
@@ -189,9 +189,9 @@ impl ItemModel {
         display: HandPose,
     ) -> Option<Self> {
         let id = definition_id(key, variant);
-        let Some(definition) = crate::assets::json_resource(assets_root, "items", id) else {
-            if crate::probe::enabled() {
-                crate::probe::count("item.definition_missing", id);
+        let Some(definition) = melon_assets::assets::json_resource(assets_root, "items", id) else {
+            if melon_core::probe::enabled() {
+                melon_core::probe::count("item.definition_missing", id);
             }
             return None;
         };
@@ -221,13 +221,13 @@ impl ItemModel {
         }
         let first = layers.first()?.source.model();
         let Some(model) = Model::resolve(assets_root, first) else {
-            if crate::probe::enabled() {
-                crate::probe::note("item.model_missing", first, || format!("from {id}"));
+            if melon_core::probe::enabled() {
+                melon_core::probe::note("item.model_missing", first, || format!("from {id}"));
             }
             return None;
         };
-        if crate::probe::enabled() && variant.is_some() {
-            crate::probe::note("item.custom", id, || {
+        if melon_core::probe::enabled() && variant.is_some() {
+            melon_core::probe::note("item.custom", id, || {
                 let v = variant.expect("checked");
                 format!(
                     "floats {:?}, strings {:?}, flags {:?}, colors {:?}, dye {:?}; {} layer(s), first model {first}",
@@ -840,8 +840,8 @@ fn collect_layers(
                 Some("has_component") => has_component(model, state.variant),
                 Some("bundle/has_selected_item") => false,
                 other => {
-                    if crate::probe::enabled() {
-                        crate::probe::count(
+                    if melon_core::probe::enabled() {
+                        melon_core::probe::count(
                             "item.unsupported",
                             format!("condition {}", other.unwrap_or("?")),
                         );
@@ -944,8 +944,8 @@ fn collect_layers(
         }
         "empty" => {}
         other => {
-            if crate::probe::enabled() {
-                crate::probe::count("item.unsupported", format!("model type {other}"));
+            if melon_core::probe::enabled() {
+                melon_core::probe::count("item.unsupported", format!("model type {other}"));
             }
             return None;
         }
@@ -1611,7 +1611,7 @@ mod tests {
 
     fn assets() -> Option<&'static Path> {
         static ROOT: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
-        let root = ROOT.get_or_init(crate::assets::default_root).as_path();
+        let root = ROOT.get_or_init(melon_assets::assets::default_root).as_path();
         root.join("minecraft/items/stone.json")
             .is_file()
             .then_some(root)
@@ -1697,7 +1697,7 @@ mod tests {
         let trim = &atlas.sprites["minecraft:trims/items/chestplate_trim_gold"];
         let [u0, v0, u1, v1] = trim.0;
         assert!(u1 > u0 && v1 > v0);
-        let gold = crate::assets::texture_image(root, "minecraft:trims/items/chestplate_trim_gold")
+        let gold = melon_assets::assets::texture_image(root, "minecraft:trims/items/chestplate_trim_gold")
             .expect("gold chestplate trim");
         assert!(gold.pixels().any(|p| p[3] == 255));
 

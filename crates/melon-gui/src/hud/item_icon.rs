@@ -1,6 +1,6 @@
 //! Item icons for the hotbar and inventory, baked on the CPU from the item models.
 
-use crate::world::item_model::StackKey;
+use melon_world::item_model::StackKey;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -10,16 +10,16 @@ use image::RgbaImage;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::icon_atlas::{IconAtlas, Slot};
-use crate::math::angle::Rotation;
-use crate::renderer::quad::DrawList;
-use crate::renderer::{Renderer, TextureId};
+use melon_core::math::angle::Rotation;
+use melon_render::quad::DrawList;
+use melon_render::{Renderer, TextureId};
 use crate::sprite::GuiSprite;
-use crate::world::block_entity::models::SkullType;
-use crate::world::glint::GlintUv;
-use crate::world::head_profile::HeadProfile;
-use crate::world::item_model::{self, Count, ItemKey, ItemModel, ItemQuad};
-use crate::world::json_model::{Display, TextureCache};
-use crate::world::texture_animation;
+use melon_world::block_entity::models::SkullType;
+use melon_world::glint::GlintUv;
+use melon_world::head_profile::HeadProfile;
+use melon_world::item_model::{self, Count, ItemKey, ItemModel, ItemQuad};
+use melon_world::json_model::{Display, TextureCache};
+use melon_world::texture_animation;
 
 /// Edge length of a baked block icon.
 const BLOCK_ICON_SIZE: u32 = 64;
@@ -35,7 +35,7 @@ const DEFAULT_BLOCK_GUI: Display = Display {
 #[derive(Clone)]
 pub struct ItemSheet {
     pub texture: TextureId,
-    pub sprites: Arc<HashMap<String, ([f32; 4], crate::world::transparency::AlphaMap)>>,
+    pub sprites: Arc<HashMap<String, ([f32; 4], melon_world::transparency::AlphaMap)>>,
 }
 
 /// One item's icon, ready to draw.
@@ -257,7 +257,7 @@ impl ItemIcons {
         let strip = icon.strip();
         let texture = renderer
             .load_texture(&strip)
-            .map_err(|e| crate::warn!("Item icon {name} not uploaded: {e:#}"))
+            .map_err(|e| melon_base::warn!("Item icon {name} not uploaded: {e:#}"))
             .ok()?;
         Some(Icon {
             look: Look::Sprite(GuiSprite::with_meta(
@@ -309,7 +309,7 @@ fn atlas_layers(item: &ItemModel, sheet: &ItemSheet) -> Option<Vec<([f32; 4], [f
         .map(|(texture, tint)| {
             let &(uv, _) = sheet
                 .sprites
-                .get(&crate::world::item_atlas::canonical(&texture))?;
+                .get(&melon_world::item_atlas::canonical(&texture))?;
             let [r, g, b] = tint.map(|c| f32::from(c) / 255.0);
             Some((uv, [r, g, b, 1.0]))
         })
@@ -576,8 +576,8 @@ pub fn draw_triangle(
     let (tw, th) = (texture.width() as usize, texture.height() as usize);
     let texels = texture.as_raw();
     let glint = glint.map(|g| {
-        let millis = crate::world::glint::millis();
-        (g, GlintUv::new(crate::world::glint::ARMOR_SCALE, millis))
+        let millis = melon_world::glint::millis();
+        (g, GlintUv::new(melon_world::glint::ARMOR_SCALE, millis))
     });
     let lit = tint.map(|t| f32::from(t) / 255.0 * shade);
     let width = w as usize;
@@ -669,7 +669,7 @@ fn to_byte(v: f32) -> u8 {
 
 /// `BlendFunction.GLINT`: `dst + src * src` of the scrolling armor glint.
 fn add_glint(pixel: &mut [u8], uv: Vec2, glint: &RgbaImage) {
-    let sample = crate::world::glint::sample(glint, uv);
+    let sample = melon_world::glint::sample(glint, uv);
     if sample[3] < 26 {
         return;
     }
@@ -723,8 +723,8 @@ mod tests {
             eprintln!("no extracted assets, skipping");
             return;
         };
-        let ids = crate::world::item_atlas::texture_ids(&root);
-        let packed = crate::world::block_models::pack_sprites(&root, ids, 4096);
+        let ids = melon_world::item_atlas::texture_ids(&root);
+        let packed = melon_world::block_models::pack_sprites(&root, ids, 4096);
         let sheet = ItemSheet {
             texture: TextureId(0),
             sprites: Arc::new(packed.sprites),

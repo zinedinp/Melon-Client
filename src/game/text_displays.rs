@@ -5,20 +5,20 @@ use std::collections::HashMap;
 use glam::{IVec3, Mat4, Vec3};
 
 use super::InWorld;
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::text::{self, StyledText};
-use crate::i18n::Lang;
-use crate::math::ChunkHash;
-use crate::math::argb;
-use crate::renderer::quad::{DrawList, Vertex};
-use crate::renderer::{
+use melon_gui::hud::item_slot::ItemPainter;
+use melon_gui::text::{self, StyledText};
+use melon_assets::i18n::Lang;
+use melon_core::math::ChunkHash;
+use melon_core::math::argb;
+use melon_render::quad::{DrawList, Vertex};
+use melon_render::{
     Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer, TextureId, WorldVertex,
 };
-use crate::world::entity::display::{
+use melon_world::entity::display::{
     self, FLAG_ALIGN_LEFT, FLAG_ALIGN_RIGHT, FLAG_DEFAULT_BACKGROUND, FLAG_SEE_THROUGH, FLAG_SHADOW,
 };
-use crate::world::entity::kind::EntityKind;
-use crate::world::lightmap::LightmapParams;
+use melon_world::entity::kind::EntityKind;
+use melon_world::lightmap::LightmapParams;
 
 /// Blocks a pixel of text covers (`scale(-0.025)`).
 const PIXEL: f32 = 0.025;
@@ -243,8 +243,8 @@ impl InWorld {
             }
             let mut parts = Vec::new();
             let built = build(state, painter, lang, entity.id as u64, style);
-            if crate::probe::enabled() {
-                crate::probe::note("text_display", format!("#{} built", entity.id), || {
+            if melon_core::probe::enabled() {
+                melon_core::probe::note("text_display", format!("#{} built", entity.id), || {
                     let styled = StyledText::from_component(&state.text, lang);
                     let fonts: Vec<&str> = styled
                         .spans
@@ -281,7 +281,7 @@ impl InWorld {
                         texture,
                         solid,
                     }),
-                    Err(e) => crate::warn!("Text display mesh failed: {e:#}"),
+                    Err(e) => melon_base::warn!("Text display mesh failed: {e:#}"),
                 }
             }
             self.entity_meshes.text_displays.kept.insert(
@@ -320,7 +320,7 @@ impl InWorld {
         params: &LightmapParams,
         out: &mut Vec<EntityDraw>,
     ) {
-        if crate::probe::enabled() {
+        if melon_core::probe::enabled() {
             for entity in self.entities.iter() {
                 if entity.kind != EntityKind::TextDisplay {
                     continue;
@@ -339,7 +339,7 @@ impl InWorld {
                 } else {
                     "submitted"
                 };
-                crate::probe::note("text_display", format!("#{} {outcome}", entity.id), || {
+                melon_core::probe::note("text_display", format!("#{} {outcome}", entity.id), || {
                     let feet = entity.pos(partial).as_vec3();
                     let transform = entity
                         .display
@@ -385,7 +385,7 @@ impl InWorld {
                 * Mat4::from_rotation_y(std::f32::consts::PI)
                 * Mat4::from_scale(Vec3::splat(-PIXEL));
             let light = match state.light_override() {
-                Some((block, sky)) => crate::world::lightmap::sample(block, sky, params),
+                Some((block, sky)) => melon_world::lightmap::sample(block, sky, params),
                 None => self.light_at_eye(feet + Vec3::Y * state.height * 0.5, 0, params),
             };
             let distance =

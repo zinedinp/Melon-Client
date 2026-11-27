@@ -43,7 +43,7 @@ fn load_font_stack(
         let Ok(value) = serde_json::from_slice::<serde_json::Value>(
             melon_assets::assets::packs::meta::strip_bom(bytes),
         ) else {
-            crate::warn!("{id} is not valid JSON, skipped");
+            melon_base::warn!("{id} is not valid JSON, skipped");
             continue;
         };
         let providers = value
@@ -81,13 +81,13 @@ fn load_providers(
         match provider_type {
             "bitmap" => {
                 if let Err(e) = load_bitmap(assets, &provider, pages, page_index_by_path, glyphs) {
-                    crate::warn!("{e:#}");
+                    melon_base::warn!("{e:#}");
                 }
             }
             "space" => load_space(&provider, glyphs),
             "unihex" => match load_unihex(assets, &provider) {
                 Ok(provider) => unihex.push(provider),
-                Err(e) => crate::warn!("{e:#}"),
+                Err(e) => melon_base::warn!("{e:#}"),
             },
             "reference" => {
                 if let Some(ref_id) = provider.get("id").and_then(|v| v.as_str()) {
@@ -103,7 +103,7 @@ fn load_providers(
                 }
             }
             other => {
-                crate::warn!(
+                melon_base::warn!(
                     "provider type '{other}' not supported yet, skipped (see notes/Assets.md)"
                 );
             }

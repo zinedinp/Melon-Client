@@ -1,9 +1,9 @@
 //! The player list and the scoreboard.
 
 use crate::game::{InWorld, PlayerEntry};
-use crate::network::play::game::PlayerInfoUpdate;
-use crate::network::play::game::scores::ScorePacket;
-use crate::world::game_mode::GameMode;
+use melon_net::play::game::PlayerInfoUpdate;
+use melon_net::play::game::scores::ScorePacket;
+use melon_world::game_mode::GameMode;
 
 impl InWorld {
     /// `handlePlayerInfoUpdate`: a player is added once (`putIfAbsent`, so

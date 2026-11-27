@@ -337,7 +337,7 @@ fn model_count(
     if let Some(cuts) = known.get(definition_key) {
         return pick(cuts);
     }
-    let definition = crate::assets::json_resource(assets_root, "items", definition_key);
+    let definition = melon_assets::assets::json_resource(assets_root, "items", definition_key);
     let mut cuts = Vec::new();
     if let Some(definition) = definition {
         count_cuts(&definition["model"], i32::from(max_stack), &mut cuts);

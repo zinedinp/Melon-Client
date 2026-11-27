@@ -59,7 +59,7 @@ fn info(asset: &str) -> Arc<Info> {
     }
     // A missing file draws nothing, as vanilla's `EquipmentClientInfo` default.
     let info = Arc::new(match &store.root {
-        Some(root) => crate::assets::json_resource(root, "equipment", asset)
+        Some(root) => melon_assets::assets::json_resource(root, "equipment", asset)
             .map(|json| parse(&json))
             .unwrap_or_default(),
         None => built_in(asset),
@@ -172,8 +172,8 @@ pub fn each_asset_texture(
                 None => continue,
             },
         };
-        let (namespace, path) = crate::assets::split_id(&layer.texture);
-        let texture = crate::util::intern::intern(|s| {
+        let (namespace, path) = melon_assets::assets::split_id(&layer.texture);
+        let texture = melon_core::util::intern::intern(|s| {
             for part in [namespace, ":entity/equipment/", layer_type, "/", path] {
                 s.push_str(part);
             }

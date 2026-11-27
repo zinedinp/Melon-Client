@@ -1,8 +1,8 @@
 //! Vanilla `minecraft.setScreen` as a plain stack.
 
-use crate::gui::screen::{CursorKind, Screen, ScreenContext};
-use crate::i18n::Lang;
-use crate::settings::options::Config;
+use melon_gui::screen::{CursorKind, Screen, ScreenContext};
+use melon_assets::i18n::Lang;
+use melon_settings::options::Config;
 
 #[derive(Default)]
 pub struct ScreenStack {
@@ -39,10 +39,10 @@ impl ScreenStack {
     /// `Screen::poll` for the top screen, and while server dialogs cover
     /// it, for the screen under them: a join goes on behind a dialog the
     /// server shows while configuring.
-    pub fn poll(&mut self) -> Option<crate::gui::screen::ScreenAction> {
+    pub fn poll(&mut self) -> Option<melon_gui::screen::ScreenAction> {
         let top = self.screens.len().checked_sub(1)?;
         let action = self.screens[top].poll();
-        if !matches!(action, crate::gui::screen::ScreenAction::None) {
+        if !matches!(action, melon_gui::screen::ScreenAction::None) {
             return Some(action);
         }
         let under = self

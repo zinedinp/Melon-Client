@@ -1,6 +1,6 @@
 //! Vanilla `AbstractContainerScreen` for server-opened menus.
 
-use crate::world::item_model::StackKey;
+use melon_world::item_model::StackKey;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::entity_preview::EntityPreview;
@@ -13,12 +13,12 @@ use crate::overlay::menu_layout::{MenuLayout, SLOT_PITCH, Strip};
 use crate::overlay::menus::{self, Frame, MenuDraw, MenuScreen, MenuSprites};
 use crate::overlay::recipe_book::{self, Mode, RecipeBookPanel, RecipeBookSprites};
 use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
-use crate::renderer::quad::DrawList;
-use crate::renderer::{Renderer, TextureId};
+use melon_render::quad::DrawList;
+use melon_render::{Renderer, TextureId};
 use crate::screen::TextEvent;
-use crate::settings::input::InputBind;
+use melon_settings::input::InputBind;
 use crate::text::{self, StyledText};
-use crate::world::inventory::{self, ContainerKind, OpenContainer};
+use melon_world::inventory::{self, ContainerKind, OpenContainer};
 use melon_assets::assets::Assets;
 
 const IMAGE_WIDTH: f32 = 176.0;
@@ -78,7 +78,7 @@ impl ContainerTextures {
             nautilus: renderer.asset_texture(assets, "minecraft:gui/container/nautilus.png")?,
             menus: MenuSprites::load(renderer, assets)?,
             recipe_book: RecipeBookSprites::load(renderer, assets)
-                .map_err(|e| crate::warn!("Recipe book: {e:#}"))
+                .map_err(|e| melon_base::warn!("Recipe book: {e:#}"))
                 .ok(),
         })
     }
@@ -538,7 +538,7 @@ impl Overlay for ContainerOverlay {
 
     fn visit_stacks(
         &self,
-        inventory: &crate::world::inventory::Inventory,
+        inventory: &melon_world::inventory::Inventory,
         visit: &mut dyn FnMut(&dyn StackKey) -> bool,
     ) -> bool {
         let shown = self.screen.as_ref().map_or(&[][..], |s| s.shown_stacks());
@@ -724,7 +724,7 @@ fn draw_hand_and_tooltip(overlay: &ContainerOverlay, ui: &mut OverlayDraw, menu:
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::inventory::MountLook;
+    use melon_world::inventory::MountLook;
 
     const LOOK: MountLook = MountLook {
         entity: 1,

@@ -5,8 +5,8 @@ use std::time::Duration;
 use glam::Mat4;
 use image::RgbaImage;
 
-use crate::math::angle::{PI, Rotation};
-use crate::renderer::{CubeMapId, Renderer, SceneFrame, Sky};
+use melon_core::math::angle::{PI, Rotation};
+use melon_render::{CubeMapId, Renderer, SceneFrame, Sky};
 use melon_assets::assets::Assets;
 
 /// `CubeMap.PROJECTION_FOV`.

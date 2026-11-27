@@ -6,7 +6,7 @@ use glam::{EulerRot, Mat4, Quat, Vec3};
 use pumpkin_data::item_stack::ItemStack;
 
 use super::kind::EntityKind;
-use crate::component::Component;
+use melon_protocol::component::Component;
 use crate::entity::wire::DataValue;
 use crate::item_model::KeyedStack;
 

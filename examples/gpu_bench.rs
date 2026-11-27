@@ -15,18 +15,18 @@ use winit::window::{Window, WindowId};
 
 use melon::game::camera;
 use melon::game::level_meshes::LevelMeshes;
-use melon::math::euler::{Look, Orientation};
-use melon::network;
-use melon::renderer::quad::DrawList;
-use melon::renderer::{
+use melon_core::math::euler::{Look, Orientation};
+use melon_net;
+use melon_render::quad::DrawList;
+use melon_render::{
     EntityDraw, Frame, RenderLayer, Renderer, SceneFrame, WorldDraw, world_projection,
 };
-use melon::world::block_models::BlockModels;
-use melon::world::culling::frustum::Frustum;
-use melon::world::culling::{CullSettings, Culler};
-use melon::world::fluid::FluidSprites;
-use melon::world::level::Level;
-use melon::world::lightmap::LightmapParams;
+use melon_world::block_models::BlockModels;
+use melon_world::culling::frustum::Frustum;
+use melon_world::culling::{CullSettings, Culler};
+use melon_world::fluid::FluidSprites;
+use melon_world::level::Level;
+use melon_world::lightmap::LightmapParams;
 
 const RADIUS: i32 = 8;
 const CHUNKS: &str = "target/pipeline-bench/chunks.bin";
@@ -52,7 +52,7 @@ impl ApplicationHandler for Bench {
 }
 
 fn main() -> anyhow::Result<()> {
-    melon::platform::drop_cargo_stack();
+    melon_base::platform::drop_cargo_stack();
     let event_loop = EventLoop::new()?;
     let mut bench = Bench { result: None };
     event_loop.run_app(&mut bench)?;
@@ -66,7 +66,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
     for packet in &packets {
         level.insert(network::play::level::chunk::decode(
             packet,
-            melon::world::dimension::Height::OVERWORLD,
+            melon_world::dimension::Height::OVERWORLD,
         )?);
     }
     println!("{} Chunks", packets.len());
@@ -104,10 +104,10 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
     renderer.set_present(false, requested)?;
     println!("Present mode: {}", renderer.present_mode_name());
 
-    let assets = melon::assets::Assets::discover()?;
+    let assets = melon_assets::assets::Assets::discover()?;
     let extras = FluidSprites::TEXTURES
         .iter()
-        .map(|id| melon::world::block_models::ExtraTexture {
+        .map(|id| melon_world::block_models::ExtraTexture {
             id: (*id).to_owned(),
             image: None,
         })
@@ -150,7 +150,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                 .is_some_and(|s| s != 0)
         })
         .unwrap_or(64);
-    let eye_y = surface as f32 + 1.0 + melon::world::player::EYE_HEIGHT;
+    let eye_y = surface as f32 + 1.0 + melon_world::player::EYE_HEIGHT;
     let views = [
         ("north", Vec3::new(spawn.x, eye_y, spawn.z), 180.0, 0.0),
         ("east", Vec3::new(spawn.x, eye_y, spawn.z), 270.0, 0.0),
@@ -171,7 +171,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
         "{:<12} {:>9} {:>9} {:>9} {:>11} {:>11} {:>9} {:>9}",
         "Camera", "Frame", "solid", "cutout", "translucent", "atmosphere", "cpu", "blur"
     );
-    let blur = std::env::var_os("MELON_BENCH_BLUR").map(|_| melon::renderer::Blur {
+    let blur = std::env::var_os("MELON_BENCH_BLUR").map(|_| melon_render::Blur {
         radius: 5.0,
         ui_split: 0,
     });
@@ -179,13 +179,13 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
     let clouds_on = std::env::var_os("MELON_BENCH_CLOUDS").is_some();
     let rain_image = assets.image("minecraft:environment/rain.png")?;
     let rain_texture = renderer.load_texture_tiled(&rain_image)?;
-    let rain_template = renderer.upload_mesh(&melon::world::weather::template(
-        &melon::world::weather::streaks(&rain_image),
+    let rain_template = renderer.upload_mesh(&melon_world::weather::template(
+        &melon_world::weather::streaks(&rain_image),
         rain_image.width(),
         rain_image.height(),
     ))?;
     let white = renderer.white_texture();
-    let cloud_texture = melon::world::clouds::CloudTexture::load(assets.root());
+    let cloud_texture = melon_world::clouds::CloudTexture::load(assets.root());
     for (name, eye, yaw, pitch) in views {
         let eye = eye.as_dvec3();
         let view = Orientation::new(Look::from_melon(yaw, pitch)).view;
@@ -200,9 +200,9 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
         let culler = culler.with_occlusion(&mask);
 
         let fog = if std::env::var_os("MELON_BENCH_NOFOG").is_some() {
-            melon::world::fog::FogData::NONE
+            melon_world::fog::FogData::NONE
         } else {
-            melon::world::fog::FogData {
+            melon_world::fog::FogData {
                 color: [0.75, 0.85, 1.0, 1.0],
                 environmental_start: 0.0,
                 environmental_end: 1024.0,
@@ -214,13 +214,13 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
         };
         let mut atmosphere_meshes = Vec::new();
         let mut atmosphere: Vec<EntityDraw> = Vec::new();
-        let mut weather: Vec<melon::renderer::WeatherDraw> = Vec::new();
+        let mut weather: Vec<melon_render::WeatherDraw> = Vec::new();
         if rain_on {
             let height = |x, z| level.motion_blocking_height(x, z);
-            let precipitation = |_, _, _| melon::world::weather::Precipitation::Rain;
+            let precipitation = |_, _, _| melon_world::weather::Precipitation::Rain;
             let light = |x, y, z| level.light_at(x, y, z);
             let radius = 10;
-            let columns = melon::world::weather::columns(melon::world::weather::WeatherQuery {
+            let columns = melon_world::weather::columns(melon_world::weather::WeatherQuery {
                 intensity: 1.0,
                 radius,
                 camera: eye,
@@ -242,7 +242,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                     dx * dx + dz * dz >= min * min
                 })
                 .collect();
-            let (rain, _) = melon::world::weather::pieces(
+            let (rain, _) = melon_world::weather::pieces(
                 &columns,
                 eye,
                 radius,
@@ -252,7 +252,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
             );
             let pieces = renderer.upload_mesh(&rain.vertices)?;
             atmosphere_meshes.push(pieces);
-            weather.push(melon::renderer::WeatherDraw {
+            weather.push(melon_render::WeatherDraw {
                 template: rain_template,
                 pieces,
                 wraps: rain.wraps,
@@ -262,8 +262,8 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
             });
         }
         if clouds_on {
-            let frame = melon::world::clouds::CloudFrame {
-                status: melon::world::clouds::CloudStatus::Fancy,
+            let frame = melon_world::clouds::CloudFrame {
+                status: melon_world::clouds::CloudStatus::Fancy,
                 color: CLOUD_COLOR,
                 bottom_y: 192.0,
                 range_chunks: RADIUS as u8,
@@ -271,8 +271,8 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                 game_time: 1000,
                 partial_tick: 0.5,
             };
-            let verts = melon::world::clouds::build_anchored(&cloud_texture, frame);
-            let anchor = melon::world::clouds::anchor(&cloud_texture, &frame);
+            let verts = melon_world::clouds::build_anchored(&cloud_texture, frame);
+            let anchor = melon_world::clouds::anchor(&cloud_texture, &frame);
             if !verts.is_empty() {
                 let mesh = renderer.upload_mesh(&verts)?;
                 atmosphere_meshes.push(mesh);
@@ -284,10 +284,10 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                     model: glam::Mat4::from_translation((anchor - anchor.floor()).as_vec3()),
                     origin: anchor.floor().as_ivec3(),
                     layer: RenderLayer::Atmosphere,
-                    blend: melon::renderer::Blending::Translucent,
+                    blend: melon_render::Blending::Translucent,
                     light: None,
                     overlay: 0.0,
-                    glint: melon::renderer::Glint::None,
+                    glint: melon_render::Glint::None,
                 });
             }
         }
@@ -322,7 +322,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                     clouds: atmosphere
                         .first()
                         .cloned()
-                        .map(|draw| melon::renderer::CloudDraw {
+                        .map(|draw| melon_render::CloudDraw {
                             draw,
                             color: CLOUD_COLOR,
                         }),

@@ -1,7 +1,7 @@
 //! Who joins: an offline name, or an account signed in with Microsoft or another service.
 
-use crate::auth::accounts::Account;
-use crate::auth::skin::{self, SkinSource};
+use melon_base::auth::accounts::Account;
+use melon_base::auth::skin::{self, SkinSource};
 
 /// Which identity to log in as.
 pub enum Identity {
@@ -21,12 +21,12 @@ impl Identity {
     /// The account the launcher selected (`accounts.json` in the game folder). Skins come from
     /// its service from now on.
     pub fn saved(game_dir: &std::path::Path) -> Self {
-        Self::of(crate::auth::load_or_refresh(game_dir))
+        Self::of(melon_base::auth::load_or_refresh(game_dir))
     }
 
     /// [`Self::saved`] as stored, its session not refreshed: no service is asked.
     pub fn stored(game_dir: &std::path::Path) -> Self {
-        Self::of(crate::auth::load_selected(game_dir))
+        Self::of(melon_base::auth::load_selected(game_dir))
     }
 
     fn of(account: Option<Account>) -> Self {
@@ -42,7 +42,7 @@ impl Identity {
                         username: account.username,
                         uuid,
                         access_token: account.access_token,
-                        session: crate::auth::minecraft::MOJANG_SESSION.to_owned(),
+                        session: melon_base::auth::minecraft::MOJANG_SESSION.to_owned(),
                     };
                 }
             }
@@ -70,7 +70,7 @@ impl Identity {
 
     pub fn uuid(&self) -> uuid::Uuid {
         match self {
-            Identity::Offline { username } => crate::auth::accounts::offline_uuid(username),
+            Identity::Offline { username } => melon_base::auth::accounts::offline_uuid(username),
             Identity::Online { uuid, .. } => *uuid,
         }
     }

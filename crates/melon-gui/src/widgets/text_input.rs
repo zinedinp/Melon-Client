@@ -3,7 +3,7 @@
 use std::cell::{Cell, RefCell};
 use std::time::{Duration, Instant};
 
-use crate::renderer::quad::{BlendMode, DrawList};
+use melon_render::quad::{BlendMode, DrawList};
 use crate::screen::TextEvent;
 use crate::text::font::{Font, Glyphs};
 
@@ -465,7 +465,7 @@ impl TextInput {
                 Edit::Moved
             }
             TextEvent::Copy => {
-                crate::platform::copy_to_clipboard(&self.selected());
+                melon_base::platform::copy_to_clipboard(&self.selected());
                 Edit::Moved
             }
             TextEvent::Insert => {
@@ -473,7 +473,7 @@ impl TextInput {
                 Edit::Moved
             }
             TextEvent::Cut => {
-                crate::platform::copy_to_clipboard(&self.selected());
+                melon_base::platform::copy_to_clipboard(&self.selected());
                 changed(self.insert(""))
             }
             _ => Edit::Ignored,

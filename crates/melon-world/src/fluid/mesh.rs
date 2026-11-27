@@ -12,7 +12,7 @@ use crate::terrain::Neighborhood;
 
 use super::state::{FluidKind, FluidState, fluid_of};
 use super::{FluidSprites, MAX_FLUID_HEIGHT, OFFSET};
-use crate::math::angle::{self, HALF_PI};
+use melon_core::math::angle::{self, HALF_PI};
 
 /// What the fluid mesher looks up around one block: the block at `pos` in
 /// section `section` of `neighborhood`.

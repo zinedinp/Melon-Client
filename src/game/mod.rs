@@ -20,7 +20,7 @@ mod events;
 mod gizmos;
 mod hand_render;
 mod heads;
-pub use crate::gui::screens::ingame::loading::LoadingReason;
+pub use melon_gui::screens::ingame::loading::LoadingReason;
 pub use heads::sync_head_objects;
 mod crystal_beams;
 mod entity_sprites;
@@ -61,21 +61,21 @@ use std::path::Path;
 
 use glam::DVec3;
 
-use crate::gui::hud::debug::{DebugOverlay, RenderStats};
-use crate::gui::hud::{Hud, PlayerStatus};
-use crate::gui::overlay::chat::Chat;
-use crate::gui::text::font::Font;
-use crate::join::Joined;
-use crate::renderer::{EntityDraw, Renderer};
-use crate::world::block_entity::BlockEntities;
-use crate::world::block_tint::TintSettings;
-use crate::world::clock::ClientClocks;
-use crate::world::culling::occlusion::OcclusionCache;
-use crate::world::game_mode::{GameMode, LocalGameMode};
-use crate::world::hotbars::Hotbars;
-use crate::world::inventory::Inventory;
-use crate::world::level::Level;
-use crate::world::player::PlayerState;
+use melon_gui::hud::debug::{DebugOverlay, RenderStats};
+use melon_gui::hud::{Hud, PlayerStatus};
+use melon_gui::overlay::chat::Chat;
+use melon_gui::text::font::Font;
+use melon_net::join::Joined;
+use melon_render::{EntityDraw, Renderer};
+use melon_world::block_entity::BlockEntities;
+use melon_world::block_tint::TintSettings;
+use melon_world::clock::ClientClocks;
+use melon_world::culling::occlusion::OcclusionCache;
+use melon_world::game_mode::{GameMode, LocalGameMode};
+use melon_world::hotbars::Hotbars;
+use melon_world::inventory::Inventory;
+use melon_world::level::Level;
+use melon_world::player::PlayerState;
 use camera::CameraMode;
 use keys::Keys;
 use level_meshes::{BlockEntityMeshes, LevelMeshes};
@@ -93,7 +93,7 @@ pub struct PlayerEntry {
     /// Milliseconds; negative while unknown.
     pub latency: i32,
     /// `tabListDisplayName`: the server's name for the list.
-    pub display_name: Option<crate::component::Component>,
+    pub display_name: Option<melon_protocol::component::Component>,
     /// `tabListOrder`: higher comes first.
     pub list_order: i32,
     pub show_hat: bool,
@@ -138,7 +138,7 @@ pub struct InWorld {
     /// The portal's glow and spin, the vignette's brightness.
     effects: effects::EffectState,
     /// This frame's screen effects, drawn with the HUD.
-    effects_frame: crate::gui::effects::ScreenEffects,
+    effects_frame: melon_gui::effects::ScreenEffects,
     player: PlayerState,
     /// What `LocalPlayer` keeps of its body: hurt, death, frost, eyes.
     body: vitals::OwnBody,
@@ -151,9 +151,9 @@ pub struct InWorld {
     /// The player list, by profile id.
     players: HashMap<uuid::Uuid, PlayerEntry>,
     /// Objectives, scores and teams.
-    scoreboard: crate::world::scoreboard::Scoreboard,
+    scoreboard: melon_world::scoreboard::Scoreboard,
     /// The player list's header, footer and hearts.
-    tab_list: crate::gui::hud::player_tab::PlayerTabOverlay,
+    tab_list: melon_gui::hud::player_tab::PlayerTabOverlay,
     /// The server checks accounts: skins in the list are real.
     online_mode: bool,
     /// The own profile id, which picks the skin.
@@ -162,17 +162,17 @@ pub struct InWorld {
     preview: entity_preview::PreviewTextures,
     chat: Chat,
     /// The server's commands, for completing them in the chat.
-    commands: crate::network::play::chat::commands::CommandTree,
+    commands: melon_net::play::chat::commands::CommandTree,
     /// The registries' ids, for completing command arguments.
-    registries: crate::network::play::chat::command_suggestions::Registries,
+    registries: melon_net::play::chat::command_suggestions::Registries,
     /// Saved creative hotbars.
     hotbars: Hotbars,
     menus: overlay::Menus,
     hud: Hud,
     /// A spectator's hotbar menu.
-    spectator_menu: crate::gui::overlay::spectator_menu::SpectatorMenu,
+    spectator_menu: melon_gui::overlay::spectator_menu::SpectatorMenu,
     /// The open inventory, chat or switcher, if any. The world keeps running.
-    overlay: Option<Box<dyn crate::gui::overlay::Overlay>>,
+    overlay: Option<Box<dyn melon_gui::overlay::Overlay>>,
     /// Real time not yet spent on whole ticks.
     tick_time: f32,
     /// While the game is paused: the partial tick it was paused at
@@ -196,13 +196,13 @@ pub struct InWorld {
     /// Chest lids, bells, books...: what animates on block entities.
     block_entities: BlockEntities,
     /// Mobs, other players and every other entity the server tracks.
-    entities: crate::world::entity::tracker::Entities,
+    entities: melon_world::entity::tracker::Entities,
     block_entity_meshes: BlockEntityMeshes,
     entity_meshes: entities::EntityMeshes,
     /// Last frame's entity draws, refilled by the next (see [`Self::recycle`]).
     spare_entities: Vec<EntityDraw>,
     /// The same for the particle draws.
-    spare_particles: Vec<crate::renderer::ParticleDraw>,
+    spare_particles: Vec<melon_render::ParticleDraw>,
     /// `ClientClockManager`: day/night from `SET_TIME`.
     clocks: ClientClocks,
     /// Cracks on blocks being broken, the own and others'.
@@ -214,18 +214,18 @@ pub struct InWorld {
     /// Ticks since joining, for when cracks were last heard of.
     ticks: u64,
     /// Last `RAIN_LEVEL_CHANGE` / `THUNDER_LEVEL_CHANGE`.
-    weather: crate::world::weather::WeatherLevels,
+    weather: melon_world::weather::WeatherLevels,
     /// The world border and the other settings the server sends for the level.
-    border: crate::world::border::WorldBorder,
+    border: melon_world::border::WorldBorder,
     border_mesh: border_mesh::BorderMesh,
     /// What the slower F3 + F6 world renderers keep between frames.
     visualizers: debug::visualizers::VisualizerCache,
     /// `DebugEntryChunkGeneration`'s lines and the block they are for.
     chunk_generation: std::cell::RefCell<Option<([i32; 3], Vec<String>)>>,
     /// The recipes the server unlocked, and what its machines accept.
-    recipes: crate::world::recipes::RecipeBook,
-    recipe_sets: crate::world::recipes::RecipeSets,
-    level_settings: crate::world::level_settings::LevelSettings,
+    recipes: melon_world::recipes::RecipeBook,
+    recipe_sets: melon_world::recipes::RecipeSets,
+    level_settings: melon_world::level_settings::LevelSettings,
     /// `BlockStatePredictionHandler`.
     predictions: prediction::Predictions,
     /// The attack and use keys' delays and the block being broken.
@@ -239,13 +239,13 @@ pub struct InWorld {
     /// The plugin channels the server registered (`melon:swap`).
     server_channels: Vec<String>,
     /// `Minecraft.hitResult`.
-    hit_result: Option<crate::world::pick::Hit>,
+    hit_result: Option<melon_world::pick::Hit>,
     /// Haste, Conduit Power and Mining Fatigue on the player.
-    mining_effects: crate::world::player::mining::MiningEffects,
+    mining_effects: melon_world::player::mining::MiningEffects,
     /// Every status effect on the player, for the HUD, the inventory and the movement.
-    status_effects: crate::world::player::status_effects::ActiveEffects,
+    status_effects: melon_world::player::status_effects::ActiveEffects,
     /// The hands: swing, item in use, first-person heights.
-    hands: crate::world::player::hands::Hands,
+    hands: melon_world::player::hands::Hands,
     /// F3's lines on the connection, sound, server and threads.
     subsystems: subsystems::SubsystemMeter,
     /// `--bench`: plays in the player's place.
@@ -255,7 +255,7 @@ pub struct InWorld {
 /// The frame's numbers the F3 overlay shows besides the world's own.
 pub struct DebugFrame {
     pub render: RenderStats,
-    pub clouds: crate::world::clouds::CloudStatus,
+    pub clouds: melon_world::clouds::CloudStatus,
     pub biome_blend: u8,
     pub framerate_limit: Option<u32>,
     /// The frame's time, for the GPU's share of it.
@@ -282,8 +282,8 @@ pub struct Received {
     pub loaded: bool,
     /// The server ended a reconfiguration with a new world.
     pub rejoined: Option<(
-        Box<crate::network::JoinInfo>,
-        Vec<crate::network::WorldEvent>,
+        Box<melon_net::JoinInfo>,
+        Vec<melon_net::WorldEvent>,
     )>,
 }
 
@@ -312,7 +312,7 @@ impl InWorld {
     pub fn enter(mut joined: Joined, game_dir: &Path, lasting: Lasting) -> Self {
         let (debug_view, debug_visible) = debug::view::DebugView::load(game_dir);
         let mut debug =
-            DebugOverlay::new(crate::gui::hud::debug_entries::DebugEntries::load(game_dir));
+            DebugOverlay::new(melon_gui::hud::debug_entries::DebugEntries::load(game_dir));
         debug.set_visible(debug_visible);
         let mut player = PlayerState::new(DVec3::new(8.0, 80.0, 8.0));
         let chat_types = std::mem::take(&mut joined.session.info.chat_types);
@@ -341,7 +341,7 @@ impl InWorld {
         let chat = Chat::new(chat_types, info.uuid, Some(game_dir.to_path_buf()));
         joined.session.send_register(&[
             pumpkin_protocol::java::melon_movement::CHANNEL,
-            crate::network::play::SWAP_CHANNEL,
+            melon_net::play::SWAP_CHANNEL,
         ]);
         Self {
             uuid: info.uuid,
@@ -406,13 +406,13 @@ impl InWorld {
             particles: Default::default(),
             outline: Default::default(),
             ticks: 0,
-            weather: crate::world::weather::WeatherLevels::default(),
+            weather: melon_world::weather::WeatherLevels::default(),
             border: Default::default(),
             border_mesh: Default::default(),
             visualizers: Default::default(),
             chunk_generation: Default::default(),
-            recipes: crate::world::recipes::RecipeBook::with_layer(
-                crate::world::recipes::layers::current(),
+            recipes: melon_world::recipes::RecipeBook::with_layer(
+                melon_world::recipes::layers::current(),
             ),
             recipe_sets: Default::default(),
             level_settings: Default::default(),
@@ -443,14 +443,14 @@ impl InWorld {
     }
 
     /// The integrated server, in a singleplayer world.
-    pub fn integrated_server(&self) -> Option<&crate::singleplayer::server::IntegratedServer> {
+    pub fn integrated_server(&self) -> Option<&melon_net::singleplayer::server::IntegratedServer> {
         self.joined.server.as_ref()
     }
 
     /// [`Self::integrated_server`], to change it.
     pub fn integrated_server_mut(
         &mut self,
-    ) -> Option<&mut crate::singleplayer::server::IntegratedServer> {
+    ) -> Option<&mut melon_net::singleplayer::server::IntegratedServer> {
         self.joined.server.as_mut()
     }
 
@@ -489,7 +489,7 @@ impl InWorld {
     }
 
     /// What the connection thread took in so far.
-    pub fn net_stats(&self) -> &crate::network::play::stats::NetStats {
+    pub fn net_stats(&self) -> &melon_net::play::stats::NetStats {
         self.joined.session.stats()
     }
 
@@ -521,7 +521,7 @@ impl InWorld {
     pub fn debug_extended(&self) -> bool {
         self.debug
             .entries()
-            .is_enabled(crate::gui::hud::debug_entries::Entry::SoundCache)
+            .is_enabled(melon_gui::hud::debug_entries::Entry::SoundCache)
     }
 
     /// `AudioEngine::cache_stats`, for F3.
@@ -529,7 +529,7 @@ impl InWorld {
         self.audio.cache = cache;
     }
 
-    pub fn sample_subsystems(&mut self, audio: &crate::audio::stats::AudioStats) {
+    pub fn sample_subsystems(&mut self, audio: &melon_audio::stats::AudioStats) {
         if !self.debug.entries().shows_anything() {
             self.subsystems.reset();
             return;
@@ -557,13 +557,13 @@ impl InWorld {
     }
 
     /// `Options.broadcastOptions`: the server hears of changed options.
-    pub fn send_client_info(&self, info: &crate::network::ClientInfo) {
+    pub fn send_client_info(&self, info: &melon_net::ClientInfo) {
         self.joined.session.send_client_information(info);
     }
 
     /// The mouse moved while the cursor is grabbed: the player looks around.
     pub fn look(&mut self, dx: f32, dy: f32, sensitivity: f64, invert_y: bool) {
-        let scale = crate::settings::input::look_scale(sensitivity);
+        let scale = melon_settings::input::look_scale(sensitivity);
         let dy = if invert_y { -dy } else { dy };
         self.player.look(dx * scale, dy * scale);
     }
@@ -571,7 +571,7 @@ impl InWorld {
     /// The chat options changed.
     pub fn set_chat_settings(
         &mut self,
-        settings: &crate::settings::options::ChatSettings,
+        settings: &melon_settings::options::ChatSettings,
         font: &Font,
     ) {
         self.chat.set_settings(settings, font);
@@ -588,14 +588,14 @@ impl InWorld {
     }
 
     /// The "Chunk Builder" option.
-    pub fn set_chunk_builder(&mut self, builder: crate::settings::options::ChunkBuilder) {
+    pub fn set_chunk_builder(&mut self, builder: melon_settings::options::ChunkBuilder) {
         self.level.set_chunk_builder(builder);
     }
 
     /// Colour maps, the biome registry and biome blend, for terrain tints.
     pub fn set_tints(
         &mut self,
-        maps: std::sync::Arc<crate::world::colormap::ColorMaps>,
+        maps: std::sync::Arc<melon_world::colormap::ColorMaps>,
         blend: u8,
     ) {
         self.level.set_tints(TintSettings::new(
@@ -662,7 +662,7 @@ impl InWorld {
     pub fn reload_resources(
         &mut self,
         renderer: &mut Renderer,
-        colormaps: std::sync::Arc<crate::world::colormap::ColorMaps>,
+        colormaps: std::sync::Arc<melon_world::colormap::ColorMaps>,
         biome_blend: u8,
     ) {
         self.meshes.clear(renderer);
@@ -679,8 +679,8 @@ impl InWorld {
     pub fn rejoin(
         mut self,
         renderer: &mut Renderer,
-        info: crate::network::JoinInfo,
-        events: Vec<crate::network::WorldEvent>,
+        info: melon_net::JoinInfo,
+        events: Vec<melon_net::WorldEvent>,
     ) -> Joined {
         self.release(renderer);
         let InWorld { mut joined, .. } = self;
@@ -715,7 +715,7 @@ impl InWorld {
         self.joined
             .server
             .as_ref()
-            .is_some_and(crate::singleplayer::server::IntegratedServer::is_finished)
+            .is_some_and(melon_net::singleplayer::server::IntegratedServer::is_finished)
             .then(|| "The integrated server stopped.".to_owned())
     }
 }

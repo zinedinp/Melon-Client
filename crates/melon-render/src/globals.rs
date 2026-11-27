@@ -4,7 +4,7 @@ use ash::vk;
 use glam::Mat4;
 
 use super::frame::WorldDraw;
-use crate::world::fog::FogData;
+use melon_world::fog::FogData;
 use majestix_vk::{
     Binding, Descriptor, DescriptorSet, DescriptorSetLayout, Frames, Mapped, MemoryUse,
     Simple as _, Write,
@@ -87,7 +87,7 @@ impl Globals {
             cardinal_a: [down, top, north, south],
             cardinal_b: [west, east, 1.0, 1.0],
             view_up: [up.x, up.y, up.z, 0.0],
-            glint: [crate::world::glint::millis(), 1.0, 0.0, 0.0],
+            glint: [melon_world::glint::millis(), 1.0, 0.0, 0.0],
             screen: [1.0, 1.0, 0.0, 0.0],
         }
     }
@@ -232,7 +232,7 @@ impl GlobalBuffers {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::math::angle::Rotation;
+    use melon_core::math::angle::Rotation;
 
     #[test]
     fn the_blocks_size_is_ten_vec4s() {

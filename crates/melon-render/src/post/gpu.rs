@@ -362,7 +362,7 @@ impl Post {
             let extent = self.extent;
             // SAFETY: `device` is live, and the infos name only its own live handles.
             if let Err(e) = unsafe { self.bind_all(device, mem_props, extent) } {
-                crate::warn!("Post effects: {e:#}");
+                melon_base::warn!("Post effects: {e:#}");
             }
         }
         self.needs_init.set(true);

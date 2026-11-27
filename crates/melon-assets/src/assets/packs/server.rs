@@ -98,7 +98,7 @@ pub enum Action {
 pub struct PromptRequest {
     pub required: bool,
     /// The server's own words.
-    pub message: Option<crate::component::Component>,
+    pub message: Option<melon_protocol::component::Component>,
 }
 
 enum State {
@@ -217,7 +217,7 @@ pub fn push(
     url: String,
     hash: String,
     required: bool,
-    message: Option<crate::component::Component>,
+    message: Option<melon_protocol::component::Component>,
 ) {
     let mut guard = manager();
     let Some(m) = guard.as_mut() else {
@@ -334,7 +334,7 @@ pub fn active_packs() -> Vec<Arc<Pack>> {
                         entry.reporting = true;
                     }
                     Err(e) => {
-                        crate::warn!("Server resource pack {} broken: {e:#}", entry.id);
+                        melon_base::warn!("Server resource pack {} broken: {e:#}", entry.id);
                         entry.state = State::Failed;
                         failed.push(entry.id);
                     }
@@ -375,7 +375,7 @@ pub fn reload_finished(ok: bool) {
 
 impl Manager {
     fn send(&self, id: Uuid, status: Status) {
-        crate::probe::note("pack.status", format!("{id} {status:?}"), String::new);
+        melon_core::probe::note("pack.status", format!("{id} {status:?}"), String::new);
         if let Some(responder) = &self.responder {
             responder(id, status);
         }
@@ -383,7 +383,7 @@ impl Manager {
 
     /// `ServerPackManager.pushPack`.
     fn push_pack(&mut self, id: Uuid, url: String, hash: Option<String>) {
-        crate::probe::note("pack.server", &url, || {
+        melon_core::probe::note("pack.server", &url, || {
             format!("id {id}, hash {}", hash.as_deref().unwrap_or("(none)"))
         });
         if let Some(i) = self.packs.iter().position(|p| p.id == id) {
@@ -453,8 +453,8 @@ fn finish_download(id: Uuid, url: &str, result: anyhow::Result<PathBuf>) {
             m.send(id, Status::Downloaded);
         }
         Err(e) => {
-            crate::warn!("Server resource pack {url} not loaded: {e:#}");
-            crate::probe::note("pack.server", format!("{url} FAILED"), || format!("{e:#}"));
+            melon_base::warn!("Server resource pack {url} not loaded: {e:#}");
+            melon_core::probe::note("pack.server", format!("{url} FAILED"), || format!("{e:#}"));
             entry.state = State::Failed;
             m.send(id, Status::FailedDownload);
         }

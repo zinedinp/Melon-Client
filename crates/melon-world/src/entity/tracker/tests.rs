@@ -156,8 +156,8 @@ fn a_mob_named_dinnerbone_hangs_upside_down_with_its_look_inverted() {
 
 #[test]
 fn a_name_that_translates_to_dinnerbone_does_what_dinnerbone_does() {
-    use crate::i18n::Lang;
-    use crate::text::StyledText;
+    use melon_assets::i18n::Lang;
+    use melon_assets::text::StyledText;
     let upside_down_in = |lang: &Lang| {
         let mut entities = Entities::default();
         entities.apply(add(5, &EntityType::COW, [0.0; 3]), 1);
@@ -181,8 +181,8 @@ fn a_name_that_translates_to_dinnerbone_does_what_dinnerbone_does() {
 
 #[test]
 fn switching_the_language_looks_at_the_names_again() {
-    use crate::i18n::Lang;
-    use crate::text::StyledText;
+    use melon_assets::i18n::Lang;
+    use melon_assets::text::StyledText;
     let mut entities = Entities::default();
     entities.apply(add(5, &EntityType::COW, [0.0; 3]), 1);
     let name = Component::translatable("my.name", Vec::new());

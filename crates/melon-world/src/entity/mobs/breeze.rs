@@ -5,7 +5,7 @@ use crate::entity::animations::breeze as anim;
 use crate::entity::keyframe::{AnimationDefinition, AnimationState};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition};
-use crate::math::angle::{EIGHTH_PI, PI, THIRD_PI};
+use melon_core::math::angle::{EIGHTH_PI, PI, THIRD_PI};
 use crate::model_part::{Cube, Pose};
 
 /// Animation slots (`PoseInput::anim`).

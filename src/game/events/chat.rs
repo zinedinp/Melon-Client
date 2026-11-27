@@ -1,10 +1,10 @@
 //! Chat, titles and the messages the game itself sends.
 
-use crate::component::Component;
+use melon_protocol::component::Component;
 use crate::game::InWorld;
-use crate::gui::text::{StyledText, font::Font};
-use crate::i18n::Lang;
-use crate::network::play::chat::ChatEvent;
+use melon_gui::text::{StyledText, font::Font};
+use melon_assets::i18n::Lang;
+use melon_net::play::chat::ChatEvent;
 
 impl InWorld {
     pub(in crate::game) fn receive_chat(&mut self, event: ChatEvent, lang: &Lang, font: &Font) {

@@ -115,13 +115,13 @@ pub fn spawn(engine: &mut ParticleEngine, world: &World, event: i32, pos: [i32; 
                     out.push(Spawn::new(eye, at, aux));
                 }
                 let mut angle = 0.0f64;
-                while angle < crate::math::angle::double::TAU {
+                while angle < melon_core::math::angle::double::TAU {
                     let ring = at + DVec3::new(angle.cos() * 5.0, -0.4, angle.sin() * 5.0);
                     for speed in [-5.0, -7.0] {
                         let aux = DVec3::new(angle.cos() * speed, 0.0, angle.sin() * speed);
                         out.push(simple(Kind::Portal, ring, aux));
                     }
-                    angle += crate::math::angle::double::PI / 20.0;
+                    angle += melon_core::math::angle::double::PI / 20.0;
                 }
             }
             id::MOB_SPAWNER => {
@@ -135,7 +135,7 @@ pub fn spawn(engine: &mut ParticleEngine, world: &World, event: i32, pos: [i32; 
             id::DRAGON_FIREBALL_SPLASH => {
                 for _ in 0..200 {
                     let dist = rng.next_float() * 4.0;
-                    let angle = rng.next_float() * crate::math::angle::TAU;
+                    let angle = rng.next_float() * melon_core::math::angle::TAU;
                     let aux = DVec3::new(
                         f64::from(angle.cos() * dist),
                         0.01 + rng.next_double() * 0.5,
@@ -349,7 +349,7 @@ fn potion_splash(base: DVec3, rgb: i32, kind: Kind, rng: &mut JavaRandom, out: &
     let [r, g, b] = super::super::provider::rgb_of(rgb as u32);
     for _ in 0..100 {
         let dist = rng.next_double() * 4.0;
-        let angle = rng.next_double() * crate::math::angle::double::TAU;
+        let angle = rng.next_double() * melon_core::math::angle::double::TAU;
         let aux = DVec3::new(
             angle.cos() * dist,
             0.01 + rng.next_double() * 0.5,
@@ -459,7 +459,7 @@ fn sculk_charge(
     rng: &mut JavaRandom,
     out: &mut Vec<Spawn>,
 ) {
-    use crate::math::angle::PI;
+    use melon_core::math::angle::PI;
     let count = data >> 6;
     if count > 0 {
         if rng.next_float() < 0.3 + count as f32 * 0.1 {

@@ -64,7 +64,7 @@ impl Source {
                                 Some(name) if valid_path(&name) => {
                                     out.insert(name);
                                 }
-                                _ => crate::warn!(
+                                _ => melon_base::warn!(
                                     "Invalid path in pack {}: {}, ignoring",
                                     root.display(),
                                     rel.display()

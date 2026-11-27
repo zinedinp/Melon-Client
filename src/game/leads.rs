@@ -8,15 +8,15 @@ use super::InWorld;
 use super::entities::EntityFrame;
 use super::entity_models::DrawStyle;
 use super::world_resources::WorldResources;
-use crate::math::ChunkHash;
-use crate::renderer::{EntityDraw, Glint, MeshId, RenderLayer, Renderer};
-use crate::world::culling::Culler;
-use crate::world::entity::kind::EntityKind;
-use crate::world::entity::leash::{self, Lead};
-use crate::world::entity::mobs::{ModelId, leash_knot};
-use crate::world::entity::player::Arm;
-use crate::world::entity::tracker::{ClientEntity, Entities};
-use crate::world::level::Level;
+use melon_core::math::ChunkHash;
+use melon_render::{EntityDraw, Glint, MeshId, RenderLayer, Renderer};
+use melon_world::culling::Culler;
+use melon_world::entity::kind::EntityKind;
+use melon_world::entity::leash::{self, Lead};
+use melon_world::entity::mobs::{ModelId, leash_knot};
+use melon_world::entity::player::Arm;
+use melon_world::entity::tracker::{ClientEntity, Entities};
+use melon_world::level::Level;
 
 struct Kept {
     mesh: Option<MeshId>,
@@ -38,7 +38,7 @@ impl LeadMeshes {
         renderer: &mut Renderer,
         entity: i32,
         lead: Lead,
-        white: crate::renderer::TextureId,
+        white: melon_render::TextureId,
         out: &mut Vec<EntityDraw>,
     ) {
         let kept = self.by_entity.entry(entity).or_insert_with(|| Kept {
@@ -56,7 +56,7 @@ impl LeadMeshes {
             kept.origin = lead.start.floor().as_ivec3();
             match renderer.upload_mesh(&lead.quads(kept.origin.as_vec3())) {
                 Ok(mesh) => kept.mesh = Some(mesh),
-                Err(e) => crate::warn!("Lead mesh failed: {e:#}"),
+                Err(e) => melon_base::warn!("Lead mesh failed: {e:#}"),
             }
         }
         if let Some(mesh) = kept.mesh {
@@ -68,7 +68,7 @@ impl LeadMeshes {
                 model: Mat4::IDENTITY,
                 origin: kept.origin,
                 layer: RenderLayer::Entities,
-                blend: crate::renderer::Blending::Opaque,
+                blend: melon_render::Blending::Opaque,
                 light: None,
                 overlay: 0.0,
                 glint: Glint::None,

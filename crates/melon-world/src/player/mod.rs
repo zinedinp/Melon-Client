@@ -382,8 +382,8 @@ impl PlayerState {
     }
 
     /// Where it looks, in vanilla's convention.
-    pub fn look_angles(&self) -> crate::math::euler::Look {
-        crate::math::euler::Look::from_melon(self.yaw_degrees, self.pitch_degrees)
+    pub fn look_angles(&self) -> melon_core::math::euler::Look {
+        melon_core::math::euler::Look::from_melon(self.yaw_degrees, self.pitch_degrees)
     }
 
     /// Melon's yaw in degrees: 0 looks north (vanilla's 0 looks south).

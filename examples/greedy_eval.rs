@@ -4,12 +4,12 @@ use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use anyhow::Context;
-use melon::renderer::WorldVertex;
-use melon::world::block_models::BlockModels;
-use melon::world::block_tint::TintSettings;
-use melon::world::chunk::Chunk;
-use melon::world::fluid::FluidSprites;
-use melon::world::terrain::{self, MeshContext, Neighborhood};
+use melon_render::WorldVertex;
+use melon_world::block_models::BlockModels;
+use melon_world::block_tint::TintSettings;
+use melon_world::chunk::Chunk;
+use melon_world::fluid::FluidSprites;
+use melon_world::terrain::{self, MeshContext, Neighborhood};
 
 /// What two faces must share to merge.
 #[derive(Clone, Copy)]
@@ -39,8 +39,8 @@ struct Face {
 }
 
 fn main() -> anyhow::Result<()> {
-    melon::platform::drop_cargo_stack();
-    let assets = melon::assets::Assets::discover()?;
+    melon_base::platform::drop_cargo_stack();
+    let assets = melon_assets::assets::Assets::discover()?;
     let models = BlockModels::bake(assets.root(), Vec::new(), 16384).0;
     let s = |id: &str| models.sprite(id).unwrap_or([0.0; 4]);
     let fluids = FluidSprites {
@@ -243,9 +243,9 @@ fn frozen() -> anyhow::Result<Vec<Chunk>> {
             let len = word(&mut at)?;
             let packet = bytes.get(at..at + len).context("short file")?;
             at += len;
-            melon::network::play::level::chunk::decode(
+            melon_net::play::level::chunk::decode(
                 packet,
-                melon::world::dimension::Height::OVERWORLD,
+                melon_world::dimension::Height::OVERWORLD,
             )
         })
         .collect()

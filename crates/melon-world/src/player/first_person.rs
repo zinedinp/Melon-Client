@@ -3,7 +3,7 @@
 use glam::{Mat4, Vec3};
 
 use crate::entity::player::Arm;
-use crate::math::angle::{self, PI, Rotation};
+use melon_core::math::angle::{self, PI, Rotation};
 
 fn invert(arm: Arm) -> f32 {
     match arm {

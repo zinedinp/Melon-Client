@@ -1,13 +1,13 @@
 //! Decodes `LevelChunkWithLight`, for the dimension's height.
 
-use crate::protocol::packet::Reader;
-use crate::world::biome::{ChunkBiomes, SectionBiomes};
-use crate::world::chunk::{
+use melon_protocol::packet::Reader;
+use melon_world::biome::{ChunkBiomes, SectionBiomes};
+use melon_world::chunk::{
     BLOCKS_PER_SECTION, Chunk, ChunkLight, ChunkScan, LIGHT_NIBBLES, LightSection, LightUpdate,
     Section,
 };
-use crate::world::dimension::Height;
-use crate::world::head_profile::{HeadProfile, is_player_head};
+use melon_world::dimension::Height;
+use melon_world::head_profile::{HeadProfile, is_player_head};
 use anyhow::{Result, bail};
 use pumpkin_protocol::ser::NetworkReadSliceExt;
 use std::sync::Arc;
@@ -54,7 +54,7 @@ pub fn decode(body: &[u8], height: Height) -> Result<Chunk> {
         read_paletted(&mut data, &mut blocks[..], BLOCK_INDIRECT_MAX_BITS, |_| {
             false
         })?;
-        if crate::probe::enabled() {
+        if melon_core::probe::enabled() {
             probe_states(&blocks[..]);
         }
         let section = Arc::new(Section::from_array(&blocks));
@@ -334,22 +334,22 @@ fn probe_states(blocks: &[u16]) {
             continue;
         }
         let Some(id) = BlockStateId::new(state) else {
-            crate::probe::count(
+            melon_core::probe::count(
                 "block.seen",
                 format!("(state {state} outside the registry)"),
             );
             continue;
         };
         let block = Block::from_state_id(id);
-        crate::probe::note("block.seen", block.name, || format!("first state {state}"));
+        melon_core::probe::note("block.seen", block.name, || format!("first state {state}"));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::varint::write_var_int;
-    use crate::world::chunk::LIGHT_NIBBLES;
+    use melon_protocol::varint::write_var_int;
+    use melon_world::chunk::LIGHT_NIBBLES;
 
     const OVERWORLD_SECTIONS: usize = Height::OVERWORLD.sections();
 

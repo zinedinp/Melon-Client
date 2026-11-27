@@ -2,9 +2,9 @@
 
 use rustc_hash::FxHashMap;
 
-use crate::renderer::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId, WorldVertex};
-use crate::world::block_models::BlockModels;
-use crate::world::level::Level;
+use melon_render::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId, WorldVertex};
+use melon_world::block_models::BlockModels;
+use melon_world::level::Level;
 
 /// `LevelRenderer`: a breaker not heard of for this many ticks is dropped.
 const EXPIRY_TICKS: u64 = 400;
@@ -105,7 +105,7 @@ impl BlockCracks {
                         state,
                         mesh,
                     }),
-                    Err(e) => crate::warn!("Block cracks not uploaded: {e:#}"),
+                    Err(e) => melon_base::warn!("Block cracks not uploaded: {e:#}"),
                 }
             }
         }
@@ -117,10 +117,10 @@ impl BlockCracks {
             model: glam::Mat4::IDENTITY,
             origin: glam::IVec3::from_array(overlay.pos),
             layer: RenderLayer::Crumbling,
-            blend: crate::renderer::Blending::Translucent,
+            blend: melon_render::Blending::Translucent,
             light: None,
             overlay: 0.0,
-            glint: crate::renderer::Glint::None,
+            glint: melon_render::Glint::None,
         }));
     }
 }

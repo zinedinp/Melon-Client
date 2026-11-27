@@ -86,9 +86,9 @@ impl InWorld {
             if self.level.block_state(pos[0], pos[1], pos[2]) == Some(v.state) {
                 continue;
             }
-            if crate::probe::enabled() {
+            if melon_core::probe::enabled() {
                 let shown = self.level.block_state(pos[0], pos[1], pos[2]);
-                crate::probe::note("prediction.reverted", format!("{pos:?}"), || {
+                melon_core::probe::note("prediction.reverted", format!("{pos:?}"), || {
                     format!(
                         "client had {shown:?}, server says {}, player colliding {}",
                         v.state,

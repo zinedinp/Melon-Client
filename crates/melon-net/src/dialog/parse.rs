@@ -15,7 +15,7 @@ use super::{
     ActionButton, AfterAction, ButtonData, CommonData, DEFAULT_BUTTON_WIDTH, Dialog, DialogKind,
     DialogRef, DialogSet,
 };
-use crate::component::{ClickEvent, Component, decode};
+use melon_protocol::component::{ClickEvent, Component, decode};
 
 type Fields = Map<String, Value>;
 

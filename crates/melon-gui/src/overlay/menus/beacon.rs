@@ -9,7 +9,7 @@ use crate::overlay::CLICK;
 use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::{ChatExit, OverlayAction, OverlayContext};
 use crate::sprite::GuiSprite;
-use crate::world::inventory::OpenContainer;
+use melon_world::inventory::OpenContainer;
 
 /// `BeaconMenu`'s `ContainerData` indices.
 const LEVELS: usize = 0;
@@ -316,7 +316,7 @@ impl MenuScreen for BeaconScreen {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::inventory::ContainerKind;
+    use melon_world::inventory::ContainerKind;
 
     fn menu(levels: i16, payment: bool) -> OpenContainer {
         let mut menu = OpenContainer::new(1, ContainerKind::Beacon, String::new());

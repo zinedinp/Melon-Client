@@ -2,8 +2,8 @@
 
 use glam::{DVec3, Mat4};
 
-use crate::renderer::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId};
-use crate::world::border::WorldBorder;
+use melon_render::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId};
+use melon_world::border::WorldBorder;
 
 /// How far above and below the camera the wall reaches.
 const HEIGHT: f64 = 256.0;
@@ -46,13 +46,13 @@ impl BorderMesh {
                     model: Mat4::IDENTITY,
                     origin,
                     layer: RenderLayer::Shadows,
-                    blend: crate::renderer::Blending::Opaque,
+                    blend: melon_render::Blending::Opaque,
                     light: None,
                     overlay: 0.0,
-                    glint: crate::renderer::Glint::None,
+                    glint: melon_render::Glint::None,
                 });
             }
-            Err(e) => crate::warn!("World border mesh failed: {e:#}"),
+            Err(e) => melon_base::warn!("World border mesh failed: {e:#}"),
         }
     }
 

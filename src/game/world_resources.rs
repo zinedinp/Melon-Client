@@ -1,26 +1,26 @@
 //! What a joined world draws with, independent of which world.
 
-use crate::world::item_model::HeldUse;
-use crate::world::item_model::StackKey;
+use melon_world::item_model::HeldUse;
+use melon_world::item_model::StackKey;
 
 use super::entity_models::{MobModels, PlayerModels};
 use super::held_items::HeldItems;
-use crate::assets::Assets;
-use crate::gui::hud::HudTextures;
-use crate::gui::hud::item_icon::ItemIcons;
-use crate::gui::overlay::container::ContainerTextures;
-use crate::gui::overlay::creative::CreativeTextures;
-use crate::gui::overlay::game_mode_switcher::SwitcherTextures;
-use crate::gui::overlay::inventory::InventoryTextures;
-use crate::gui::overlay::spectator_menu::SpectatorTextures;
-use crate::renderer::{MeshId, Renderer, TextureId};
-use crate::world::block_entity;
-use crate::world::block_models::{BakedAtlas, BlockModels, ExtraTexture, SpriteSheet};
-use crate::world::clouds::CloudTexture;
-use crate::world::colormap::ColorMaps;
-use crate::world::fluid::FluidSprites;
-use crate::world::head_profile::HeadProfile;
-use crate::world::texture_animation::TextureAnimator;
+use melon_assets::assets::Assets;
+use melon_gui::hud::HudTextures;
+use melon_gui::hud::item_icon::ItemIcons;
+use melon_gui::overlay::container::ContainerTextures;
+use melon_gui::overlay::creative::CreativeTextures;
+use melon_gui::overlay::game_mode_switcher::SwitcherTextures;
+use melon_gui::overlay::inventory::InventoryTextures;
+use melon_gui::overlay::spectator_menu::SpectatorTextures;
+use melon_render::{MeshId, Renderer, TextureId};
+use melon_world::block_entity;
+use melon_world::block_models::{BakedAtlas, BlockModels, ExtraTexture, SpriteSheet};
+use melon_world::clouds::CloudTexture;
+use melon_world::colormap::ColorMaps;
+use melon_world::fluid::FluidSprites;
+use melon_world::head_profile::HeadProfile;
+use melon_world::texture_animation::TextureAnimator;
 use image::RgbaImage;
 
 pub struct WorldResources {
@@ -32,27 +32,27 @@ pub struct WorldResources {
     /// The atlas's animated sprites (water, lava, fire...).
     pub animator: TextureAnimator,
     /// Vanilla's `items` atlas, no mipmaps: what held items sample unless
-    /// their texture is a block's (see [`crate::world::item_atlas`]).
+    /// their texture is a block's (see [`melon_world::item_atlas`]).
     pub item_atlas: TextureId,
     pub item_animator: TextureAnimator,
     pub fluids: FluidSprites,
     /// The assets these were loaded from, for what loads on first sight.
     pub root: std::path::PathBuf,
     /// Every particle type's sprites on the block atlas.
-    pub particle_sprites: std::sync::Arc<crate::particle::animation::SpriteSets>,
+    pub particle_sprites: std::sync::Arc<melon_world::particle::animation::SpriteSets>,
     /// The player models (Steve's wide arms, Alex's slim ones) and the skins.
     pub players: PlayerModels,
     /// The mob models and the mob and armor textures seen so far.
     pub mobs: MobModels,
     pub hud: HudTextures,
-    pub effects: crate::gui::effects::EffectTextures,
+    pub effects: melon_gui::effects::EffectTextures,
     pub inventory: InventoryTextures,
     pub creative: CreativeTextures,
     pub switcher: SwitcherTextures,
     pub container: ContainerTextures,
     pub spectator: SpectatorTextures,
     /// The tab list's ping bars.
-    pub tab: crate::gui::hud::player_tab::TabTextures,
+    pub tab: melon_gui::hud::player_tab::TabTextures,
     pub icons: ItemIcons,
     pub held: HeldItems,
     /// Blocks mobs carry (an enderman's).
@@ -77,7 +77,7 @@ pub struct Baked {
     models: BlockModels,
     atlas: BakedAtlas,
     items: SpriteSheet,
-    particle_sprites: crate::particle::animation::SpriteSets,
+    particle_sprites: melon_world::particle::animation::SpriteSets,
     fluids: FluidSprites,
     colormaps: ColorMaps,
 }
@@ -94,7 +94,7 @@ impl Baked {
             .collect();
         extras.extend(block_entity::atlas_textures(assets_root));
         extras.extend(
-            crate::particle::animation::SpriteSets::texture_ids(assets_root)
+            melon_world::particle::animation::SpriteSets::texture_ids(assets_root)
                 .into_iter()
                 .map(|id| ExtraTexture { id, image: None }),
         );
@@ -107,14 +107,14 @@ impl Baked {
             lava_still: sprite(FluidSprites::TEXTURES[3]),
             lava_flow: sprite(FluidSprites::TEXTURES[4]),
         };
-        let particle_sprites = crate::particle::animation::SpriteSets::load(
+        let particle_sprites = melon_world::particle::animation::SpriteSets::load(
             assets_root,
             |id| models.sprite(id),
             sprite("minecraft:particle/generic_0"),
         );
-        let items = crate::world::block_models::pack_sprites(
+        let items = melon_world::block_models::pack_sprites(
             assets_root,
-            crate::world::item_atlas::texture_ids(assets_root),
+            melon_world::item_atlas::texture_ids(assets_root),
             max_side,
         );
         Self {
@@ -138,13 +138,13 @@ impl PendingBake {
         let started = std::thread::Builder::new()
             .name("bake".to_owned())
             .spawn(move || {
-                crate::platform::lower_thread_priority();
+                melon_base::platform::lower_thread_priority();
                 Baked::new(&assets_root, max_side)
             });
         match started {
             Ok(thread) => Some(Self(thread)),
             Err(e) => {
-                crate::warn!("Block models not baked ahead: {e}");
+                melon_base::warn!("Block models not baked ahead: {e}");
                 None
             }
         }
@@ -187,7 +187,7 @@ pub struct SkyResources {
 
 impl SkyResources {
     fn load(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
-        use crate::world::sky;
+        use melon_world::sky;
         let mut moon = [TextureId(0); 8];
         for (texture, phase) in moon.iter_mut().zip(MOON_PHASES) {
             let id = format!("minecraft:environment/celestial/moon/{phase}.png");
@@ -349,7 +349,7 @@ impl WorldResources {
         let block_atlas = renderer.load_texture_mipmapped(&atlas.image, &atlas.mips)?;
         let item_atlas = renderer.load_texture(&items.image)?;
         let item_sprites = std::sync::Arc::new(items.sprites);
-        let item_sheet = crate::gui::hud::item_icon::ItemSheet {
+        let item_sheet = melon_gui::hud::item_icon::ItemSheet {
             texture: item_atlas,
             sprites: item_sprites.clone(),
         };
@@ -374,13 +374,13 @@ impl WorldResources {
             players,
             mobs,
             hud: HudTextures::load(renderer, assets)?,
-            effects: crate::gui::effects::EffectTextures::load(renderer, assets)?,
+            effects: melon_gui::effects::EffectTextures::load(renderer, assets)?,
             inventory: InventoryTextures::load(renderer, assets)?,
             creative: CreativeTextures::load(renderer, assets)?,
             switcher: SwitcherTextures::load(renderer, assets)?,
             container: ContainerTextures::load(renderer, assets)?,
             spectator: SpectatorTextures::load(renderer, assets)?,
-            tab: crate::gui::hud::player_tab::TabTextures::load(renderer, assets)?,
+            tab: melon_gui::hud::player_tab::TabTextures::load(renderer, assets)?,
             icons: ItemIcons::new(assets.root(), item_sheet, renderer.max_texture_side()),
             held: HeldItems::new(assets.root(), sheets),
             blocks: Default::default(),
@@ -404,10 +404,10 @@ impl WorldResources {
     }
 
     /// The nether portal's sprite in the block atlas.
-    pub fn nether_portal_sprite(&self) -> Option<crate::gui::effects::AtlasSprite> {
+    pub fn nether_portal_sprite(&self) -> Option<melon_gui::effects::AtlasSprite> {
         self.models
             .sprite("minecraft:block/nether_portal")
-            .map(|uv| crate::gui::effects::AtlasSprite {
+            .map(|uv| melon_gui::effects::AtlasSprite {
                 atlas: self.atlas,
                 uv,
             })
@@ -485,7 +485,7 @@ impl WorldResources {
 
 /// A weather texture's drop streaks as the template `weather.vert` places.
 fn upload_template(renderer: &mut Renderer, image: &image::RgbaImage) -> anyhow::Result<MeshId> {
-    use crate::world::weather;
+    use melon_world::weather;
     let (width, height) = image.dimensions();
     renderer.upload_mesh(&weather::template(&weather::streaks(image), width, height))
 }

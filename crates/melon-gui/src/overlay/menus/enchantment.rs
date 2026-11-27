@@ -6,8 +6,8 @@ use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::{OverlayAction, OverlayContext};
 use crate::sprite::GuiSprite;
 use crate::text::{StyledText, colors};
-use crate::world::inventory::OpenContainer;
-use crate::world::java_random::JavaRandom;
+use melon_world::inventory::OpenContainer;
+use melon_world::java_random::JavaRandom;
 
 /// `EnchantmentMenu`'s `ContainerData`: costs, seed, clues.
 const COSTS: usize = 0;
@@ -192,7 +192,7 @@ impl MenuScreen for EnchantmentScreen {
                 &name,
                 left + ROW_X + 20.0,
                 top + y + 2.0,
-                crate::math::argb(name_color),
+                melon_core::math::argb(name_color),
             );
             draw.text_shadowed(
                 &cost_text,
@@ -291,7 +291,7 @@ impl MenuScreen for EnchantmentScreen {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::inventory::ContainerKind;
+    use melon_world::inventory::ContainerKind;
     use pumpkin_data::item::Item;
     use pumpkin_data::item_stack::ItemStack;
 

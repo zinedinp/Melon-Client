@@ -3,8 +3,8 @@
 
 use anyhow::Result;
 
-use crate::component::{Component, is_trusted_url};
-use crate::protocol::reader::{Reader, initial_capacity};
+use melon_protocol::component::{Component, is_trusted_url};
+use melon_protocol::reader::{Reader, initial_capacity};
 
 /// `ServerLinks.KnownLinkType`, by its wire id.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -94,7 +94,7 @@ pub fn read(body: &[u8]) -> Result<Vec<ServerLink>> {
         if is_trusted_url(&url) {
             links.push(ServerLink { kind, url });
         } else {
-            crate::warn!("Server link with an invalid address dropped: {url}");
+            melon_base::warn!("Server link with an invalid address dropped: {url}");
         }
     }
     Ok(links)
@@ -103,7 +103,7 @@ pub fn read(body: &[u8]) -> Result<Vec<ServerLink>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::{reader, varint};
+    use melon_protocol::{reader, varint};
 
     #[test]
     fn known_and_named_links_are_read_and_bad_ones_dropped() {

@@ -33,11 +33,11 @@ pub(super) const END_PORTAL: &str = "minecraft:entity/end_portal/end_portal";
 
 /// A banner's flag in dye `color`.
 pub(super) fn banner_flag(assets_root: &Path, color: usize) -> Option<RgbaImage> {
-    let load = |id: &str| -> Option<RgbaImage> { crate::assets::texture_image(assets_root, id) };
+    let load = |id: &str| -> Option<RgbaImage> { melon_assets::assets::texture_image(assets_root, id) };
     let mut flag = load(BANNER_BASE)?;
     let mut dyed = load("minecraft:entity/banner/base")?;
     let rgb = DYES[color].1;
-    crate::assets::tint(&mut dyed, [(rgb >> 16) as u8, (rgb >> 8) as u8, rgb as u8]);
+    melon_assets::assets::tint(&mut dyed, [(rgb >> 16) as u8, (rgb >> 8) as u8, rgb as u8]);
     image::imageops::overlay(&mut flag, &dyed, 0, 0);
     Some(flag)
 }

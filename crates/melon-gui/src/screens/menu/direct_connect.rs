@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::join::Target;
+use melon_net::join::Target;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::menu::connecting::ConnectingScreen;
 use crate::widgets::Ui;

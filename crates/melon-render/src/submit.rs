@@ -124,7 +124,7 @@ impl Renderer {
         if ui_vertices < frame.ui.vertices.len() {
             static WARNED: std::sync::Once = std::sync::Once::new();
             WARNED.call_once(|| {
-                crate::warn!(
+                melon_base::warn!(
                     "UI vertex buffer full ({} > {VERTEX_CAPACITY}): the rest is not drawn",
                     frame.ui.vertices.len()
                 );

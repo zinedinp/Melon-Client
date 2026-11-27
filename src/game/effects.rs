@@ -6,11 +6,11 @@ use pumpkin_data::{Block, BlockStateId};
 use super::InWorld;
 use super::environment::FrameEnvironment;
 use super::world_resources::WorldResources;
-use crate::gui::effects::{AtlasSprite, ScreenEffects, Underwater, Vignette};
-use crate::math::angle;
-use crate::world::fog::FogType;
-use crate::world::level::Level;
-use crate::world::physics::Aabb;
+use melon_gui::effects::{AtlasSprite, ScreenEffects, Underwater, Vignette};
+use melon_core::math::angle;
+use melon_world::fog::FogType;
+use melon_world::level::Level;
+use melon_world::physics::Aabb;
 
 /// What changes from tick to tick.
 #[derive(Clone, Copy, Debug, Default)]
@@ -146,7 +146,7 @@ impl InWorld {
         }
         let skew = 5.0 / (intensity * intensity + 5.0) - intensity * 0.04;
         let skew = skew * skew;
-        let axis = Vec3::new(0.0, crate::math::SQRT_2 / 2.0, crate::math::SQRT_2 / 2.0);
+        let axis = Vec3::new(0.0, melon_core::math::SQRT_2 / 2.0, melon_core::math::SQRT_2 / 2.0);
         let angle = (state.spin_time + partial * state.spin_speed).to_radians();
         Mat4::from_quat(angle::axis_angle(axis, angle))
             * Mat4::from_scale(Vec3::new(1.0 / skew, 1.0, 1.0))
@@ -223,7 +223,7 @@ impl InWorld {
             let z = feet.z + (f64::from((i >> 2) % 2) - 0.5) * 0.6 * 0.8;
             let (bx, by, bz) = (x.floor() as i32, y.floor() as i32, z.floor() as i32);
             if let Some(state) = self.level.block_state(bx, by, bz)
-                && crate::world::block::state_flags::is_solid(state)
+                && melon_world::block::state_flags::is_solid(state)
                 && let Some(uv) = assets.models.particle_sprite(state)
             {
                 found = Some(AtlasSprite {
@@ -277,7 +277,7 @@ mod tests {
 
     #[test]
     fn a_portal_block_is_found_around_the_player() {
-        use crate::world::chunk::{Chunk, Section};
+        use melon_world::chunk::{Chunk, Section};
         let mut level = Level::default();
         level.insert(Chunk::new(
             0,

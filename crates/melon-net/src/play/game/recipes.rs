@@ -4,12 +4,12 @@ use std::collections::HashMap;
 
 use anyhow::{Result, bail};
 
-use crate::protocol::packet::Reader;
-use crate::protocol::reader::initial_capacity;
-use crate::world::recipes::book::{BookSettings, Category, Entry, RecipeId, TypeSettings};
-use crate::world::recipes::display::Shown;
-use crate::world::recipes::sets::{PropertySet, StonecutterOption};
-use crate::world::recipes::{ItemSet, RecipeDisplay, RecipeSets, SlotDisplay};
+use melon_protocol::packet::Reader;
+use melon_protocol::reader::initial_capacity;
+use melon_world::recipes::book::{BookSettings, Category, Entry, RecipeId, TypeSettings};
+use melon_world::recipes::display::Shown;
+use melon_world::recipes::sets::{PropertySet, StonecutterOption};
+use melon_world::recipes::{ItemSet, RecipeDisplay, RecipeSets, SlotDisplay};
 
 /// A recipe packet, decoded.
 pub enum RecipeEvent {
@@ -276,7 +276,7 @@ mod tests {
     use pumpkin_data::item_stack::ItemStack;
 
     use super::*;
-    use crate::protocol::varint::write_var_int as var;
+    use melon_protocol::varint::write_var_int as var;
 
     fn bytes(f: impl FnOnce(&mut Vec<u8>)) -> Vec<u8> {
         let mut out = Vec::new();
@@ -295,7 +295,7 @@ mod tests {
             var(b, 2).unwrap();
             var(b, 6).unwrap();
             var(b, 0).unwrap();
-            crate::protocol::reader::write_string(b, planks).unwrap();
+            melon_protocol::reader::write_string(b, planks).unwrap();
             var(b, 4).unwrap();
             var(b, i32::from(Item::STICK.id)).unwrap();
             var(b, 4).unwrap();
@@ -353,7 +353,7 @@ mod tests {
     fn an_update_reads_its_sets_and_stonecutter_options() {
         let body = bytes(|b| {
             var(b, 1).unwrap();
-            crate::protocol::reader::write_string(b, "minecraft:furnace_input").unwrap();
+            melon_protocol::reader::write_string(b, "minecraft:furnace_input").unwrap();
             var(b, 2).unwrap();
             var(b, i32::from(Item::BEEF.id)).unwrap();
             var(b, i32::from(Item::IRON_ORE.id)).unwrap();
@@ -367,7 +367,7 @@ mod tests {
         let sets = recipe_sets(&mut r).unwrap();
         assert!(r.remaining().is_empty());
         assert!(sets.accepts(
-            crate::world::recipes::sets::FURNACE_INPUT,
+            melon_world::recipes::sets::FURNACE_INPUT,
             &ItemStack::new(1, &Item::BEEF)
         ));
         assert_eq!(

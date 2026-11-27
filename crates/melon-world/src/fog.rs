@@ -4,7 +4,7 @@ use glam::Vec3;
 
 use crate::atmosphere::Atmosphere;
 use crate::dimension::Rgb;
-use crate::math::angle;
+use melon_core::math::angle;
 
 /// `FogType`, without `NONE`: what the camera is in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

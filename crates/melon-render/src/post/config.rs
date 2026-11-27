@@ -404,7 +404,7 @@ mod tests {
     /// Vanilla's chains (or the one in `MELON_PACK_JSON`) parse.
     #[test]
     fn real_chains_parse() {
-        let chains = crate::assets::test_post_chains(crate::assets::test_root().as_deref());
+        let chains = melon_assets::assets::test_post_chains(melon_assets::assets::test_root().as_deref());
         if chains.is_empty() {
             eprintln!("no assets and no MELON_PACK_JSON, test skipped");
             return;

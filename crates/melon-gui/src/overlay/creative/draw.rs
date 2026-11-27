@@ -5,15 +5,15 @@ use super::{
     TAB_WIDTH,
 };
 use crate::hud::item_slot::{self, ItemPainter};
-use crate::i18n::Lang;
-use crate::math::argb;
+use melon_assets::i18n::Lang;
+use melon_core::math::argb;
 use crate::overlay::container_input::ContainerView;
 use crate::overlay::inventory::{SlotDrag, draw_carried, draw_slots};
 use crate::overlay::{Overlay, OverlayDraw};
-use crate::renderer::quad::DrawList;
+use melon_render::quad::DrawList;
 use crate::text::font::Glyphs;
 use crate::text::{StyledText, colors};
-use crate::world::creative_tabs::{CreativeTab, Row, TabType, tabs};
+use melon_world::creative_tabs::{CreativeTab, Row, TabType, tabs};
 use pumpkin_data::item_stack::ItemStack;
 
 impl CreativeOverlay {

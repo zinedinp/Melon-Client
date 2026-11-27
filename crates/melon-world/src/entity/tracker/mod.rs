@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::component::Component;
+use melon_protocol::component::Component;
 use glam::{DVec3, Vec3};
 use pumpkin_data::entity::EntityType;
 use pumpkin_data::item_stack::ItemStack;
@@ -27,7 +27,7 @@ use crate::entity::wire::{
 };
 use crate::item_model::KeyedStack;
 use crate::level::Level;
-use crate::math::wrap_degrees;
+use melon_core::math::wrap_degrees;
 use crate::physics::{self, Aabb};
 use crate::player::hands::{Hand, SwingState};
 
@@ -316,11 +316,11 @@ impl ClientEntity {
     /// `recreateFromPacket`; `None` for a type the registry doesn't know.
     pub fn spawn(add: &AddEntity) -> Option<Self> {
         let ty = EntityType::from_raw(u16::try_from(add.kind).ok()?)?;
-        if crate::probe::enabled() {
+        if melon_core::probe::enabled() {
             let kind = EntityKind::of(ty);
-            crate::probe::count("entity.spawned", ty.resource_name);
+            melon_core::probe::count("entity.spawned", ty.resource_name);
             if kind == EntityKind::Other {
-                crate::probe::note("entity.not_drawn", ty.resource_name, || {
+                melon_core::probe::note("entity.not_drawn", ty.resource_name, || {
                     format!("first at {:?}, data {}", add.pos, add.data)
                 });
             }
@@ -498,8 +498,8 @@ impl ClientEntity {
                             .apply(self.kind, *index, value);
                         continue;
                     }
-                    if self.kind == EntityKind::Other && crate::probe::enabled() {
-                        crate::probe::note(
+                    if self.kind == EntityKind::Other && melon_core::probe::enabled() {
+                        melon_core::probe::note(
                             "entity.data",
                             format!("{} #{index}", self.ty.resource_name),
                             || format!("{value:?}"),

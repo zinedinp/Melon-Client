@@ -1,6 +1,6 @@
 //! Every GUI sprite plus the font, uploaded once at startup.
 
-use crate::renderer::{Renderer, TextureId};
+use melon_render::{Renderer, TextureId};
 use crate::sprite::GuiSprite;
 use crate::text::font::{DYNAMIC_PAGE, Font, Glyphs};
 use crate::widgets::button::{ButtonTextures, TabTextures};
@@ -113,7 +113,7 @@ impl GuiAssets {
             match renderer.load_texture(&blank) {
                 Ok(id) => self.font_textures.push(id),
                 Err(e) => {
-                    crate::warn!("font: Unifont page: {e:#}");
+                    melon_base::warn!("font: Unifont page: {e:#}");
                     self.font_textures.push(self.white);
                 }
             }
@@ -127,7 +127,7 @@ impl GuiAssets {
 
     /// The atlas sprites `object` components in the last frame's text asked for.
     fn sync_objects(&mut self, renderer: &mut Renderer) {
-        use crate::component::ObjectInfo;
+        use melon_protocol::component::ObjectInfo;
         use crate::text::objects::{ObjectQuads, sprite_image};
         for info in self.font.take_wanted_objects() {
             let ObjectInfo::Atlas(sprite) = &info else {

@@ -4,15 +4,15 @@
 use std::time::Instant;
 
 use super::{RunningState, load_panorama};
-use crate::assets::Assets;
-use crate::assets::packs::server::{self, Action};
-use crate::assets::packs::{self, repository};
-use crate::gui::assets::GuiAssets;
-use crate::gui::screens::menu::connecting::disconnected_screen;
-use crate::gui::screens::packs::PackConfirmScreen;
-use crate::i18n::Lang;
-use crate::renderer::Renderer;
-use crate::settings::options::Config;
+use melon_assets::assets::Assets;
+use melon_assets::assets::packs::server::{self, Action};
+use melon_assets::assets::packs::{self, repository};
+use melon_gui::assets::GuiAssets;
+use melon_gui::screens::menu::connecting::disconnected_screen;
+use melon_gui::screens::packs::PackConfirmScreen;
+use melon_assets::i18n::Lang;
+use melon_render::Renderer;
+use melon_settings::options::Config;
 
 /// Reads through the packs `config` selects, with the server's on top.
 pub(super) fn activate_packs(assets: &Assets, config: &Config) {
@@ -23,11 +23,11 @@ pub(super) fn activate_packs(assets: &Assets, config: &Config) {
         .extend(repository::discover_mods(assets.game_dir()));
     if !stack.packs.is_empty() {
         let ids: Vec<&str> = stack.packs.iter().map(|p| p.id.as_str()).collect();
-        crate::info!("Resource packs: {}", ids.join(", "));
+        melon_base::info!("Resource packs: {}", ids.join(", "));
     }
     packs::activate(stack);
-    crate::world::entity::equipment_asset::install(assets.root());
-    crate::world::creative_tabs::apply_from_game_dir(assets.game_dir());
+    melon_world::entity::equipment_asset::install(assets.root());
+    melon_world::creative_tabs::apply_from_game_dir(assets.game_dir());
     describe_packs();
 }
 
@@ -35,11 +35,11 @@ pub(super) fn activate_packs(assets: &Assets, config: &Config) {
 fn describe_packs() {
     use std::collections::{BTreeMap, BTreeSet};
 
-    use crate::probe::{enabled, note, section};
+    use melon_core::probe::{enabled, note, section};
     if !enabled() {
         return;
     }
-    use crate::assets::packs;
+    use melon_assets::assets::packs;
     const USED: &[&str] = &[
         "models",
         "textures",
@@ -100,7 +100,7 @@ fn describe_packs() {
             let id = file
                 .trim_start_matches("post_effect/")
                 .trim_end_matches(".json");
-            if !crate::renderer::post::load::IDS
+            if !melon_render::post::load::IDS
                 .iter()
                 .any(|known| known.trim_start_matches("minecraft:") == id)
             {
@@ -117,25 +117,25 @@ fn describe_packs() {
 /// The active packs' replacements for vanilla's GUI shaders, compiled and handed to the
 /// renderer.
 pub(super) fn apply_gui_shaders(renderer: &mut Renderer, assets: &Assets) {
-    let shaders = crate::renderer::pack_shaders::compile(assets.root());
+    let shaders = melon_render::pack_shaders::compile(assets.root());
     for shader in &shaders {
-        crate::info!("GUI shader from a resource pack: {:?}", shader.program);
+        melon_base::info!("GUI shader from a resource pack: {:?}", shader.program);
     }
     for (program, e) in renderer.set_gui_shaders(&shaders) {
-        crate::warn!("GUI shader {program:?} unusable: {e:#}");
+        melon_base::warn!("GUI shader {program:?} unusable: {e:#}");
     }
-    match crate::renderer::pack_outline::compile(assets.root()) {
+    match melon_render::pack_outline::compile(assets.root()) {
         Ok(Some(shader)) => {
-            crate::info!("World shader from a resource pack: rendertype_outline");
+            melon_base::info!("World shader from a resource pack: rendertype_outline");
             if let Some(e) = renderer.set_outline_pack_shader(Some(&shader)) {
-                crate::warn!("World shader rendertype_outline unusable: {e:#}");
+                melon_base::warn!("World shader rendertype_outline unusable: {e:#}");
             }
         }
         Ok(None) => {
             renderer.set_outline_pack_shader(None);
         }
         Err(e) => {
-            crate::warn!("World shader rendertype_outline dropped: {e:#}");
+            melon_base::warn!("World shader rendertype_outline dropped: {e:#}");
             renderer.set_outline_pack_shader(None);
         }
     }
@@ -143,12 +143,12 @@ pub(super) fn apply_gui_shaders(renderer: &mut Renderer, assets: &Assets) {
 
 /// The post effect chains the packs have (vanilla's entity outline, and any others).
 pub(super) fn apply_post_chains(renderer: &mut Renderer, assets: &Assets) {
-    let (chains, blit) = crate::renderer::post::load::load(assets.root());
+    let (chains, blit) = melon_render::post::load::load(assets.root());
     for chain in &chains {
-        crate::info!("Post effect: {}", chain.id);
+        melon_base::info!("Post effect: {}", chain.id);
     }
     for (id, e) in renderer.set_post_chains(chains, blit) {
-        crate::warn!("Post effect {id} unusable: {e:#}");
+        melon_base::warn!("Post effect {id} unusable: {e:#}");
     }
 }
 
@@ -173,7 +173,7 @@ impl RunningState {
                 self.env.gui_textures = textures;
             }
             Err(e) => {
-                crate::warn!("GUI textures not reloaded: {e:#}");
+                melon_base::warn!("GUI textures not reloaded: {e:#}");
                 ok = false;
                 let mut kept = textures;
                 kept.extend(self.renderer.end_texture_reuse(false));
@@ -206,7 +206,7 @@ impl RunningState {
                     }
                     Err(failed) => {
                         let (old, e) = *failed;
-                        crate::warn!("World resources not reloaded: {e:#}");
+                        melon_base::warn!("World resources not reloaded: {e:#}");
                         ok = false;
                         self.world_resources = Some(old);
                     }
@@ -228,7 +228,7 @@ impl RunningState {
         }
         self.resize_gui();
         server::reload_finished(ok);
-        crate::info!("Resources reloaded in {:.2?}", started.elapsed());
+        melon_base::info!("Resources reloaded in {:.2?}", started.elapsed());
     }
 
     /// Carries out what the server's resource packs need.
@@ -259,7 +259,7 @@ impl RunningState {
     /// The player answered the server's pack prompt; a saved server remembers the answer.
     pub(super) fn answer_server_packs(&mut self, accept: bool) {
         if let Some((address, policy)) = server::answer_prompt(accept) {
-            crate::settings::server_list::set_accept_textures(
+            melon_settings::server_list::set_accept_textures(
                 self.env.assets.game_dir(),
                 &address,
                 policy.accept(),

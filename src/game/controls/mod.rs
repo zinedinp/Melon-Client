@@ -1,8 +1,8 @@
 //! Input while in a world and not paused (vanilla `Minecraft.handleKeybinds`).
 
-use crate::gui::text::font::Font;
-use crate::i18n::Lang;
-use crate::settings::options::Config;
+use melon_gui::text::font::Font;
+use melon_assets::i18n::Lang;
+use melon_settings::options::Config;
 
 mod chat;
 mod keyboard;

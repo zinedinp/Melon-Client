@@ -228,7 +228,7 @@ fn the_screen_options_read_and_write() {
     let text = config.serialize();
     assert!(text.contains("biomeBlendRadius:7\n"));
     let clouds = Config::parse("renderClouds:\"fast\"\ncloudRange:40\nweatherRadius:4");
-    assert_eq!(clouds.clouds, crate::world::clouds::CloudStatus::Fast);
+    assert_eq!(clouds.clouds, melon_world::clouds::CloudStatus::Fast);
     assert_eq!(clouds.cloud_range, 40);
     assert_eq!(clouds.weather_radius, 4);
     assert!(text.contains("vignette:false\n"));

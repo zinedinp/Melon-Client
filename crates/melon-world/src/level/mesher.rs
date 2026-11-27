@@ -113,7 +113,7 @@ impl Mesher {
                 .name(format!("chunk-mesher-now-{i}"))
                 .spawn(move || {
                     // The frame waits for these.
-                    crate::platform::raise_frame_thread_priority();
+                    melon_base::platform::raise_frame_thread_priority();
                     for (job, reply) in &urgent_rx {
                         let _ = reply.send(build(&job, &models, fluids));
                     }
@@ -184,7 +184,7 @@ fn work(
     fluids: FluidSprites,
     stop: &AtomicBool,
 ) {
-    crate::platform::lower_thread_priority();
+    melon_base::platform::lower_thread_priority();
     for job in jobs {
         if stop.load(Ordering::Relaxed) {
             return;

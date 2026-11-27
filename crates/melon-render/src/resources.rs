@@ -19,7 +19,7 @@ impl Renderer {
     /// The texture `identifier` (`namespace:path` under `textures/`) from the active packs, uploaded.
     pub fn asset_texture(
         &mut self,
-        assets: &crate::assets::Assets,
+        assets: &melon_assets::assets::Assets,
         identifier: &str,
     ) -> anyhow::Result<TextureId> {
         self.load_texture(&assets.image(identifier)?)
@@ -146,7 +146,7 @@ impl Renderer {
             })
         };
         if let Err(e) = result {
-            crate::warn!("Texture upload failed: {e:#}");
+            melon_base::warn!("Texture upload failed: {e:#}");
         }
     }
 
@@ -279,7 +279,7 @@ impl Renderer {
         // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
-                crate::warn!("Waiting for the GPU failed: {e}");
+                melon_base::warn!("Waiting for the GPU failed: {e}");
                 return;
             }
             self.destroy_retired(true);
@@ -303,7 +303,7 @@ impl Renderer {
                 }
             });
             if let Err(e) = result {
-                crate::warn!("Texture descriptors not compacted: {e:#}");
+                melon_base::warn!("Texture descriptors not compacted: {e:#}");
             }
         }
     }
@@ -434,7 +434,7 @@ impl Renderer {
         // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
-                crate::warn!("Waiting for the GPU failed: {e}");
+                melon_base::warn!("Waiting for the GPU failed: {e}");
             }
             self.pipelines.ui.clear_pack(&self.device);
             for shader in shaders {

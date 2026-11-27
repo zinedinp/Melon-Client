@@ -20,8 +20,8 @@ use element::{ButtonAction, ButtonElement, Element, Press, WarningElement};
 pub use waiting::WaitingScreen;
 pub use warning::WarningScreen;
 
-use crate::component::ClickEvent;
-use crate::dialog::{
+use melon_protocol::component::ClickEvent;
+use melon_net::dialog::{
     ActionButton, AfterAction, Dialog, DialogClick, DialogKind, InputValue, connection,
 };
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
@@ -178,7 +178,7 @@ impl DialogScreen {
                                 &link.display_name(),
                                 None,
                                 *button_width,
-                                ButtonAction::Action(Some(crate::dialog::Action::Static(open))),
+                                ButtonAction::Action(Some(melon_net::dialog::Action::Static(open))),
                                 ctx,
                             ))
                         })
@@ -649,7 +649,7 @@ impl Screen for DialogScreen {
         Some(DialogLayer::Dialog)
     }
 
-    fn visit_stacks(&self, visit: &mut dyn FnMut(&dyn crate::world::item_model::StackKey) -> bool) {
+    fn visit_stacks(&self, visit: &mut dyn FnMut(&dyn melon_world::item_model::StackKey) -> bool) {
         for element in &self.elements {
             element.visit_stacks(visit);
         }

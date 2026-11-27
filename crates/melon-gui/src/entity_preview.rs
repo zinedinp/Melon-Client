@@ -3,8 +3,8 @@
 use glam::{Mat3, Mat4, Vec3};
 use image::RgbaImage;
 
-use crate::math::angle::{PI, Rotation};
-use crate::world::entity::model::{Model, ModelPose, PartId};
+use melon_core::math::angle::{PI, Rotation};
+use melon_world::entity::model::{Model, ModelPose, PartId};
 
 /// Where an entity is shown and where the mouse is, in GUI pixels.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -77,7 +77,7 @@ pub struct PreviewLayer<'a> {
     pub only: Option<&'a [PartId]>,
     /// Keep the previous layer's depth so a translucent overlay tests against it.
     pub share_depth: bool,
-    /// Armor glint (`enchanted_glint_armor`), sampled with [`crate::world::glint::ARMOR_SCALE`].
+    /// Armor glint (`enchanted_glint_armor`), sampled with [`melon_world::glint::ARMOR_SCALE`].
     pub glint: Option<&'a RgbaImage>,
 }
 
@@ -162,7 +162,7 @@ fn draw_layer(out: &mut RgbaImage, depth: &mut [f32], layer: &PreviewLayer) {
             continue;
         };
         let normals = Mat3::from_mat4(matrix).inverse().transpose();
-        model.part_faces(crate::world::entity::model::PartId(index), &mut |face| {
+        model.part_faces(melon_world::entity::model::PartId(index), &mut |face| {
             let normal = (normals * face.normal).normalize_or_zero();
             if normal.z <= 0.0 {
                 return;
@@ -190,7 +190,7 @@ fn draw_layer(out: &mut RgbaImage, depth: &mut [f32], layer: &PreviewLayer) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::player::{AvatarRenderState, PlayerModel, PlayerModelType};
+    use melon_world::entity::player::{AvatarRenderState, PlayerModel, PlayerModelType};
 
     fn preview(mouse: (f32, f32)) -> EntityPreview {
         EntityPreview {

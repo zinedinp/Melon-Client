@@ -16,9 +16,9 @@ pub mod text_input;
 pub mod tooltip;
 
 use crate::assets::GuiAssets;
-use crate::i18n::Lang;
-use crate::renderer::TextureId;
-use crate::renderer::quad::DrawList;
+use melon_assets::i18n::Lang;
+use melon_render::TextureId;
+use melon_render::quad::DrawList;
 use crate::screen::CursorKind;
 use crate::text::font::Font;
 

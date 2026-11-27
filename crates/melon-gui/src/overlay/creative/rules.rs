@@ -2,9 +2,9 @@
 
 use super::{CreativeChanges, CreativeOverlay, IMAGE_HEIGHT, IMAGE_WIDTH, Slot};
 use crate::overlay::container_input::SlotClick;
-use crate::world::creative_tabs::TabType;
-use crate::world::inventory::ClickType;
-use crate::world::inventory::{
+use melon_world::creative_tabs::TabType;
+use melon_world::inventory::ClickType;
+use melon_world::inventory::{
     self, HOTBAR_SLOTS, Inventory, OUTSIDE, can_item_quick_replace, empty,
 };
 use pumpkin_data::item_stack::ItemStack;

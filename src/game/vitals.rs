@@ -1,10 +1,10 @@
 //! What the status bars show of the local player beyond health and food.
 
 use super::InWorld;
-use crate::gui::hud::bars::air::MAX_AIR;
-use crate::gui::hud::bars::hearts::HeartKind;
-use crate::network::play::game::DataValue;
-use crate::world::player::status_effects::{HUNGER_ID, POISON_ID, REGENERATION_ID, WITHER_ID};
+use melon_gui::hud::bars::air::MAX_AIR;
+use melon_gui::hud::bars::hearts::HeartKind;
+use melon_net::play::game::DataValue;
+use melon_world::player::status_effects::{HUNGER_ID, POISON_ID, REGENERATION_ID, WITHER_ID};
 use pumpkin_data::tracked_data::{avatar, entity, player};
 
 /// `Attributes.MAX_HEALTH`'s default: a new player's health.
@@ -17,7 +17,7 @@ const FROZEN_TICKS: i32 = 140;
 /// movement. Vanilla makes a new `LocalPlayer` on every respawn, so these
 /// start over then (see [`Self::respawned`]).
 ///
-/// [`PlayerState`]: crate::world::player::PlayerState
+/// [`PlayerState`]: melon_world::player::PlayerState
 #[derive(Default)]
 pub(super) struct OwnBody {
     /// `LivingEntity.hurtTime`: ticks the body still flashes red.
@@ -53,7 +53,7 @@ impl InWorld {
     /// The attributes the server sets on the local player.
     pub(super) fn own_attributes(
         &mut self,
-        snapshots: &[crate::network::play::game::AttributeSnapshot],
+        snapshots: &[melon_net::play::game::AttributeSnapshot],
     ) {
         for snapshot in snapshots {
             self.player.set_attribute(
@@ -87,7 +87,7 @@ impl InWorld {
             self.status.absorption = 0.0;
             self.status.air = MAX_AIR;
         }
-        let fresh = crate::gui::hud::PlayerStatus::default();
+        let fresh = melon_gui::hud::PlayerStatus::default();
         self.status.food = fresh.food;
         self.status.saturation = fresh.saturation;
         self.status.experience_progress = fresh.experience_progress;

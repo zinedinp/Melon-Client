@@ -1,11 +1,11 @@
 //! Vanilla `SoundOptionsScreen`.
 
-use crate::audio::source::SoundSource;
-use crate::cycle::Cycle;
-use crate::i18n::Lang;
+use melon_audio::source::SoundSource;
+use melon_core::cycle::Cycle;
+use melon_assets::i18n::Lang;
 use crate::screen::{ConfigChange, ScreenContext};
 use crate::screens::options::{on_off_label, value_label};
-use crate::settings::options::Config;
+use melon_settings::options::Config;
 use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 
 /// One step per percent.
@@ -152,7 +152,7 @@ pub fn sound_options_screen(ctx: &ScreenContext) -> OptionsSubScreen<SoundOption
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::audio::music::MusicToast;
+    use melon_audio::music::MusicToast;
 
     #[test]
     fn a_slider_moves_its_own_source() {

@@ -1,6 +1,6 @@
 //! What changes over a particle's life without moving it.
 
-use crate::math::angle::PI;
+use melon_core::math::angle::PI;
 
 /// `getQuadSize(partial)`, by class.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -42,7 +42,7 @@ impl SizeCurve {
             }
             Self::ReversePortal => 1.0 - (age as f32 + partial) / (life * 1.5),
             Self::Marker => 1.0,
-            Self::Flash => 7.1 * crate::math::sin((age as f32 + partial - 1.0) * 0.25 * PI),
+            Self::Flash => 7.1 * melon_core::math::sin((age as f32 + partial - 1.0) * 0.25 * PI),
             Self::Shriek => (s * 0.75).clamp(0.0, 1.0),
         }
     }

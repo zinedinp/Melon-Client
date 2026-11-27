@@ -4,7 +4,7 @@ use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::look;
-use crate::math::angle::{self, PI};
+use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
 
 const RIBCAGE_X_ROT: f32 = 0.204_203_52;

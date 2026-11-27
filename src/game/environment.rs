@@ -5,14 +5,14 @@ use glam::{Mat4, Vec3};
 use super::InWorld;
 use super::camera::Camera;
 use super::world_resources::WorldResources;
-use crate::renderer::{CelestialDraw, SkyKind};
-use crate::world::atmosphere::{Atmosphere, BiomeMix};
-use crate::world::dimension::Skybox;
-use crate::world::fluid::FluidKind;
-use crate::world::fog::{self, FogContext, FogData, FogEffects, FogType};
-use crate::world::level::Level;
-use crate::world::physics::{eye_in_water, fluid_height};
-use crate::world::sky;
+use melon_render::{CelestialDraw, SkyKind};
+use melon_world::atmosphere::{Atmosphere, BiomeMix};
+use melon_world::dimension::Skybox;
+use melon_world::fluid::FluidKind;
+use melon_world::fog::{self, FogContext, FogData, FogEffects, FogType};
+use melon_world::level::Level;
+use melon_world::physics::{eye_in_water, fluid_height};
+use melon_world::sky;
 
 /// `LocalPlayer.waterVisionTime`'s end.
 const WATER_VISION_TICKS: i32 = 600;
@@ -48,7 +48,7 @@ pub struct FrameEnvironment {
 impl InWorld {
     /// Blindness and night vision, as the fog reads them.
     fn fog_effects(&self, partial: f32) -> FogEffects {
-        use crate::world::player::status_effects::{BLINDNESS_ID, NIGHT_VISION_ID};
+        use melon_world::player::status_effects::{BLINDNESS_ID, NIGHT_VISION_ID};
         let blindness = self
             .status_effects
             .get(BLINDNESS_ID)
@@ -58,8 +58,8 @@ impl InWorld {
             .get(NIGHT_VISION_ID)
             .map_or(0.0, |effect| {
                 if effect.ends_within(200) {
-                    0.7 + crate::math::angle::sin(
-                        (effect.duration as f32 - partial) * crate::math::angle::PI * 0.2,
+                    0.7 + melon_core::math::angle::sin(
+                        (effect.duration as f32 - partial) * melon_core::math::angle::PI * 0.2,
                     ) * 0.3
                 } else {
                     1.0
@@ -198,7 +198,7 @@ impl InWorld {
         assets: &WorldResources,
         look: &FrameEnvironment,
         camera: &Camera,
-        white: crate::renderer::TextureId,
+        white: melon_render::TextureId,
     ) -> Vec<CelestialDraw> {
         let atmosphere = &look.atmosphere;
         let mut out = Vec::new();
@@ -308,14 +308,14 @@ fn is_powder_snow(state: u16) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::{Chunk, Section};
+    use melon_world::chunk::{Chunk, Section};
     use pumpkin_data::Block;
 
     /// Looking north, so the view is the identity.
     fn camera_at(position: glam::DVec3) -> Camera {
         Camera::new(
             position,
-            crate::math::euler::Look::new(180.0, 0.0),
+            melon_core::math::euler::Look::new(180.0, 0.0),
             70.0,
             256.0,
         )

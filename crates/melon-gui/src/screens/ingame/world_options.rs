@@ -3,14 +3,14 @@
 //! Melon adds two LAN switches: whether guests are verified, and Bedrock.
 
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::singleplayer::server::Publish;
+use melon_net::singleplayer::server::Publish;
 use crate::text::{StyledText, TextStyle, colors};
 use crate::widgets::button::Button;
 use crate::widgets::edit_box::EditBox;
 use crate::widgets::layout::{BUTTON_H, HeaderFooter};
 use crate::widgets::set::{KeyResult, WidgetSet};
 use crate::widgets::{Rect, Ui, Widget};
-use crate::world::game_mode::GameMode;
+use melon_world::game_mode::GameMode;
 
 /// `Button.builder`'s and `CycleButton`'s default width, and the grids' gap.
 const W: f32 = 150.0;

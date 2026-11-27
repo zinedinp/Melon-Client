@@ -1,12 +1,12 @@
 //! Vanilla `InventoryScreen` (E).
 
-use crate::world::item_model::{KeyedStack, StackKey};
+use melon_world::item_model::{KeyedStack, StackKey};
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::entity_preview::EntityPreview;
 use crate::hud::item_slot::{self, ItemPainter};
-use crate::i18n::Lang;
-use crate::math::argb;
+use melon_assets::i18n::Lang;
+use melon_core::math::argb;
 use crate::overlay::container::draw_panel;
 use crate::overlay::container_input::{
     self, ContainerMouse, ContainerView, MouseButtonKind, QuickCraft, SlotClick,
@@ -14,13 +14,13 @@ use crate::overlay::container_input::{
 use crate::overlay::menu_layout::MenuLayout;
 use crate::overlay::recipe_book::{self, Mode, RecipeBookPanel};
 use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
-use crate::renderer::quad::DrawList;
-use crate::renderer::{Renderer, TextureId};
+use melon_render::quad::DrawList;
+use melon_render::{Renderer, TextureId};
 use crate::screen::TextEvent;
-use crate::settings::input::InputBind;
+use melon_settings::input::InputBind;
 use crate::sprite::GuiSprite;
 use crate::text::{StyledText, colors};
-use crate::world::inventory::{self, Inventory};
+use melon_world::inventory::{self, Inventory};
 use melon_assets::assets::Assets;
 
 const IMAGE_WIDTH: f32 = 176.0;

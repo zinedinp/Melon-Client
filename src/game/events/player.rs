@@ -4,7 +4,7 @@
 use glam::DVec3;
 
 use crate::game::{InWorld, Received};
-use crate::network::play::game::{DataValue, EntityFlags, EntityPacket, FLAG_ON_FIRE, NAUSEA_ID};
+use melon_net::play::game::{DataValue, EntityFlags, EntityPacket, FLAG_ON_FIRE, NAUSEA_ID};
 
 impl InWorld {
     /// `handleSetHealth`; a death or a revival is reported.
@@ -65,8 +65,8 @@ impl InWorld {
             );
             return;
         }
-        if crate::probe::enabled() {
-            crate::probe::trace_io(
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(
                 false,
                 "set_entity_motion",
                 format!(

@@ -374,10 +374,10 @@ fn post_chains_pass_validation() {
     use super::post::gpu::Post;
     use super::post::load;
     use super::texture::Texture;
-    use crate::assets::packs::{self, Pack, ResourceStack};
+    use melon_assets::assets::packs::{self, Pack, ResourceStack};
     use std::path::Path;
 
-    let Some(root) = crate::assets::test_root() else {
+    let Some(root) = melon_assets::assets::test_root() else {
         eprintln!("no assets (MELON_ASSETS), test skipped");
         return;
     };

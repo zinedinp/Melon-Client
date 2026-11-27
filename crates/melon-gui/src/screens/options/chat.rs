@@ -1,10 +1,10 @@
 //! Vanilla `ChatOptionsScreen`.
 
-use crate::cycle::Cycle;
-use crate::i18n::Lang;
+use melon_core::cycle::Cycle;
+use melon_assets::i18n::Lang;
 use crate::screen::{ConfigChange, ScreenContext};
 use crate::screens::options::{on_off_label, value_label};
-use crate::settings::options::{ChatSettings, Config};
+use melon_settings::options::{ChatSettings, Config};
 use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 
 /// Unit sliders move in hundredths (their labels show whole percent).

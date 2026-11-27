@@ -1,17 +1,17 @@
 //! The game client. The launcher is the separate `melon-launcher` binary.
 
 use melon::app::{self, cli};
-use melon::assets::Assets;
-use melon::i18n::languages::Language;
-use melon::network;
-use melon::settings::options::Config;
+use melon_assets::assets::Assets;
+use melon_assets::i18n::languages::Language;
+use melon_net;
+use melon_settings::options::Config;
 
 fn main() -> anyhow::Result<()> {
-    melon::platform::drop_cargo_stack();
+    melon_base::platform::drop_cargo_stack();
     // The frame is drawn here: ahead of the meshers and the server's generation.
-    melon::platform::raise_frame_thread_priority();
+    melon_base::platform::raise_frame_thread_priority();
     // The CPU's vector unit, probed once: every SIMD kernel runs on it.
-    melon::math::simd::init();
+    melon_core::math::simd::init();
     let args: Vec<String> = std::env::args().collect();
     let command = cli::parse(&args).unwrap_or_else(|message| {
         eprintln!("{message}");
@@ -27,9 +27,9 @@ fn run_game(command: cli::Command) -> anyhow::Result<()> {
     let mut assets = Assets::discover()?;
     let args: Vec<String> = std::env::args().collect();
     let instance = cli::instance(&std::env::args().collect::<Vec<_>>())
-        .unwrap_or_else(|| melon::instances::MELON.to_owned());
+        .unwrap_or_else(|| melon_core::instances::MELON.to_owned());
     assets = assets.with_instance(&instance)?;
-    melon::instances::ensure_dirs(assets.game_dir());
+    melon_core::instances::ensure_dirs(assets.game_dir());
     let _probe = start_probe(&args, &assets);
 
     let options = match command {
@@ -53,7 +53,7 @@ fn connect(address: &str, assets: &Assets) -> anyhow::Result<()> {
     let identity = network::Identity::saved(assets.launcher_dir());
     let config = Config::load(assets.game_dir());
     let client = network::ClientInfo::from_config(&config);
-    use melon::assets::packs::server as packs;
+    use melon_assets::assets::packs::server as packs;
     packs::begin(
         assets.game_dir(),
         None,
@@ -103,7 +103,7 @@ fn connect(address: &str, assets: &Assets) -> anyhow::Result<()> {
         identity.username(),
         session.info
     );
-    let lang = melon::i18n::Lang::load(assets, config.lang);
+    let lang = melon_assets::i18n::Lang::load(assets, config.lang);
     let seconds = std::env::var("MELON_CONNECT_SECS")
         .ok()
         .and_then(|s| s.parse().ok())
@@ -131,13 +131,13 @@ fn connect(address: &str, assets: &Assets) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn log_event(event: &network::WorldEvent, lang: &melon::i18n::Lang) {
-    use melon::network::play::game::GameEvent;
+fn log_event(event: &network::WorldEvent, lang: &melon_assets::i18n::Lang) {
+    use melon_net::play::game::GameEvent;
     let item = |slot: String, stack: &pumpkin_data::item_stack::ItemStack| {
         if stack.is_empty() {
             return;
         }
-        let name = melon::gui::hud::item_slot::styled_hover_name(lang, stack);
+        let name = melon_gui::hud::item_slot::styled_hover_name(lang, stack);
         let components: Vec<String> = stack
             .patch
             .iter()
@@ -154,11 +154,11 @@ fn log_event(event: &network::WorldEvent, lang: &melon::i18n::Lang) {
             components.join(", ")
         );
     };
-    use melon::network::play::chat::ChatEvent;
-    use melon::network::play::game::scores::ScorePacket;
-    use melon::world::scoreboard::{ScoreUpdate, TeamAction};
-    let text = |component: &melon::component::Component| {
-        styled(&melon::gui::text::StyledText::from_component(
+    use melon_net::play::chat::ChatEvent;
+    use melon_net::play::game::scores::ScorePacket;
+    use melon_world::scoreboard::{ScoreUpdate, TeamAction};
+    let text = |component: &melon_protocol::component::Component| {
+        styled(&melon_gui::text::StyledText::from_component(
             component, lang,
         ))
     };
@@ -230,7 +230,7 @@ fn log_event(event: &network::WorldEvent, lang: &melon::i18n::Lang) {
 }
 
 /// A styled text as its runs.
-fn styled(text: &melon::gui::text::StyledText) -> String {
+fn styled(text: &melon_gui::text::StyledText) -> String {
     text.spans
         .iter()
         .map(|span| {
@@ -267,9 +267,9 @@ fn start_probe(args: &[String], assets: &Assets) -> Option<ProbeGuard> {
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
-    let path = melon::instances::logs_dir(assets.game_dir()).join(format!("probe-{stamp}.md"));
+    let path = melon_core::instances::logs_dir(assets.game_dir()).join(format!("probe-{stamp}.md"));
     eprintln!("Tester on: report in {}", path.display());
-    melon::probe::enable(path);
+    melon_core::probe::enable(path);
     Some(ProbeGuard)
 }
 
@@ -277,8 +277,8 @@ struct ProbeGuard;
 
 impl Drop for ProbeGuard {
     fn drop(&mut self) {
-        melon::probe::write_report();
-        if let Some(path) = melon::probe::report_path() {
+        melon_core::probe::write_report();
+        if let Some(path) = melon_core::probe::report_path() {
             eprintln!("Tester: report in {}", path.display());
         }
     }

@@ -3,11 +3,11 @@
 use glam::{Mat4, Vec3};
 
 use super::InWorld;
-use crate::world::entity::humanoid::{ArmPose, SwingPose};
-use crate::world::entity::player::{Arm, PlayerModelPart};
-use crate::world::player::ArmPoses;
-use crate::world::player::first_person;
-use crate::world::player::hands::{Hand, UseAnimation};
+use melon_world::entity::humanoid::{ArmPose, SwingPose};
+use melon_world::entity::player::{Arm, PlayerModelPart};
+use melon_world::player::ArmPoses;
+use melon_world::player::first_person;
+use melon_world::player::hands::{Hand, UseAnimation};
 
 /// One thing a first-person hand draws.
 pub(super) enum HandDraw<'a> {
@@ -22,7 +22,7 @@ pub(super) enum HandDraw<'a> {
         stack: &'a pumpkin_data::item_stack::ItemStack,
         arm: Arm,
         matrix: Mat4,
-        using: crate::world::item_model::HeldUse,
+        using: melon_world::item_model::HeldUse,
     },
 }
 
@@ -60,7 +60,7 @@ impl InWorld {
         &self,
         eye: Vec3,
         main_arm: Arm,
-        shown_parts: crate::world::entity::player::ShownParts,
+        shown_parts: melon_world::entity::player::ShownParts,
         partial: f32,
     ) -> Vec<HandDraw<'_>> {
         let space = self.player.hand_space(eye);

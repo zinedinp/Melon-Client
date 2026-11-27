@@ -316,11 +316,11 @@ impl Model {
             }
             let dense = angles.len();
             if dense > 0 {
-                let padded = dense.next_multiple_of(crate::math::simd::PAD);
+                let padded = dense.next_multiple_of(melon_core::math::simd::PAD);
                 angles.resize(padded, 0.0);
                 sin.resize(padded, 0.0);
                 cos.resize(padded, 0.0);
-                crate::math::sin_cos::sin_cos(angles, sin, cos);
+                melon_core::math::sin_cos::sin_cos(angles, sin, cos);
             }
             let mut next = 0;
             let mut take = |a: f32| {
@@ -341,7 +341,7 @@ impl Model {
                 let r = state.pose.rotation;
                 let turn = (r != Vec3::ZERO).then(|| {
                     let [(sx, cx), (sy, cy), (sz, cz)] = r.to_array().map(&mut take);
-                    crate::math::angle::euler_zyx_of(Vec3::new(sx, sy, sz), Vec3::new(cx, cy, cz))
+                    melon_core::math::angle::euler_zyx_of(Vec3::new(sx, sy, sz), Vec3::new(cx, cy, cz))
                 });
                 out.push(
                     parent

@@ -2,8 +2,8 @@
 
 use super::WorldContext;
 use crate::game::InWorld;
-use crate::gui::overlay::container_input::MouseButtonKind;
-use crate::gui::screen::ScreenAction;
+use melon_gui::overlay::container_input::MouseButtonKind;
+use melon_gui::screen::ScreenAction;
 
 impl InWorld {
     /// A mouse button went down or up.
@@ -11,7 +11,7 @@ impl InWorld {
         &mut self,
         button: MouseButtonKind,
         pressed: bool,
-        bind: Option<&crate::settings::input::InputBind>,
+        bind: Option<&melon_settings::input::InputBind>,
         ui: &WorldContext,
     ) -> ScreenAction {
         let index = match button {

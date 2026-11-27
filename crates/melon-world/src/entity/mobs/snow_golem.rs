@@ -4,7 +4,7 @@ use super::{LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::look;
-use crate::math::angle;
+use melon_core::math::angle;
 use crate::model_part::{Cube, Pose};
 
 /// `CubeDeformation(-0.5)`: every ball is a pixel smaller than its box.
@@ -26,7 +26,7 @@ pub fn layer() -> LayerDefinition {
     root.add_or_replace_child(
         "right_arm",
         arm(),
-        Pose::offset_rotation((-5.0, 6.0, -1.0), (0.0, crate::math::angle::PI, -1.0)),
+        Pose::offset_rotation((-5.0, 6.0, -1.0), (0.0, melon_core::math::angle::PI, -1.0)),
     );
     root.add_or_replace_child(
         "upper_body",
@@ -76,7 +76,7 @@ pub fn setup_anim(parts: &SnowGolemParts, pose: &mut ModelPose, state: &LivingRe
     left.offset.x = cos * 5.0;
     left.offset.z = -sin * 5.0;
     let right = &mut pose[parts.right_arm].pose;
-    right.rotation.y = turn + crate::math::angle::PI;
+    right.rotation.y = turn + melon_core::math::angle::PI;
     right.offset.x = -cos * 5.0;
     right.offset.z = sin * 5.0;
 }

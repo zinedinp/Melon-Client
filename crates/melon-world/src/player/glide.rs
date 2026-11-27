@@ -4,7 +4,7 @@ use super::mode::glide;
 use super::movement::{MoveState, Travel, priority};
 use super::{MoveMode, PlayerState};
 use crate::level::Level;
-use crate::math::angle;
+use melon_core::math::angle;
 use crate::physics::Aabb;
 use glam::DVec3;
 

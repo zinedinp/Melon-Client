@@ -3,7 +3,7 @@
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle::{self, PI};
+use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
 
 /// Rest pitch of an adult hoglin's head (`DEFAULT_HEAD_X_ROT`).

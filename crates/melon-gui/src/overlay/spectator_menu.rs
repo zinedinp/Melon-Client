@@ -3,9 +3,9 @@
 use std::time::{Duration, Instant};
 
 use crate::hud::item_slot::ItemPainter;
-use crate::i18n::Lang;
-use crate::renderer::quad::DrawList;
-use crate::renderer::{Renderer, TextureId};
+use melon_assets::i18n::Lang;
+use melon_render::quad::DrawList;
+use melon_render::{Renderer, TextureId};
 use crate::sprite::GuiSprite;
 use crate::text::{self, StyledText, colors};
 use melon_assets::assets::Assets;

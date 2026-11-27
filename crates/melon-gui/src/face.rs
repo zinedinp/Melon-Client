@@ -1,7 +1,7 @@
 //! Vanilla `PlayerFaceExtractor`.
 
-use crate::renderer::TextureId;
-use crate::renderer::quad::DrawList;
+use melon_render::TextureId;
+use melon_render::quad::DrawList;
 
 /// Draws `skin`'s face `size` pixels square at `[x, y]`, with the hat on top.
 pub fn draw_face(

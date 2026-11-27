@@ -4,16 +4,16 @@ use glam::{DVec3, Mat4, Vec3};
 
 use super::InWorld;
 use super::camera::Camera;
-use crate::component::Component;
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::text::{self, StyledText};
-use crate::i18n::Lang;
-use crate::math::argb;
-use crate::renderer::quad::DrawList;
-use crate::world::entity::kind::EntityKind;
-use crate::world::entity::tracker::ClientEntity;
-use crate::world::pick;
-use crate::world::scoreboard::Visibility;
+use melon_protocol::component::Component;
+use melon_gui::hud::item_slot::ItemPainter;
+use melon_gui::text::{self, StyledText};
+use melon_assets::i18n::Lang;
+use melon_core::math::argb;
+use melon_render::quad::DrawList;
+use melon_world::entity::kind::EntityKind;
+use melon_world::entity::tracker::ClientEntity;
+use melon_world::pick;
+use melon_world::scoreboard::Visibility;
 
 /// `EntityRenderer.submitNameTag`'s `scale(0.025)`: blocks a text pixel.
 const PIXEL: f32 = 0.025;
@@ -40,7 +40,7 @@ const BEHIND_ALPHA: f32 = 32.0 / 255.0;
 pub struct NameView {
     position: DVec3,
     /// `Camera.yRot` / `xRot`, for billboards.
-    look: crate::math::euler::Look,
+    look: melon_core::math::euler::Look,
     /// `bobView * view`: the world relative to the camera as it sees it.
     view: Mat4,
     tan_half_fov: f32,
@@ -64,7 +64,7 @@ impl NameView {
             .view
             .transform_point3((point - self.position).as_vec3());
         let depth = -v.z;
-        if depth < crate::renderer::WORLD_Z_NEAR {
+        if depth < melon_render::WORLD_Z_NEAR {
             return None;
         }
         let x = v.x / (depth * self.tan_half_fov * self.aspect);
@@ -122,7 +122,7 @@ impl InWorld {
             let height = f64::from(entity.size().1);
             let anchor = feet + DVec3::new(0.0, height + 0.5, 0.0);
             let projected = view.project(anchor, size);
-            if crate::probe::enabled()
+            if melon_core::probe::enabled()
                 && entity.uuid != self.uuid
                 && (entity.kind == EntityKind::Player || entity.custom_name.is_some())
             {
@@ -131,7 +131,7 @@ impl InWorld {
                     (Some(_), None) => "off screen",
                     (None, _) => "hidden",
                 };
-                crate::probe::note(
+                melon_core::probe::note(
                     "nametag",
                     format!("{} #{} {outcome}", entity.ty.resource_name, entity.id),
                     || self.name_tag_detail(entity, name.as_ref(), dist_sq.sqrt(), lang),
@@ -195,7 +195,7 @@ impl InWorld {
         size: (f32, f32),
         background_opacity: f32,
     ) {
-        use crate::world::entity::display::{
+        use melon_world::entity::display::{
             FLAG_ALIGN_LEFT, FLAG_ALIGN_RIGHT, FLAG_DEFAULT_BACKGROUND, FLAG_SEE_THROUGH,
             FLAG_SHADOW,
         };
@@ -215,7 +215,7 @@ impl InWorld {
             }
             let tick = entity.age_in_ticks(0.0) as i32;
             let transform = state.transform(tick, partial);
-            let facing = crate::world::entity::display::orientation(
+            let facing = melon_world::entity::display::orientation(
                 state.billboard,
                 (entity.yaw_degrees(partial), entity.pitch_degrees(partial)),
                 (view.look.y_rot, view.look.x_rot),
@@ -240,8 +240,8 @@ impl InWorld {
                 + (up * (box_h * 0.5 * 0.025 * transform.scale.y.abs().max(1e-3))).as_dvec3();
             let hidden =
                 pick::clip_blocks_for_nametag(&self.level, view.position, middle).is_some();
-            if crate::probe::enabled() {
-                crate::probe::note("text_display", format!("#{}", entity.id), || {
+            if melon_core::probe::enabled() {
+                melon_core::probe::note("text_display", format!("#{}", entity.id), || {
                     format!(
                         "pos={:?} billboard={} translation={:?} scale={:?} left={:?} right={:?} anchor={anchor:?} hidden={hidden}",
                         entity.pos(partial),
@@ -320,7 +320,7 @@ impl InWorld {
             EntityKind::ItemFrame | EntityKind::GlowItemFrame
         ) {
             let name = entity.item.get_custom_name().filter(|_| looked_at)?;
-            return Some(crate::component::pumpkin::from_pumpkin(name));
+            return Some(melon_protocol::component::pumpkin::from_pumpkin(name));
         }
         let player = entity.kind == EntityKind::Player;
         if entity.kind == EntityKind::ArmorStand {
@@ -476,8 +476,8 @@ impl InWorld {
         text::draw(draw_list, &paint, styled, -width / 2.0, -9.0);
         draw_list.scale_since(start, scale);
         draw_list.offset_since(start, at);
-        if crate::probe::enabled() {
-            crate::probe::note("nametag.draw", styled.to_plain(), || {
+        if melon_core::probe::enabled() {
+            melon_core::probe::note("nametag.draw", styled.to_plain(), || {
                 format!(
                     "at={at:?} scale={scale:.3} width={width} glyph_vertices={} alpha={:?} background={background_opacity}",
                     draw_list.vertices_len() - start,
@@ -503,7 +503,7 @@ mod tests {
     fn view() -> NameView {
         NameView {
             position: DVec3::ZERO,
-            look: crate::math::euler::Look::new(180.0, 0.0),
+            look: melon_core::math::euler::Look::new(180.0, 0.0),
             view: Mat4::IDENTITY,
             tan_half_fov: (35.0_f32).to_radians().tan(),
             aspect: 16.0 / 9.0,
@@ -526,10 +526,10 @@ mod tests {
     #[test]
     fn a_camera_away_from_the_origin_sees_a_point_at_its_real_distance() {
         let eye = DVec3::new(1_000_000.3, 75.0, -1_000_044.7);
-        let camera = Camera::new(eye, crate::math::euler::Look::new(20.0, 10.0), 70.0, 256.0);
+        let camera = Camera::new(eye, melon_core::math::euler::Look::new(20.0, 10.0), 70.0, 256.0);
         let camera = NameView::of(&camera, 16.0 / 9.0);
         let size = (320.0, 180.0);
-        let forward = crate::math::euler::Orientation::new(camera.look).forwards;
+        let forward = melon_core::math::euler::Orientation::new(camera.look).forwards;
         let (at, depth) = camera
             .project(eye + forward.as_dvec3() * 4.0, size)
             .unwrap();

@@ -8,9 +8,9 @@ use crate::game::camera::{self, Camera};
 use crate::game::entities::EntityFrame;
 use crate::game::environment::FrameEnvironment;
 use crate::game::world_resources::WorldResources;
-use crate::settings::options::Config;
-use crate::world::fog::FogType;
-use crate::world::lightmap::LightmapParams;
+use melon_settings::options::Config;
+use melon_world::fog::FogType;
+use melon_world::lightmap::LightmapParams;
 
 /// `Camera.calculateHudFov`'s start: the hand's own field of view.
 const HAND_FOV: f32 = 70.0;

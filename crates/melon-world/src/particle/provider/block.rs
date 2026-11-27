@@ -76,7 +76,7 @@ pub(super) fn falling_dust(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     p.look.animated = true;
     p.look.size = SizeCurve::GrowIn;
     let spin = (rng.next_float() - 0.5) * 0.1;
-    p.roll = rng.next_float() * crate::math::angle::TAU;
+    p.roll = rng.next_float() * melon_core::math::angle::TAU;
     p.prev_roll = p.roll;
     p.behavior = Behavior::FallingDust { spin };
     Some(p)

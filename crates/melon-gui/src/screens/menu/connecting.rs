@@ -5,8 +5,8 @@ use std::thread;
 
 use anyhow::Result;
 
-use crate::join::{self, Joined, Target};
-use crate::network::{ClientInfo, Identity};
+use melon_net::join::{self, Joined, Target};
+use melon_net::{ClientInfo, Identity};
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::widgets::button::Button;
 use crate::widgets::dialog::DialogScreen;
@@ -40,10 +40,10 @@ impl ConnectingScreen {
         let identity = Identity::stored(ctx.account_dir);
         let account_dir = ctx.account_dir.to_path_buf();
         if let Target::Server(address) = &target {
-            crate::instances::save_last_server(ctx.game_dir, address);
+            melon_core::instances::save_last_server(ctx.game_dir, address);
         }
         let saved = match &target {
-            Target::Server(address) => crate::settings::server_list::find(ctx.game_dir, address),
+            Target::Server(address) => melon_settings::server_list::find(ctx.game_dir, address),
             Target::World { .. } => None,
         };
         melon_assets::assets::packs::server::begin(
@@ -76,7 +76,7 @@ impl ConnectingScreen {
     }
 
     fn failed(reason: String) -> ScreenAction {
-        crate::warn!("Connection failed: {reason}");
+        melon_base::warn!("Connection failed: {reason}");
         ScreenAction::Replace(Box::new(disconnected_screen(
             "connect.failed",
             reason,

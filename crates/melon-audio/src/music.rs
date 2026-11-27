@@ -1,6 +1,6 @@
 //! The music options: how often songs play and when the "now playing"
 
-use crate::cycle::Cycle;
+use melon_core::cycle::Cycle;
 
 /// `MusicManager.MusicFrequency`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

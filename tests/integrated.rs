@@ -2,10 +2,10 @@
 
 use std::path::PathBuf;
 
-use melon::network::{Identity, Session, Teleport, WorldEvent};
-use melon::singleplayer::server::{self, IntegratedServer, Options};
-use melon::singleplayer::{self, WorldSettings};
-use melon::world::game_mode::GameMode;
+use melon_net::{Identity, Session, Teleport, WorldEvent};
+use melon_net::singleplayer::server::{self, IntegratedServer, Options};
+use melon_net::singleplayer::{self, WorldSettings};
+use melon_world::game_mode::GameMode;
 
 /// A fresh world, its server, and a session joined to it. Dropping it
 struct TestWorld {
@@ -42,7 +42,7 @@ impl TestWorld {
             username: username.to_owned(),
         };
         let mut session =
-            melon::network::join_stream(pipe, &identity, &Default::default(), Box::new(|| {}))
+            melon_net::join_stream(pipe, &identity, &Default::default(), Box::new(|| {}))
                 .expect("joining the integrated server should work");
         let joined = session.poll();
         let spawn = joined
@@ -92,7 +92,7 @@ fn joins_two_worlds_in_one_process() {
             .filter(|e| matches!(e, WorldEvent::ChunkLoaded(_)))
             .count();
         assert!(chunks > 0, "the spawn chunk should arrive");
-        use melon::network::play::game::GameEvent;
+        use melon_net::play::game::GameEvent;
         let mut health = None;
         let mut inventory = None;
         let note = |event: &GameEvent, health: &mut Option<f32>, inventory: &mut Option<usize>| {
@@ -134,7 +134,7 @@ fn joins_two_worlds_in_one_process() {
         }
         assert!(chunks >= 25, "only {chunks} chunks arrived");
         assert_eq!(health, Some(20.0), "a new player has full health");
-        assert_eq!(inventory, Some(melon::world::inventory::SLOT_COUNT));
+        assert_eq!(inventory, Some(melon_world::inventory::SLOT_COUNT));
         world.stop();
         assert!(
             world.dir.join("level.dat").is_file(),
@@ -147,8 +147,8 @@ fn joins_two_worlds_in_one_process() {
 #[test]
 #[ignore = "starts an integrated server"]
 fn game_mode_switching_and_chat_round_trip() {
-    use melon::network::play::chat::ChatEvent;
-    use melon::network::play::game::GameEvent;
+    use melon_net::play::chat::ChatEvent;
+    use melon_net::play::game::GameEvent;
 
     let settings = WorldSettings {
         name: "World".to_owned(),
@@ -168,7 +168,7 @@ fn game_mode_switching_and_chat_round_trip() {
         .collect();
     let session = &mut world.session;
     let entity_id = session.info.entity_id;
-    let wait_for = |session: &mut melon::network::Session,
+    let wait_for = |session: &mut melon_net::Session,
                     events: &mut Vec<GameEvent>,
                     what: &str,
                     found: &dyn Fn(&GameEvent) -> bool| {
@@ -213,7 +213,7 @@ fn game_mode_switching_and_chat_round_trip() {
 
     use pumpkin_data::item::Item;
     use pumpkin_data::item_stack::ItemStack;
-    let book = melon::world::creative_tabs::TABS
+    let book = melon_world::creative_tabs::TABS
         .iter()
         .flat_map(|t| &t.items)
         .find(|s| s.item.registry_key == "enchanted_book")
@@ -248,7 +248,7 @@ fn game_mode_switching_and_chat_round_trip() {
         (0, vec!["gamemode".to_owned()])
     );
 
-    let source = melon::network::play::chat::command_suggestions::Source {
+    let source = melon_net::play::chat::command_suggestions::Source {
         registries: &session.info.registries,
         players: &[],
         selectors: true,
@@ -257,7 +257,7 @@ fn game_mode_switching_and_chat_round_trip() {
     let found: Vec<String> = enchant
         .arguments
         .iter()
-        .filter_map(|a| melon::network::play::chat::command_suggestions::suggest(a, "eff", &source))
+        .filter_map(|a| melon_net::play::chat::command_suggestions::suggest(a, "eff", &source))
         .flatten()
         .map(|s| s.text)
         .collect();
@@ -286,8 +286,8 @@ fn game_mode_switching_and_chat_round_trip() {
 #[test]
 #[ignore = "starts an integrated server"]
 fn cave_culling_hides_terrain_from_underground() {
-    use melon::world::culling::occlusion::{self, SectionState};
-    use melon::world::terrain::section_visibility;
+    use melon_world::culling::occlusion::{self, SectionState};
+    use melon_world::terrain::section_visibility;
     use std::collections::HashMap;
 
     let settings = WorldSettings {
@@ -295,9 +295,9 @@ fn cave_culling_hides_terrain_from_underground() {
         ..WorldSettings::default()
     };
     let mut world = TestWorld::open("culling", settings, 4, "Caver");
-    let mut level = melon::world::level::Level::default();
+    let mut level = melon_world::level::Level::default();
     let mut visibility = HashMap::new();
-    let mut insert = |level: &mut melon::world::level::Level, chunk: melon::world::chunk::Chunk| {
+    let mut insert = |level: &mut melon_world::level::Level, chunk: melon_world::chunk::Chunk| {
         visibility.insert((chunk.x, chunk.z), section_visibility(&chunk));
         level.insert(chunk);
     };
@@ -318,11 +318,11 @@ fn cave_culling_hides_terrain_from_underground() {
     }
     let (x, y, z) = world.spawn.pos;
     let (cx, cz) = (
-        melon::math::section_coord(x as i32),
-        melon::math::section_coord(z as i32),
+        melon_core::math::section_coord(x as i32),
+        melon_core::math::section_coord(z as i32),
     );
     let (min_y, height) = level.height();
-    let section_y = |block_y: i32| melon::math::section_coord(block_y - min_y);
+    let section_y = |block_y: i32| melon_core::math::section_coord(block_y - min_y);
     let reached = |block_y: i32| {
         occlusion::walk(
             (cx, section_y(block_y), cz),
@@ -350,14 +350,14 @@ fn cave_culling_hides_terrain_from_underground() {
 #[ignore = "generates terrain and writes worlds to disk"]
 fn the_player_stands_and_walks_on_generated_terrain() {
     use glam::DVec3;
-    use melon::world::player::{MoveInput, PlayerState};
+    use melon_world::player::{MoveInput, PlayerState};
 
     let settings = WorldSettings {
         seed: "4831".to_owned(),
         ..WorldSettings::default()
     };
     let mut world = TestWorld::open("physics", settings, 2, "Walker");
-    let mut level = melon::world::level::Level::default();
+    let mut level = melon_world::level::Level::default();
     for event in std::mem::take(&mut world.joined) {
         if let WorldEvent::ChunkLoaded(chunk) = event {
             level.insert(chunk);
@@ -367,7 +367,7 @@ fn the_player_stands_and_walks_on_generated_terrain() {
     let session = &mut world.session;
     let mut player = PlayerState::new(DVec3::new(x, y, z));
 
-    let mut pump = |level: &mut melon::world::level::Level, player: &mut PlayerState| {
+    let mut pump = |level: &mut melon_world::level::Level, player: &mut PlayerState| {
         for event in session.poll() {
             match event {
                 WorldEvent::ChunkLoaded(chunk) => level.insert(chunk),
@@ -395,7 +395,7 @@ fn the_player_stands_and_walks_on_generated_terrain() {
             MoveInput::default(),
             &level,
             20,
-            melon::world::player::SPRINT_WINDOW_DEFAULT,
+            melon_world::player::SPRINT_WINDOW_DEFAULT,
         );
         if player.on_ground() {
             settled_ticks += 1;
@@ -444,12 +444,12 @@ fn the_player_stands_and_walks_on_generated_terrain() {
             input,
             &level,
             20,
-            melon::world::player::SPRINT_WINDOW_DEFAULT,
+            melon_world::player::SPRINT_WINDOW_DEFAULT,
         );
         let feet = player.feet() + DVec3::new(0.0, 0.01, 0.0);
-        let inside = melon::world::physics::block_boxes(
+        let inside = melon_world::physics::block_boxes(
             &level,
-            &melon::world::physics::Aabb::at_feet(feet, 0.5, 1.7),
+            &melon_world::physics::Aabb::at_feet(feet, 0.5, 1.7),
         );
         assert!(inside.is_empty(), "inside a block at {feet:?}: {inside:?}");
     }
@@ -534,8 +534,8 @@ fn a_custom_movement_state_bends_the_move_checks() {
 #[test]
 #[ignore = "starts an integrated server; set MELON_COMMANDS_DUMP"]
 fn dump_command_tree() {
-    use melon::network::play::chat::commands::{CommandTree, NodeKind};
-    use melon::network::play::game::GameEvent;
+    use melon_net::play::chat::commands::{CommandTree, NodeKind};
+    use melon_net::play::game::GameEvent;
     use serde_json::{Map, Value, json};
 
     let Ok(path) = std::env::var("MELON_COMMANDS_DUMP") else {
@@ -672,7 +672,7 @@ fn dump_command_tree() {
                         },
                     );
                 out.insert("parser".into(), json!(name));
-                if let melon::network::play::chat::commands::Parser::Registry { registry, .. } =
+                if let melon_net::play::chat::commands::Parser::Registry { registry, .. } =
                     &a.parser
                 {
                     out.insert("registry".into(), json!(registry));
@@ -722,8 +722,8 @@ fn dump_command_tree() {
 #[test]
 #[ignore = "starts an integrated server"]
 fn the_nether_comes_with_its_own_height() {
-    use melon::network::play::game::GameEvent;
-    use melon::world::dimension::Height;
+    use melon_net::play::game::GameEvent;
+    use melon_world::dimension::Height;
 
     let settings = WorldSettings {
         seed: "42".to_owned(),
@@ -745,7 +745,7 @@ fn the_nether_comes_with_its_own_height() {
         pos, yaw, pitch, ..
     } = world.spawn;
 
-    let mut level = melon::world::level::Level::default();
+    let mut level = melon_world::level::Level::default();
     let mut op = false;
     for event in std::mem::take(&mut world.joined) {
         match event {
@@ -866,9 +866,9 @@ fn the_nether_comes_with_its_own_height() {
 #[test]
 #[ignore = "starts an integrated server"]
 fn summoned_mobs_are_tracked() {
-    use melon::network::play::game::GameEvent;
-    use melon::world::entity::kind::EntityKind;
-    use melon::world::entity::tracker::Entities;
+    use melon_net::play::game::GameEvent;
+    use melon_world::entity::kind::EntityKind;
+    use melon_world::entity::tracker::Entities;
 
     let settings = WorldSettings {
         name: "World".to_owned(),
@@ -955,7 +955,7 @@ fn summoned_mobs_are_tracked() {
 /// A creative world with entities tracked as the game does, for tests
 struct MobWorld {
     world: TestWorld,
-    entities: melon::world::entity::tracker::Entities,
+    entities: melon_world::entity::tracker::Entities,
     /// Every `ClientboundMoveVehicle`: where the server put the vehicle back.
     vehicle_resets: Vec<[f64; 3]>,
 }
@@ -984,7 +984,7 @@ impl MobWorld {
     }
 
     fn feed(&mut self, events: Vec<WorldEvent>) {
-        use melon::network::play::game::GameEvent;
+        use melon_net::play::game::GameEvent;
         let own = self.world.session.info.entity_id;
         for event in events {
             match event {
@@ -1001,7 +1001,7 @@ impl MobWorld {
     fn wait(
         &mut self,
         what: &str,
-        done: impl Fn(&melon::world::entity::tracker::Entities) -> bool,
+        done: impl Fn(&melon_world::entity::tracker::Entities) -> bool,
     ) {
         let until = std::time::Instant::now() + std::time::Duration::from_secs(30);
         loop {
@@ -1022,12 +1022,12 @@ impl MobWorld {
     }
 
     /// Summons a still `name` two blocks south and waits for it. Others
-    fn summon(&mut self, name: &str, kind: melon::world::entity::kind::EntityKind) -> i32 {
+    fn summon(&mut self, name: &str, kind: melon_world::entity::kind::EntityKind) -> i32 {
         let before: std::collections::HashSet<i32> = self.entities.iter().map(|e| e.id).collect();
         self.world
             .session
             .send_command(&format!("summon minecraft:{name} ~ ~ ~2 {{NoAI:1b}}"));
-        let find = |e: &melon::world::entity::tracker::Entities| {
+        let find = |e: &melon_world::entity::tracker::Entities| {
             e.iter()
                 .find(|m| m.kind == kind && !before.contains(&m.id))
                 .map(|m| m.id)
@@ -1041,7 +1041,7 @@ impl MobWorld {
 #[test]
 #[ignore = "starts an integrated server"]
 fn an_attacked_pig_is_hurt() {
-    use melon::world::entity::kind::EntityKind;
+    use melon_world::entity::kind::EntityKind;
 
     let mut mobs = MobWorld::open("attack", "Hunter");
     let id = mobs.summon("pig", EntityKind::Pig);
@@ -1055,8 +1055,8 @@ fn an_attacked_pig_is_hurt() {
 #[test]
 #[ignore = "starts an integrated server"]
 fn flint_and_steel_lights_a_creeper() {
-    use melon::world::entity::kind::EntityKind;
-    use melon::world::player::hands::Hand;
+    use melon_world::entity::kind::EntityKind;
+    use melon_world::player::hands::Hand;
 
     let mut mobs = MobWorld::open("interact", "Igniter");
     mobs.world
@@ -1076,8 +1076,8 @@ fn flint_and_steel_lights_a_creeper() {
 #[test]
 #[ignore = "starts an integrated server"]
 fn a_lead_ties_a_pig_to_the_player_and_lets_go() {
-    use melon::world::entity::kind::EntityKind;
-    use melon::world::player::hands::Hand;
+    use melon_world::entity::kind::EntityKind;
+    use melon_world::player::hands::Hand;
 
     let mut mobs = MobWorld::open("lead", "Shepherd");
     let own = mobs.world.session.info.entity_id;
@@ -1102,10 +1102,10 @@ fn a_lead_ties_a_pig_to_the_player_and_lets_go() {
 #[test]
 #[ignore = "starts an integrated server"]
 fn a_click_boards_a_boat_and_sneaking_gets_off() {
-    use melon::network::play::game::PlayerInput;
-    use melon::world::entity::kind::EntityKind;
-    use melon::world::entity::ride::Steering;
-    use melon::world::player::hands::Hand;
+    use melon_net::play::game::PlayerInput;
+    use melon_world::entity::kind::EntityKind;
+    use melon_world::entity::ride::Steering;
+    use melon_world::player::hands::Hand;
     use pumpkin_data::item_stack::ItemStack;
 
     let mut mobs = MobWorld::open("ride", "Skipper");
@@ -1159,9 +1159,9 @@ fn a_click_boards_a_boat_and_sneaking_gets_off() {
 #[test]
 #[ignore = "starts an integrated server"]
 fn a_steered_boat_follows_its_client_until_it_jumps() {
-    use melon::network::play::game::PlayerInput;
-    use melon::world::entity::kind::EntityKind;
-    use melon::world::player::hands::Hand;
+    use melon_net::play::game::PlayerInput;
+    use melon_world::entity::kind::EntityKind;
+    use melon_world::player::hands::Hand;
 
     let mut mobs = MobWorld::open("boat", "Rower");
     let id = mobs.summon("oak_boat", EntityKind::Boat);
@@ -1207,7 +1207,7 @@ fn a_steered_boat_follows_its_client_until_it_jumps() {
 /// A creative world and the menu the server has open, kept the way the
 struct MenuWorld {
     world: TestWorld,
-    menu: Option<melon::world::inventory::OpenContainer>,
+    menu: Option<melon_world::inventory::OpenContainer>,
     /// Every entity the server added: id and `EntityType` id.
     added: Vec<(i32, i32)>,
     /// Every block change the server sent: position and state id.
@@ -1234,7 +1234,7 @@ impl MenuWorld {
             menu: None,
             added: Vec::new(),
             changed: Vec::new(),
-            carried: melon::world::inventory::empty(),
+            carried: melon_world::inventory::empty(),
             channels: Vec::new(),
         };
         this.apply(joined);
@@ -1244,8 +1244,8 @@ impl MenuWorld {
     }
 
     fn apply(&mut self, events: Vec<WorldEvent>) {
-        use melon::network::play::game::{EntityPacket, GameEvent};
-        use melon::world::inventory::{ContainerKind, OpenContainer};
+        use melon_net::play::game::{EntityPacket, GameEvent};
+        use melon_world::inventory::{ContainerKind, OpenContainer};
         for event in events {
             let event = match event {
                 WorldEvent::Game(event) => event,
@@ -1328,7 +1328,7 @@ impl MenuWorld {
         }
     }
 
-    fn menu(&self) -> &melon::world::inventory::OpenContainer {
+    fn menu(&self) -> &melon_world::inventory::OpenContainer {
         self.menu.as_ref().expect("a menu is open")
     }
 
@@ -1343,8 +1343,8 @@ impl MenuWorld {
     }
 
     /// Puts a block `~2 ~ ~` from the player and right-clicks it open.
-    fn open_block(&mut self, block: &str, kind: melon::world::inventory::ContainerKind) {
-        use melon::world::player::hands::Hand;
+    fn open_block(&mut self, block: &str, kind: melon_world::inventory::ContainerKind) {
+        use melon_world::player::hands::Hand;
         self.world
             .session
             .send_command(&format!("setblock ~2 ~ ~ {block}"));
@@ -1375,7 +1375,7 @@ impl MenuWorld {
     }
 
     /// A click as the game sends it: predicted, then with what it changed.
-    fn click(&mut self, slot: i16, button: i8, kind: melon::world::inventory::ClickType) {
+    fn click(&mut self, slot: i16, button: i8, kind: melon_world::inventory::ClickType) {
         let menu = self.menu.as_mut().expect("a menu is open");
         let click = menu.click(slot, button, kind, false, &mut self.carried);
         let changed: Vec<_> = click
@@ -1394,7 +1394,7 @@ impl MenuWorld {
 
     /// Moves the stack in menu slot `from` to slot `to` (two clicks).
     fn move_stack(&mut self, from: i16, to: i16) {
-        use melon::world::inventory::ClickType;
+        use melon_world::inventory::ClickType;
         let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
         while self.menu().slots[from as usize].is_empty() {
             self.pump();
@@ -1425,7 +1425,7 @@ impl MenuWorld {
 #[test]
 #[ignore = "starts an integrated server"]
 fn the_servers_menus_agree_with_the_clients() {
-    use melon::world::inventory::{ClickType, ContainerKind, loom, stonecutting};
+    use melon_world::inventory::{ClickType, ContainerKind, loom, stonecutting};
     use pumpkin_data::item::Item;
 
     let mut w = MenuWorld::open("menus", "Crafter");
@@ -1475,7 +1475,7 @@ fn the_servers_menus_agree_with_the_clients() {
     w.open_block("minecraft:loom", ContainerKind::Loom);
     w.move_stack(4 + 27 + 3, 0);
     w.move_stack(4 + 27 + 4, 1);
-    let patterns = loom::selectable_patterns(&melon::world::inventory::empty());
+    let patterns = loom::selectable_patterns(&melon_world::inventory::empty());
     assert!(patterns.len() > 4);
     assert!(w.menu().slots[3].is_empty());
     w.world.session.send_container_button(w.menu().id, 0);
@@ -1500,7 +1500,7 @@ fn the_servers_menus_agree_with_the_clients() {
         .0;
     w.world.session.send_interact(
         id,
-        melon::world::player::hands::Hand::Main,
+        melon_world::player::hands::Hand::Main,
         [0.0, 1.0, 0.0],
         false,
     );
@@ -1519,7 +1519,7 @@ fn the_servers_menus_agree_with_the_clients() {
 #[test]
 #[ignore = "starts an integrated server"]
 fn a_zip_mod_block_can_be_placed() {
-    use melon::world::player::hands::Hand;
+    use melon_world::player::hands::Hand;
 
     let block = pumpkin_data::mod_registry::register_simple_block(
         "melon_test:placed",
@@ -1556,8 +1556,8 @@ fn a_zip_mod_block_can_be_placed() {
 #[test]
 #[ignore = "starts an integrated server"]
 fn a_swapped_block_keeps_what_hangs_on_it() {
-    use melon::network::play::SWAP_CHANNEL;
-    use melon::world::player::hands::Hand;
+    use melon_net::play::SWAP_CHANNEL;
+    use melon_world::player::hands::Hand;
     use pumpkin_data::{Block, item::Item};
 
     let mut w = MenuWorld::open("swap", "Swapper");
@@ -1637,7 +1637,7 @@ fn a_published_world_takes_a_lan_guest_and_sends_it_off() {
         .expect("publishing should work");
     assert!(server.published().is_some());
     // The world is announced on the LAN as vanilla's `LanServerPinger` does.
-    let detector = melon::network::lan::LanDetector::start().expect("joins the LAN group");
+    let detector = melon_net::lan::LanDetector::start().expect("joins the LAN group");
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     let heard = loop {
         if let Some(servers) = detector.take_dirty()
@@ -1658,7 +1658,7 @@ fn a_published_world_takes_a_lan_guest_and_sends_it_off() {
         username: "Guest".to_owned(),
     };
     let mut session =
-        melon::network::join_server(&format!("127.0.0.1:{port}"), &guest, &Default::default())
+        melon_net::join_server(&format!("127.0.0.1:{port}"), &guest, &Default::default())
             .expect("the guest should join over the LAN");
     let joined = session.poll();
     assert!(

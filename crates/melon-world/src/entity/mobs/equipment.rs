@@ -210,7 +210,7 @@ fn trim_overlay(stack: &ItemStack, slot: ArmorSlot, baby: bool) -> Option<std::s
         _ => "humanoid",
     };
     let palette = trim_palette(stack, material);
-    Some(crate::util::intern::intern(|s| {
+    Some(melon_core::util::intern::intern(|s| {
         for part in [
             "minecraft:trims/entity/",
             folder,

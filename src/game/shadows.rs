@@ -4,9 +4,9 @@ use rustc_hash::FxHashMap;
 
 use glam::{IVec3, Mat4, Vec3};
 
-use crate::renderer::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId, WorldVertex};
-use crate::world::level::Level;
-use crate::world::shadow;
+use melon_render::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId, WorldVertex};
+use melon_world::level::Level;
+use melon_world::shadow;
 
 /// The local player's key among the casters (entity ids are the others).
 pub const OWN: i32 = i32::MIN;
@@ -84,7 +84,7 @@ impl ShadowMeshes {
             if !relative.is_empty() {
                 match renderer.upload_mesh(&relative) {
                     Ok(mesh) => shadow.mesh = Some(mesh),
-                    Err(e) => crate::warn!("Shadow mesh failed: {e:#}"),
+                    Err(e) => melon_base::warn!("Shadow mesh failed: {e:#}"),
                 }
             }
         }
@@ -97,10 +97,10 @@ impl ShadowMeshes {
                 model: Mat4::IDENTITY,
                 origin: shadow.origin,
                 layer: RenderLayer::Shadows,
-                blend: crate::renderer::Blending::Opaque,
+                blend: melon_render::Blending::Opaque,
                 light: None,
                 overlay: 0.0,
-                glint: crate::renderer::Glint::None,
+                glint: melon_render::Glint::None,
             });
         }
     }

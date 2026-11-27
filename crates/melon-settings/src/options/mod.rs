@@ -3,14 +3,14 @@
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use crate::audio::music::{MusicFrequency, MusicToast};
-use crate::audio::source::{SoundSource, Volumes};
-use crate::cycle::Cycle;
-use crate::i18n::languages::Language;
+use melon_audio::music::{MusicFrequency, MusicToast};
+use melon_audio::source::{SoundSource, Volumes};
+use melon_core::cycle::Cycle;
+use melon_assets::i18n::languages::Language;
 use crate::input::{self, Action, InputBind, InputSettings};
-use crate::world::clouds::CloudStatus;
-use crate::world::culling::CullSettings;
-use crate::world::entity::player::{Arm, PlayerModelPart, ShownParts};
+use melon_world::clouds::CloudStatus;
+use melon_world::culling::CullSettings;
+use melon_world::entity::player::{Arm, PlayerModelPart, ShownParts};
 
 mod chat;
 mod choices;
@@ -18,8 +18,8 @@ mod keys;
 #[cfg(test)]
 mod tests;
 
-pub use crate::particle::ParticleStatus;
-pub use crate::world::level::ChunkBuilder;
+pub use melon_world::particle::ParticleStatus;
+pub use melon_world::level::ChunkBuilder;
 pub use chat::*;
 pub use choices::*;
 use keys::*;
@@ -43,7 +43,7 @@ pub const MAX_FPS_DEFAULT: u32 = 120;
 pub const GAMMA_DEFAULT: f64 = 0.5;
 /// `Options.biomeBlendRadius`: `0` is off, `7` blends 15x15 blocks.
 pub const BIOME_BLEND_RANGE: (u8, u8) = (0, 7);
-pub use crate::world::block_tint::BIOME_BLEND_DEFAULT;
+pub use melon_world::block_tint::BIOME_BLEND_DEFAULT;
 /// `Options.cloudRange` in chunks.
 pub const CLOUD_RANGE_RANGE: (u8, u8) = (2, 128);
 pub const CLOUD_RANGE_DEFAULT: u8 = 128;
@@ -265,7 +265,7 @@ impl Config {
 
     pub fn save(&self, game_dir: &Path) {
         if let Err(e) = std::fs::write(Self::path(game_dir), self.serialize()) {
-            crate::warn!("options.txt not written: {e:#}");
+            melon_base::warn!("options.txt not written: {e:#}");
         }
     }
 }

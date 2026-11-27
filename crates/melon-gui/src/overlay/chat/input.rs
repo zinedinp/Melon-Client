@@ -1,20 +1,20 @@
 //! Vanilla `ChatScreen` (T, or / for a command).
 
-use crate::component::ClickEvent;
+use melon_protocol::component::ClickEvent;
 
 use crate::hud::item_slot::ItemPainter;
-use crate::i18n::Lang;
-use crate::math::argb;
-use crate::network::play::chat::Suggestions;
-use crate::network::play::chat::command_suggestions::{self, SELECTOR_LEVEL, Source};
-use crate::network::play::chat::commands::{CommandTree, SpanKind};
+use melon_assets::i18n::Lang;
+use melon_core::math::argb;
+use melon_net::play::chat::Suggestions;
+use melon_net::play::chat::command_suggestions::{self, SELECTOR_LEVEL, Source};
+use melon_net::play::chat::commands::{CommandTree, SpanKind};
 use crate::overlay::chat::Chat;
 use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
-use crate::renderer::quad::DrawList;
+use melon_render::quad::DrawList;
 use crate::screen::TextEvent;
-use crate::settings::input::InputBind;
-use crate::settings::options::{ChatSettings, ChatVisibility};
+use melon_settings::input::InputBind;
+use melon_settings::options::{ChatSettings, ChatVisibility};
 use crate::text::font::Font;
 use crate::text::{self, Hover, StyledText, TextStyle, colors};
 use crate::widgets::text_input::{Edit, TextInput};
@@ -261,7 +261,7 @@ impl ChatInput {
             }
             // `ChatScreen.handleClickEvent` → `defaultHandleGameClickEvent`.
             Some(event @ (ClickEvent::ShowDialog { .. } | ClickEvent::Custom { .. })) => {
-                return OverlayAction::Dialog(crate::dialog::DialogClick::from_event(
+                return OverlayAction::Dialog(melon_net::dialog::DialogClick::from_event(
                     event.clone(),
                 ));
             }

@@ -5,7 +5,7 @@ use glam::{Mat3, Mat4, Vec3};
 use crate::clock::Environment;
 use crate::geometry;
 use crate::java_random::JavaRandom;
-use crate::math::angle::{self, HALF_PI, PI, Rotation, TAU};
+use melon_core::math::angle::{self, HALF_PI, PI, Rotation, TAU};
 use crate::mesh::WorldVertex;
 
 /// `SkyRenderer.SUN_HEIGHT` / `MOON_HEIGHT`.

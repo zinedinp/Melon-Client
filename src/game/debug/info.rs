@@ -4,9 +4,9 @@ use pumpkin_data::tag::{self, RegistryKey, Taggable};
 use pumpkin_data::{Block, BlockStateId};
 
 use crate::game::InWorld;
-use crate::gui::hud::debug::DebugExtras;
-use crate::gui::hud::debug_entries::Entry;
-use crate::world::clouds::CloudStatus;
+use melon_gui::hud::debug::DebugExtras;
+use melon_gui::hud::debug_entries::Entry;
+use melon_world::clouds::CloudStatus;
 
 /// A block state as `BlockState.toString` says it.
 pub fn describe_state(state: u16) -> (String, Vec<String>) {
@@ -75,12 +75,12 @@ fn tags_of(key: RegistryKey, id: u16) -> Vec<String> {
 /// flowing form, or `minecraft:empty`), its properties, and its registry
 /// id for the tags.
 fn describe_fluid(state: u16) -> (String, Vec<String>, u16) {
-    let Some(fluid) = crate::world::fluid::fluid_of(state) else {
+    let Some(fluid) = melon_world::fluid::fluid_of(state) else {
         return ("minecraft:empty".to_owned(), Vec::new(), 0);
     };
     let (name, id) = match fluid.kind {
-        crate::world::fluid::FluidKind::Water => ("water", 2),
-        crate::world::fluid::FluidKind::Lava => ("lava", 4),
+        melon_world::fluid::FluidKind::Water => ("water", 2),
+        melon_world::fluid::FluidKind::Lava => ("lava", 4),
     };
     let falling = format!("falling: {}", fluid.falling);
     if fluid.amount == 8 && !fluid.falling {
@@ -97,7 +97,7 @@ fn describe_fluid(state: u16) -> (String, Vec<String>, u16) {
 
 /// `DebugEntryHeightmap`'s client line: one above the top block of each
 /// kind in the column, the bottom where there is none.
-fn client_heightmaps(level: &crate::world::level::Level, x: i32, z: i32) -> String {
+fn client_heightmaps(level: &melon_world::level::Level, x: i32, z: i32) -> String {
     let (min_y, sections) = level.height();
     let top = min_y + sections * 16;
     let height = |matches: &dyn Fn(u16) -> bool| {
@@ -107,7 +107,7 @@ fn client_heightmaps(level: &crate::world::level::Level, x: i32, z: i32) -> Stri
             .map_or(min_y, |y| y + 1)
     };
     let block = |id: u16| Block::from_state_id(BlockStateId::new_or_air(id));
-    let fluid = |id: u16| crate::world::fluid::fluid_of(id).is_some();
+    let fluid = |id: u16| melon_world::fluid::fluid_of(id).is_some();
     let surface = height(&|id| !block(id).default_state.is_air());
     let motion = height(&|id| {
         block(id).has_tag(&tag::Block::MINECRAFT_BLOCKS_MOTION_IN_HEIGHTMAP) || fluid(id)
@@ -172,7 +172,7 @@ impl InWorld {
         let eye = self.player.tick_eye();
         let reach = eye + self.player.forward_vector().as_dvec3() * 20.0;
         if (on(Entry::LookingAtBlockState) || on(Entry::LookingAtBlockTags))
-            && let Some(hit) = crate::world::pick::clip_blocks(&self.level, eye, reach)
+            && let Some(hit) = melon_world::pick::clip_blocks(&self.level, eye, reach)
         {
             let [x, y, z] = hit.pos;
             let state = self.level.block_state(x, y, z).unwrap_or(0);
@@ -190,7 +190,7 @@ impl InWorld {
             }
         }
         if (on(Entry::LookingAtFluidState) || on(Entry::LookingAtFluidTags))
-            && let Some(hit) = crate::world::pick::clip_blocks_and_fluids(&self.level, eye, reach)
+            && let Some(hit) = melon_world::pick::clip_blocks_and_fluids(&self.level, eye, reach)
         {
             let [x, y, z] = hit.pos;
             let state = self.level.block_state(x, y, z).unwrap_or(0);
@@ -278,8 +278,8 @@ impl InWorld {
             let [used, streaming] = self.audio.channels;
             extras.sound_mood = Some(format!(
                 "Sounds: {used}/{} + {streaming}/{} (Mood {}%)",
-                crate::audio::stats::STATIC_CHANNELS,
-                crate::audio::stats::STREAMING_CHANNELS,
+                melon_audio::stats::STATIC_CHANNELS,
+                melon_audio::stats::STREAMING_CHANNELS,
                 (self.mood() * 100.0 + 0.5).floor() as i32,
             ));
         }

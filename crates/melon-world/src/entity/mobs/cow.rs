@@ -3,7 +3,7 @@
 use super::rounded;
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, variant_body};
 use crate::entity::model::{LayerDefinition, PartDefinition};
-use crate::math::angle::PI;
+use melon_core::math::angle::PI;
 use crate::model_part::{Cube, Pose};
 use pumpkin_data::cow_variant::CowVariant;
 

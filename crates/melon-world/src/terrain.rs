@@ -2,7 +2,7 @@
 
 use std::ops::Range;
 
-use crate::math::{radix, section_to_block};
+use melon_core::math::{radix, section_to_block};
 use glam::{DVec3, Vec3};
 
 use crate::block::direction::Direction;
@@ -700,7 +700,7 @@ pub fn test_models() -> Option<(&'static std::sync::Arc<BlockModels>, FluidSprit
     static MODELS: OnceLock<Option<(Arc<BlockModels>, FluidSprites)>> = OnceLock::new();
     MODELS
         .get_or_init(|| {
-            let root = crate::assets::default_root();
+            let root = melon_assets::assets::default_root();
             if !root.join("minecraft/blockstates/stone.json").exists() {
                 return None;
             }

@@ -31,7 +31,7 @@ pub fn discover(game_dir: &Path) -> Vec<Arc<Pack>> {
             match Pack::open(format!("file/{name}"), name.clone(), &path) {
                 Ok(pack) => Some(Arc::new(pack)),
                 Err(e) => {
-                    crate::warn!("Resource pack {name} skipped: {e:#}");
+                    melon_base::warn!("Resource pack {name} skipped: {e:#}");
                     None
                 }
             }

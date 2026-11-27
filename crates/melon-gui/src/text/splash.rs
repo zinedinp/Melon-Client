@@ -1,8 +1,8 @@
 //! Vanilla `SplashManager` / `SplashRenderer` (rotated yellow text by the logo).
 
-use crate::math::angle::{self, PI, TAU};
-use crate::renderer::quad::Transform2D;
-use crate::world::java_random::java_string_hash;
+use melon_core::math::angle::{self, PI, TAU};
+use melon_render::quad::Transform2D;
+use melon_world::java_random::java_string_hash;
 use melon_assets::assets::Assets;
 use rand::RngExt;
 

@@ -253,7 +253,7 @@ impl ThreadCounts {
 
     #[cfg(windows)]
     fn read() -> Option<Self> {
-        let (user, system) = crate::platform::current_thread_cpu()?;
+        let (user, system) = melon_base::platform::current_thread_cpu()?;
         Some(Self {
             user,
             system,

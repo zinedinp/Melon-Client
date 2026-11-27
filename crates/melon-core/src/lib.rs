@@ -12,6 +12,3 @@ pub mod instances;
 pub mod math;
 pub mod probe;
 pub mod util;
-
-// melon-base's modules, under the paths the moved code names them by.
-use melon_base::{home, info, json_file, warn};

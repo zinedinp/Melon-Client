@@ -203,7 +203,7 @@ impl ClientEntity {
         } else {
             0.15
         };
-        angle * factor * crate::math::angle::PI
+        angle * factor * melon_core::math::angle::PI
     }
 
     /// `Fox.getCrouchAmount`.
@@ -260,7 +260,7 @@ impl ClientEntity {
         let age = self.age as f32 + partial;
         let riding = self.vehicle.is_some();
         let shake = if self.appearance.shaking() {
-            (age.floor() * 3.25).cos() * crate::math::angle::PI * 0.4
+            (age.floor() * 3.25).cos() * melon_core::math::angle::PI * 0.4
         } else {
             0.0
         };

@@ -6,18 +6,18 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use glam::Mat4;
 use image::RgbaImage;
 
-use crate::assets::Assets;
-use crate::auth::skin::DownloadedSkin;
-use crate::renderer::{EntityDraw, Glint, MeshId, RenderLayer, Renderer, TextureId};
-use crate::world::block_entity::models::SkullType;
-use crate::world::entity::mobs::villager::Hat;
-use crate::world::entity::mobs::{MobModel, ModelId};
-use crate::world::entity::model::Model;
-use crate::world::entity::player::{
+use melon_assets::assets::Assets;
+use melon_base::auth::skin::DownloadedSkin;
+use melon_render::{EntityDraw, Glint, MeshId, RenderLayer, Renderer, TextureId};
+use melon_world::block_entity::models::SkullType;
+use melon_world::entity::mobs::villager::Hat;
+use melon_world::entity::mobs::{MobModel, ModelId};
+use melon_world::entity::model::Model;
+use melon_world::entity::player::{
     DEFAULT_SKINS, PlayerModel, PlayerModelType, default_skin, default_skin_texture,
 };
-use crate::world::entity::skull::SkullModel;
-use crate::world::head_profile::HeadProfile;
+use melon_world::entity::skull::SkullModel;
+use melon_world::head_profile::HeadProfile;
 
 /// A model's parts on the GPU, by part index; `None` for parts without boxes.
 pub struct ModelMeshes {
@@ -37,7 +37,7 @@ impl ModelMeshes {
     ) -> anyhow::Result<Self> {
         let parts = (0..model.len())
             .map(|i| {
-                let part = crate::world::entity::model::PartId(i);
+                let part = melon_world::entity::model::PartId(i);
                 let vertices = model.part_vertices_sided(part, two_sided);
                 if vertices.is_empty() {
                     Ok(None)
@@ -66,7 +66,7 @@ impl ModelMeshes {
         matrices: &[Option<Mat4>],
         origin: glam::IVec3,
         style: DrawStyle,
-        overlay: &[crate::world::entity::model::PartId],
+        overlay: &[melon_world::entity::model::PartId],
         out: &mut Vec<EntityDraw>,
     ) {
         self.draws_filtered(matrices, origin, style, true, Some(overlay), out);
@@ -78,7 +78,7 @@ impl ModelMeshes {
         origin: glam::IVec3,
         style: DrawStyle,
         translucent: bool,
-        only: Option<&[crate::world::entity::model::PartId]>,
+        only: Option<&[melon_world::entity::model::PartId]>,
         out: &mut Vec<EntityDraw>,
     ) {
         out.extend(
@@ -98,7 +98,7 @@ impl ModelMeshes {
                     model,
                     origin,
                     layer: style.layer,
-                    blend: crate::renderer::Blending::of(translucent),
+                    blend: melon_render::Blending::of(translucent),
                     light: style.light,
                     overlay: style.overlay,
                     glint: style.glint,
@@ -112,7 +112,7 @@ impl ModelMeshes {
         matrices: &[Option<Mat4>],
         origin: glam::IVec3,
         style: DrawStyle,
-        skip: &[crate::world::entity::model::PartId],
+        skip: &[melon_world::entity::model::PartId],
         out: &mut Vec<EntityDraw>,
     ) {
         out.extend(
@@ -130,7 +130,7 @@ impl ModelMeshes {
                     model,
                     origin,
                     layer: style.layer,
-                    blend: crate::renderer::Blending::Opaque,
+                    blend: melon_render::Blending::Opaque,
                     light: style.light,
                     overlay: style.overlay,
                     glint: style.glint,
@@ -254,11 +254,11 @@ impl PlayerModels {
         let textures = textures.map(str::to_owned);
         std::thread::spawn(move || {
             let skin = match textures {
-                Some(textures) => crate::auth::skin::skin_from_textures(&textures),
-                None => crate::auth::skin::fetch_skin(&uuid.simple().to_string()),
+                Some(textures) => melon_base::auth::skin::skin_from_textures(&textures),
+                None => melon_base::auth::skin::fetch_skin(&uuid.simple().to_string()),
             };
             let skin = skin
-                .map_err(|e| crate::warn!("Skin of {uuid} not loaded: {e:#}"))
+                .map_err(|e| melon_base::warn!("Skin of {uuid} not loaded: {e:#}"))
                 .ok();
             let _ = sender.send((uuid, skin));
         });
@@ -286,7 +286,7 @@ impl PlayerModels {
                         }),
                     );
                 }
-                Err(e) => crate::warn!("Skin of {uuid} not uploaded: {e:#}"),
+                Err(e) => melon_base::warn!("Skin of {uuid} not uploaded: {e:#}"),
             }
         }
     }
@@ -305,8 +305,8 @@ impl PlayerModels {
                 let sender = self.sender.clone();
                 let name = name.to_string();
                 std::thread::spawn(move || {
-                    let skin = crate::auth::skin::fetch_skin_by_name(&name)
-                        .map_err(|e| crate::warn!("Skin of {name} not loaded: {e:#}"))
+                    let skin = melon_base::auth::skin::fetch_skin_by_name(&name)
+                        .map_err(|e| melon_base::warn!("Skin of {name} not loaded: {e:#}"))
                         .ok();
                     let _ = sender.send((key, skin));
                 });
@@ -360,7 +360,7 @@ impl PlayerModels {
 impl PlayerModels {
     /// `ClientMannequin.getSkin`: its profile's skin once fetched, else the
     /// default one by the profile's id, with the patch's body and arms.
-    pub fn for_avatar(&self, avatar: &crate::world::head_profile::AvatarProfile) -> PlayerLook<'_> {
+    pub fn for_avatar(&self, avatar: &melon_world::head_profile::AvatarProfile) -> PlayerLook<'_> {
         let mut look = match &avatar.profile {
             Some(profile) if self.has_head_skin(profile) => self.for_profile(profile.skin_key()),
             _ => self.default_look(default_skin(avatar.default_skin_id())),
@@ -424,7 +424,7 @@ impl HeadMeshes {
         &self.skulls[index]
     }
 
-    /// Head `kind` at `animation` ([`crate::world::entity::skull::joints`]), placed by `at`
+    /// Head `kind` at `animation` ([`melon_world::entity::skull::joints`]), placed by `at`
     pub fn draws(
         &self,
         kind: SkullType,
@@ -485,7 +485,7 @@ impl MobModels {
         if self.textures.contains_key(id) {
             return;
         }
-        let found = crate::assets::texture_with_meta(&self.assets_root, id);
+        let found = melon_assets::assets::texture_with_meta(&self.assets_root, id);
         if let Some(hat) = found
             .as_ref()
             .and_then(|(_, meta)| meta.as_ref())
@@ -495,12 +495,12 @@ impl MobModels {
             self.hats.insert(id.to_owned(), hat);
         }
         let image = found
-            .and_then(|(bytes, _)| crate::assets::decode_png(&bytes))
-            .or_else(|| crate::assets::palette::resolve(&self.assets_root, id));
+            .and_then(|(bytes, _)| melon_assets::assets::decode_png(&bytes))
+            .or_else(|| melon_assets::assets::palette::resolve(&self.assets_root, id));
         let texture = image.and_then(|image| {
             renderer
                 .load_texture(&image)
-                .map_err(|e| crate::warn!("Texture {id} not uploaded: {e:#}"))
+                .map_err(|e| melon_base::warn!("Texture {id} not uploaded: {e:#}"))
                 .ok()
         });
         self.textures.insert(id.to_owned(), texture);
@@ -508,7 +508,7 @@ impl MobModels {
 
     /// The texture `id`, decoded, for a picture drawn on the CPU.
     pub fn image(&self, id: &str) -> Option<RgbaImage> {
-        crate::assets::texture_image(&self.assets_root, id)
+        melon_assets::assets::texture_image(&self.assets_root, id)
     }
 
     /// How much of the hat the clothes texture `id` covers.

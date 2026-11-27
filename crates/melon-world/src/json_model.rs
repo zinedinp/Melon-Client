@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::math::angle::{self, Rotation};
+use melon_core::math::angle::{self, Rotation};
 use glam::{Mat3, Vec2, Vec3};
 use image::RgbaImage;
 use serde_json::Value;
@@ -37,7 +37,7 @@ pub struct Model {
 impl Model {
     pub fn resolve(assets_root: &Path, id: &str) -> Option<Self> {
         Self::resolve_with(id, &|id| {
-            crate::assets::json_resource(assets_root, "models", id).map(Arc::new)
+            melon_assets::assets::json_resource(assets_root, "models", id).map(Arc::new)
         })
     }
 
@@ -56,10 +56,10 @@ impl Model {
         let mut ao_set = false;
         let mut light_set = false;
         let mut next = Some(id.to_owned());
-        let mut namespace = crate::assets::split_id(id).0.to_owned();
+        let mut namespace = melon_assets::assets::split_id(id).0.to_owned();
         for _ in 0..16 {
             let Some(id) = next.take() else { break };
-            let (id_ns, path) = crate::assets::split_id(&id);
+            let (id_ns, path) = melon_assets::assets::split_id(&id);
             if path == "builtin/generated" {
                 model.generated = true;
                 break;
@@ -203,10 +203,10 @@ impl<'a> TextureCache<'a> {
     }
 
     fn load(&mut self, id: &str) -> Option<RgbaImage> {
-        let Some((png, meta)) = crate::assets::texture_with_meta(self.assets_root, id) else {
-            return crate::assets::palette::resolve(self.assets_root, id);
+        let Some((png, meta)) = melon_assets::assets::texture_with_meta(self.assets_root, id) else {
+            return melon_assets::assets::palette::resolve(self.assets_root, id);
         };
-        let img = crate::assets::decode_png(&png)?;
+        let img = melon_assets::assets::decode_png(&png)?;
         if let Some(frames) = meta
             .as_ref()
             .and_then(|meta| meta.get("animation"))

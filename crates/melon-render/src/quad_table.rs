@@ -206,7 +206,7 @@ impl QuadSets {
             let (_, set) = self.sets.swap_remove(i);
             // SAFETY: made by this device, and no frame in flight uses it any more.
             if let Err(e) = unsafe { device.free_descriptor_sets(self.pool, &[set]) } {
-                crate::warn!("Mesh descriptor not freed: {e}");
+                melon_base::warn!("Mesh descriptor not freed: {e}");
             }
         }
     }

@@ -1,8 +1,8 @@
 //! Vanilla's delete `ConfirmScreen`s, for a world and for a saved server.
 
 use crate::screen::{ScreenAction, ScreenContext};
-use crate::settings::server_list;
-use crate::singleplayer;
+use melon_settings::server_list;
+use melon_net::singleplayer;
 use crate::widgets::dialog::DialogScreen;
 use crate::widgets::layout::BUTTON_W;
 
@@ -18,7 +18,7 @@ pub fn confirm_delete_world(folder: String, world_name: &str, ctx: &ScreenContex
         .line(warning, WARNING_COLOR)
         .button("selectWorld.deleteButton", BUTTON_W, move |ctx| {
             if let Err(e) = singleplayer::delete_world(ctx.game_dir, &folder) {
-                crate::warn!("World not deleted ({folder}): {e:#}");
+                melon_base::warn!("World not deleted ({folder}): {e:#}");
             }
             ScreenAction::Back
         })

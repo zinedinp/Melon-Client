@@ -2,14 +2,14 @@
 
 use glam::{DVec3, IVec3, Mat4, Vec3};
 
-use crate::gui::text::font::Font;
-use crate::renderer::quad::{DrawList, Vertex};
-use crate::renderer::{
+use melon_gui::text::font::Font;
+use melon_render::quad::{DrawList, Vertex};
+use melon_render::{
     Blending, EntityDraw, LineDraw, LineStyle, MeshId, RenderLayer, Renderer, TextureId,
     WorldVertex,
 };
-use crate::world::block::direction::Direction;
-use crate::world::physics::Aabb;
+use melon_world::block::direction::Direction;
+use melon_world::physics::Aabb;
 
 /// `GizmoStyle.stroke`'s width, in pixels.
 pub const DEFAULT_WIDTH: f32 = 2.5;
@@ -243,7 +243,7 @@ impl Slot {
                 self.built = vertices;
                 self.origin = origin;
             }
-            Err(e) => crate::warn!("Gizmo mesh failed: {e:#}"),
+            Err(e) => melon_base::warn!("Gizmo mesh failed: {e:#}"),
         }
     }
 
@@ -275,7 +275,7 @@ impl Slot {
             blend,
             light: None,
             overlay: 0.0,
-            glint: crate::renderer::Glint::None,
+            glint: melon_render::Glint::None,
         })
     }
 }

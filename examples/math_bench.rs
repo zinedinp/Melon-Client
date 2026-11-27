@@ -4,14 +4,14 @@ use std::hint::black_box;
 use std::time::Instant;
 
 use glam::{Mat4, Vec3};
-use melon::math::angle::{self, Rotation};
-use melon::math::euler::{Look, Orientation};
-use melon::world::entity::humanoid::HumanoidRenderState;
-use melon::world::entity::living::{self, LivingRenderState, Placement};
-use melon::world::entity::mobs::{MobModel, ModelId, PoseInput};
-use melon::world::entity::player::{AvatarRenderState, PlayerModel, PlayerModelType};
-use melon::world::entity::pose_cache::PoseCache;
-use melon::world::player::forward_vector_for;
+use melon_core::math::angle::{self, Rotation};
+use melon_core::math::euler::{Look, Orientation};
+use melon_world::entity::humanoid::HumanoidRenderState;
+use melon_world::entity::living::{self, LivingRenderState, Placement};
+use melon_world::entity::mobs::{MobModel, ModelId, PoseInput};
+use melon_world::entity::player::{AvatarRenderState, PlayerModel, PlayerModelType};
+use melon_world::entity::pose_cache::PoseCache;
+use melon_world::player::forward_vector_for;
 
 /// Unrelated memory walked between calls: bigger than L2's share per core.
 const TRAFFIC_BYTES: usize = 1 << 20;
@@ -289,8 +289,8 @@ fn time(pipeline: &mut Pipeline, traffic: Option<&[u64]>, angles: usize) -> f64 
 /// The sine kernel on each tier the CPU has, in ns per angle, over
 /// `angles` at a time (a model's pose hands it a handful).
 fn kernel_tiers() {
-    use melon::math::simd::Tier;
-    use melon::math::sin_cos::sin_cos_on;
+    use melon_core::math::simd::Tier;
+    use melon_core::math::sin_cos::sin_cos_on;
     for angles in [4usize, 8, 16, 64, 1024] {
         let x: Vec<f32> = (0..angles).map(|k| (k as f32 * 0.37).sin() * 3.0).collect();
         let (mut s, mut c) = (vec![0.0f32; angles], vec![0.0f32; angles]);
@@ -311,7 +311,7 @@ fn kernel_tiers() {
 }
 
 fn main() {
-    melon::platform::drop_cargo_stack();
+    melon_base::platform::drop_cargo_stack();
     if std::env::var_os("MELON_BENCH_TIERS").is_some() {
         return kernel_tiers();
     }

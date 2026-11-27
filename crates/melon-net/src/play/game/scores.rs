@@ -1,8 +1,8 @@
 //! The packets of the scoreboard and the tab list.
 
-use crate::component::Component;
-use crate::protocol::packet::Reader;
-use crate::world::scoreboard::{
+use melon_protocol::component::Component;
+use melon_protocol::packet::Reader;
+use melon_world::scoreboard::{
     CollisionRule, DisplaySlot, NumberFormat, Objective, RenderType, Score, ScoreUpdate,
     TeamAction, TeamColor, TeamLook, Visibility,
 };
@@ -132,8 +132,8 @@ fn players(r: &mut Reader) -> Result<Vec<Box<str>>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::reader::write_string;
-    use crate::protocol::varint::write_var_int;
+    use melon_protocol::reader::write_string;
+    use melon_protocol::varint::write_var_int;
 
     #[test]
     fn reads_a_team_with_its_members() {

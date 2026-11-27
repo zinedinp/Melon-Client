@@ -1,6 +1,5 @@
 //! The client: the game loop ([`game`]) and the app around it ([`app`]),
-//! over the crates in `crates/`. Their modules are re-exported here under the
-//! paths the client has always named them by.
+//! over the crates in `crates/`.
 //!
 //! Each crate uses only ones below it in this list:
 //!
@@ -17,17 +16,6 @@
 //! melon-core        math, utilities, instances, the tester's report
 //! melon-base        what the launcher shares: accounts, folders, 2D Vulkan
 //! ```
-
-pub use melon_assets::{assets, i18n, text};
-pub use melon_audio as audio;
-pub use melon_base::{auth, home, info, json_file, platform, prepare, warn};
-pub use melon_core::{cycle, instances, math, probe, util};
-pub use melon_gui as gui;
-pub use melon_net::{self as network, dialog, join, singleplayer};
-pub use melon_protocol::component;
-pub use melon_render as renderer;
-pub use melon_settings as settings;
-pub use melon_world::{self as world, particle};
 
 pub mod app;
 pub mod game;

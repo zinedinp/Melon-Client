@@ -8,8 +8,8 @@ use std::sync::{Mutex, OnceLock};
 
 use image::RgbaImage;
 
-use crate::i18n::Lang;
-use crate::renderer::TextureId;
+use melon_assets::i18n::Lang;
+use melon_render::TextureId;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::text::font::LINE_HEIGHT;
 use crate::text::{StyledText, colors};
@@ -160,7 +160,7 @@ impl PackSelectionScreen {
 
     /// Data packs: the folder's packs in the lists' entries.
     fn data_entries(&self) -> (HashMap<String, Entry>, Entry) {
-        let entries = crate::singleplayer::data_packs::discover(&self.pack_dir)
+        let entries = melon_net::singleplayer::data_packs::discover(&self.pack_dir)
             .into_iter()
             .map(|pack| {
                 let key = self.icon_key(&pack.id);
@@ -185,7 +185,7 @@ impl PackSelectionScreen {
             })
             .collect();
         let vanilla = Entry {
-            id: crate::singleplayer::data_packs::VANILLA.to_owned(),
+            id: melon_net::singleplayer::data_packs::VANILLA.to_owned(),
             title: String::new(),
             description: serde_json::json!({"translate": "dataPack.vanilla.description"}),
             lines: OnceCell::new(),
@@ -428,7 +428,7 @@ impl PackSelectionScreen {
             Id::OpenFolder => {
                 let _ = std::fs::create_dir_all(&self.pack_dir);
                 if let Err(e) = open::that(&self.pack_dir) {
-                    crate::warn!("Pack folder not opened: {e}");
+                    melon_base::warn!("Pack folder not opened: {e}");
                 }
                 ScreenAction::None
             }
@@ -763,7 +763,7 @@ fn description_lines(
     let lang = ui.lang;
     let text = match description {
         serde_json::Value::String(s) => StyledText::formatted(s),
-        other => StyledText::from_component(&crate::component::decode::component(other), lang),
+        other => StyledText::from_component(&melon_protocol::component::decode::component(other), lang),
     };
     let text = text.with_default_color(DESCRIPTION_COLOR);
     let mut lines = ui.wrap_styled(&text, DESCRIPTION_W);
@@ -829,7 +829,7 @@ fn drop_confirm(paths: Vec<PathBuf>, pack_dir: PathBuf) -> ScreenAction {
             let _ = std::fs::create_dir_all(&pack_dir);
             for path in &paths {
                 if let Err(e) = copy_pack(path, &pack_dir) {
-                    crate::warn!("Pack {path:?} not copied: {e}");
+                    melon_base::warn!("Pack {path:?} not copied: {e}");
                 }
             }
             ScreenAction::Back

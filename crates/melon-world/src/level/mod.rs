@@ -19,7 +19,7 @@ use crate::culling::visgraph::VisibilitySet;
 use crate::dimension::{DimensionType, Height};
 use crate::fluid::FluidSprites;
 use crate::head_profile::{HeadProfile, is_player_head};
-use crate::math::{ChunkMap, SectionSet, section_coord, section_relative};
+use melon_core::math::{ChunkMap, SectionSet, section_coord, section_relative};
 use crate::terrain::SectionMesh;
 use mesh_queue::MeshQueue;
 
@@ -590,7 +590,7 @@ impl ChunkBuilder {
     }
 }
 
-impl crate::cycle::Cycle for ChunkBuilder {
+impl melon_core::cycle::Cycle for ChunkBuilder {
     const ALL: &'static [Self] = &[Self::None, Self::PlayerAffected, Self::Nearby];
 }
 

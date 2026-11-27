@@ -3,12 +3,12 @@
 use super::camera::CameraMode;
 use super::world_resources::WorldResources;
 use super::{DebugFrame, InWorld};
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::overlay::{OverlayDraw, OverlayKind, OverlayTextures};
-use crate::i18n::Lang;
-use crate::renderer::Renderer;
-use crate::renderer::quad::DrawList;
-use crate::settings::options::Config;
+use melon_gui::hud::item_slot::ItemPainter;
+use melon_gui::overlay::{OverlayDraw, OverlayKind, OverlayTextures};
+use melon_assets::i18n::Lang;
+use melon_render::Renderer;
+use melon_render::quad::DrawList;
+use melon_settings::options::Config;
 use std::time::Instant;
 
 impl InWorld {
@@ -37,17 +37,17 @@ impl InWorld {
         let partial = self.partial_tick();
         if shown {
             if panel.is_none() {
-                crate::gui::hud::effects::draw_hud(
+                melon_gui::hud::effects::draw_hud(
                     draw_list,
                     &assets.hud.effects,
                     &self.status_effects,
                     size.0,
                 );
             }
-            let player = crate::gui::hud::HudPlayer {
+            let player = melon_gui::hud::HudPlayer {
                 inventory: &self.inventory,
                 status: &self.status,
-                attack: crate::gui::hud::AttackCooldown {
+                attack: melon_gui::hud::AttackCooldown {
                     strength: self.hands.attack_strength(self.inventory.selected_stack()),
                     indicator: config.attack_indicator,
                     main_arm: config.main_hand,
@@ -56,7 +56,7 @@ impl InWorld {
                 // `Hud.extractCrosshair`: the 3D one stands in for it.
                 first_person: self.camera_mode == CameraMode::FirstPerson
                     && !self.debug.entries().is_enabled(
-                        crate::gui::hud::debug_entries::Entry::ThreeDimensionalCrosshair,
+                        melon_gui::hud::debug_entries::Entry::ThreeDimensionalCrosshair,
                     ),
             };
             self.hud.draw(draw_list, &assets.hud, painter, player, size);
@@ -81,7 +81,7 @@ impl InWorld {
         // Hidden, the subtitles still show over an open in-game screen.
         if config.show_subtitles && (shown || self.overlay.is_some()) {
             let ears = self.listener();
-            let listener = crate::gui::hud::subtitles::Listener {
+            let listener = melon_gui::hud::subtitles::Listener {
                 position: ears.position,
                 forward: ears.forward,
                 up: ears.up,
@@ -131,7 +131,7 @@ impl InWorld {
             });
         }
         let effects_tooltip = panel.and_then(|panel| {
-            crate::gui::hud::effects::draw_inventory(
+            melon_gui::hud::effects::draw_inventory(
                 draw_list,
                 &assets.hud.effects,
                 painter,
@@ -152,9 +152,9 @@ impl InWorld {
         &self,
     ) -> Vec<(
         &pumpkin_data::item_stack::ItemStack,
-        crate::world::item_model::HeldUse,
+        melon_world::item_model::HeldUse,
     )> {
-        use crate::world::player::hands::Hand;
+        use melon_world::player::hands::Hand;
         let mut stacks = Vec::with_capacity(4);
         for hand in Hand::ALL {
             let using = self.hands.using_in(hand).is_some();
@@ -169,14 +169,14 @@ impl InWorld {
     /// Hands the stacks drawn this frame to `visit`, for baking their icons.
     pub fn visit_shown_stacks(
         &self,
-        visit: &mut dyn FnMut(&dyn crate::world::item_model::StackKey) -> bool,
+        visit: &mut dyn FnMut(&dyn melon_world::item_model::StackKey) -> bool,
     ) {
         let inventory = &self.inventory;
         let mut go =
-            |stack: &crate::world::item_model::KeyedStack| stack.is_empty() || visit(stack);
+            |stack: &melon_world::item_model::KeyedStack| stack.is_empty() || visit(stack);
         let fixed = (0..9)
             .map(|i| inventory.hotbar(i))
-            .chain([&inventory.slots()[crate::world::inventory::OFFHAND_SLOT]])
+            .chain([&inventory.slots()[melon_world::inventory::OFFHAND_SLOT]])
             .all(&mut go);
         if fixed && let Some(menu) = &self.menus.open_container {
             let more = menu
@@ -196,7 +196,7 @@ impl InWorld {
     pub fn draw_debug(
         &self,
         draw_list: &mut DrawList,
-        gui: &crate::gui::assets::GuiAssets,
+        gui: &melon_gui::assets::GuiAssets,
         renderer: &Renderer,
         frame: DebugFrame,
         width: f32,
@@ -209,7 +209,7 @@ impl InWorld {
         let gpu_ms = renderer.gpu_last_frame().0;
         let gpu_utilization = (gpu_ms > 0.0 && frame.frame_seconds > 0.0)
             .then(|| f64::from(gpu_ms) / (f64::from(frame.frame_seconds) * 1000.0) * 100.0);
-        let context = crate::gui::hud::debug::DebugContext {
+        let context = melon_gui::hud::debug::DebugContext {
             entries: &entries,
             fps: self.fps.fps,
             framerate_limit: frame.framerate_limit,
@@ -233,7 +233,7 @@ impl InWorld {
             day_time: self.clocks.environment(0.0).day_time,
             extras: {
                 let mut extras = self.debug_extras(frame.clouds, frame.biome_blend);
-                if entries.is_enabled(crate::gui::hud::debug_entries::Entry::PostEffects) {
+                if entries.is_enabled(melon_gui::hud::debug_entries::Entry::PostEffects) {
                     extras.post_effects = renderer.applied_post_effects().to_vec();
                 }
                 extras

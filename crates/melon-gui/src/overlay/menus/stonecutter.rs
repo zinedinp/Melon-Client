@@ -7,7 +7,7 @@ use super::{Frame, Loader, MenuDraw, MenuScreen};
 use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::{OverlayAction, OverlayContext};
 use crate::sprite::GuiSprite;
-use crate::world::inventory::{OpenContainer, stonecutting};
+use melon_world::inventory::{OpenContainer, stonecutting};
 
 const COLUMNS: usize = 4;
 const ROWS: usize = 3;
@@ -53,7 +53,7 @@ pub struct StonecutterScreen {
 
 impl StonecutterScreen {
     /// `containerChanged`.
-    fn refresh(&mut self, menu: &OpenContainer, sets: &crate::world::recipes::RecipeSets) {
+    fn refresh(&mut self, menu: &OpenContainer, sets: &melon_world::recipes::RecipeSets) {
         let input = &menu.slots[0];
         if self.input.as_ref().is_some_and(|known| {
             known.item.id == input.item.id && known.is_empty() == input.is_empty()

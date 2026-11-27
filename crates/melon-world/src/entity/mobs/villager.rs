@@ -4,7 +4,7 @@ use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::humanoid;
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle::{self, HALF_PI, PI, Rotation, THIRD_PI};
+use melon_core::math::angle::{self, HALF_PI, PI, Rotation, THIRD_PI};
 use crate::model_part::{Cube, Pose};
 use glam::{Mat4, Vec3};
 

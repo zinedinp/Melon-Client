@@ -12,12 +12,7 @@ pub mod source;
 pub mod spatial;
 pub mod stats;
 
-// The lower crates' modules, under the paths the moved code names them by.
-use melon_assets::assets;
-use melon_base::warn;
-use melon_core::{cycle, math, probe};
-
-use crate::assets::Assets;
+use melon_assets::assets::Assets;
 use library::{Sound, SoundEvents};
 use pcm::PcmBuffer;
 use rodio::mixer::Mixer;
@@ -200,7 +195,7 @@ impl Loader {
                 });
             match spawned {
                 Ok(_) => started += 1,
-                Err(e) => crate::warn!("no loader thread: {e}"),
+                Err(e) => melon_base::warn!("no loader thread: {e}"),
             }
         }
         Self {
@@ -241,7 +236,7 @@ impl AudioEngine {
         let hrtf = directional.then(hrtf::HrtfStore::default_set).flatten();
         let stream = open_output(device, if hrtf.is_some() { Some(2) } else { channels });
         if stream.is_none() {
-            crate::warn!("no output device, sounds stay silent");
+            melon_base::warn!("no output device, sounds stay silent");
         }
         let mixer = stream.as_ref().map(|s| s.mixer().clone());
         let layout = layout_of(stream.as_ref());
@@ -373,7 +368,7 @@ impl AudioEngine {
     pub fn set_directional(&mut self, on: bool) {
         self.hrtf = on.then(hrtf::HrtfStore::default_set).flatten();
         if on && self.hrtf.is_none() {
-            crate::warn!("HRTF data unreadable, directional audio stays off");
+            melon_base::warn!("HRTF data unreadable, directional audio stays off");
         }
         self.reopen();
     }
@@ -536,7 +531,7 @@ impl AudioEngine {
                 }
             });
         if let Err(e) = spawned {
-            crate::warn!("no stream thread for {}: {e}", instance.event);
+            melon_base::warn!("no stream thread for {}: {e}", instance.event);
             return false;
         }
         true
@@ -610,7 +605,7 @@ fn load_buffer(cache: &Cache, name: &Arc<str>, stats: &AudioStats) -> Option<Pcm
     let mut decoded = cache.decoded.lock().ok()?;
     let entry = decoded.entry(Arc::clone(name)).or_insert_with(|| {
         if buffer.is_none() {
-            crate::warn!("{name}.ogg missing or unreadable");
+            melon_base::warn!("{name}.ogg missing or unreadable");
         }
         buffer
     });
@@ -627,7 +622,7 @@ fn open_output(name: &str, channels: Option<u16>) -> Option<MixerDeviceSink> {
             Some(count) => builder.with_channels(count).open_stream(),
             None => builder.open_stream(),
         }
-        .inspect_err(|e| crate::warn!("output not open ({e})"))
+        .inspect_err(|e| melon_base::warn!("output not open ({e})"))
         .ok()
     };
     let wanted = channels.and_then(rodio::ChannelCount::new);
@@ -647,11 +642,11 @@ fn layout_of(stream: Option<&MixerDeviceSink>) -> Layout {
 /// `JOrbisAudioStream.readAll`: the whole file as 16-bit samples. Like
 /// `OpenAlUtil.audioFormatToOpenAl`, only mono and stereo are taken.
 fn decode(assets_root: &Path, name: &str) -> Option<PcmBuffer> {
-    let bytes = crate::assets::sound(assets_root, name)?;
+    let bytes = melon_assets::assets::sound(assets_root, name)?;
     let decoder = Decoder::new(std::io::Cursor::new(bytes)).ok()?;
     let (channels, sample_rate) = (decoder.channels(), decoder.sample_rate());
     if channels.get() > 2 {
-        crate::warn!("{name}.ogg has {channels} channels, only mono and stereo play");
+        melon_base::warn!("{name}.ogg has {channels} channels, only mono and stereo play");
         return None;
     }
     Some(PcmBuffer::from_samples(channels, sample_rate, decoder))
@@ -659,11 +654,11 @@ fn decode(assets_root: &Path, name: &str) -> Option<PcmBuffer> {
 
 /// Music: decoded while it plays, from the file read whole.
 fn open_stream(assets_root: &Path, sound: &Sound) -> Option<Decoder<std::io::Cursor<Vec<u8>>>> {
-    let bytes = crate::assets::sound(assets_root, &sound.name)?;
+    let bytes = melon_assets::assets::sound(assets_root, &sound.name)?;
     match Decoder::new(std::io::Cursor::new(bytes)) {
         Ok(decoder) => Some(decoder),
         Err(e) => {
-            crate::warn!("{}.ogg unplayable: {e}", sound.name);
+            melon_base::warn!("{}.ogg unplayable: {e}", sound.name);
             None
         }
     }
@@ -676,7 +671,7 @@ mod tests {
     /// Decode-only: the `.ogg` yields stereo samples without an OS audio device.
     #[test]
     fn click_sound_decodes() {
-        let bytes = crate::assets::sound(&crate::assets::default_root(), "random/click_stereo")
+        let bytes = melon_assets::assets::sound(&melon_assets::assets::default_root(), "random/click_stereo")
             .expect("assets/minecraft/sounds/random/click_stereo.ogg unreadable");
         let mut decoder = Decoder::new(std::io::Cursor::new(bytes))
             .expect("Decoder::new sollte click_stereo.ogg dekodieren");

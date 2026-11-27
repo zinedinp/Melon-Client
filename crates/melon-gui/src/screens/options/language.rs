@@ -1,7 +1,7 @@
 //! Vanilla `LanguageSelectScreen` / `LanguageSelectionList` (`ObjectSelectionList`).
 
-use crate::i18n::available_languages;
-use crate::i18n::languages::Language;
+use melon_assets::i18n::available_languages;
+use melon_assets::i18n::languages::Language;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::menu::placeholder::placeholder_screen;
 use crate::text::font::LINE_HEIGHT;

@@ -1,13 +1,13 @@
 //! Vanilla `SelectWorldScreen`.
 
-use crate::join::Target;
-use crate::renderer::TextureId;
+use melon_net::join::Target;
+use melon_render::TextureId;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::menu::confirm_delete::confirm_delete_world;
 use crate::screens::menu::connecting::ConnectingScreen;
 use crate::screens::menu::create_world::CreateWorldScreen;
 use crate::screens::menu::edit_world::EditWorldScreen;
-use crate::singleplayer::{self, WorldCreationMode, WorldEntry};
+use melon_net::singleplayer::{self, WorldCreationMode, WorldEntry};
 use crate::text::font::LINE_HEIGHT;
 use crate::text::{StyledText, TextStyle};
 use crate::widgets::button::Button;

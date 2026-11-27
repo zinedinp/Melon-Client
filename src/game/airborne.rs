@@ -1,7 +1,7 @@
 //! The game's side of the glide and the riptide spin.
 
 use super::InWorld;
-use crate::network::play::game::PlayerCommand;
+use melon_net::play::game::PlayerCommand;
 use pumpkin_data::data_component_impl::{
     DamageImpl, EquipmentSlot, EquippableImpl, GliderImpl, MaxDamageImpl,
 };

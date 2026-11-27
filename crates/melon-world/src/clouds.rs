@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use crate::block::direction::Direction;
-use crate::cycle::Cycle;
+use melon_core::cycle::Cycle;
 use crate::mesh::WorldVertex;
 
 /// `CloudRenderer.CELL_SIZE_IN_BLOCKS`.
@@ -83,7 +83,7 @@ impl CloudTexture {
     }
 
     pub fn load(assets_root: &Path) -> Self {
-        let Some(rgba) = crate::assets::texture_image(assets_root, "environment/clouds") else {
+        let Some(rgba) = melon_assets::assets::texture_image(assets_root, "environment/clouds") else {
             return Self::empty();
         };
         let width = rgba.width() as i32;
@@ -402,7 +402,7 @@ fn push_face(
     // The cell's colour and the face's shade only: the clouds' colour of
     // the moment (time of day, weather) comes per draw, as vanilla's
     // `CloudColor` uniform does, so the mesh outlives it.
-    let [r, g, b, a] = crate::math::argb(cell);
+    let [r, g, b, a] = melon_core::math::argb(cell);
     let color = [r * shade, g * shade, b * shade, a];
     let mut corners = match dir {
         Direction::Up => [

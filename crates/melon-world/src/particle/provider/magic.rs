@@ -228,7 +228,7 @@ pub(super) fn note(c: &Cx, rng: &mut JavaRandom) -> Option<Particle> {
     p.vel.y += 0.2;
     let note = aux.x as f32;
     let channel = |offset: f32| {
-        ((note + offset) * crate::math::angle::TAU)
+        ((note + offset) * melon_core::math::angle::TAU)
             .sin()
             .mul_add(0.65, 0.35)
             .max(0.0)

@@ -1,7 +1,7 @@
 //! `DialogBodyHandlers`: an element for each kind of dialog body.
 
 use super::element::{Element, ItemElement, TextElement};
-use crate::dialog::DialogBody;
+use melon_net::dialog::DialogBody;
 use crate::screen::ScreenContext;
 
 /// `DialogBodyHandlers.createBodyElement`.

@@ -7,11 +7,11 @@ pub mod input;
 use std::collections::VecDeque;
 use std::path::PathBuf;
 
-use crate::component::{Component, Contents};
+use melon_protocol::component::{Component, Contents};
 
-use crate::i18n::Lang;
-use crate::network::play::chat::{BoundChatType, ChatEvent, ChatTypes};
-use crate::settings::options::{ChatSettings, ChatVisibility};
+use melon_assets::i18n::Lang;
+use melon_net::play::chat::{BoundChatType, ChatEvent, ChatTypes};
+use melon_settings::options::{ChatSettings, ChatVisibility};
 use crate::text::font::Font;
 use crate::text::{self, StyledText, TextStyle, colors};
 use history::CommandHistory;

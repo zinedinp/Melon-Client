@@ -45,7 +45,7 @@ pub fn find(main: &Path, query: &str) -> Option<PathBuf> {
     if is_folder_name(query) && (query == MELON || dir(main, query).is_dir()) {
         return Some(dir(main, query));
     }
-    let store: Store = crate::json_file::load(&main.join(FILE)).unwrap_or_default();
+    let store: Store = melon_base::json_file::load(&main.join(FILE)).unwrap_or_default();
     store
         .instances
         .iter()
@@ -68,7 +68,7 @@ pub fn logs_dir(game_dir: &Path) -> PathBuf {
 pub fn ensure_dirs(game_dir: &Path) {
     for name in GAME_DIRS {
         if let Err(e) = std::fs::create_dir_all(game_dir.join(name)) {
-            crate::warn!("{} not created: {e}", game_dir.join(name).display());
+            melon_base::warn!("{} not created: {e}", game_dir.join(name).display());
         }
     }
 }
@@ -76,21 +76,21 @@ pub fn ensure_dirs(game_dir: &Path) {
 /// Remembers the server joined, for the launcher's quick join.
 pub fn save_last_server(game_dir: &Path, address: &str) {
     if let Err(e) = std::fs::write(game_dir.join("last_server.txt"), address) {
-        crate::warn!("last_server.txt not saved: {e}");
+        melon_base::warn!("last_server.txt not saved: {e}");
     }
 }
 
 /// What the game reads of the launcher's `launcher.json`: where the assets are.
 #[derive(Deserialize, Default)]
 pub struct LauncherSettings {
-    /// Folder extracted assets live in. None: [`crate::home::default_assets_dir`].
+    /// Folder extracted assets live in. None: [`melon_base::home::default_assets_dir`].
     #[serde(default)]
     pub assets_dir: Option<String>,
 }
 
 impl LauncherSettings {
     pub fn load(main: &Path) -> Self {
-        crate::json_file::load(&main.join("launcher.json")).unwrap_or_default()
+        melon_base::json_file::load(&main.join("launcher.json")).unwrap_or_default()
     }
 
     /// Base folder for extracted assets (settings path, or the OS personal folder).
@@ -103,24 +103,24 @@ impl LauncherSettings {
         {
             return PathBuf::from(path);
         }
-        let personal = crate::home::default_assets_dir();
-        if crate::home::is_prepared_at(&crate::home::version_assets(
+        let personal = melon_base::home::default_assets_dir();
+        if melon_base::home::is_prepared_at(&melon_base::home::version_assets(
             &personal,
-            crate::home::VERSION,
-        )) || crate::home::is_prepared_at(&personal)
-            || !crate::home::is_prepared(home)
+            melon_base::home::VERSION,
+        )) || melon_base::home::is_prepared_at(&personal)
+            || !melon_base::home::is_prepared(home)
         {
             personal
         } else {
-            crate::home::assets_root(home)
+            melon_base::home::assets_root(home)
         }
     }
 
     /// Folder the game reads (`assets/<VERSION>/`, or the flat `assets/` of old).
     pub fn melon_play_assets(&self, home: &Path) -> PathBuf {
-        let versioned = crate::home::version_assets(&self.assets_dir(home), crate::home::VERSION);
+        let versioned = melon_base::home::version_assets(&self.assets_dir(home), melon_base::home::VERSION);
         let base = self.assets_dir(home);
-        if !crate::home::is_prepared_at(&versioned) && crate::home::is_prepared_at(&base) {
+        if !melon_base::home::is_prepared_at(&versioned) && melon_base::home::is_prepared_at(&base) {
             base
         } else {
             versioned
@@ -193,7 +193,7 @@ mod tests {
         );
         assert_eq!(
             settings.melon_play_assets(home),
-            PathBuf::from(format!("/tmp/melon-assets-test/{}", crate::home::VERSION))
+            PathBuf::from(format!("/tmp/melon-assets-test/{}", melon_base::home::VERSION))
         );
     }
 }

@@ -5,7 +5,7 @@ use glam::DVec3;
 
 use crate::fluid::FluidKind;
 use crate::level::Level;
-use crate::math::angle::DEG_TO_RAD;
+use melon_core::math::angle::DEG_TO_RAD;
 use crate::physics::{self, Aabb};
 
 /// `Attributes.GRAVITY`'s default.

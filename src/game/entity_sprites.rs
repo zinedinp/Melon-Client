@@ -12,13 +12,13 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::entities::{EntityFrame, Placed, from_block, submit_item, submit_item_cluster};
 use super::world_resources::WorldResources;
-use crate::math::angle::{self, Rotation};
-use crate::renderer::{Blending, EntityDraw, Glint, MeshId, Renderer, WorldVertex};
-use crate::world::entity::display;
-use crate::world::entity::kind::EntityKind;
-use crate::world::entity::mobs::projectile::thrown_look;
-use crate::world::entity::tracker::ClientEntity;
-use crate::world::item_model::HandPose;
+use melon_core::math::angle::{self, Rotation};
+use melon_render::{Blending, EntityDraw, Glint, MeshId, Renderer, WorldVertex};
+use melon_world::entity::display;
+use melon_world::entity::kind::EntityKind;
+use melon_world::entity::mobs::projectile::thrown_look;
+use melon_world::entity::tracker::ClientEntity;
+use melon_world::item_model::HandPose;
 
 /// `ExperienceOrbRenderer.EXPERIENCE_ORB_LOCATION`.
 pub const ORB_TEXTURE: &str = "minecraft:entity/experience/experience_orb";
@@ -78,7 +78,7 @@ impl SpriteMeshes {
         if slot.is_none() {
             match renderer.upload_mesh(&quads) {
                 Ok(mesh) => *slot = Some(mesh),
-                Err(e) => crate::warn!("Sprite mesh failed: {e:#}"),
+                Err(e) => melon_base::warn!("Sprite mesh failed: {e:#}"),
             }
         }
     }
@@ -107,10 +107,10 @@ impl SpriteMeshes {
     fn bolt(&mut self, renderer: &mut Renderer, entity: &ClientEntity) -> Option<MeshId> {
         let (mesh, seen) = self.bolts.entry(entity.id).or_insert_with(|| {
             let seed = entity.uuid.as_u64_pair().1 as i64;
-            let quads = crate::world::entity::lightning::quads(seed);
+            let quads = melon_world::entity::lightning::quads(seed);
             let mesh = renderer
                 .upload_mesh(&quads)
-                .map_err(|e| crate::warn!("Lightning mesh failed: {e:#}"))
+                .map_err(|e| melon_base::warn!("Lightning mesh failed: {e:#}"))
                 .ok();
             (mesh, false)
         });

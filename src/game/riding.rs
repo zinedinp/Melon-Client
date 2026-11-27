@@ -2,14 +2,14 @@
 //! then tell the server.
 
 use super::{InWorld, melon_yaw, minecraft_yaw};
-use crate::network::play::game::PlayerCommand;
-use crate::world::entity::boat_sim::BoatInput;
-use crate::world::entity::horse_sim::HorseInput;
-use crate::world::entity::kind::EntityKind;
-use crate::world::entity::ride::{JumpCharge, Steering};
-use crate::world::entity::tracker::DriveInput;
-use crate::world::inventory::OFFHAND_SLOT;
-use crate::world::player::MoveInput;
+use melon_net::play::game::PlayerCommand;
+use melon_world::entity::boat_sim::BoatInput;
+use melon_world::entity::horse_sim::HorseInput;
+use melon_world::entity::kind::EntityKind;
+use melon_world::entity::ride::{JumpCharge, Steering};
+use melon_world::entity::tracker::DriveInput;
+use melon_world::inventory::OFFHAND_SLOT;
+use melon_world::player::MoveInput;
 
 /// What riding keeps between ticks.
 #[derive(Default)]

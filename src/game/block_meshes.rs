@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 
-use crate::renderer::{MeshId, Renderer, WorldVertex};
-use crate::world::block_models::BlockModels;
-use crate::world::block_tint::TintKind;
+use melon_render::{MeshId, Renderer, WorldVertex};
+use melon_world::block_models::BlockModels;
+use melon_world::block_tint::TintKind;
 
 /// What one block state draws as: its tint, and a mesh per colour of it.
 struct Entry {
@@ -15,7 +15,7 @@ struct Entry {
 
 #[derive(Default)]
 pub struct BlockMeshes {
-    by_state: HashMap<u16, Entry, crate::math::ChunkHash>,
+    by_state: HashMap<u16, Entry, melon_core::math::ChunkHash>,
 }
 
 fn tint_kind(models: &BlockModels, state: u16) -> TintKind {
@@ -46,7 +46,7 @@ pub fn vertices(models: &BlockModels, state: u16, rgb: [u8; 3]) -> Vec<WorldVert
     });
     // A chest's or banner's own model has no quads: its look is the block
     // entity's (`BuiltInBlockModels`).
-    crate::world::block_entity::at_rest(state, models, &mut out);
+    melon_world::block_entity::at_rest(state, models, &mut out);
     out
 }
 
@@ -81,7 +81,7 @@ impl BlockMeshes {
         } else {
             renderer
                 .upload_mesh(&vertices)
-                .map_err(|e| crate::warn!("Block {state} not uploaded: {e:#}"))
+                .map_err(|e| melon_base::warn!("Block {state} not uploaded: {e:#}"))
                 .ok()
         };
         entry.meshes.push((rgb, mesh));
@@ -116,11 +116,11 @@ impl BlockMeshes {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::block_models::BlockModels;
+    use melon_world::block_models::BlockModels;
 
     #[test]
     fn a_full_block_is_six_quads_in_the_unit_cube_lit_like_an_entity() {
-        let root = crate::assets::default_root();
+        let root = melon_assets::assets::default_root();
         if !root.join("minecraft/blockstates/stone.json").exists() {
             eprintln!("no assets: skipped");
             return;
@@ -147,7 +147,7 @@ mod tint_tests {
 
     #[test]
     fn leaves_take_the_biome_colour_and_stone_does_not() {
-        let root = crate::assets::default_root();
+        let root = melon_assets::assets::default_root();
         if !root.join("minecraft/blockstates/stone.json").exists() {
             eprintln!("no assets: skipped");
             return;

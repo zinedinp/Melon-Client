@@ -349,7 +349,7 @@ fn sample_sunrise_sunset(day_time: f64) -> [f32; 4] {
     ];
     let keys: Vec<(f64, [f32; 4])> = KEYS
         .iter()
-        .map(|&(t, argb)| (t, crate::math::argb(argb as u32)))
+        .map(|&(t, argb)| (t, melon_core::math::argb(argb as u32)))
         .collect();
     sample_wrapped_vec4(day_time, &keys)
 }

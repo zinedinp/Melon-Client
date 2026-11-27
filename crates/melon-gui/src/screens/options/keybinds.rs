@@ -1,8 +1,8 @@
 //! Vanilla `KeyBindsScreen` / `KeyBindsList`.
 
 use crate::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext};
-use crate::settings::input::{self, Action, InputBind};
-use crate::settings::options::Config;
+use melon_settings::input::{self, Action, InputBind};
+use melon_settings::options::Config;
 use crate::text::{StyledText, TextStyle, colors};
 use crate::widgets::button::Button;
 use crate::widgets::layout::{BUTTON_H, HeaderFooter, SPACING, WIDE_BUTTON_W};

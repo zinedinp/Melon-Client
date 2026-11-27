@@ -18,7 +18,7 @@ use pumpkin_util::version::JavaMinecraftVersion;
 
 use super::links::ServerLink;
 use super::{Dialog, DialogRef, DialogSet};
-use crate::protocol::reader::{Reader, initial_capacity};
+use melon_protocol::reader::{Reader, initial_capacity};
 
 const VERSION: JavaMinecraftVersion = JavaMinecraftVersion::V_26_3;
 const REGISTRY: &str = "minecraft:dialog";
@@ -94,7 +94,7 @@ pub fn read_registry(body: &[u8]) -> Result<()> {
             let json = read_json(&mut r)?;
             let parsed = json.as_ref().and_then(Dialog::from_json).map(Arc::new);
             if parsed.is_none() {
-                crate::warn!("Dialog {name} from the registry unreadable");
+                melon_base::warn!("Dialog {name} from the registry unreadable");
             }
             parsed
         } else {
@@ -146,7 +146,7 @@ pub fn read_show(body: &[u8], play: bool) -> Result<()> {
     };
     match dialog {
         Some(dialog) => with(|state| state.requests.push_back(Request::Show(dialog))),
-        None => crate::warn!("Dialog from the server unreadable, not shown"),
+        None => melon_base::warn!("Dialog from the server unreadable, not shown"),
     }
     Ok(())
 }
@@ -276,14 +276,14 @@ pub fn send_custom(id: &str, payload: Option<&NbtTag>) {
     let sender = state().as_ref().and_then(|s| s.sender.clone());
     match sender {
         Some(send) => send(id, payload),
-        None => crate::warn!("Custom action {id} without a connection"),
+        None => melon_base::warn!("Custom action {id} without a connection"),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::{reader, varint};
+    use melon_protocol::{reader, varint};
 
     /// The state is shared; the tests that touch it take turns.
     static SERIAL: Mutex<()> = Mutex::new(());

@@ -1,7 +1,7 @@
 //! Vanilla `ManageServerScreen` ("Edit Server Info").
 
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::settings::server_list::{self, ServerEntry};
+use melon_settings::server_list::{self, ServerEntry};
 use crate::widgets::Ui;
 use crate::widgets::button::Button;
 use crate::widgets::edit_box::EditBox;

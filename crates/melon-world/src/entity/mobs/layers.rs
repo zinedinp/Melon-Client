@@ -9,7 +9,7 @@ pub(super) fn dye_tint(color: pumpkin_data::dye_color::DyeColor) -> [f32; 3] {
 }
 
 /// A layer's texture id: a literal, or a path built from an item and
-/// pooled ([`crate::util::intern`]), so a frame's layers allocate nothing.
+/// pooled ([`melon_core::util::intern`]), so a frame's layers allocate nothing.
 #[derive(Clone, Debug)]
 pub enum TexturePath {
     Static(&'static str),

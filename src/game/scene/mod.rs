@@ -13,16 +13,16 @@ pub(super) use view::FrameView;
 
 use super::InWorld;
 use super::world_resources::WorldResources;
-use crate::gui::hud::debug::RenderStats;
-use crate::renderer::{Renderer, SceneFrame, Sky, WorldDraw};
-use crate::settings::options::Config;
-use crate::world::lightmap;
+use melon_gui::hud::debug::RenderStats;
+use melon_render::{Renderer, SceneFrame, Sky, WorldDraw};
+use melon_settings::options::Config;
+use melon_world::lightmap;
 use std::time::Instant;
 
 /// The font debug labels are written with, and its pages.
 pub type DebugFont<'a> = (
-    &'a crate::gui::text::font::Font,
-    &'a [crate::renderer::TextureId],
+    &'a melon_gui::text::font::Font,
+    &'a [melon_render::TextureId],
 );
 
 impl InWorld {
@@ -107,7 +107,7 @@ impl InWorld {
         let scene = SceneFrame {
             sky: Some(Sky {
                 cubemap: None,
-                view: crate::world::sky::rotation_view(camera.bob * camera.view),
+                view: melon_world::sky::rotation_view(camera.bob * camera.view),
                 fov_y_degrees: camera.fov,
                 celestials: sky.celestials,
             }),

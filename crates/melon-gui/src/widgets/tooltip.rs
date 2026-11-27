@@ -1,9 +1,9 @@
 //! Tooltips: `TooltipRenderUtil`'s box (the `tooltip/*` sprites) around the text.
 
 use crate::assets::TooltipSprites;
-use crate::math::argb;
-use crate::renderer::TextureId;
-use crate::renderer::quad::DrawList;
+use melon_core::math::argb;
+use melon_render::TextureId;
+use melon_render::quad::DrawList;
 use crate::text::{self, StyledText, TextPaint};
 use crate::widgets::Rect;
 

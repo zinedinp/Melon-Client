@@ -2,7 +2,7 @@
 
 use super::{Loader, MenuDraw, MenuScreen};
 use crate::sprite::GuiSprite;
-use crate::world::inventory::{ContainerKind, OpenContainer};
+use melon_world::inventory::{ContainerKind, OpenContainer};
 
 /// `AbstractFurnaceMenu`'s `ContainerData` indices.
 const LIT_TIME: usize = 0;

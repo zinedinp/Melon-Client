@@ -1,6 +1,6 @@
 //! What a dialog shows above its inputs (vanilla `server/dialog/body`).
 
-use crate::component::Component;
+use melon_protocol::component::Component;
 
 /// `PlainMessage.DEFAULT_WIDTH`.
 pub const PLAIN_MESSAGE_WIDTH: u32 = 200;

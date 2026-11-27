@@ -9,11 +9,11 @@ use crate::game::camera::CameraMode;
 use crate::game::entity_models::DrawStyle;
 use crate::game::hand_render::HandDraw;
 use crate::game::world_resources::WorldResources;
-use crate::renderer::{Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer};
-use crate::settings::options::Config;
-use crate::world::entity::leash::Lead;
-use crate::world::item_model::HandPose;
-use crate::world::player::ArmPoses;
+use melon_render::{Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer};
+use melon_settings::options::Config;
+use melon_world::entity::leash::Lead;
+use melon_world::item_model::HandPose;
+use melon_world::player::ArmPoses;
 
 /// What the entity layer draws from: the view and what culling left.
 pub(super) struct EntityInput<'a> {
@@ -82,11 +82,11 @@ impl InWorld {
             visible,
             &crate::game::fishing::View {
                 frame,
-                plane: crate::world::entity::fishing::NearPlane {
+                plane: melon_world::entity::fishing::NearPlane {
                     forward: camera.forward(),
                     left: camera.left(),
                     up: camera.up(),
-                    near: crate::renderer::WORLD_Z_NEAR,
+                    near: melon_render::WORLD_Z_NEAR,
                     fov: f32::from(config.fov),
                     aspect,
                 },
@@ -195,7 +195,7 @@ impl InWorld {
                             light: None,
                             overlay: 0.0,
                             glint: Glint::item(
-                                crate::world::glint::has_foil(stack),
+                                melon_world::glint::has_foil(stack),
                                 assets.held.glint_texels(atlas),
                             ),
                         });
@@ -225,7 +225,7 @@ impl InWorld {
             .avatar_state(arms, swing, view.spectator, config.model_parts);
         state.death_time = self.own_death_time(partial);
         if self.players.get(&self.uuid).is_some_and(|p| {
-            crate::world::entity::player::AvatarRenderState::wants_upside_down(
+            melon_world::entity::player::AvatarRenderState::wants_upside_down(
                 &p.name,
                 config.model_parts,
             )

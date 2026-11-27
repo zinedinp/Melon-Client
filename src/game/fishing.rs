@@ -7,14 +7,14 @@ use glam::{IVec3, Mat4, Vec3};
 use super::InWorld;
 use super::entities::EntityFrame;
 use super::world_resources::WorldResources;
-use crate::math::ChunkHash;
-use crate::renderer::{EntityDraw, Glint, MeshId, RenderLayer, Renderer, WorldVertex};
-use crate::world::entity::display;
-use crate::world::entity::fishing::{self, NearPlane};
-use crate::world::entity::kind::EntityKind;
-use crate::world::entity::player::Arm;
-use crate::world::item_model::HeldUse;
-use crate::world::player::hands::Hand;
+use melon_core::math::ChunkHash;
+use melon_render::{EntityDraw, Glint, MeshId, RenderLayer, Renderer, WorldVertex};
+use melon_world::entity::display;
+use melon_world::entity::fishing::{self, NearPlane};
+use melon_world::entity::kind::EntityKind;
+use melon_world::entity::player::Arm;
+use melon_world::item_model::HeldUse;
+use melon_world::player::hands::Hand;
 use pumpkin_data::item_stack::ItemStack;
 
 /// `FishingHookRenderer.TEXTURE_LOCATION`.
@@ -54,7 +54,7 @@ impl FishingMeshes {
         if self.sprite.is_none() {
             match renderer.upload_mesh(&sprite_quads()) {
                 Ok(mesh) => self.sprite = Some(mesh),
-                Err(e) => crate::warn!("Bobber mesh failed: {e:#}"),
+                Err(e) => melon_base::warn!("Bobber mesh failed: {e:#}"),
             }
         }
         self.sprite
@@ -65,7 +65,7 @@ impl FishingMeshes {
         renderer: &mut Renderer,
         id: i32,
         from: (Vec3, Vec3, Vec3, [u8; 2]),
-        white: crate::renderer::TextureId,
+        white: melon_render::TextureId,
         out: &mut Vec<EntityDraw>,
     ) {
         let kept = self.lines.entry(id).or_insert_with(|| Kept {
@@ -84,7 +84,7 @@ impl FishingMeshes {
             let quads = fishing::line_quads(from.0, from.1, from.2, kept.origin.as_vec3(), from.3);
             match renderer.upload_mesh(&quads) {
                 Ok(mesh) => kept.mesh = Some(mesh),
-                Err(e) => crate::warn!("Fishing line mesh failed: {e:#}"),
+                Err(e) => melon_base::warn!("Fishing line mesh failed: {e:#}"),
             }
         }
         if let Some(mesh) = kept.mesh {
@@ -96,7 +96,7 @@ impl FishingMeshes {
                 model: Mat4::IDENTITY,
                 origin: kept.origin,
                 layer: RenderLayer::Entities,
-                blend: crate::renderer::Blending::Opaque,
+                blend: melon_render::Blending::Opaque,
                 light: None,
                 overlay: 0.0,
                 glint: Glint::None,
@@ -231,7 +231,7 @@ impl InWorld {
                         * Mat4::from_scale(Vec3::splat(0.5)),
                     origin,
                     layer: RenderLayer::Entities,
-                    blend: crate::renderer::Blending::Opaque,
+                    blend: melon_render::Blending::Opaque,
                     light: Some(light),
                     overlay: 0.0,
                     glint: Glint::None,

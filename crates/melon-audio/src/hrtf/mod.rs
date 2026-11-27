@@ -5,7 +5,7 @@
 //! (`GetHrtfCoeffs`), done per sound as its default `hrtf-mode = full` does.
 
 use super::spatial::{Listener, ListenerPose, linear_gain};
-use crate::math::slices;
+use melon_core::math::slices;
 use rodio::source::{SeekError, UniformSourceIterator};
 use rodio::{ChannelCount, Sample, SampleRate, Source};
 use std::sync::{Arc, OnceLock};

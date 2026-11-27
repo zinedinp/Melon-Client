@@ -19,12 +19,12 @@ pub(super) struct PipelineCache {
 impl PipelineCache {
     /// Last run's cache, or an empty one; `None` when the driver makes none.
     pub(super) fn open(layer: &majestix_vk::Device) -> Option<Self> {
-        let path = crate::home::dir().join("cache").join(FILE);
+        let path = melon_base::home::dir().join("cache").join(FILE);
         let data = std::fs::read(&path).unwrap_or_default();
         let cache = match layer.create_pipeline_cache(&data) {
             Ok(cache) => cache,
             Err(e) => {
-                crate::warn!("renderer: no pipeline cache: {e}");
+                melon_base::warn!("renderer: no pipeline cache: {e}");
                 return None;
             }
         };
@@ -54,10 +54,10 @@ impl PipelineCache {
         match layer.pipeline_cache_data(cache) {
             Ok(data) => {
                 if let Err(e) = write(&path, &data) {
-                    crate::warn!("renderer: pipeline cache not saved: {e}");
+                    melon_base::warn!("renderer: pipeline cache not saved: {e}");
                 }
             }
-            Err(e) => crate::warn!("renderer: pipeline cache not read: {e}"),
+            Err(e) => melon_base::warn!("renderer: pipeline cache not read: {e}"),
         }
         layer.retire(cache);
     }

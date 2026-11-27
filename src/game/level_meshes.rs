@@ -5,19 +5,19 @@ use std::ops::Range;
 
 use glam::{DVec3, IVec3, Vec3};
 
-use crate::math::{ChunkMap, SECTION_SIZE, radix, section_coord};
-use crate::renderer::{
+use melon_core::math::{ChunkMap, SECTION_SIZE, radix, section_coord};
+use melon_render::{
     ChunkDraw, IndexMeshId, MeshId, QuadMeshId, Renderer, SectionCull, TerrainMesh, TerrainQuad,
     WorldVertex,
 };
-use crate::world::block::direction::Direction;
-use crate::world::block_entity::BlockEntities;
-use crate::world::block_models::BlockModels;
-use crate::world::culling::Culler;
-use crate::world::culling::occlusion::SectionPos;
-use crate::world::dimension::Height;
-use crate::world::level::{FinishedMesh, Level};
-use crate::world::terrain::{self, LayerMesh, SectionMesh, TranslucentMesh};
+use melon_world::block::direction::Direction;
+use melon_world::block_entity::BlockEntities;
+use melon_world::block_models::BlockModels;
+use melon_world::culling::Culler;
+use melon_world::culling::occlusion::SectionPos;
+use melon_world::dimension::Height;
+use melon_world::level::{FinishedMesh, Level};
+use melon_world::terrain::{self, LayerMesh, SectionMesh, TranslucentMesh};
 
 /// How many mesh bytes go to the GPU per frame at most.
 const UPLOAD_BUDGET: usize = 16 << 20;
@@ -454,7 +454,7 @@ impl LevelMeshes {
         self.min_y = height.min_y;
         let drawn = MASK_SECTIONS as i32 * SECTION_SIZE;
         if height.height > drawn {
-            crate::warn!(
+            melon_base::warn!(
                 "The level is {} blocks tall; blocks above its lowest {drawn} are not drawn",
                 height.height
             );
@@ -468,7 +468,7 @@ impl LevelMeshes {
 
     fn upload_to(&mut self, sink: &mut impl MeshSink, finished: Vec<FinishedMesh>) {
         if !finished.is_empty() && !self.waiting.is_empty() {
-            let newer: crate::math::SectionSet = finished.iter().map(|mesh| mesh.pos).collect();
+            let newer: melon_core::math::SectionSet = finished.iter().map(|mesh| mesh.pos).collect();
             self.waiting.retain(|waiting| !newer.contains(&waiting.pos));
         }
         for mesh in finished {
@@ -535,7 +535,7 @@ impl LevelMeshes {
         let meshes = match SectionMeshes::upload(pos, mesh, sink) {
             Ok(meshes) => meshes,
             Err(e) => {
-                crate::warn!("Section mesh not uploaded: {e:#}");
+                melon_base::warn!("Section mesh not uploaded: {e:#}");
                 SectionMeshes::default()
             }
         };
@@ -702,7 +702,7 @@ impl LevelMeshes {
             Ok(indices) => {
                 sink.free_indices(std::mem::replace(&mut translucent.indices, indices));
             }
-            Err(e) => crate::warn!("Translucent mesh not resorted: {e:#}"),
+            Err(e) => melon_base::warn!("Translucent mesh not resorted: {e:#}"),
         }
         let (quads, indices) = (
             translucent.faces.quad_count(),
@@ -1011,7 +1011,7 @@ impl ChangingMesh {
                 match renderer.upload_mesh(&self.uploaded) {
                     Ok(mesh) => self.mesh = Some(mesh),
                     Err(e) => {
-                        crate::warn!("Block entity mesh failed: {e:#}");
+                        melon_base::warn!("Block entity mesh failed: {e:#}");
                         self.uploaded.clear();
                     }
                 }
@@ -1100,7 +1100,7 @@ impl BlockEntityMeshes {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::xorshift::XorShift;
+    use melon_core::util::xorshift::XorShift;
 
     #[test]
     fn draw_keys_order_like_distance_then_index() {
@@ -1127,8 +1127,8 @@ mod tests {
     #[test]
     #[ignore]
     fn visible_sections_at_rd32() {
-        use crate::world::culling::frustum::Frustum;
-        use crate::world::culling::{CullSettings, Culler};
+        use melon_world::culling::frustum::Frustum;
+        use melon_world::culling::{CullSettings, Culler};
         let layer = || LayerMesh {
             items: vec![TerrainQuad([0; 5]); 70],
             groups: std::array::from_fn(|g| g as u32 * 10..g as u32 * 10 + 10),
@@ -1160,7 +1160,7 @@ mod tests {
         // Turns +x to the view's -z: looking along the row.
         let view = glam::Mat4::from_rotation_y(std::f32::consts::FRAC_PI_2);
         let frustum = Frustum::from_view_projection(
-            crate::renderer::world_projection(70.0, 16.0 / 9.0, 512.0) * view,
+            melon_render::world_projection(70.0, 16.0 / 9.0, 512.0) * view,
         );
         let culler = Culler::new(frustum, None, eye, (-64, 24), CullSettings::default());
         let rounds = 300;

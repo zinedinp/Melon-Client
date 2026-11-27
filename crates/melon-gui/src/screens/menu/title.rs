@@ -7,7 +7,7 @@ use crate::screens::menu::placeholder::placeholder_screen;
 use crate::screens::menu::singleplayer::SingleplayerScreen;
 use crate::screens::options::OptionsScreen;
 use crate::screens::options::language::LanguageScreen;
-use crate::singleplayer;
+use melon_net::singleplayer;
 use crate::text::splash;
 use crate::widgets::button::Button;
 use crate::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter};
@@ -209,7 +209,7 @@ impl Screen for TitleScreen {
         }
     }
 
-    fn refresh_lang(&mut self, lang: &crate::i18n::Lang) {
+    fn refresh_lang(&mut self, lang: &melon_assets::i18n::Lang) {
         self.version = version_text(lang.get("melon.version_suffix"));
     }
 

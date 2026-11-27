@@ -11,7 +11,7 @@
 
 use glam::{IVec3, Vec3};
 
-use crate::math::SECTION_SIZE;
+use melon_core::math::SECTION_SIZE;
 
 /// Sections a column can have: one bit each in a `u32`.
 pub const LANES: usize = 32;
@@ -133,7 +133,7 @@ mod tests {
     use super::*;
     use crate::culling::frustum::Frustum;
     use crate::culling::{CullSettings, Culler};
-    use crate::util::xorshift::XorShift;
+    use melon_core::util::xorshift::XorShift;
 
     /// Every column of a view, by section, gives what the box test of
     /// each section gives; on every tier.

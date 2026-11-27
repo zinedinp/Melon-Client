@@ -6,12 +6,12 @@ use super::view::FrameView;
 use crate::game::InWorld;
 use crate::game::level_meshes::VisibleChunks;
 use crate::game::world_resources::WorldResources;
-use crate::renderer::{MeshId, Renderer};
-use crate::settings::options::Config;
-use crate::world::culling::{Culler, occlusion};
-use crate::world::dimension::Skybox;
-use crate::world::entity::leash::Lead;
-use crate::world::fog::FogType;
+use melon_render::{MeshId, Renderer};
+use melon_settings::options::Config;
+use melon_world::culling::{Culler, occlusion};
+use melon_world::dimension::Skybox;
+use melon_world::entity::leash::Lead;
+use melon_world::fog::FogType;
 
 /// Whether cave culling uses vanilla's smart cull of distant sections;
 /// `MELON_NO_SMART_CULL` turns it off.
@@ -49,7 +49,7 @@ impl InWorld {
             let inside = self
                 .level
                 .block_state(p.x, p.y, p.z)
-                .is_some_and(crate::world::block::state_flags::is_drawn);
+                .is_some_and(melon_world::block::state_flags::is_drawn);
             cull.occlusion &= !inside;
         }
         let culler = Culler::new(
@@ -76,7 +76,7 @@ impl InWorld {
         let traced = self
             .debug
             .entries()
-            .is_enabled(crate::gui::hud::debug_entries::Entry::ChunkSectionPaths);
+            .is_enabled(melon_gui::hud::debug_entries::Entry::ChunkSectionPaths);
         let mask = self
             .occlusion
             .update(section, level.revision(), view_distance, traced, || {

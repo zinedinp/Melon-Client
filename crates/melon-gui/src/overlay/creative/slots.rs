@@ -4,8 +4,8 @@ use super::{
     COLUMNS, CreativeOverlay, DESTROY_SLOT, IMAGE_HEIGHT, IMAGE_WIDTH, ROWS, Slot, TAB_HEIGHT,
     TAB_WIDTH,
 };
-use crate::world::creative_tabs::{CreativeTab, Row, TabType, tabs};
-use crate::world::inventory::{self, HOTBAR_SLOTS, SLOT_COUNT};
+use melon_world::creative_tabs::{CreativeTab, Row, TabType, tabs};
+use melon_world::inventory::{self, HOTBAR_SLOTS, SLOT_COUNT};
 
 impl CreativeOverlay {
     /// Every slot on the current tab with its position, by menu index.

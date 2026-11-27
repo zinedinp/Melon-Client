@@ -1,8 +1,8 @@
 //! `ChatComponent.extractRenderState` and its hit tests.
 
 use super::{BOTTOM_MARGIN, Chat, Line, Tag};
-use crate::i18n::Lang;
-use crate::renderer::quad::DrawList;
+use melon_assets::i18n::Lang;
+use melon_render::quad::DrawList;
 use crate::text::font::{Font, Glyphs};
 use crate::text::{self, StyledText, TextPaint, TextStyle};
 

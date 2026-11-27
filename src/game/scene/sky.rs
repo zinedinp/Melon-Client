@@ -3,8 +3,8 @@
 use super::view::FrameView;
 use crate::game::InWorld;
 use crate::game::world_resources::WorldResources;
-use crate::renderer::{CelestialDraw, CloudDraw, Renderer, WeatherDraw};
-use crate::settings::options::Config;
+use melon_render::{CelestialDraw, CloudDraw, Renderer, WeatherDraw};
+use melon_settings::options::Config;
 
 /// The sky layer's draws.
 pub(super) struct SkyLayer {

@@ -32,7 +32,7 @@ impl Renderer {
         // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
-                crate::warn!("Waiting for the GPU failed: {e}");
+                melon_base::warn!("Waiting for the GPU failed: {e}");
             }
             let mut prepared = Vec::new();
             for source in sources {
@@ -53,7 +53,7 @@ impl Renderer {
                 .post
                 .set_blit(&self.device, self.passes.clear, blit.as_ref())
             {
-                crate::warn!("Outline blit: {e:#}");
+                melon_base::warn!("Outline blit: {e:#}");
             }
             // Occlusion culling reads the depth buffer too.
             let wanted = self.post.is_active() || self.occlusion.is_some();
@@ -64,7 +64,7 @@ impl Renderer {
                 self.resize_post()
             };
             if let Err(e) = result {
-                crate::warn!("Post effects: {e:#}");
+                melon_base::warn!("Post effects: {e:#}");
             }
         }
         failed
@@ -119,7 +119,7 @@ impl Renderer {
                     .textures
                     .get(location)
                     .cloned()
-                    .unwrap_or_else(crate::assets::missing_texture);
+                    .unwrap_or_else(melon_assets::assets::missing_texture);
                 // SAFETY: `device` is live, and the infos name only its own live handles.
                 match unsafe {
                     self.uploader(self.textures.nearest_sampler)

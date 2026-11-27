@@ -11,11 +11,11 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use crate::assets::atlas_sources;
-use crate::assets::packs;
+use melon_assets::assets::atlas_sources;
+use melon_assets::assets::packs;
 
 /// Every sprite name (`namespace:path`) the item atlas packs. Each is read
-/// through [`crate::assets::texture_image`], which finds the file behind a
+/// through [`melon_assets::assets::texture_image`], which finds the file behind a
 /// prefixed or paletted name.
 pub fn texture_ids(assets_root: &Path) -> Vec<String> {
     let stack = packs::active();

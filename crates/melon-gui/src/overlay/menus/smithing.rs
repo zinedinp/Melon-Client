@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use super::{Loader, MenuDraw, MenuScreen, MenuSprites};
 use crate::sprite::GuiSprite;
-use crate::world::inventory::OpenContainer;
+use melon_world::inventory::OpenContainer;
 
 /// `CyclingSlotBackground.ICON_CHANGE_TICK_RATE`, in milliseconds.
 const ICON_MILLIS: u128 = 30 * 50;

@@ -8,7 +8,7 @@ use crate::entity::humanoid::HumanoidParts;
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::player::Arm;
-use crate::math::angle::{self, PI};
+use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
 
 /// `IllagerModel.createBodyLayer`; the renderer scales it by 0.9375.

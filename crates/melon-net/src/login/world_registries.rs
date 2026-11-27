@@ -5,10 +5,10 @@ use pumpkin_protocol::ser::{NetworkReadSliceExt, nbt_tag_to_json_ext};
 use pumpkin_util::version::JavaMinecraftVersion;
 use serde_json::Value;
 
-use crate::protocol::packet::Reader;
-use crate::protocol::reader::initial_capacity;
-use crate::world::biome::{Biome, Biomes};
-use crate::world::dimension::{DimensionType, DimensionTypes};
+use melon_protocol::packet::Reader;
+use melon_protocol::reader::initial_capacity;
+use melon_world::biome::{Biome, Biomes};
+use melon_world::dimension::{DimensionType, DimensionTypes};
 
 const VERSION: JavaMinecraftVersion = JavaMinecraftVersion::V_26_3;
 
@@ -91,8 +91,8 @@ fn read_entry(r: &mut Reader) -> Result<Option<Value>> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::protocol::{packet, varint};
-    use crate::world::dimension::{Height, rgb};
+    use melon_protocol::{packet, varint};
+    use melon_world::dimension::{Height, rgb};
 
     /// The synced registry as the server's data holds it, as a packet.
     pub fn registry_packet(registry: &str) -> Vec<u8> {

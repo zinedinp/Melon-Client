@@ -1,10 +1,10 @@
 //! Melon's own settings, the ones vanilla has no screen for.
 
-use crate::cycle::Cycle;
-use crate::i18n::Lang;
+use melon_core::cycle::Cycle;
+use melon_assets::i18n::Lang;
 use crate::screen::{ConfigChange, ScreenContext};
 use crate::screens::options::value_label;
-use crate::settings::options::Config;
+use melon_settings::options::Config;
 use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

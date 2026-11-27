@@ -3,7 +3,7 @@
 use crate::biome::{Biome, Biomes};
 use crate::clock::Environment as Day;
 use crate::dimension::{DimensionType, Rgb, Skybox, rgb};
-use crate::math::argb;
+use melon_core::math::argb;
 
 /// `EnvironmentAttributes` defaults, for what neither the dimension nor the biome sets.
 const FOG_END: f32 = 1024.0;

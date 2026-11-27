@@ -14,17 +14,17 @@ pub mod spectator_menu;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::item_slot::ItemPainter;
-use crate::i18n::Lang;
-use crate::network::play::chat::Suggestions;
-use crate::network::play::chat::commands::CommandTree;
-use crate::renderer::quad::DrawList;
+use melon_assets::i18n::Lang;
+use melon_net::play::chat::Suggestions;
+use melon_net::play::chat::commands::CommandTree;
+use melon_render::quad::DrawList;
 use crate::screen::TextEvent;
-use crate::settings::input::InputBind;
-use crate::settings::options::{ChatSettings, Config};
+use melon_settings::input::InputBind;
+use melon_settings::options::{ChatSettings, Config};
 use crate::text::font::Font;
-use crate::world::game_mode::GameMode;
-use crate::world::hotbars::Hotbars;
-use crate::world::inventory::{Inventory, OpenContainer};
+use melon_world::game_mode::GameMode;
+use melon_world::hotbars::Hotbars;
+use melon_world::inventory::{Inventory, OpenContainer};
 use chat::Chat;
 use container::ContainerTextures;
 use container_input::{MouseButtonKind, SlotClick};
@@ -58,7 +58,7 @@ pub enum ChatExit {
 pub enum OverlayAction {
     None,
     /// A chat link's `show_dialog` or `custom`: for the app's dialogs.
-    Dialog(crate::dialog::DialogClick),
+    Dialog(melon_net::dialog::DialogClick),
     /// Close the overlay.
     Close(ChatExit),
     /// Inventory clicks.
@@ -123,13 +123,13 @@ pub struct OverlayContext<'a> {
     pub container: Option<&'a mut OpenContainer>,
     pub chat: &'a mut Chat,
     /// The recipe book the server filled.
-    pub recipes: &'a mut crate::world::recipes::RecipeBook,
+    pub recipes: &'a mut melon_world::recipes::RecipeBook,
     /// What the server's machines accept and the stonecutter cuts.
-    pub recipe_sets: &'a crate::world::recipes::RecipeSets,
+    pub recipe_sets: &'a melon_world::recipes::RecipeSets,
     pub hotbars: &'a Hotbars,
     pub commands: &'a CommandTree,
     /// The registries' ids, for completing command arguments.
-    pub registries: &'a crate::network::play::chat::command_suggestions::Registries,
+    pub registries: &'a melon_net::play::chat::command_suggestions::Registries,
     /// `EntityEvent.PERMISSION_LEVEL_*`: whether `@` selectors complete.
     pub permission_level: u8,
     /// The listed players' names, for completing chat; only built when asked.
@@ -170,15 +170,15 @@ pub struct OverlayDraw<'a> {
     pub chat_settings: &'a ChatSettings,
     pub lang: &'a Lang,
     pub size: (f32, f32),
-    pub recipes: &'a crate::world::recipes::RecipeBook,
-    pub recipe_sets: &'a crate::world::recipes::RecipeSets,
+    pub recipes: &'a melon_world::recipes::RecipeBook,
+    pub recipe_sets: &'a melon_world::recipes::RecipeSets,
     /// The recipe the server asked the menu to show as ghost items.
-    pub ghost: Option<&'a (i32, crate::world::recipes::RecipeDisplay)>,
+    pub ghost: Option<&'a (i32, melon_world::recipes::RecipeDisplay)>,
     /// The player's experience level and whether materials are free (creative).
     pub experience_level: i32,
     pub infinite_materials: bool,
     /// The texture of the entity the overlay asked to show.
-    pub entity_preview: Option<crate::renderer::TextureId>,
+    pub entity_preview: Option<melon_render::TextureId>,
 }
 
 /// A screen over the running world (vanilla's in-game `Screen`s that don't pause it).
@@ -257,7 +257,7 @@ pub trait Overlay {
     fn visit_stacks(
         &self,
         _inventory: &Inventory,
-        _visit: &mut dyn FnMut(&dyn crate::world::item_model::StackKey) -> bool,
+        _visit: &mut dyn FnMut(&dyn melon_world::item_model::StackKey) -> bool,
     ) -> bool {
         true
     }

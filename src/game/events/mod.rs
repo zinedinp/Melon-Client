@@ -8,13 +8,13 @@ mod scoreboard;
 mod teleport;
 
 use super::{InWorld, LoadingReason, Received};
-use crate::gui::text::{StyledText, font::Font};
-use crate::i18n::Lang;
-use crate::network::WorldEvent;
-use crate::network::play::game::GameEvent;
-use crate::renderer::Renderer;
-use crate::world::game_mode::GameMode;
-use crate::world::inventory::empty;
+use melon_gui::text::{StyledText, font::Font};
+use melon_assets::i18n::Lang;
+use melon_net::WorldEvent;
+use melon_net::play::game::GameEvent;
+use melon_render::Renderer;
+use melon_world::game_mode::GameMode;
+use melon_world::inventory::empty;
 
 /// `ClientPacketListener.determineLevelLoadingReason`: the portal's
 /// background unless the player died; the Nether wins over the End.
@@ -142,7 +142,7 @@ impl InWorld {
         self.audio.respawned();
         self.ambient.respawned();
         let held = self.inventory.selected();
-        self.inventory = crate::world::inventory::Inventory::default();
+        self.inventory = melon_world::inventory::Inventory::default();
         if held != 0 {
             self.joined.session.send_carried_item(0);
         }
@@ -263,7 +263,7 @@ impl InWorld {
 
             // The level.
             GameEvent::Entity(packet) => {
-                if let crate::network::play::game::EntityPacket::Event { id, event } = &packet {
+                if let melon_net::play::game::EntityPacket::Event { id, event } = &packet {
                     self.on_entity_event_particles(*id, *event);
                 }
                 self.receive_entity(packet);
@@ -321,7 +321,7 @@ impl InWorld {
 
     /// The probe's note of a block changing near the player.
     fn probe_block_change(&self, pos: [i32; 3], state: u16) {
-        if !crate::probe::enabled() {
+        if !melon_core::probe::enabled() {
             return;
         }
         let f = self.player.feet();
@@ -333,7 +333,7 @@ impl InWorld {
             return;
         }
         let (t, n) = (self.clocks.game_time(), self.ticks);
-        crate::probe::note("block.near", format!("{pos:?}/{t}/{n}"), || {
+        melon_core::probe::note("block.near", format!("{pos:?}/{t}/{n}"), || {
             format!(
                 "old={old:?} new={state} feet=({:.2},{:.2},{:.2}) tick={t}",
                 f.x, f.y, f.z

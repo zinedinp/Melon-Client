@@ -3,13 +3,13 @@
 //! to. A new kind of body or input is a new element, made by its handler
 //! ([`super::body`], [`super::input`]); the screen needs no change.
 
-use crate::world::item_model::StackKey;
+use melon_world::item_model::StackKey;
 use std::sync::Arc;
 
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::component::{ClickEvent, Component};
-use crate::dialog::{Action, Dialog, InputValue};
+use melon_protocol::component::{ClickEvent, Component};
+use melon_net::dialog::{Action, Dialog, InputValue};
 use crate::screen::{CursorKind, ScreenContext, TextEvent};
 use crate::text::{self, Hover, StyledText};
 use crate::widgets::button::Button;
@@ -301,7 +301,7 @@ pub struct ItemElement {
 const ITEM_SPACING: f32 = 2.0;
 
 impl ItemElement {
-    pub fn new(body: &crate::dialog::ItemBody, ctx: &ScreenContext) -> Self {
+    pub fn new(body: &melon_net::dialog::ItemBody, ctx: &ScreenContext) -> Self {
         let stack =
             crate::hud::item_slot::hover_stack(&body.id, body.count, body.components.as_ref());
         Self {

@@ -3,7 +3,7 @@
 use crate::game::InWorld;
 use crate::game::camera::Camera;
 use crate::game::world_resources::WorldResources;
-use crate::renderer::{ParticleDraw, Renderer};
+use melon_render::{ParticleDraw, Renderer};
 
 /// What the particle layer draws from.
 pub(super) struct ParticleInput<'a> {

@@ -8,9 +8,9 @@ use anyhow::{Context, Result, bail};
 use image::RgbaImage;
 use serde_json::Value;
 
-use super::protocol::packet::{self, Reader, read_packet, write_packet};
-use super::protocol::varint;
-use crate::text::{SPRITE_COUNT, sprite_char};
+use melon_protocol::packet::{self, Reader, read_packet, write_packet};
+use melon_protocol::varint;
+use melon_assets::text::{SPRITE_COUNT, sprite_char};
 
 const TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -214,7 +214,7 @@ fn parse_legacy(body: &[u8], latency_ms: u128) -> Result<ServerStatus> {
 /// `ServerData.validateIcon`.
 fn decode_favicon(url: &str) -> Option<RgbaImage> {
     let data = url.strip_prefix("data:image/png;base64,")?;
-    let png = crate::util::base64::decode(&data.replace('\n', ""))?;
+    let png = melon_core::util::base64::decode(&data.replace('\n', ""))?;
     let image = image::load_from_memory_with_format(&png, image::ImageFormat::Png)
         .ok()?
         .to_rgba8();
@@ -239,8 +239,8 @@ mod tests {
         assert_eq!(status.protocol, crate::PROTOCOL_VERSION);
         assert!(status.max > 0);
         assert!(!status.description.is_null());
-        let motd = crate::component::decode::component(&status.description);
-        let text = crate::text::StyledText::from_component(&motd, &crate::i18n::Lang::empty());
+        let motd = melon_protocol::component::decode::component(&status.description);
+        let text = melon_assets::text::StyledText::from_component(&motd, &melon_assets::i18n::Lang::empty());
         eprintln!("MOTD: {:?}", text.to_plain());
     }
 
@@ -254,8 +254,8 @@ mod tests {
         .unwrap();
         let mut sprites = Vec::new();
         let sanitized = sanitize_description(&motd, 0, &mut sprites);
-        let component = crate::component::decode::component(&sanitized);
-        let text = crate::text::StyledText::from_component(&component, &crate::i18n::Lang::empty());
+        let component = melon_protocol::component::decode::component(&sanitized);
+        let text = melon_assets::text::StyledText::from_component(&component, &melon_assets::i18n::Lang::empty());
         assert_eq!(text.to_plain(), "   \u{E000} G\n  +");
         assert_eq!(sprites, ["item/totem_of_undying"]);
     }

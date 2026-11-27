@@ -5,7 +5,7 @@ use crate::entity::animations::warden as anim;
 use crate::entity::keyframe::{AnimationDefinition, AnimationState};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle::{self, HALF_PI, PI};
+use melon_core::math::angle::{self, HALF_PI, PI};
 use crate::model_part::{Cube, Pose};
 
 /// Animation slots (`PoseInput::anim`).

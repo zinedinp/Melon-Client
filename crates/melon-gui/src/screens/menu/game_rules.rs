@@ -6,7 +6,7 @@ use std::rc::Rc;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::singleplayer::rules::{self, Category, Changes, Rule, Value};
+use melon_net::singleplayer::rules::{self, Category, Changes, Rule, Value};
 use crate::text::font::LINE_HEIGHT;
 use crate::text::{StyledText, TextStyle, colors};
 use crate::widgets::button::Button;
@@ -125,7 +125,7 @@ impl GameRulesScreen {
     }
 
     /// The caption of a rule: its language entry, else its name spelled out.
-    fn caption(rule: &Rule, lang: &crate::i18n::Lang) -> String {
+    fn caption(rule: &Rule, lang: &melon_assets::i18n::Lang) -> String {
         let key = rules::lang_key(&rule.name);
         if lang.has(&key) {
             lang.get_dynamic(&key).to_owned()
@@ -134,13 +134,13 @@ impl GameRulesScreen {
         }
     }
 
-    fn description(rule: &Rule, lang: &crate::i18n::Lang) -> Option<String> {
+    fn description(rule: &Rule, lang: &melon_assets::i18n::Lang) -> Option<String> {
         let key = format!("{}.description", rules::lang_key(&rule.name));
         lang.has(&key).then(|| lang.get_dynamic(&key).to_owned())
     }
 
     /// `RuleList.populateChildren`.
-    fn populate(&mut self, lang: &crate::i18n::Lang) {
+    fn populate(&mut self, lang: &melon_assets::i18n::Lang) {
         let needle = self.widgets.field(Id::Search).value().to_lowercase();
         let mut shown: Vec<(Category, String, usize)> = self
             .rules

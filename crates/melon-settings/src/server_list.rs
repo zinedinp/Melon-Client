@@ -41,12 +41,12 @@ fn path(game_dir: &Path) -> PathBuf {
 }
 
 pub fn load(game_dir: &Path) -> Vec<ServerEntry> {
-    crate::json_file::load(&path(game_dir)).unwrap_or_default()
+    melon_base::json_file::load(&path(game_dir)).unwrap_or_default()
 }
 
 pub fn save(game_dir: &Path, servers: &[ServerEntry]) {
-    if let Err(e) = crate::json_file::save(&path(game_dir), servers) {
-        crate::warn!("Server list not saved: {e}");
+    if let Err(e) = melon_base::json_file::save(&path(game_dir), servers) {
+        melon_base::warn!("Server list not saved: {e}");
     }
 }
 

@@ -3,8 +3,8 @@
 use std::time::{Duration, Instant};
 
 use crate::effects;
-use crate::math::argb;
-use crate::renderer::quad::Transform2D;
+use melon_core::math::argb;
+use melon_render::quad::Transform2D;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::widgets::Ui;
 use crate::widgets::button::Button;

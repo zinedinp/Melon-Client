@@ -11,10 +11,10 @@ use winit::keyboard::{Key, KeyCode, ModifiersState, NamedKey, NativeKey, Physica
 use winit::window::{CursorGrabMode, CursorIcon, Window};
 
 use super::RunningState;
-use crate::gui::overlay::container_input::MouseButtonKind;
-use crate::gui::screen::{CursorKind, TextEvent};
-use crate::platform::clipboard_text;
-use crate::settings::input::InputBind;
+use melon_gui::overlay::container_input::MouseButtonKind;
+use melon_gui::screen::{CursorKind, TextEvent};
+use melon_base::platform::clipboard_text;
+use melon_settings::input::InputBind;
 
 /// What the window last said about input, and the cursor grab.
 pub(super) struct InputState {
@@ -111,7 +111,7 @@ fn grab_cursor(window: &Window) -> bool {
         .is_ok();
     window.set_cursor_visible(!grabbed);
     if !grabbed {
-        crate::warn!("Cursor not grabbed: mouse look may be limited");
+        melon_base::warn!("Cursor not grabbed: mouse look may be limited");
     }
     grabbed
 }
@@ -242,8 +242,8 @@ impl RunningState {
             WindowEvent::Occluded(occluded) => self.input.occluded = occluded,
             WindowEvent::ModifiersChanged(modifiers) => {
                 self.input.modifiers = modifiers.state();
-                crate::gui::input_state::set_shift(self.input.modifiers.shift_key());
-                self.env.modifiers = crate::gui::screen::Modifiers {
+                melon_gui::input_state::set_shift(self.input.modifiers.shift_key());
+                self.env.modifiers = melon_gui::screen::Modifiers {
                     shift: self.input.modifiers.shift_key(),
                     alt: self.input.modifiers.alt_key(),
                     control: self.input.modifiers.control_key(),
@@ -310,7 +310,7 @@ impl RunningState {
 
     fn mouse_input(&mut self, button: MouseButton, pressed: bool, event_loop: &ActiveEventLoop) {
         if button == MouseButton::Left {
-            crate::gui::input_state::set_left_held(pressed);
+            melon_gui::input_state::set_left_held(pressed);
         }
         if self.playing() {
             let kind = match button {
@@ -335,7 +335,7 @@ impl RunningState {
                     .screens
                     .top_mut()
                     .map(|screen| screen.on_bind(bind, &self.env.ctx(scale)))
-                    .unwrap_or(crate::gui::screen::ScreenAction::None);
+                    .unwrap_or(melon_gui::screen::ScreenAction::None);
                 self.apply(action, event_loop);
             }
             return;
@@ -426,7 +426,7 @@ impl RunningState {
                 return;
             };
             let action = screen.on_text_event(text_event, &self.env.ctx(scale));
-            if !matches!(action, crate::gui::screen::ScreenAction::None) {
+            if !matches!(action, melon_gui::screen::ScreenAction::None) {
                 self.apply(action, event_loop);
                 return;
             }
@@ -435,7 +435,7 @@ impl RunningState {
 
     /// After the frame.
     pub(super) fn sync_ime_area(&mut self) {
-        let Some((x, y, height)) = crate::gui::ime::take_cursor() else {
+        let Some((x, y, height)) = melon_gui::ime::take_cursor() else {
             return;
         };
         if !self.input.ime_allowed {
@@ -493,7 +493,7 @@ impl RunningState {
                     .input
                     .binds
                     .actions_for(bind)
-                    .any(|action| action == crate::settings::input::Action::Screenshot)
+                    .any(|action| action == melon_settings::input::Action::Screenshot)
             })
         {
             self.screenshots.request();
@@ -519,7 +519,7 @@ impl RunningState {
                             .map(|screen| {
                                 screen.on_bind(InputBind::unknown(), &self.env.ctx(scale))
                             })
-                            .unwrap_or(crate::gui::screen::ScreenAction::None);
+                            .unwrap_or(melon_gui::screen::ScreenAction::None);
                         self.apply(action, event_loop);
                     } else if self.screens.top_closes_on_escape() {
                         self.escape_top_screen(event_loop);
@@ -561,7 +561,7 @@ impl RunningState {
                 .screens
                 .top_mut()
                 .map(|screen| screen.on_bind(captured, &self.env.ctx(scale)))
-                .unwrap_or(crate::gui::screen::ScreenAction::None);
+                .unwrap_or(melon_gui::screen::ScreenAction::None);
             self.apply(action, event_loop);
             return;
         }
@@ -575,7 +575,7 @@ impl RunningState {
                 return;
             };
             let action = screen.on_text_event(text_event, &self.env.ctx(scale));
-            if !matches!(action, crate::gui::screen::ScreenAction::None) {
+            if !matches!(action, melon_gui::screen::ScreenAction::None) {
                 self.apply(action, event_loop);
                 return;
             }

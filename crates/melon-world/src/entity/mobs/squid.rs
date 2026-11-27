@@ -4,7 +4,7 @@ use glam::DVec3;
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle::{self, PI};
+use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
 
 /// `EntityEvent` 19: the tentacles start a new stroke.
@@ -36,10 +36,10 @@ pub fn layer(baby: bool) -> LayerDefinition {
         Pose::offset(0.0, 8.0, 0.0),
     );
     for i in 0..TENTACLES {
-        let around = i as f64 * crate::math::angle::double::PI * 2.0 / TENTACLES as f64;
+        let around = i as f64 * melon_core::math::angle::double::PI * 2.0 / TENTACLES as f64;
         let (x, z) = (around.cos() as f32 * 5.0, around.sin() as f32 * 5.0);
-        let turn = (i as f64 * crate::math::angle::double::PI * -2.0 / TENTACLES as f64
-            + crate::math::angle::double::HALF_PI) as f32;
+        let turn = (i as f64 * melon_core::math::angle::double::PI * -2.0 / TENTACLES as f64
+            + melon_core::math::angle::double::HALF_PI) as f32;
         root.add_or_replace_child(
             tentacle_name(i),
             vec![Cube::new((48.0, 0.0), (-1.0, 0.0, -1.0), (2.0, 18.0, 2.0))],

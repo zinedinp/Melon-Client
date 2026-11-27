@@ -1,6 +1,6 @@
 //! Dimension types (vanilla `DimensionType`).
 
-use crate::math::argb;
+use melon_core::math::argb;
 use anyhow::Result;
 use serde_json::Value;
 

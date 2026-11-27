@@ -108,7 +108,7 @@ fn textures_of(assets_root: &Path, kind: Kind) -> Vec<String> {
     if SPRITELESS.contains(&kind.to_name()) {
         return Vec::new();
     }
-    let Some(json) = crate::assets::json_resource(assets_root, "particles", kind.to_name()) else {
+    let Some(json) = melon_assets::assets::json_resource(assets_root, "particles", kind.to_name()) else {
         return Vec::new();
     };
     json["textures"]
@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn the_sets_name_their_textures() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets");
-        if crate::assets::json_resource(&root, "particles", "smoke").is_none() {
+        if melon_assets::assets::json_resource(&root, "particles", "smoke").is_none() {
             return;
         }
         let smoke = textures_of(&root, Kind::Smoke);

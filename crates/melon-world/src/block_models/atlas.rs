@@ -178,7 +178,7 @@ fn load(assets_root: &Path, id: String, image: Option<RgbaImage>) -> Sprite {
             levels: Vec::new(),
         };
     }
-    let image = crate::assets::texture_image(assets_root, &id).map(|image| {
+    let image = melon_assets::assets::texture_image(assets_root, &id).map(|image| {
         let side = image.width();
         if image.height() > side {
             image::imageops::crop_imm(&image, 0, 0, side, side).to_image()
@@ -187,7 +187,7 @@ fn load(assets_root: &Path, id: String, image: Option<RgbaImage>) -> Sprite {
         }
     });
     Sprite {
-        image: image.unwrap_or_else(crate::assets::missing_texture),
+        image: image.unwrap_or_else(melon_assets::assets::missing_texture),
         frames: None,
         levels: Vec::new(),
     }
@@ -217,7 +217,7 @@ fn fit(sprites: &mut [Sprite], max_side: u32) {
     if cap >= largest {
         return;
     }
-    crate::warn!("Block atlas: textures over {cap}px are scaled down to fit {max_side}x{max_side}");
+    melon_base::warn!("Block atlas: textures over {cap}px are scaled down to fit {max_side}x{max_side}");
     for sprite in sprites.iter_mut() {
         while sprite.image.width().max(sprite.image.height()) > cap {
             sprite.image = mipmap::halve(&sprite.image);

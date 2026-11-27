@@ -5,8 +5,8 @@ use pumpkin_data::item_stack::ItemStack;
 use pumpkin_protocol::codec::item_stack_seralizer::ItemStackSerializer;
 use std::io::Write;
 
-use crate::protocol::packet;
-use crate::protocol::varint::write_var_int;
+use melon_protocol::packet;
+use melon_protocol::varint::write_var_int;
 
 /// `ServerboundSetCreativeModeSlotPacket`.
 pub fn write_creative_slot(buf: &mut Vec<u8>, slot: i16, stack: &ItemStack) -> Result<()> {
@@ -24,7 +24,7 @@ pub fn write_container_click(
     buf: &mut Vec<u8>,
     container: i32,
     state_id: i32,
-    click: &crate::world::inventory::Click,
+    click: &melon_world::inventory::Click,
     changed: &[(i16, &ItemStack)],
     carried: &ItemStack,
 ) -> Result<()> {

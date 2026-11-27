@@ -5,10 +5,10 @@ pub mod report;
 
 use std::path::PathBuf;
 
-use crate::audio::SoundInstance;
-use crate::audio::source::SoundSource;
-use crate::math::angle::{self, TAU};
-use crate::world::player::{MoveInput, PlayerState};
+use melon_audio::SoundInstance;
+use melon_audio::source::SoundSource;
+use melon_core::math::angle::{self, TAU};
+use melon_world::player::{MoveInput, PlayerState};
 
 /// The world the benchmark plays in, under `saves/`.
 pub const WORLD_FOLDER: &str = "melon-bench";
@@ -386,7 +386,7 @@ pub fn forest_spot(
     block: impl Fn(i32, i32, i32) -> u16,
 ) -> Option<glam::DVec3> {
     let leafy = |x: i32, z: i32| {
-        top(x, z).filter(|&y| crate::world::block::state_flags::is_leaves(block(x, y - 1, z)))
+        top(x, z).filter(|&y| melon_world::block::state_flags::is_leaves(block(x, y - 1, z)))
     };
     let (cx, cz) = (around.x.floor() as i32, around.z.floor() as i32);
     let mut best = (0, cx, cz);
@@ -417,15 +417,15 @@ pub fn forest_spot(
             let (x, z) = (x + dx, z + dz);
             let Some(top) = leafy(x, z) else { continue };
             let mut y = top - 1;
-            while crate::world::block::state_flags::is_leaves(block(x, y, z)) {
+            while melon_world::block::state_flags::is_leaves(block(x, y, z)) {
                 y -= 1;
             }
             let mut air = 0;
-            while !crate::world::block::state_flags::is_drawn(block(x, y, z)) && y > top - 48 {
+            while !melon_world::block::state_flags::is_drawn(block(x, y, z)) && y > top - 48 {
                 air += 1;
                 y -= 1;
             }
-            if air >= 2 && !crate::world::block::state_flags::is_leaves(block(x, y, z)) {
+            if air >= 2 && !melon_world::block::state_flags::is_leaves(block(x, y, z)) {
                 return Some(feet(x, z, y + 1));
             }
         }

@@ -1,11 +1,11 @@
 //! `DolphinModel` and `BabyDolphinModel`.
 
-use crate::math::angle::THIRD_PI as THIRD;
+use melon_core::math::angle::THIRD_PI as THIRD;
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle;
+use melon_core::math::angle;
 use crate::model_part::{Cube, Pose};
 
 fn turned(offset: (f32, f32, f32), rotation: (f32, f32, f32)) -> Pose {

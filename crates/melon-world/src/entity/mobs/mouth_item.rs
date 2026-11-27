@@ -2,7 +2,7 @@
 
 use glam::{Mat4, Vec3};
 
-use crate::math::angle::Rotation;
+use melon_core::math::angle::Rotation;
 
 /// Where a dolphin holds it.
 pub fn dolphin(root: Mat4, x_rot: f32) -> Mat4 {

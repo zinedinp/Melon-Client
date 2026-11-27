@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 use super::font::Font;
-use crate::component::{AtlasSprite, ObjectInfo, PlayerSprite};
-use crate::renderer::TextureId;
+use melon_protocol::component::{AtlasSprite, ObjectInfo, PlayerSprite};
+use melon_render::TextureId;
 
 /// A rectangle of a texture, `[u0, v0, u1, v1]`.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -124,7 +124,7 @@ pub fn sprite_image(root: &std::path::Path, sprite: &AtlasSprite) -> Option<imag
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::component::{PlayerSprite, Profile};
+    use melon_protocol::component::{PlayerSprite, Profile};
 
     fn font() -> Font {
         Font::from_bitmaps(Default::default(), Vec::new())

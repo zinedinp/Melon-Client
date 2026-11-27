@@ -6,7 +6,7 @@ use std::sync::{Mutex, OnceLock};
 use image::RgbaImage;
 use rustc_hash::FxHashMap;
 
-use crate::renderer::TextureId;
+use melon_render::TextureId;
 use crate::sprite::GuiSprite;
 use crate::widgets::{Rect, Ui};
 

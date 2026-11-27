@@ -5,12 +5,12 @@ use super::world_registries::WorldRegistries;
 use super::{ClientInfo, Identity};
 use crate::play::chat::{self, command_suggestions};
 use crate::play::{Play, PlayListener};
-use crate::protocol::connection::{Connection, ReadHalf, WriteHalf};
-use crate::protocol::packet::Reader;
-use crate::protocol::{crypto, id, packet, varint};
-use crate::world::biome::Biomes;
-use crate::world::dimension::DimensionTypes;
-use crate::world::game_mode::GameMode;
+use melon_protocol::connection::{Connection, ReadHalf, WriteHalf};
+use melon_protocol::packet::Reader;
+use melon_protocol::{crypto, id, packet, varint};
+use melon_world::biome::Biomes;
+use melon_world::dimension::DimensionTypes;
+use melon_world::game_mode::GameMode;
 use crate::{PROTOCOL_VERSION, Session, Stream, WorldEvent};
 use anyhow::{Context, Result, bail};
 use pumpkin_data::packet::clientbound::{config, login as login_cb};
@@ -88,7 +88,7 @@ pub fn join_server(addr: &str, identity: &Identity, client: &ClientInfo) -> Resu
     let (stream, host, port) = connect_tcp(addr)?;
     let control = stream.try_clone().context("cloning the socket")?;
     let pack_close = stream.try_clone().context("cloning the socket")?;
-    crate::assets::packs::server::attach(
+    melon_assets::assets::packs::server::attach(
         Arc::new(|_, _| {}),
         Some(Box::new(move || {
             let _ = pack_close.shutdown(Shutdown::Both);
@@ -160,7 +160,7 @@ pub fn join_over(
     login(&mut conn, identity)?;
     let (mut reader, writer) = conn.into_split().context("splitting the connection")?;
     let writer: SharedWriter = Arc::new(Mutex::new(writer));
-    crate::assets::packs::server::set_responder(pack_responder(&writer));
+    melon_assets::assets::packs::server::set_responder(pack_responder(&writer));
     crate::dialog::connection::start(custom_action_sender(&writer));
     let (chat_types, registries, world) = configure(&mut reader, &writer, client)?;
     let mut listener = PlayListener::new(world.dimension_types.clone());
@@ -175,7 +175,7 @@ pub fn join_over(
 }
 
 /// Sends a resource pack's status (`ServerboundResourcePackPacket`) to the server.
-fn pack_responder(writer: &SharedWriter) -> crate::assets::packs::server::Responder {
+fn pack_responder(writer: &SharedWriter) -> melon_assets::assets::packs::server::Responder {
     let writer = Arc::clone(writer);
     Arc::new(move |pack, status| {
         let mut writer = lock(&writer);
@@ -209,7 +209,7 @@ fn custom_action_sender(writer: &SharedWriter) -> crate::dialog::connection::Sen
                 .ok_or_else(|| anyhow::anyhow!("payload too large"))
         });
         if let Err(e) = sent {
-            crate::warn!("Custom action {action} not sent: {e:#}");
+            melon_base::warn!("Custom action {action} not sent: {e:#}");
         }
     })
 }
@@ -226,7 +226,7 @@ pub fn read_pack_push(body: &[u8]) -> Result<()> {
     } else {
         None
     };
-    crate::assets::packs::server::push(pack, url, hash, required, prompt);
+    melon_assets::assets::packs::server::push(pack, url, hash, required, prompt);
     Ok(())
 }
 
@@ -234,7 +234,7 @@ pub fn read_pack_push(body: &[u8]) -> Result<()> {
 pub fn read_pack_pop(body: &[u8]) -> Result<()> {
     let mut r = Reader::new(body);
     let pack = if r.bool()? { Some(r.uuid()?) } else { None };
-    crate::assets::packs::server::pop(pack);
+    melon_assets::assets::packs::server::pop(pack);
     Ok(())
 }
 
@@ -325,7 +325,7 @@ pub fn handle_encryption_request(
             );
         };
         let hash = crypto::server_hash(&server_id, &shared_secret, &public_key_der);
-        crate::auth::minecraft::join_server(
+        melon_base::auth::minecraft::join_server(
             session,
             access_token,
             &uuid.simple().to_string(),

@@ -6,7 +6,7 @@ use miraculix::x86::bundles::V4Vbmi;
 use miraculix::x86::ops::avx::avx2::Avx2;
 use miraculix::x86::ops::sse::ssse3::Ssse3;
 
-use crate::math::x86::bytes::{Avx2Bytes, Sse2Bytes, Ssse3Bytes, VbmiBytes};
+use melon_core::math::x86::bytes::{Avx2Bytes, Sse2Bytes, Ssse3Bytes, VbmiBytes};
 use crate::section::BLOCKS_PER_SECTION;
 use crate::section_decode::{ROWS, decode_with, flag_rows_with};
 

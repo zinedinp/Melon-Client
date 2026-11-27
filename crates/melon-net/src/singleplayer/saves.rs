@@ -50,7 +50,7 @@ impl WorldCreationMode {
     }
 }
 
-impl crate::cycle::Cycle for WorldCreationMode {
+impl melon_core::cycle::Cycle for WorldCreationMode {
     const ALL: &'static [Self] = &WorldCreationMode::ALL;
 }
 
@@ -110,7 +110,7 @@ impl Difficulty {
     }
 }
 
-impl crate::cycle::Cycle for Difficulty {
+impl melon_core::cycle::Cycle for Difficulty {
     const ALL: &'static [Self] = &Difficulty::ALL;
 }
 
@@ -122,7 +122,7 @@ pub fn parse_seed(seed: &str) -> Option<i64> {
     }
     Some(
         seed.parse::<i64>()
-            .unwrap_or_else(|_| i64::from(crate::world::java_random::java_string_hash(seed))),
+            .unwrap_or_else(|_| i64::from(melon_world::java_random::java_string_hash(seed))),
     )
 }
 
@@ -290,7 +290,7 @@ pub fn list_worlds(game_dir: &Path) -> Vec<WorldEntry> {
             let folder = e.file_name().to_string_lossy().into_owned();
             let path = e.path();
             let level = read_level(&path);
-            let file: Option<WorldFile> = crate::json_file::load(&path.join("melon_world.json"));
+            let file: Option<WorldFile> = melon_base::json_file::load(&path.join("melon_world.json"));
             if file.is_none() && level.is_none() {
                 return None;
             }
@@ -428,7 +428,7 @@ pub fn save_world(game_dir: &Path, folder: &str, settings: &WorldSettings) -> io
         world_type: settings.world_type.id().to_string(),
         data_packs: settings.data_packs.clone(),
     };
-    crate::json_file::save(&dir.join("melon_world.json"), &file)
+    melon_base::json_file::save(&dir.join("melon_world.json"), &file)
 }
 
 /// The seed the integrated server generated the world with, from its `level.dat`.
@@ -443,10 +443,10 @@ pub fn read_seed(game_dir: &Path, folder: &str) -> Option<i64> {
 /// `LevelStorageAccess.renameLevel`.
 pub fn rename_world(game_dir: &Path, folder: &str, name: &str) -> io::Result<()> {
     let path = world_dir(game_dir, folder).join("melon_world.json");
-    let mut file: WorldFile = crate::json_file::load(&path)
+    let mut file: WorldFile = melon_base::json_file::load(&path)
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "melon_world.json"))?;
     file.name = name.to_owned();
-    crate::json_file::save(&path, &file)
+    melon_base::json_file::save(&path, &file)
 }
 
 /// `saves/<folder>/icon.png`: the world's list icon, which Reset Icon removes.

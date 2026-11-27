@@ -1,7 +1,7 @@
 //! What a dialog asks the player for (vanilla `server/dialog/input`): each
 //! input's value goes to the buttons' actions under its key.
 
-use crate::component::Component;
+use melon_protocol::component::Component;
 
 /// `Input`: a control and the key its value goes by.
 #[derive(Clone, Debug)]

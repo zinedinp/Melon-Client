@@ -2,7 +2,7 @@
 
 use super::living::LivingRenderState;
 use super::model::{Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle::{self, PI};
+use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
 
 /// `QuadrupedModel.createBodyMesh(legSize, mirrorLeftLeg, mirrorRightLeg, g)`.

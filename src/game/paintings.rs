@@ -7,11 +7,11 @@ use std::collections::HashMap;
 use glam::{DVec3, IVec3, Mat4};
 
 use super::world_resources::WorldResources;
-use crate::math::ChunkHash;
-use crate::renderer::{Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer};
-use crate::world::entity::painting;
-use crate::world::entity::tracker::ClientEntity;
-use crate::world::level::Level;
+use melon_core::math::ChunkHash;
+use melon_render::{Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer};
+use melon_world::entity::painting;
+use melon_world::entity::tracker::ClientEntity;
+use melon_world::level::Level;
 
 #[derive(PartialEq)]
 struct Key {
@@ -34,13 +34,13 @@ pub struct PaintingMeshes {
     by_entity: HashMap<i32, Kept, ChunkHash>,
 }
 
-fn upload(renderer: &mut Renderer, vertices: &[crate::renderer::WorldVertex]) -> Option<MeshId> {
+fn upload(renderer: &mut Renderer, vertices: &[melon_render::WorldVertex]) -> Option<MeshId> {
     if vertices.is_empty() {
         return None;
     }
     renderer
         .upload_mesh(vertices)
-        .map_err(|e| crate::warn!("Painting mesh failed: {e:#}"))
+        .map_err(|e| melon_base::warn!("Painting mesh failed: {e:#}"))
         .ok()
 }
 

@@ -9,9 +9,9 @@ use pumpkin_util::version::JavaMinecraftVersion;
 use serde::Deserialize;
 use std::io::Write;
 
-use crate::component::{self, Component, Style};
-use crate::protocol::packet::{self, Reader};
-use crate::protocol::varint::write_var_int;
+use melon_protocol::component::{self, Component, Style};
+use melon_protocol::packet::{self, Reader};
+use melon_protocol::varint::write_var_int;
 
 pub mod id {
     use pumpkin_data::packet::{clientbound::play as cb, serverbound::play as sb};
@@ -364,12 +364,12 @@ mod tests {
             "with": ["Chatter", 3]
         });
         let component = component::decode::component(&json);
-        let lang = crate::i18n::Lang::from_pairs(&[("multiplayer.player.joined", "%s joined %s")]);
-        let text = crate::text::StyledText::from_component(&component, &lang);
+        let lang = melon_assets::i18n::Lang::from_pairs(&[("multiplayer.player.joined", "%s joined %s")]);
+        let text = melon_assets::text::StyledText::from_component(&component, &lang);
         assert_eq!(text.to_plain(), "Chatter joined 3");
         let list = component::decode::component(&serde_json::json!(["a", {"text": "b"}]));
         assert_eq!(
-            crate::text::StyledText::from_component(&list, &lang).to_plain(),
+            melon_assets::text::StyledText::from_component(&list, &lang).to_plain(),
             "ab"
         );
     }
@@ -393,10 +393,10 @@ mod tests {
         let json =
             pumpkin_protocol::ser::nbt_tag_to_json(&pumpkin_nbt::tag::NbtTag::Compound(line));
         let component = component::decode::component(&json);
-        let text = crate::text::StyledText::from_component(&component, &crate::i18n::Lang::empty());
+        let text = melon_assets::text::StyledText::from_component(&component, &melon_assets::i18n::Lang::empty());
         assert_eq!(text.to_plain(), "Coins: 5");
         assert!(text.spans[0].style.bold);
-        assert_eq!(text.spans[0].style.color, Some(crate::text::colors::GOLD));
+        assert_eq!(text.spans[0].style.color, Some(melon_assets::text::colors::GOLD));
     }
 
     #[test]

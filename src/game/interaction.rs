@@ -4,19 +4,19 @@ use pumpkin_data::item_stack::ItemStack;
 use pumpkin_data::{Block, BlockStateId};
 
 use super::{InWorld, sounds};
-use crate::audio::block_sounds::BlockSound;
+use melon_audio::block_sounds::BlockSound;
 use crate::game::controls::WorldContext;
-use crate::gui::overlay::container::ContainerOverlay;
-use crate::gui::overlay::{ChatExit, OverlayKind};
-use crate::network::play::SWAP_CHANNEL;
-use crate::network::play::game::PlayerAction;
-use crate::world::block_placement;
-use crate::world::entity::interact::{self as entity_interact, EntityUse, Holder};
-use crate::world::entity::kind::EntityKind;
-use crate::world::inventory::{ClickType, OFFHAND_SLOT, empty};
-use crate::world::pick::{self, BlockHit, EntityHit, Hit};
-use crate::world::player::hands::{Hand, ItemUse, Swing, UseAnimation, UsingItem};
-use crate::world::player::mining::{Miner, breaks_blocks_in_creative, enchantment_level};
+use melon_gui::overlay::container::ContainerOverlay;
+use melon_gui::overlay::{ChatExit, OverlayKind};
+use melon_net::play::SWAP_CHANNEL;
+use melon_net::play::game::PlayerAction;
+use melon_world::block_placement;
+use melon_world::entity::interact::{self as entity_interact, EntityUse, Holder};
+use melon_world::entity::kind::EntityKind;
+use melon_world::inventory::{ClickType, OFFHAND_SLOT, empty};
+use melon_world::pick::{self, BlockHit, EntityHit, Hit};
+use melon_world::player::hands::{Hand, ItemUse, Swing, UseAnimation, UsingItem};
+use melon_world::player::mining::{Miner, breaks_blocks_in_creative, enchantment_level};
 use pumpkin_data::data_component_impl::PiercingWeaponImpl;
 
 /// `TridentItem.releaseUsing`: the least ticks held for a throw or a spin.
@@ -184,7 +184,7 @@ impl InWorld {
 
     /// `LocalPlayer.onSyncedDataUpdated` for the living flags.
     pub(super) fn sync_using_item(&mut self, living: u8) {
-        use crate::network::play::game::{LIVING_OFF_HAND, LIVING_USING_ITEM};
+        use melon_net::play::game::{LIVING_OFF_HAND, LIVING_USING_ITEM};
         let using = living & LIVING_USING_ITEM != 0;
         if !using {
             self.hands.using = None;
@@ -231,7 +231,7 @@ impl InWorld {
             effects: self.mining_effects,
             efficiency: self.player.attributes().mining_efficiency(),
             break_speed: self.player.attributes().block_break_speed(),
-            eye_in_water: crate::world::physics::eye_in_water(&self.level, self.player.tick_eye()),
+            eye_in_water: melon_world::physics::eye_in_water(&self.level, self.player.tick_eye()),
             on_ground: self.player.on_ground(),
         }
     }
@@ -272,7 +272,7 @@ impl InWorld {
             .entities
             .get(hit.id)
             .is_some_and(|entity| entity.is_living() && !entity.appearance.dying());
-        living && crate::world::player::hands::attack_delay(self.inventory.selected_stack()) > 5.0
+        living && melon_world::player::hands::attack_delay(self.inventory.selected_stack()) > 5.0
     }
 
     /// What the crosshair ray from `eye` meets first: a block or an entity.
@@ -467,7 +467,7 @@ impl InWorld {
             self.queue_block_sound(state, BlockSound::Hit, sounds::block_center(pos));
         }
         if !finished {
-            let side = crate::world::block::direction::Direction::ALL[usize::from(face.min(5))];
+            let side = melon_world::block::direction::Direction::ALL[usize::from(face.min(5))];
             self.mining_particles(pos, side);
         }
         if finished {
@@ -817,10 +817,10 @@ impl InWorld {
             return false;
         };
         let origin = glam::DVec3::new(f64::from(pos[0]), f64::from(pos[1]), f64::from(pos[2]));
-        let shapes: Vec<crate::world::physics::Aabb> = id
+        let shapes: Vec<melon_world::physics::Aabb> = id
             .to_state()
             .get_block_collision_shapes()
-            .map(|b| crate::world::physics::Aabb {
+            .map(|b| melon_world::physics::Aabb {
                 min: origin + glam::DVec3::new(b.min.x, b.min.y, b.min.z),
                 max: origin + glam::DVec3::new(b.max.x, b.max.y, b.max.z),
             })
@@ -840,7 +840,7 @@ impl InWorld {
             }
             let (w, h) = e.size();
             let bounds =
-                crate::world::physics::Aabb::at_feet(e.pos(1.0), f64::from(w), f64::from(h));
+                melon_world::physics::Aabb::at_feet(e.pos(1.0), f64::from(w), f64::from(h));
             shapes.iter().any(|s| s.intersects(&bounds))
         })
     }

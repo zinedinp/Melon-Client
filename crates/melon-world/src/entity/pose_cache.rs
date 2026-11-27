@@ -6,7 +6,7 @@ use glam::Mat4;
 
 use super::mobs::ModelId;
 use super::model::{Model, ModelPose};
-use crate::math::ChunkHash;
+use melon_core::math::ChunkHash;
 
 struct Kept {
     model: Option<ModelId>,

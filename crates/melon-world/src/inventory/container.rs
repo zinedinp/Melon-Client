@@ -5,7 +5,7 @@ use super::{
     Click, ClickType, Drag, HOTBAR_SLOTS, MAIN_SLOTS, OUTSIDE, shrink, split_slot, stacks_equal,
 };
 use crate::item_model::KeyedStack;
-use crate::text::StyledText;
+use melon_assets::text::StyledText;
 use pumpkin_data::item_stack::ItemStack;
 
 /// Player inventory portion of every vanilla container: 27 main + 9 hotbar.
@@ -516,7 +516,7 @@ impl OpenContainer {
 mod tests {
     use super::*;
     use crate::inventory::{Inventory, empty};
-    use crate::text::{StyledText, colors};
+    use melon_assets::text::{StyledText, colors};
     use pumpkin_data::item::Item;
     use pumpkin_data::item_stack::ItemStack;
 

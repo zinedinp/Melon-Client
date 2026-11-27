@@ -9,7 +9,7 @@ use serde_json::{Map, Value, json};
 use super::Phase;
 use super::nvml::GpuSample;
 use crate::game::subsystems::{Rates, Snapshot};
-use crate::renderer::PassStats;
+use melon_render::PassStats;
 
 /// A change smaller than this share is noise, in the comparison.
 pub const TOLERANCE: f64 = 0.10;
@@ -66,7 +66,7 @@ pub struct Recorder {
 
 /// The process's resident memory in bytes.
 pub fn resident_bytes() -> u64 {
-    crate::platform::resident_set_bytes().unwrap_or(0)
+    melon_base::platform::resident_set_bytes().unwrap_or(0)
 }
 
 /// Mean, percentiles and max of `values`, in their unit.
@@ -565,9 +565,9 @@ pub fn compare(old: &Value, new: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::audio::stats::AudioTotals;
+    use melon_audio::stats::AudioTotals;
     use crate::game::thread_cpu::ThreadTimes;
-    use crate::network::play::stats::NetTotals;
+    use melon_net::play::stats::NetTotals;
     use std::time::{Duration, Instant};
 
     fn snapshot(at: Instant) -> Snapshot {

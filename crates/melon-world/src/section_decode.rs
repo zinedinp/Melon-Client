@@ -11,8 +11,8 @@
     target_arch = "x86_64",
     all(target_arch = "aarch64", target_endian = "little")
 ))]
-use crate::math::bytes::Bytes;
-use crate::math::simd::{self, ByteTier};
+use melon_core::math::bytes::Bytes;
+use melon_core::math::simd::{self, ByteTier};
 use crate::section::BLOCKS_PER_SECTION;
 
 /// Rows of 16 blocks along x in a section, index `y * 16 + z`.
@@ -291,7 +291,7 @@ fn flag_steps<B: Bytes, const BITS: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::xorshift::XorShift;
+    use melon_core::util::xorshift::XorShift;
 
     /// Random indices below `len`, packed at `bits`.
     fn packed(bits: u8, len: usize, noise: &mut XorShift) -> Vec<u64> {

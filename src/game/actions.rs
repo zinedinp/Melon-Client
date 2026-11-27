@@ -1,11 +1,11 @@
 //! What the player does to the inventory and the hotbar, and the F3 key combinations.
 
 use super::InWorld;
-use crate::gui::text::font::Font;
-use crate::gui::text::{StyledText, TextStyle, colors};
-use crate::i18n::Lang;
-use crate::network::play::game::PlayerAction;
-use crate::world::inventory::ClickType;
+use melon_gui::text::font::Font;
+use melon_gui::text::{StyledText, TextStyle, colors};
+use melon_assets::i18n::Lang;
+use melon_net::play::game::PlayerAction;
+use melon_world::inventory::ClickType;
 
 impl InWorld {
     /// Selects hotbar slot `slot` (`Inventory.setSelectedSlot`) and tells the server.
@@ -78,12 +78,12 @@ impl InWorld {
     /// What World Options starts from; `None` outside a singleplayer world.
     pub fn world_options_state(
         &self,
-    ) -> Option<crate::gui::screens::ingame::world_options::WorldOptionsState> {
+    ) -> Option<melon_gui::screens::ingame::world_options::WorldOptionsState> {
         let server = self.integrated_server()?;
         let mode =
-            |mode: pumpkin_util::GameMode| crate::world::game_mode::GameMode::from_id(mode as i32);
+            |mode: pumpkin_util::GameMode| melon_world::game_mode::GameMode::from_id(mode as i32);
         Some(
-            crate::gui::screens::ingame::world_options::WorldOptionsState {
+            melon_gui::screens::ingame::world_options::WorldOptionsState {
                 default_game_mode: server
                     .default_game_mode()
                     .map_or(self.game_mode.current, mode),
@@ -103,8 +103,8 @@ impl InWorld {
     /// World Options' Apply Changes (`WorldOptionsScreen.applyChanges`).
     pub fn apply_world_options(
         &mut self,
-        change: crate::gui::screens::ingame::world_options::WorldOptionsChange,
-        lang: &crate::i18n::Lang,
+        change: melon_gui::screens::ingame::world_options::WorldOptionsChange,
+        lang: &melon_assets::i18n::Lang,
         font: &Font,
     ) {
         if let Some(difficulty) = change.difficulty {
@@ -113,7 +113,7 @@ impl InWorld {
         if change.lock_difficulty {
             self.joined.session.send_lock_difficulty(true);
         }
-        let mode = |mode: crate::world::game_mode::GameMode| {
+        let mode = |mode: melon_world::game_mode::GameMode| {
             pumpkin_util::GameMode::try_from(i32::from(mode.id())).ok()
         };
         let mut messages = Vec::new();
@@ -148,7 +148,7 @@ impl InWorld {
                             &[&publish.port.to_string()],
                         ),
                         Err(error) => {
-                            crate::warn!("Not published: {error:#}");
+                            melon_base::warn!("Not published: {error:#}");
                             lang.get("commands.publish.failed").to_owned()
                         }
                     });

@@ -2,17 +2,17 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::audio::stats::AudioStats;
+use melon_audio::stats::AudioStats;
 use crate::game::InWorld;
 use crate::game::bench::nvml::GpuMonitor;
 use crate::game::bench::report::{self, FrameSample, Recorder, Setup};
 use crate::game::bench::{BenchOptions, Phase, Scene, WORLD_SEED};
 use crate::game::subsystems::Snapshot;
-use crate::gui::hud::debug::RenderStats;
-use crate::join::Target;
-use crate::renderer::Renderer;
-use crate::settings::options::{self, Config};
-use crate::singleplayer::{
+use melon_gui::hud::debug::RenderStats;
+use melon_net::join::Target;
+use melon_render::Renderer;
+use melon_settings::options::{self, Config};
+use melon_net::singleplayer::{
     self, Difficulty, WorldCreationMode, WorldSettings, rules, rules::Value,
 };
 
@@ -159,14 +159,14 @@ impl BenchRun {
     /// report.
     pub fn finish(&self) {
         let Some(recorder) = &self.recorder else {
-            crate::warn!("Bench: the world was never entered, nothing measured");
+            melon_base::warn!("Bench: the world was never entered, nothing measured");
             return;
         };
         let summary = recorder.summary();
         let dir = self.options.out.as_deref().unwrap_or(Path::new(OUT_DIR));
         match recorder.write(dir) {
             Ok(path) => println!("Bench: {} (and .csv)", path.display()),
-            Err(e) => crate::warn!("Bench: not written: {e:#}"),
+            Err(e) => melon_base::warn!("Bench: not written: {e:#}"),
         }
         print!("{}", report::table(&summary));
         if let Some(path) = &self.options.compare {
@@ -178,7 +178,7 @@ impl BenchRun {
                     println!("Compared with {}:", path.display());
                     print!("{}", report::compare(&old, &summary));
                 }
-                None => crate::warn!("Bench: {} unreadable", path.display()),
+                None => melon_base::warn!("Bench: {} unreadable", path.display()),
             }
         }
     }

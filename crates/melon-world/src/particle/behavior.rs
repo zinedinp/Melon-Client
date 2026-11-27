@@ -295,7 +295,7 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
             if p.age_out() {
                 return;
             }
-            p.roll += crate::math::angle::PI * spin * 2.0;
+            p.roll += melon_core::math::angle::PI * spin * 2.0;
             if p.on_ground {
                 p.prev_roll = 0.0;
                 p.roll = 0.0;
@@ -361,7 +361,7 @@ pub fn tick(p: &mut Particle, ctx: &TickCtx, rng: &mut JavaRandom, out: &mut Vec
             if p.age_out() {
                 return;
             }
-            let (sin, cos) = (crate::math::sin(angle), crate::math::cos(angle));
+            let (sin, cos) = (melon_core::math::sin(angle), melon_core::math::cos(angle));
             p.vel.x = (p.vel.x + f64::from(0.6 * cos)) * 0.07;
             p.vel.z = (p.vel.z + f64::from(0.6 * sin)) * 0.07;
             p.move_by(ctx, p.vel);

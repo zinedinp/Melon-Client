@@ -3,11 +3,11 @@
 use glam::Vec3;
 
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle;
+use melon_core::math::angle;
 use crate::model_part::{Cube, Pose};
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, dye_tint};
-use crate::math::angle::QUARTER_PI as Q;
+use melon_core::math::angle::QUARTER_PI as Q;
 
 /// A part with one box.
 fn part(

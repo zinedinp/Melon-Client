@@ -2,7 +2,7 @@
 
 use super::{Loader, MenuDraw, MenuScreen};
 use crate::sprite::GuiSprite;
-use crate::world::inventory::MountLook;
+use melon_world::inventory::MountLook;
 
 #[derive(Clone, Copy)]
 pub struct Sprites {

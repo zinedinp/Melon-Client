@@ -2,13 +2,13 @@
 
 use std::collections::HashMap;
 
-use crate::i18n::Lang;
-use crate::math::argb;
-use crate::renderer::Renderer;
-use crate::renderer::quad::DrawList;
+use melon_assets::i18n::Lang;
+use melon_core::math::argb;
+use melon_render::Renderer;
+use melon_render::quad::DrawList;
 use crate::sprite::GuiSprite;
 use crate::text::StyledText;
-use crate::world::player::status_effects::{ActiveEffect, ActiveEffects, format_duration};
+use melon_world::player::status_effects::{ActiveEffect, ActiveEffects, format_duration};
 use melon_assets::assets::Assets;
 
 use super::item_slot::ItemPainter;
@@ -124,7 +124,7 @@ fn blink(duration: i32) -> f32 {
     let remaining = duration as f32;
     let used_seconds = 10 - duration / 20;
     let alpha = (remaining / 10.0 / 5.0 * 0.5).clamp(0.0, 0.5)
-        + crate::math::angle::cos(remaining * crate::math::angle::PI / 5.0)
+        + melon_core::math::angle::cos(remaining * melon_core::math::angle::PI / 5.0)
             * (used_seconds as f32 / 10.0 * 0.25).clamp(0.0, 0.25);
     alpha.clamp(0.0, 1.0)
 }
@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn several_effects_fill_two_rows_without_overlapping() {
-        use crate::world::player::status_effects::*;
+        use melon_world::player::status_effects::*;
         let mut effects = ActiveEffects::default();
         effects.set(SPEED_ID, 0, 600, 6);
         effects.set(NIGHT_VISION_ID, 0, 900, 6);

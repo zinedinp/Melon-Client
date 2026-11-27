@@ -2,15 +2,15 @@
 
 use glam::{DVec3, Mat4, Vec3};
 
-use crate::math::euler::{self, Look, Orientation};
+use melon_core::math::euler::{self, Look, Orientation};
 
 use super::InWorld;
-use crate::math::angle::{self, Rotation};
-use crate::renderer::world_projection;
-use crate::world::culling::frustum::Frustum;
-use crate::world::level::Level;
-use crate::world::pick;
-use crate::world::player::PlayerState;
+use melon_core::math::angle::{self, Rotation};
+use melon_render::world_projection;
+use melon_world::culling::frustum::Frustum;
+use melon_world::level::Level;
+use melon_world::pick;
+use melon_world::player::PlayerState;
 
 /// `Camera.getMaxZoom`'s starting distance behind or in front of the head.
 const THIRD_PERSON_DISTANCE: f32 = 4.0;
@@ -26,7 +26,7 @@ pub enum CameraMode {
     ThirdPersonFront,
 }
 
-impl crate::cycle::Cycle for CameraMode {
+impl melon_core::cycle::Cycle for CameraMode {
     const ALL: &'static [Self] = &[
         CameraMode::FirstPerson,
         CameraMode::ThirdPersonBack,
@@ -126,7 +126,7 @@ impl Camera {
 
     /// `Camera.getNearPlane`.
     pub fn near_plane(&self, aspect: f32) -> [Vec3; 5] {
-        let near = crate::renderer::WORLD_Z_NEAR;
+        let near = melon_render::WORLD_Z_NEAR;
         let half_height = (self.fov.to_radians() / 2.0).tan() * near;
         let half_width = half_height * aspect;
         let forward = self.forward() * near;
@@ -214,7 +214,7 @@ impl InWorld {
     fn target_fov_modifier(&self, effect_scale: f32) -> f32 {
         let mut modifier = self.player.fov_modifier();
         if let Some(using) = self.hands.using {
-            if using.item_use.animation == crate::world::player::hands::UseAnimation::Bow {
+            if using.item_use.animation == melon_world::player::hands::UseAnimation::Bow {
                 let used = (using.item_use.duration - using.remaining) as f32;
                 let scale = (used / 20.0).min(1.0);
                 modifier *= 1.0 - scale * scale * 0.15;
@@ -245,8 +245,8 @@ impl InWorld {
         }
         let hurt = self.body.hurt as f32 - partial;
         if hurt >= 0.0 {
-            let hurt = hurt / crate::world::entity::tracker::HURT_DURATION as f32;
-            let hurt = angle::sin(hurt * hurt * hurt * hurt * crate::math::angle::PI);
+            let hurt = hurt / melon_world::entity::tracker::HURT_DURATION as f32;
+            let hurt = angle::sin(hurt * hurt * hurt * hurt * melon_core::math::angle::PI);
             let direction = self.body.hurt_dir;
             bob *= Mat4::rot_y_deg(-direction)
                 * Mat4::rot_z_deg(-hurt * 14.0 * strength)
@@ -270,7 +270,7 @@ pub fn far_plane(render_distance: u8) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::math::angle::{HALF_PI, Rotation};
+    use melon_core::math::angle::{HALF_PI, Rotation};
 
     /// A wall at `x = wall`, hit by any segment crossing it.
     fn wall(wall: f64) -> impl Fn(DVec3, DVec3) -> Option<DVec3> {
@@ -285,7 +285,7 @@ mod tests {
     /// and what it culls and draws is relative to it before it is a float.
     #[test]
     fn far_out_the_camera_is_as_exact_as_at_the_origin() {
-        use crate::world::culling::{CullSettings, Culler};
+        use melon_world::culling::{CullSettings, Culler};
         let far = DVec3::new(1_000_000.0, 64.0, -2_000_000.0);
         let mut player = PlayerState::new(far);
         player.teleport(far + DVec3::X * 0.01, DVec3::ZERO, far);

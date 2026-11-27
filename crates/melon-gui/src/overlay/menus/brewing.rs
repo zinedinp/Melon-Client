@@ -2,7 +2,7 @@
 
 use super::{Loader, MenuDraw, MenuScreen, MenuSprites};
 use crate::sprite::GuiSprite;
-use crate::world::inventory::OpenContainer;
+use melon_world::inventory::OpenContainer;
 
 /// `BrewingStandMenu`'s `ContainerData` indices.
 const BREW_TICKS: usize = 0;

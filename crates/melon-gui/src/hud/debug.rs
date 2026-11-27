@@ -4,9 +4,9 @@
 //! overlay lays them out in two columns as vanilla does.
 
 use super::debug_entries::{DebugEntries, Entry};
-use crate::math::{section_coord, section_relative, wrap_degrees};
-use crate::renderer::quad::DrawList;
-use crate::renderer::{DeviceInfo, TextureId};
+use melon_core::math::{section_coord, section_relative, wrap_degrees};
+use melon_render::quad::DrawList;
+use melon_render::{DeviceInfo, TextureId};
 use crate::text::font::Font;
 
 /// `DebugScreenOverlay.extractLines`: `int height = 9`.
@@ -50,12 +50,12 @@ pub struct DebugContext<'a> {
     /// `Level.dimension().identifier()`, e.g. `minecraft:overworld`.
     pub dimension: &'a str,
     pub render: RenderStats,
-    pub mesh: crate::world::level::MeshStats,
+    pub mesh: melon_world::level::MeshStats,
     /// Bytes of GPU mesh memory allocated and in use.
     pub mesh_memory: (u64, u64),
     /// the game's `FrameProfiler::lines`.
     pub profile: Vec<String>,
-    /// The GPU's time per pass ([`crate::renderer::Renderer::gpu_profile`]).
+    /// The GPU's time per pass ([`melon_render::Renderer::gpu_profile`]).
     pub gpu_profile: Vec<String>,
     /// `Minecraft.getGpuUtilization`: the GPU's busy share of a frame, in
     /// percent; `None` without GPU timings.
@@ -347,7 +347,7 @@ fn memory(context: &DebugContext<'_>) -> Vec<String> {
 /// memory it committed (the allocator's heap), and of what it holds, how
 /// much is its own (anonymous) and how much mapped files (code, libraries).
 fn detailed_memory() -> Vec<String> {
-    let Some(m) = crate::platform::memory_details() else {
+    let Some(m) = melon_base::platform::memory_details() else {
         return vec!["Memory (process): unknown".to_owned()];
     };
     let mib = |bytes: u64| bytes / 1024 / 1024;
@@ -560,13 +560,13 @@ fn facing(yaw_degrees: f32) -> (&'static str, &'static str) {
     }
 }
 
-use crate::platform::resident_set_bytes;
+use melon_base::platform::resident_set_bytes;
 
 /// `GLX._getCpuInfo()`'s equivalent. Read once, like vanilla: the overlay
 /// asks every frame.
 fn cpu_name() -> &'static str {
     static NAME: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-    NAME.get_or_init(|| crate::platform::cpu_name().unwrap_or_else(|| "unknown".to_string()))
+    NAME.get_or_init(|| melon_base::platform::cpu_name().unwrap_or_else(|| "unknown".to_string()))
 }
 
 #[cfg(test)]

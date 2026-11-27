@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::singleplayer::data_packs::EXPERIMENTS;
+use melon_net::singleplayer::data_packs::EXPERIMENTS;
 use crate::text::font::LINE_HEIGHT;
 use crate::text::{StyledText, colors};
 use crate::widgets::button::Button;

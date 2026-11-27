@@ -19,7 +19,7 @@ mod parse;
 
 use std::sync::Arc;
 
-use crate::component::Component;
+use melon_protocol::component::Component;
 pub use action::{Action, DialogClick, InputValue, Template};
 pub use body::{DialogBody, ItemBody, PlainMessage};
 pub use input::{Input, InputControl};

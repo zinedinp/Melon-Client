@@ -26,7 +26,7 @@ pub fn load(assets_root: &Path) -> (Vec<ChainSource>, Option<Compiled>) {
         match load_one(assets_root, id) {
             Ok(Some(chain)) => chains.push(chain),
             Ok(None) => {}
-            Err(e) => crate::warn!("Post effect {id}: {e:#}"),
+            Err(e) => melon_base::warn!("Post effect {id}: {e:#}"),
         }
     }
     (chains, blit(assets_root))
@@ -34,7 +34,7 @@ pub fn load(assets_root: &Path) -> (Vec<ChainSource>, Option<Compiled>) {
 
 fn load_one(assets_root: &Path, id: &str) -> anyhow::Result<Option<ChainSource>> {
     let name = id.trim_start_matches("minecraft:");
-    let Some(json) = crate::assets::json_resource(assets_root, "post_effect", name) else {
+    let Some(json) = melon_assets::assets::json_resource(assets_root, "post_effect", name) else {
         return Ok(None);
     };
     let config = Config::parse(&json).map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -55,11 +55,11 @@ fn load_one(assets_root: &Path, id: &str) -> anyhow::Result<Option<ChainSource>>
                 && !textures.contains_key(location)
             {
                 let path = location.replacen(':', ":effect/", 1);
-                match crate::assets::texture_image(assets_root, &path) {
+                match melon_assets::assets::texture_image(assets_root, &path) {
                     Some(image) => {
                         textures.insert(location.clone(), image);
                     }
-                    None => crate::warn!("Post effect {id}: texture {location} missing"),
+                    None => melon_base::warn!("Post effect {id}: texture {location} missing"),
                 }
             }
         }
@@ -91,7 +91,7 @@ fn blit(assets_root: &Path) -> Option<Compiled> {
     match shader::compile(assets_root, &pass) {
         Ok(compiled) => Some(compiled),
         Err(e) => {
-            crate::warn!("Outline blit: {e:#}");
+            melon_base::warn!("Outline blit: {e:#}");
             None
         }
     }

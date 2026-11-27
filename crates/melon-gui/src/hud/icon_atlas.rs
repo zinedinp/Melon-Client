@@ -5,7 +5,7 @@
 
 use image::RgbaImage;
 
-use crate::renderer::{Renderer, TextureId};
+use melon_render::{Renderer, TextureId};
 
 /// Edge length of a page, at most the device's limit.
 const PAGE_SIDE: u32 = 1024;
@@ -52,7 +52,7 @@ impl IconAtlas {
         let slot = self.find(w, h).or_else(|| {
             let texture = renderer
                 .load_texture(&RgbaImage::new(self.side, self.side))
-                .map_err(|e| crate::warn!("Icon page not created: {e:#}"))
+                .map_err(|e| melon_base::warn!("Icon page not created: {e:#}"))
                 .ok()?;
             self.pages.push(Page {
                 texture,

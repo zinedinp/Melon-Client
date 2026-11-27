@@ -187,9 +187,9 @@ impl Glint {
         let per_sprite = |scale: f32, texels: u32| scale * texels.max(1) as f32 / 16.0;
         match self {
             Self::None => 0.0,
-            Self::Item { texels } => per_sprite(crate::world::glint::ITEM_SPRITE_SCALE, texels),
-            Self::Entity { texels } => per_sprite(crate::world::glint::ENTITY_SPRITE_SCALE, texels),
-            Self::Armor => crate::world::glint::ARMOR_SCALE,
+            Self::Item { texels } => per_sprite(melon_world::glint::ITEM_SPRITE_SCALE, texels),
+            Self::Entity { texels } => per_sprite(melon_world::glint::ENTITY_SPRITE_SCALE, texels),
+            Self::Armor => melon_world::glint::ARMOR_SCALE,
         }
     }
 
@@ -328,9 +328,9 @@ pub struct WorldDraw {
     /// The lightmap colour at the player's eye, multiplied onto entity draws.
     pub ambient: [f32; 3],
     /// Time of day and brightness option, applied at draw time.
-    pub lightmap: crate::world::lightmap::LightmapParams,
+    pub lightmap: melon_world::lightmap::LightmapParams,
     /// The fog every drawn thing but the sky bodies is mixed into.
-    pub fog: crate::world::fog::FogData,
+    pub fog: melon_world::fog::FogData,
     /// The dimension's shading of faces by direction (down, up, north, south, west, east).
     pub cardinal: [f32; 6],
     /// The warp the nether portal and nausea put on the view.
@@ -557,8 +557,8 @@ mod tests {
             hand_fov_y_degrees: 70.0,
             far: 256.0,
             ambient: [1.0; 3],
-            lightmap: crate::world::lightmap::LightmapParams::overworld([1.0; 3], 0.5),
-            fog: crate::world::fog::FogData::NONE,
+            lightmap: melon_world::lightmap::LightmapParams::overworld([1.0; 3], 0.5),
+            fog: melon_world::fog::FogData::NONE,
             cardinal: [1.0; 6],
             distortion: Mat4::IDENTITY,
             bob: Mat4::IDENTITY,

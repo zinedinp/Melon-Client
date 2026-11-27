@@ -3,10 +3,10 @@
 use super::InWorld;
 use super::scene::FrameView;
 use super::world_resources::WorldResources;
-use crate::renderer::{CloudDraw, EntityDraw, MeshId, Renderer, WeatherDraw, WorldVertex};
-use crate::settings::options::Config;
-use crate::world::clouds::{self, CloudFrame};
-use crate::world::weather::{self, WeatherQuery};
+use melon_render::{CloudDraw, EntityDraw, MeshId, Renderer, WeatherDraw, WorldVertex};
+use melon_settings::options::Config;
+use melon_world::clouds::{self, CloudFrame};
+use melon_world::weather::{self, WeatherQuery};
 use glam::Mat4;
 
 /// What the clouds and the weather keep between frames.
@@ -90,11 +90,11 @@ impl InWorld {
                 atlas: renderer.white_texture(),
                 model: Mat4::from_translation(cloud_anchor.1),
                 origin: cloud_anchor.0,
-                layer: crate::renderer::RenderLayer::Atmosphere,
-                blend: crate::renderer::Blending::Translucent,
+                layer: melon_render::RenderLayer::Atmosphere,
+                blend: melon_render::Blending::Translucent,
                 light: None,
                 overlay: 0.0,
-                glint: crate::renderer::Glint::None,
+                glint: melon_render::Glint::None,
             },
         });
 
@@ -199,7 +199,7 @@ fn replace_mesh(
             Some(mesh)
         }
         Err(e) => {
-            crate::warn!("Atmosphere mesh failed: {e:#}");
+            melon_base::warn!("Atmosphere mesh failed: {e:#}");
             None
         }
     }

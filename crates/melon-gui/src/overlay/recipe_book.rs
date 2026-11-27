@@ -4,17 +4,17 @@ use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::item_slot;
-use crate::math::angle::PI;
-use crate::math::argb;
+use melon_core::math::angle::PI;
+use melon_core::math::argb;
 use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::menu_layout::MenuLayout;
 use crate::overlay::{OverlayAction, OverlayDraw};
-use crate::renderer::{Renderer, TextureId};
+use melon_render::{Renderer, TextureId};
 use crate::screen::TextEvent;
 use crate::sprite::GuiSprite;
 use crate::text::StyledText;
 use crate::widgets::text_input::TextInput;
-use crate::world::recipes::{BookType, Category, RecipeBook, RecipeDisplay, RecipeId, Stock, Tab};
+use melon_world::recipes::{BookType, Category, RecipeBook, RecipeDisplay, RecipeId, Stock, Tab};
 use melon_assets::assets::Assets;
 
 const WIDTH: f32 = 147.0;
@@ -93,8 +93,8 @@ pub enum Mode {
 }
 
 impl Mode {
-    pub fn for_kind(kind: crate::world::inventory::ContainerKind) -> Option<Self> {
-        use crate::world::inventory::ContainerKind as K;
+    pub fn for_kind(kind: melon_world::inventory::ContainerKind) -> Option<Self> {
+        use melon_world::inventory::ContainerKind as K;
         Some(match kind {
             K::Crafting => Self::Crafting { grid: 3 },
             K::Furnace => Self::Furnace(BookType::Furnace),
@@ -331,7 +331,7 @@ pub struct RecipeBookPanel {
     last_placed: Option<RecipeId>,
     /// The cell whose alternatives are listed.
     popup: Option<usize>,
-    shown: Vec<crate::world::item_model::KeyedStack>,
+    shown: Vec<melon_world::item_model::KeyedStack>,
     /// When each button of the page began to squeeze: it showed a new
     /// recipe (`RecipeButton.init`).
     button_squeeze: [Option<std::time::Instant>; PER_PAGE],
@@ -467,7 +467,7 @@ impl RecipeBookPanel {
         book: &mut RecipeBook,
         stock: Stock,
         size: (f32, f32),
-        lang: &crate::i18n::Lang,
+        lang: &melon_assets::i18n::Lang,
     ) -> Vec<OverlayAction> {
         self.size = size;
         self.time += 1.0;
@@ -549,7 +549,7 @@ impl RecipeBookPanel {
         book: &RecipeBook,
         stock: &Stock,
         search: &str,
-        lang: &crate::i18n::Lang,
+        lang: &melon_assets::i18n::Lang,
     ) {
         let filtering = self.filtering(book);
         let mode = self.mode;
@@ -601,7 +601,7 @@ impl RecipeBookPanel {
             {
                 continue;
             }
-            let alternative = |e: &crate::world::recipes::book::Entry, craftable| Alternative {
+            let alternative = |e: &melon_world::recipes::book::Entry, craftable| Alternative {
                 id: e.id,
                 craftable,
                 grid: e
@@ -654,7 +654,7 @@ impl RecipeBookPanel {
         }
     }
 
-    pub fn shown_stacks(&self) -> &[crate::world::item_model::KeyedStack] {
+    pub fn shown_stacks(&self) -> &[melon_world::item_model::KeyedStack] {
         &self.shown
     }
 
@@ -1178,12 +1178,12 @@ impl RecipeBookPanel {
 
 /// What the inventory holds that can go into a recipe.
 pub fn stock_of(
-    inventory: &crate::world::inventory::Inventory,
-    menu: Option<&crate::world::inventory::OpenContainer>,
+    inventory: &melon_world::inventory::Inventory,
+    menu: Option<&melon_world::inventory::OpenContainer>,
     mode: Mode,
 ) -> Stock {
     let player = inventory.slots().get(9..45).unwrap_or(&[]);
-    let grid: &[crate::world::item_model::KeyedStack] = match (menu, mode) {
+    let grid: &[melon_world::item_model::KeyedStack] = match (menu, mode) {
         (Some(menu), Mode::Crafting { grid }) => menu.slots.get(1..1 + grid * grid).unwrap_or(&[]),
         (None, Mode::Crafting { .. }) => inventory.slots().get(1..5).unwrap_or(&[]),
         _ => &[],
@@ -1194,8 +1194,8 @@ pub fn stock_of(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::i18n::Lang;
-    use crate::world::recipes::{Entry, ItemSet, SlotDisplay};
+    use melon_assets::i18n::Lang;
+    use melon_world::recipes::{Entry, ItemSet, SlotDisplay};
 
     fn recipe(id: i32, result: &'static Item, needs: &'static Item) -> Entry {
         Entry {
@@ -1265,7 +1265,7 @@ mod tests {
         ));
         assert!(!book.will_highlight(RecipeId(0)));
         let mut layout = crate::overlay::container::menu_layout(
-            crate::world::inventory::ContainerKind::Crafting,
+            melon_world::inventory::ContainerKind::Crafting,
         );
         layout.place_at(panel.menu_left(427.0, 176.0), 240.0);
         let (x, y) = panel.cell_pos(0);

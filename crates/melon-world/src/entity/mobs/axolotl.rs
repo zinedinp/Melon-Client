@@ -1,13 +1,13 @@
 //! `AdultAxolotlModel` and `BabyAxolotlModel`.
 
-use crate::math::angle::{HALF_PI as FRAC_PI_2, PI, QUARTER_PI as FRAC_PI_4};
+use melon_core::math::angle::{HALF_PI as FRAC_PI_2, PI, QUARTER_PI as FRAC_PI_4};
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::entity::animations::baby_axolotl as baby_anim;
 use crate::entity::keyframe::AnimationDefinition;
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle;
+use melon_core::math::angle;
 use crate::model_part::{Cube, Pose};
 
 /// `Axolotl.Variant` names by id: lucy, wild, gold, cyan, blue.
@@ -124,8 +124,8 @@ pub fn baby() -> LayerDefinition {
             (-2.0, 0.25, 1.75),
             (
                 0.0,
-                crate::math::angle::HALF_PI,
-                crate::math::angle::HALF_PI,
+                melon_core::math::angle::HALF_PI,
+                melon_core::math::angle::HALF_PI,
             ),
         ),
     );
@@ -135,9 +135,9 @@ pub fn baby() -> LayerDefinition {
         Pose::offset_rotation(
             (0.0, 0.0, 0.0),
             (
-                -crate::math::angle::HALF_PI,
+                -melon_core::math::angle::HALF_PI,
                 0.0,
-                crate::math::angle::HALF_PI,
+                melon_core::math::angle::HALF_PI,
             ),
         ),
     );

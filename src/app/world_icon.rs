@@ -48,7 +48,7 @@ pub(super) fn save(path: &Path, frame: &image::RgbaImage) {
         image::imageops::crop_imm(frame, (width - side) / 2, (height - side) / 2, side, side);
     let icon = image::imageops::resize(&*view, SIZE, SIZE, image::imageops::FilterType::Triangle);
     if let Err(e) = icon.save_with_format(path, image::ImageFormat::Png) {
-        crate::warn!("World icon not saved ({}): {e}", path.display());
+        melon_base::warn!("World icon not saved ({}): {e}", path.display());
     }
 }
 

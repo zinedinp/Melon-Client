@@ -1,12 +1,12 @@
 //! The sounds of the world.
 
 use super::InWorld;
-use crate::audio::SoundInstance;
-use crate::audio::block_sounds::{BlockSound, SoundType};
-use crate::audio::level_sounds::LevelSound;
-use crate::audio::source::SoundSource;
-use crate::network::play::game::sound::{BREAK_BLOCK, Explosion, LevelEvent, ServerSound, SoundAt};
-use crate::world::{block_motion, physics};
+use melon_audio::SoundInstance;
+use melon_audio::block_sounds::{BlockSound, SoundType};
+use melon_audio::level_sounds::LevelSound;
+use melon_audio::source::SoundSource;
+use melon_net::play::game::sound::{BREAK_BLOCK, Explosion, LevelEvent, ServerSound, SoundAt};
+use melon_world::{block_motion, physics};
 use glam::DVec3;
 use pumpkin_data::tag::{self, Taggable};
 use pumpkin_data::{Block, BlockStateId};
@@ -218,7 +218,7 @@ fn block_name(state: u16) -> &'static str {
 
 impl InWorld {
     /// Sounds with a subtitle that just started, for the subtitle overlay.
-    pub fn hear(&mut self, heard: Vec<crate::audio::Heard>, lang: &crate::i18n::Lang) {
+    pub fn hear(&mut self, heard: Vec<melon_audio::Heard>, lang: &melon_assets::i18n::Lang) {
         let now = Instant::now();
         for heard in heard {
             self.hud.subtitles.hear(heard, lang, now);
@@ -231,7 +231,7 @@ impl InWorld {
     }
 
     /// Whether the level changed since the last call, so that every sound
-    /// playing stops ([`crate::audio::AudioEngine::stop_all`]) before
+    /// playing stops ([`melon_audio::AudioEngine::stop_all`]) before
     /// [`Self::take_sounds`]' are played.
     pub fn take_stop_all(&mut self) -> bool {
         std::mem::take(&mut self.audio.stop_all)
@@ -243,7 +243,7 @@ impl InWorld {
         self.audio.ears.unwrap_or_else(|| {
             let eye = self.player.tick_eye();
             let forward =
-                crate::world::player::forward_vector_for(self.player.yaw(), self.player.pitch());
+                melon_world::player::forward_vector_for(self.player.yaw(), self.player.pitch());
             Ears {
                 position: [eye.x, eye.y, eye.z],
                 forward: forward.to_array(),
@@ -272,7 +272,7 @@ impl InWorld {
             self.eating_particles(item, 5);
         }
         let Some((event, volume, pitch)) =
-            crate::world::player::hands::consume_sound(self.hand_stack(hand), rand::random::<f32>)
+            melon_world::player::hands::consume_sound(self.hand_stack(hand), rand::random::<f32>)
         else {
             return;
         };

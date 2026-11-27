@@ -12,7 +12,7 @@ use crate::chunk::Chunk;
 use crate::culling::occlusion::SectionPos;
 use crate::dimension::Height;
 use crate::fluid::FluidSprites;
-use crate::math::{ChunkMap, SECTION_SIZE, SectionMap, section_coord};
+use melon_core::math::{ChunkMap, SECTION_SIZE, SectionMap, section_coord};
 use crate::terrain::{self, SectionMesh};
 
 use super::mesher::{Job, Mesher};

@@ -9,7 +9,7 @@ use super::gui_uniforms::{BLOCKS, DynamicTransforms, Globals, IDENTITY, STRIDE};
 use super::pipeline::{Pass, PipelineDesc, depth_disabled};
 use super::vk_util::Place;
 use super::{Renderer, WorldVertex};
-use crate::assets::shaders::{self, Interface, Stage};
+use melon_assets::assets::shaders::{self, Interface, Stage};
 use melon_base::gfx::mapped::MappedBuffer;
 
 /// Glowing entities that write pack-outline markers this frame.
@@ -98,7 +98,7 @@ impl PackOutline {
     /// Projection, screen size and the day's fraction, once a frame.
     pub unsafe fn write_frame(&self, proj: Mat4, screen: (f32, f32)) {
         let game_time = super::gui_uniforms::game_time();
-        let globals = Globals::gui(crate::world::glint::millis(), game_time, screen);
+        let globals = Globals::gui(melon_world::glint::millis(), game_time, screen);
         let stride = STRIDE as usize;
         // SAFETY: the caller keeps the GPU off the shared blocks (every frame's fence was waited on).
         unsafe {
@@ -297,7 +297,7 @@ impl Renderer {
         // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {
             if let Err(e) = self.device.device_wait_idle() {
-                crate::warn!("Waiting for the GPU failed: {e}");
+                melon_base::warn!("Waiting for the GPU failed: {e}");
             }
             if let Some(pack) = self.pack_outline.take() {
                 pack.destroy(&self.device);

@@ -7,19 +7,19 @@ use super::InWorld;
 use super::entities::Placed;
 use super::entity_models::DrawStyle;
 use super::world_resources::WorldResources;
-use crate::math::angle::Rotation;
-use crate::renderer::{EntityDraw, Glint, RenderLayer, Renderer};
-use crate::world::block_entity::models::SkullType;
-use crate::world::block_entity::{self, Kind, VIEW_DISTANCE, kind_of};
-use crate::world::culling::Culler;
-use crate::world::entity::humanoid::ArmorSlot;
-use crate::world::entity::mobs;
-use crate::world::entity::mobs::custom_head::HeadTransforms;
-use crate::world::entity::model::{Model, ModelPose, PartId};
-use crate::world::head_profile::HeadProfile;
-use crate::world::item_model::HandPose;
-use crate::world::level::Level;
-use crate::world::lightmap::LightmapParams;
+use melon_core::math::angle::Rotation;
+use melon_render::{EntityDraw, Glint, RenderLayer, Renderer};
+use melon_world::block_entity::models::SkullType;
+use melon_world::block_entity::{self, Kind, VIEW_DISTANCE, kind_of};
+use melon_world::culling::Culler;
+use melon_world::entity::humanoid::ArmorSlot;
+use melon_world::entity::mobs;
+use melon_world::entity::mobs::custom_head::HeadTransforms;
+use melon_world::entity::model::{Model, ModelPose, PartId};
+use melon_world::head_profile::HeadProfile;
+use melon_world::item_model::HandPose;
+use melon_world::level::Level;
+use melon_world::lightmap::LightmapParams;
 
 /// `CustomHeadLayer`'s skull scale over the wearer's head.
 const WORN_SCALE: f32 = 1.1875;
@@ -191,11 +191,11 @@ pub(super) fn submit_worn_head(
                 * Mat4::from_scale(Vec3::new(0.625, -0.625, -0.625)),
             origin,
             layer,
-            blend: crate::renderer::Blending::of(translucent),
+            blend: melon_render::Blending::of(translucent),
             light: Some(light),
             overlay: 0.0,
             glint: Glint::entity(
-                crate::world::glint::has_foil(stack),
+                melon_world::glint::has_foil(stack),
                 assets.held.glint_texels(atlas),
             ),
         });
@@ -230,11 +230,11 @@ pub(super) fn prepare_worn_head(
 
 /// The faces `object` components in text show.
 pub fn sync_head_objects(
-    font: &crate::gui::text::font::Font,
+    font: &melon_gui::text::font::Font,
     players: &mut super::entity_models::PlayerModels,
 ) {
-    use crate::component::ObjectInfo;
-    use crate::gui::text::objects::ObjectQuads;
+    use melon_protocol::component::ObjectInfo;
+    use melon_gui::text::objects::ObjectQuads;
     for player in font.player_objects() {
         let profile = &player.profile;
         let head = (!profile.is_empty()).then(|| HeadProfile {

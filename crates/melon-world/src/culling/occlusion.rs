@@ -4,7 +4,7 @@ use glam::DVec3;
 
 use super::visgraph::VisibilitySet;
 use crate::block::direction::{Direction, Directions};
-use crate::math::{SECTION_SIZE, section_coord};
+use melon_core::math::{SECTION_SIZE, section_coord};
 
 /// A section position.
 pub type SectionPos = (i32, i32, i32);
@@ -740,7 +740,7 @@ impl OcclusionCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::xorshift::XorShift;
+    use melon_core::util::xorshift::XorShift;
 
     const HEIGHT: i32 = 8;
 

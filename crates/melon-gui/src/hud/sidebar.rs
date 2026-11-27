@@ -1,8 +1,8 @@
 //! Vanilla `Hud.displayScoreboardSidebar`.
 
 use crate::hud::item_slot::ItemPainter;
-use crate::math::argb;
-use crate::renderer::quad::DrawList;
+use melon_core::math::argb;
+use melon_render::quad::DrawList;
 use crate::text::{self, StyledText, colors};
 
 /// `Options.getBackgroundColor(0.3F)` and `(0.4F)`.

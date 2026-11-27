@@ -2,7 +2,7 @@
 
 use super::{CreativeOverlay, IMAGE_HEIGHT, IMAGE_WIDTH, Slot};
 use crate::overlay::container_input::ContainerView;
-use crate::world::inventory::{self, Inventory, can_item_quick_replace};
+use melon_world::inventory::{self, Inventory, can_item_quick_replace};
 use pumpkin_data::item_stack::ItemStack;
 
 impl CreativeOverlay {

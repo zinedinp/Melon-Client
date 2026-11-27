@@ -3,11 +3,11 @@
 use std::path::Path;
 
 use crate::assets::GuiAssets;
-use crate::audio::AudioEngine;
-use crate::i18n::Lang;
-use crate::i18n::languages::Language;
-use crate::renderer::TextureId;
-use crate::settings::options::Config;
+use melon_audio::AudioEngine;
+use melon_assets::i18n::Lang;
+use melon_assets::i18n::languages::Language;
+use melon_render::TextureId;
+use melon_settings::options::Config;
 use crate::widgets::Ui;
 
 /// A change to the options, applied and saved at once, as vanilla's options screens do.
@@ -23,7 +23,7 @@ pub enum ScreenAction {
     Replace(Box<dyn Screen>),
     SetLanguage(Language),
     /// Joined a world: leave the menus and start playing it.
-    EnterWorld(Box<crate::join::Joined>),
+    EnterWorld(Box<melon_net::join::Joined>),
     /// The pause menu's Disconnect / Save and Quit to Title.
     LeaveWorld,
     /// The death screen's Respawn.
@@ -251,13 +251,13 @@ pub trait Screen {
     /// frame (in a world; see [`crate::widgets::Ui::items`]).
     fn visit_stacks(
         &self,
-        _visit: &mut dyn FnMut(&dyn crate::world::item_model::StackKey) -> bool,
+        _visit: &mut dyn FnMut(&dyn melon_world::item_model::StackKey) -> bool,
     ) {
     }
     /// A physical key or mouse button while [`Self::capturing_bind`].
     fn on_bind(
         &mut self,
-        _bind: crate::settings::input::InputBind,
+        _bind: melon_settings::input::InputBind,
         _ctx: &ScreenContext,
     ) -> ScreenAction {
         ScreenAction::None

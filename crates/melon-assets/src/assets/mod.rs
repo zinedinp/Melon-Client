@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 pub fn game_dir(assets_root: &Path) -> &Path {
     let mut dir = assets_root;
     if let Some(name) = dir.file_name().and_then(|n| n.to_str())
-        && crate::home::version_folder(name).is_some()
+        && melon_base::home::version_folder(name).is_some()
     {
         dir = dir.parent().unwrap_or(dir);
     }
@@ -43,8 +43,8 @@ pub fn resource(
             &format!("{kind}/{path}.{extension}"),
         )
         .map(|(bytes, _)| bytes);
-    if found.is_none() && crate::probe::enabled() {
-        crate::probe::count(
+    if found.is_none() && melon_core::probe::enabled() {
+        melon_core::probe::count(
             "resource.missing",
             format!("{kind}/{identifier}.{extension}"),
         );
@@ -184,8 +184,8 @@ pub fn namespaces(assets_root: &Path) -> std::collections::BTreeSet<String> {
 
 /// The prepared vanilla tree the launcher keeps.
 pub fn launcher_root() -> Option<PathBuf> {
-    let home = crate::home::dir();
-    let settings = crate::instances::LauncherSettings::load(&home);
+    let home = melon_base::home::dir();
+    let settings = melon_core::instances::LauncherSettings::load(&home);
     let root = settings.melon_play_assets(&home);
     root.join("minecraft").is_dir().then_some(root)
 }
@@ -260,13 +260,13 @@ impl Assets {
         let candidates = [
             PathBuf::from("assets"),
             exe_assets,
-            crate::home::version_assets(&crate::home::default_assets_dir(), crate::home::VERSION),
-            crate::home::default_assets_dir(),
-            crate::home::version_assets(
-                &crate::home::assets_root(&crate::home::dir()),
-                crate::home::VERSION,
+            melon_base::home::version_assets(&melon_base::home::default_assets_dir(), melon_base::home::VERSION),
+            melon_base::home::default_assets_dir(),
+            melon_base::home::version_assets(
+                &melon_base::home::assets_root(&melon_base::home::dir()),
+                melon_base::home::VERSION,
             ),
-            crate::home::assets_root(&crate::home::dir()),
+            melon_base::home::assets_root(&melon_base::home::dir()),
         ];
         for candidate in candidates {
             if candidate.join("minecraft").is_dir() {
@@ -302,9 +302,9 @@ impl Assets {
         game_dir(&self.root)
     }
 
-    /// Plays in the instance `name` (see [`crate::instances`]).
+    /// Plays in the instance `name` (see [`melon_core::instances`]).
     pub fn with_instance(mut self, name: &str) -> anyhow::Result<Self> {
-        let dir = crate::instances::find(self.launcher_dir(), name)
+        let dir = melon_core::instances::find(self.launcher_dir(), name)
             .ok_or_else(|| anyhow::anyhow!("no instance named {name}"))?;
         std::fs::create_dir_all(&dir)?;
         self.instance_dir = Some(dir);

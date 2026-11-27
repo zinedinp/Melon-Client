@@ -6,7 +6,7 @@ use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::entity::magic_name::Magic;
 use crate::entity::model::{LayerDefinition, PartDefinition};
 use crate::entity::quadruped;
-use crate::math::angle::PI;
+use melon_core::math::angle::PI;
 use crate::model_part::{Cube, Pose};
 
 pub fn adult() -> LayerDefinition {

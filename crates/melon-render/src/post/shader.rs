@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use super::config::Pass;
-use crate::assets::shaders::{self, Interface, Stage};
+use melon_assets::assets::shaders::{self, Interface, Stage};
 
 /// Where the pipeline's three descriptor sets are.
 pub const SAMPLER_SET: u32 = 0;
@@ -83,8 +83,8 @@ mod tests {
     /// Every pass of the chain in `MELON_PACK_JSON` compiles.
     #[test]
     fn real_chains_shaders_compile() {
-        use crate::assets::packs::{self, Pack, ResourceStack};
-        let Some(root) = crate::assets::test_root() else {
+        use melon_assets::assets::packs::{self, Pack, ResourceStack};
+        let Some(root) = melon_assets::assets::test_root() else {
             eprintln!("no assets (MELON_ASSETS), test skipped");
             return;
         };
@@ -94,7 +94,7 @@ mod tests {
                 packs: vec![std::sync::Arc::new(pack)],
             });
         });
-        let chains = crate::assets::test_post_chains(Some(&root));
+        let chains = melon_assets::assets::test_post_chains(Some(&root));
         assert!(!chains.is_empty(), "no post_effect/*.json under the assets");
         for (name, json) in chains {
             let config = Config::parse(&json).unwrap_or_else(|e| panic!("{name}: {e:#}"));

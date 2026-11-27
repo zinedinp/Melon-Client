@@ -5,7 +5,7 @@ use super::models::{self, ChestHalf, SkullType};
 use super::textures::{
     BANNER_BASE, CONDUIT_SHELL, POT_BASE, POT_SIDE, banner_flag, banner_texture, chest_texture,
 };
-use crate::math::angle::PI;
+use melon_core::math::angle::PI;
 use crate::model_part::Part;
 use glam::Vec2;
 use image::RgbaImage;

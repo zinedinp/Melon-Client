@@ -1,6 +1,6 @@
 //! Vanilla `ConfirmLinkScreen` for an untrusted link from the chat.
 
-use crate::math::argb;
+use melon_core::math::argb;
 use crate::screen::ScreenAction;
 use crate::widgets::dialog::DialogScreen;
 

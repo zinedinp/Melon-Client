@@ -18,13 +18,13 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::container_input::MouseButtonKind;
 use super::{OverlayAction, OverlayContext, OverlayDraw};
-use crate::math::argb;
-use crate::renderer::{Renderer, TextureId};
+use melon_core::math::argb;
+use melon_render::{Renderer, TextureId};
 use crate::screen::TextEvent;
-use crate::settings::input::InputBind;
+use melon_settings::input::InputBind;
 use crate::sprite::GuiSprite;
 use crate::text::font::Font;
-use crate::world::inventory::{ContainerKind, OpenContainer};
+use melon_world::inventory::{ContainerKind, OpenContainer};
 use melon_assets::assets::Assets;
 
 /// Where the panel is on screen and where the mouse is, for drawing and clicks.

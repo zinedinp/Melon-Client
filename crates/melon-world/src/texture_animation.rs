@@ -140,8 +140,8 @@ pub struct SpriteAnimation {
 
 /// The frames of a texture, if it is animated.
 pub fn load_frames(assets_root: &Path, texture_id: &str) -> Option<Frames> {
-    let (png, meta) = crate::assets::texture_with_meta(assets_root, texture_id)?;
-    frames_of(&crate::assets::decode_png(&png)?, meta?.get("animation")?)
+    let (png, meta) = melon_assets::assets::texture_with_meta(assets_root, texture_id)?;
+    frames_of(&melon_assets::assets::decode_png(&png)?, meta?.get("animation")?)
 }
 
 /// `strip` cut into the frames its `animation` section describes, if there are any.
@@ -250,7 +250,7 @@ impl SpriteAnimation {
             .zip(next)
             .map(|(a, b)| {
                 let mut out = a.clone();
-                crate::math::slices::lerp_u8(a.as_raw(), b.as_raw(), progress, 1000, &mut out);
+                melon_core::math::slices::lerp_u8(a.as_raw(), b.as_raw(), progress, 1000, &mut out);
                 out
             })
             .collect()
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn reads_waters_strip() {
-        let root = crate::assets::default_root();
+        let root = melon_assets::assets::default_root();
         if !root
             .join("minecraft/textures/block/water_still.png")
             .exists()

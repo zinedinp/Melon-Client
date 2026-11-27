@@ -75,7 +75,7 @@ impl ColorMaps {
     pub fn load(assets_root: &Path) -> Self {
         let load = |name: &str, default| {
             ColorMap::load(
-                crate::assets::texture_image(assets_root, &format!("colormap/{name}")),
+                melon_assets::assets::texture_image(assets_root, &format!("colormap/{name}")),
                 default,
             )
         };
@@ -97,7 +97,7 @@ impl ColorMaps {
 
     fn shared() -> &'static Arc<Self> {
         static MAPS: OnceLock<Arc<ColorMaps>> = OnceLock::new();
-        MAPS.get_or_init(|| Arc::new(Self::load(&crate::assets::default_root())))
+        MAPS.get_or_init(|| Arc::new(Self::load(&melon_assets::assets::default_root())))
     }
 }
 

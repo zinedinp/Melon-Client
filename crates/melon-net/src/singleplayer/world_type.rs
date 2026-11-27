@@ -1,6 +1,6 @@
 //! `WorldCreationUiState.WorldTypeEntry`.
 
-use crate::cycle::Cycle;
+use melon_core::cycle::Cycle;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum WorldType {

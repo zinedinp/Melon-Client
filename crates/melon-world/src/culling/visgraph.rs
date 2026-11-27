@@ -170,7 +170,7 @@ fn faces_of_row(filled: u16, y: usize, z: usize) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::xorshift::XorShift;
+    use melon_core::util::xorshift::XorShift;
 
     /// Index steps in `Section.blocks` order (`y*256 + z*16 + x`), by direction.
     const INDEX_STEP: [isize; 6] = [-256, 256, -16, 16, -1, 1];

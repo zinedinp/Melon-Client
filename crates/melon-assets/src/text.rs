@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use crate::component::{ClickEvent, Component, Contents, HoverEvent, ObjectInfo, Style};
+use melon_protocol::component::{ClickEvent, Component, Contents, HoverEvent, ObjectInfo, Style};
 use crate::i18n::Lang;
 
 /// The font a run without one of its own is drawn in.
@@ -327,13 +327,13 @@ impl StyledText {
             Contents::Keybind(keybind) => self.push_formatted(&keybind_name(keybind, lang), &style),
             Contents::Selector { selector, .. } => self.push_formatted(selector, &style),
             Contents::Score { .. } | Contents::Nbt { .. } => {
-                if crate::probe::enabled() {
+                if melon_core::probe::enabled() {
                     let kind = if matches!(&*base.contents, Contents::Score { .. }) {
                         "score"
                     } else {
                         "nbt"
                     };
-                    crate::probe::count(
+                    melon_core::probe::count(
                         "text.unsupported",
                         format!("{kind} component (the server resolves it)"),
                     );
@@ -361,8 +361,8 @@ impl StyledText {
         lang: &Lang,
     ) {
         let pattern = lang.raw_dynamic(key).or(fallback).unwrap_or(key);
-        if crate::probe::enabled() && lang.raw_dynamic(key).is_none() {
-            crate::probe::note("lang.missing", key, || {
+        if melon_core::probe::enabled() && lang.raw_dynamic(key).is_none() {
+            melon_core::probe::note("lang.missing", key, || {
                 format!("fallback: {}", fallback.unwrap_or("(none)"))
             });
         }
@@ -482,7 +482,7 @@ mod tests {
 
     #[test]
     fn an_object_is_one_placeholder_with_its_sprite() {
-        let component = crate::component::decode::component(&serde_json::json!(
+        let component = melon_protocol::component::decode::component(&serde_json::json!(
             ["a", {"object": "atlas", "sprite": "block/stone", "bold": true}]
         ));
         let text = StyledText::from_component(&component, &Lang::empty());

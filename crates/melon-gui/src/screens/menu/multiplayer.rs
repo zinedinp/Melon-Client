@@ -8,19 +8,19 @@ use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::Instant;
 
-use crate::component::Component;
+use melon_protocol::component::Component;
 use image::RgbaImage;
 
-use crate::join::Target;
-use crate::network::lan::{LanDetector, LanServer};
-use crate::network::status::{self, CannotResolve, ServerStatus};
-use crate::renderer::TextureId;
+use melon_net::join::Target;
+use melon_net::lan::{LanDetector, LanServer};
+use melon_net::status::{self, CannotResolve, ServerStatus};
+use melon_render::TextureId;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::menu::confirm_delete::confirm_delete_server;
 use crate::screens::menu::connecting::ConnectingScreen;
 use crate::screens::menu::direct_connect::DirectConnectScreen;
 use crate::screens::menu::edit_server::EditServerScreen;
-use crate::settings::server_list::{self, ServerEntry};
+use melon_settings::server_list::{self, ServerEntry};
 use crate::text::colors;
 use crate::text::font::{Font, LINE_HEIGHT, sprite_index};
 use crate::text::{StyledText, TextStyle};
@@ -321,10 +321,10 @@ impl Screen for MultiplayerScreen {
                     }
                     Ping::Done(Box::new(Answer {
                         motd: (!status.description.is_null())
-                            .then(|| crate::component::decode::component(&status.description)),
+                            .then(|| melon_protocol::component::decode::component(&status.description)),
                         motd_lines: OnceCell::new(),
                         players: player_count(status.online, status.max),
-                        compatible: status.protocol == crate::network::PROTOCOL_VERSION,
+                        compatible: status.protocol == melon_net::PROTOCOL_VERSION,
                         status,
                     }))
                 }

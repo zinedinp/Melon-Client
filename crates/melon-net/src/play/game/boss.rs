@@ -1,10 +1,10 @@
 //! `ClientboundBossEventPacket`: the boss bars at the top of the screen.
 
-use crate::component::Component;
+use melon_protocol::component::Component;
 use anyhow::{Result, bail};
 use uuid::Uuid;
 
-use crate::protocol::packet::Reader;
+use melon_protocol::packet::Reader;
 
 /// `BossEvent.BossBarColor`, in ordinal order.
 pub const COLORS: usize = 7;

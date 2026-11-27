@@ -2,11 +2,11 @@
 
 use super::position_report::Report;
 use super::{InWorld, controls, keys, minecraft_yaw};
-use crate::gui::hud::item_slot::{self};
-use crate::gui::overlay::inventory::InventoryOverlay;
-use crate::gui::overlay::{ChatExit, OverlayKind};
-use crate::network::play::game::PlayerCommand;
-use crate::world::player::{self};
+use melon_gui::hud::item_slot::{self};
+use melon_gui::overlay::inventory::InventoryOverlay;
+use melon_gui::overlay::{ChatExit, OverlayKind};
+use melon_net::play::game::PlayerCommand;
+use melon_world::player::{self};
 
 impl InWorld {
     /// Runs the ticks that fit into `dt` seconds (`Minecraft.tick` via its
@@ -75,7 +75,7 @@ impl InWorld {
                             let tp = format!("tp {:.1} {:.1} {:.1}", at.x, at.y, at.z);
                             self.joined.session.send_command(&tp);
                         }
-                        None => crate::warn!("Bench: no trees nearby, the forest phase stays put"),
+                        None => melon_base::warn!("Bench: no trees nearby, the forest phase stays put"),
                     }
                 }
             }
@@ -135,7 +135,7 @@ impl InWorld {
         self.player
             .set_speed_effects(self.status_effects.speed_factor());
         {
-            use crate::world::player::status_effects::{
+            use melon_world::player::status_effects::{
                 DOLPHINS_GRACE_ID, JUMP_BOOST_ID, SLOW_FALLING_ID,
             };
             let effects = &self.status_effects;
@@ -188,12 +188,12 @@ impl InWorld {
             self.abort_destroy();
             self.release_using_item();
         }
-        let off = &self.inventory.slots()[crate::world::inventory::OFFHAND_SLOT];
+        let off = &self.inventory.slots()[melon_world::inventory::OFFHAND_SLOT];
         self.hands.tick(self.inventory.selected_stack(), off);
         if self
             .hands
             .using
-            .is_some_and(|using| using.overrun >= crate::world::player::hands::OVERRUN_TICKS)
+            .is_some_and(|using| using.overrun >= melon_world::player::hands::OVERRUN_TICKS)
         {
             self.release_using_item();
         }
@@ -239,7 +239,7 @@ impl InWorld {
             self.play_own_voice("entity.player.death");
         }
         self.body.death = if self.status.health <= 0.0 {
-            (self.body.death + 1).min(crate::world::entity::tracker::DEATH_DURATION)
+            (self.body.death + 1).min(melon_world::entity::tracker::DEATH_DURATION)
         } else {
             0
         };
@@ -287,7 +287,7 @@ impl InWorld {
                         uuid.to_string()
                     };
                     let theirs = team_of(&name);
-                    crate::world::scoreboard::team_allows_push(
+                    melon_world::scoreboard::team_allows_push(
                         own_team.as_ref().map(|(n, r)| (n.as_str(), *r)),
                         theirs.as_ref().map(|(n, r)| (n.as_str(), *r)),
                     )
@@ -368,7 +368,7 @@ impl InWorld {
     }
 
     pub(super) fn send_position(&mut self) {
-        if crate::probe::enabled()
+        if melon_core::probe::enabled()
             && self.clocks.game_time()
                 <= HOLD_TRACE_UNTIL.load(std::sync::atomic::Ordering::Relaxed)
         {
@@ -384,16 +384,16 @@ impl InWorld {
                 self.player.riding(),
             );
             let ticks = self.ticks;
-            crate::probe::note("hold.trace", format!("{now}/{ticks}"), || {
+            melon_core::probe::note("hold.trace", format!("{now}/{ticks}"), || {
                 format!(
                     "feet=({:.4},{:.4},{:.4}) velocity=({:.4},{:.4},{:.4}) on_ground={g} wall={w} chunk_loaded={loaded} loading={loading} vehicle={vehicle} riding={riding}",
                     feet.x, feet.y, feet.z, v.x, v.y, v.z
                 )
             });
         }
-        if crate::probe::enabled() {
+        if melon_core::probe::enabled() {
             let (f, v) = (self.player.feet(), self.player.velocity());
-            crate::probe::trace_move(format!(
+            melon_core::probe::trace_move(format!(
                 "{} feet=({:.3},{:.3},{:.3}) v=({:.3},{:.3},{:.3}) ground={} sprint={} sneak={}",
                 self.ticks,
                 f.x,

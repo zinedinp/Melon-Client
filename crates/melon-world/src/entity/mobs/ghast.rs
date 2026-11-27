@@ -4,7 +4,7 @@ use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::java_random::JavaRandom;
-use crate::math::angle;
+use melon_core::math::angle;
 use crate::model_part::{Cube, Pose};
 
 /// `MeshTransformer.scaling(4.5)`.
@@ -201,7 +201,7 @@ pub fn harness_setup_anim(parts: &HarnessParts, pose: &mut ModelPose, happy: Hap
         goggles.rotation.x = 0.0;
         goggles.offset.y = 14.0;
     } else {
-        goggles.rotation.x = -crate::math::angle::QUARTER_PI;
+        goggles.rotation.x = -melon_core::math::angle::QUARTER_PI;
         goggles.offset.y = 9.0;
     }
 }

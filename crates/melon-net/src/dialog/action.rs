@@ -6,7 +6,7 @@ use pumpkin_nbt::compound::NbtCompound;
 use pumpkin_nbt::tag::NbtTag;
 use serde_json::Value;
 
-use crate::component::ClickEvent;
+use melon_protocol::component::ClickEvent;
 
 /// `Action.ValueGetter`: an input's value, as a command template takes it
 /// and as a payload carries it.
@@ -250,7 +250,7 @@ pub fn write_payload(out: &mut Vec<u8>, payload: Option<&NbtTag>) -> Option<()> 
     if tag.len() > 65536 {
         return None;
     }
-    crate::protocol::varint::write_var_int(out, tag.len() as i32).ok()?;
+    melon_protocol::varint::write_var_int(out, tag.len() as i32).ok()?;
     out.extend_from_slice(&tag);
     Some(())
 }

@@ -5,7 +5,7 @@
 use miraculix::x86::ops::avx::avx::Avx;
 
 use crate::culling::section_cull::{LANES, SectionCull};
-use crate::math::simd::{self, Tier};
+use melon_core::math::simd::{self, Tier};
 
 #[derive(Clone, Copy)]
 pub struct CullAvx(Avx);

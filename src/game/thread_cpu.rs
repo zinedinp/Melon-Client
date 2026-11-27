@@ -19,7 +19,7 @@ impl ThreadTimes {
     #[cfg(windows)]
     pub fn sample() -> Self {
         let mut groups = BTreeMap::new();
-        for (name, nanos) in crate::platform::thread_cpu_times() {
+        for (name, nanos) in melon_base::platform::thread_cpu_times() {
             *groups.entry(group_of(&name).to_owned()).or_default() += nanos;
         }
         Self(groups)

@@ -192,7 +192,7 @@ impl IntegratedServer {
         });
         server.host.set_published(true);
         server.enforce_game_mode();
-        crate::info!("Published LAN server on port {}", publish.port);
+        melon_base::info!("Published LAN server on port {}", publish.port);
         self.published = Some(Published { publish, stop });
         Ok(())
     }
@@ -203,7 +203,7 @@ impl IntegratedServer {
         let Some(published) = self.published.take() else {
             return false;
         };
-        crate::info!(
+        melon_base::info!(
             "Unpublishing integrated server (was on port {})",
             published.publish.port
         );
@@ -314,10 +314,10 @@ fn give_host_its_skin(server: std::sync::Weak<Server>, uuid: uuid::Uuid) {
     let spawned = thread::Builder::new()
         .name("host-skin".to_owned())
         .spawn(move || {
-            let properties = match crate::auth::skin::fetch_signed_properties(&uuid.to_string()) {
+            let properties = match melon_base::auth::skin::fetch_signed_properties(&uuid.to_string()) {
                 Ok(properties) => properties,
                 Err(error) => {
-                    crate::warn!("The host's skin not fetched: {error:#}");
+                    melon_base::warn!("The host's skin not fetched: {error:#}");
                     return;
                 }
             };
@@ -343,7 +343,7 @@ fn give_host_its_skin(server: std::sync::Weak<Server>, uuid: uuid::Uuid) {
             }
         });
     if let Err(error) = spawned {
-        crate::warn!("No thread for the host's skin: {error}");
+        melon_base::warn!("No thread for the host's skin: {error}");
     }
 }
 
@@ -362,7 +362,7 @@ async fn accept_java(
             accepted = listener.accept() => match accepted {
                 Ok((stream, address)) => {
                     if let Err(error) = stream.set_nodelay(true) {
-                        crate::warn!("LAN connection without TCP_NODELAY: {error}");
+                        melon_base::warn!("LAN connection without TCP_NODELAY: {error}");
                     }
                     let limiter = PacketRateLimiter::from_config(
                         &server.advanced_config.networking.java.packet_limiter,
@@ -378,7 +378,7 @@ async fn accept_java(
                     tasks.spawn(serve_java_connection(Arc::clone(&server), pending));
                 }
                 Err(error) => {
-                    crate::warn!("LAN connection not accepted: {error}");
+                    melon_base::warn!("LAN connection not accepted: {error}");
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                 }
             },
@@ -392,7 +392,7 @@ impl Drop for IntegratedServer {
         if let Some(thread) = self.thread.take()
             && thread.join().is_err()
         {
-            crate::warn!("The integrated server crashed");
+            melon_base::warn!("The integrated server crashed");
         }
     }
 }
@@ -427,14 +427,14 @@ impl Write for ClientPipe {
 
 /// Opens the world and returns once the server is up and waiting for the client.
 pub fn start(options: Options) -> Result<(IntegratedServer, ClientPipe)> {
-    crate::instances::ensure_dirs(&options.game_dir);
-    pumpkin::data::set_data_dir(crate::home::dir().join("cache").join("server"));
+    melon_core::instances::ensure_dirs(&options.game_dir);
+    pumpkin::data::set_data_dir(melon_base::home::dir().join("cache").join("server"));
     rank_server_threads();
     if let Err(error) = prepare_new_world(&options) {
-        crate::warn!("World data packs not prepared: {error}");
+        melon_base::warn!("World data packs not prepared: {error}");
     }
     if let Err(error) = migrate_offline_host(&options.save_path, &options.host) {
-        crate::warn!("The host's player data not moved to its account: {error}");
+        melon_base::warn!("The host's player data not moved to its account: {error}");
     }
     let host_online = options.host.online;
     let (client_rx, server_tx) = tokio::io::simplex(TO_CLIENT_BYTES);
@@ -514,11 +514,11 @@ type Started = Result<(Handle, std::sync::Weak<Server>, TaskTracker), String>;
 fn rank_server_threads() {
     threads::set_start_hook(|role| match role {
         ThreadRole::Tick => {}
-        ThreadRole::Background => crate::platform::lower_thread_priority(),
+        ThreadRole::Background => melon_base::platform::lower_thread_priority(),
     });
     let _ = rayon::ThreadPoolBuilder::new()
         .thread_name(|i| format!("Rayon-Worker-{i}"))
-        .start_handler(|_| crate::platform::lower_thread_priority())
+        .start_handler(|_| melon_base::platform::lower_thread_priority())
         .build_global();
 }
 
@@ -549,7 +549,7 @@ fn migrate_offline_host(save_path: &std::path::Path, host: &Host) -> io::Result<
             let target = folder.path().join(format!("{to}{rest}"));
             if !target.exists() {
                 std::fs::rename(file.path(), &target)?;
-                crate::info!("Moved {} to the account's UUID", file.path().display());
+                melon_base::info!("Moved {} to the account's UUID", file.path().display());
             }
         }
     }

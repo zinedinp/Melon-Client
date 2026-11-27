@@ -1,34 +1,34 @@
 //! Keys in a world: movement, hotbar, F3 combos, the game mode switcher.
 
 use super::WorldContext;
-use crate::cycle::Cycle;
+use melon_core::cycle::Cycle;
 use crate::game::minecraft_yaw;
 use crate::game::{GAMEMASTER_LEVEL, InWorld};
-use crate::gui::hud::item_slot;
-use crate::gui::overlay::OverlayAction;
-use crate::gui::screen::{ScreenAction, TextEvent};
-use crate::gui::text::StyledText;
-use crate::math::wrap_degrees;
-use crate::settings::input::{Action, InputBind};
-use crate::world::game_mode::GameMode;
-use crate::world::inventory::HOTBAR_SLOTS;
+use melon_gui::hud::item_slot;
+use melon_gui::overlay::OverlayAction;
+use melon_gui::screen::{ScreenAction, TextEvent};
+use melon_gui::text::StyledText;
+use melon_core::math::wrap_degrees;
+use melon_settings::input::{Action, InputBind};
+use melon_world::game_mode::GameMode;
+use melon_world::inventory::HOTBAR_SLOTS;
 use pumpkin_data::item_stack::ItemStack;
 use winit::keyboard::{Key, NamedKey};
 
-use crate::gui::hud::debug_entries::Entry;
+use melon_gui::hud::debug_entries::Entry;
 
 /// `VersionCommand.dumpVersion` for what Melon knows of its version: the
 /// build time and the pack formats are not among it.
-fn version_lines(lang: &crate::i18n::Lang) -> Vec<String> {
+fn version_lines(lang: &melon_assets::i18n::Lang) -> Vec<String> {
     let version = env!("CARGO_PKG_VERSION");
     let minecraft = version.split_once("+mc").map_or("?", |(_, mc)| mc);
-    let protocol = crate::network::PROTOCOL_VERSION;
+    let protocol = melon_net::PROTOCOL_VERSION;
     vec![
         lang.format("commands.version.id", &[minecraft]),
         lang.format("commands.version.name", &[minecraft]),
         lang.format(
             "commands.version.data",
-            &[&crate::world::hotbars::DATA_VERSION.to_string()],
+            &[&melon_world::hotbars::DATA_VERSION.to_string()],
         ),
         lang.format("commands.version.series", &["main"]),
         lang.format(
@@ -112,7 +112,7 @@ impl InWorld {
         }
         if quick_actions {
             // `Minecraft.handleKeybinds`: `keyQuickActions` shows the dialog.
-            return ScreenAction::Dialog(crate::gui::screens::dialog::DialogRequest::QuickActions);
+            return ScreenAction::Dialog(melon_gui::screens::dialog::DialogRequest::QuickActions);
         }
         ScreenAction::None
     }
@@ -162,7 +162,7 @@ impl InWorld {
             // `keyDebugDebugOptions`: the screen choosing the entries.
             Key::Named(NamedKey::F6) => {
                 action = ScreenAction::open(
-                    crate::gui::screens::options::debug::debug_options_screen(self.debug.shared()),
+                    melon_gui::screens::options::debug::debug_options_screen(self.debug.shared()),
                 );
             }
             Key::Character(c) => match c.to_ascii_lowercase().as_str() {

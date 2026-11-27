@@ -47,7 +47,7 @@ impl BlockState {
 
 pub(super) fn parse_block_state(assets_root: &Path, block: &str) -> Option<BlockState> {
     let name = block.trim_start_matches("minecraft:");
-    let json = crate::assets::json_resource(assets_root, "blockstates", name)?;
+    let json = melon_assets::assets::json_resource(assets_root, "blockstates", name)?;
     if let Some(variants) = json["variants"].as_object() {
         let entries = variants
             .iter()

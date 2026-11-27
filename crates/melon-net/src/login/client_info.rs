@@ -1,7 +1,7 @@
 //! `ClientInformation`: the settings the server is told about.
 
-use crate::protocol::{packet, varint};
-use crate::world::entity::player::{Arm, ShownParts};
+use melon_protocol::{packet, varint};
+use melon_world::entity::player::{Arm, ShownParts};
 use anyhow::Result;
 use std::io::Write;
 
@@ -39,7 +39,7 @@ impl Default for ClientInfo {
 
 impl ClientInfo {
     /// What the server is told about these options.
-    pub fn from_config(config: &crate::settings::options::Config) -> Self {
+    pub fn from_config(config: &melon_settings::options::Config) -> Self {
         Self {
             language: config.lang.code().to_owned(),
             view_distance: config.render_distance,

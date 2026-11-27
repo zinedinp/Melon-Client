@@ -1,8 +1,8 @@
 //! Drawing and measuring [`StyledText`]: the way `Font.PreparedTextBuilder`
 
 use super::{StyledText, TextStyle};
-use crate::renderer::TextureId;
-use crate::renderer::quad::DrawList;
+use melon_render::TextureId;
+use melon_render::quad::DrawList;
 use crate::text::font::{self, BASELINE_ASCENT, Font, GlyphKind, shadow_color};
 
 /// How styled text is drawn: where, how opaque, with or without shadow.
@@ -51,7 +51,7 @@ pub fn width(font: &Font, text: &StyledText) -> f32 {
 
 /// Draws `text` with its top-left at `(x, y)`; returns its width.
 pub fn draw(draw_list: &mut DrawList, paint: &TextPaint, text: &StyledText, x: f32, y: f32) -> f32 {
-    let program = draw_list.set_program(crate::renderer::quad::Program::Text);
+    let program = draw_list.set_program(melon_render::quad::Program::Text);
     let width = draw_glyphs(draw_list, paint, text, x, y);
     draw_list.set_program(program);
     width

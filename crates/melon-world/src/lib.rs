@@ -59,11 +59,3 @@ pub mod transparency;
 pub mod weather;
 #[cfg(target_arch = "x86_64")]
 pub mod x86;
-
-// The lower crates' modules, under the paths the moved code names them by.
-#[cfg(test)]
-use melon_assets::i18n;
-use melon_assets::{assets, text};
-use melon_base::{platform, warn};
-use melon_core::{cycle, math, probe, util};
-use melon_protocol::component;

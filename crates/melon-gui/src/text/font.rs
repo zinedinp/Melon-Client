@@ -5,8 +5,8 @@ use image::RgbaImage;
 use std::collections::HashMap;
 
 use super::{StyledText, TextPaint};
-use crate::renderer::TextureId;
-use crate::renderer::quad::{DrawList, Program, Transform2D};
+use melon_render::TextureId;
+use melon_render::quad::{DrawList, Program, Transform2D};
 use melon_assets::assets::Assets;
 
 mod load;
@@ -190,7 +190,7 @@ impl Font {
                 &mut unihex,
             )
         {
-            crate::warn!("unifont_pua: {e:#}");
+            melon_base::warn!("unifont_pua: {e:#}");
         }
         let mut faces = HashMap::new();
         if root_id == DEFAULT_FONT {
@@ -208,7 +208,7 @@ impl Font {
                     &mut face.glyphs,
                     &mut own_unihex,
                 ) {
-                    crate::warn!("{id}: {e:#}");
+                    melon_base::warn!("{id}: {e:#}");
                     continue;
                 }
                 face.unihex = !own_unihex.is_empty();
@@ -258,15 +258,15 @@ impl Font {
         let font = font.filter(|&id| id != DEFAULT_FONT && id != "default");
         let Some(face) = font.and_then(|id| self.face(id)) else {
             if let Some(id) = font
-                && crate::probe::enabled()
+                && melon_core::probe::enabled()
                 && id != DEFAULT_FONT
                 && id != "default"
             {
-                crate::probe::count("font.missing", id);
+                melon_core::probe::count("font.missing", id);
             }
             let glyph = self.glyph(c);
-            if glyph.is_none() && crate::probe::enabled() && !c.is_control() && c != ' ' {
-                crate::probe::count(
+            if glyph.is_none() && melon_core::probe::enabled() && !c.is_control() && c != ' ' {
+                melon_core::probe::count(
                     "font.glyph_missing",
                     format!("U+{:04X} in default", c as u32),
                 );
@@ -279,8 +279,8 @@ impl Font {
         if face.unihex {
             return self.unihex_glyph(c);
         }
-        if crate::probe::enabled() && !c.is_control() && c != ' ' {
-            crate::probe::count(
+        if melon_core::probe::enabled() && !c.is_control() && c != ' ' {
+            melon_core::probe::count(
                 "font.glyph_missing",
                 format!("U+{:04X} in {}", c as u32, font.unwrap_or("")),
             );

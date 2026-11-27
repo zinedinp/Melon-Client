@@ -12,13 +12,13 @@ use pumpkin_data::item_stack::ItemStack;
 
 use image::RgbaImage;
 
-use crate::renderer::{MeshId, Renderer, TextureId};
-use crate::world::block_models::BlockModels;
-use crate::world::head_profile::HeadProfile;
-use crate::world::item_model::{
+use melon_render::{MeshId, Renderer, TextureId};
+use melon_world::block_models::BlockModels;
+use melon_world::head_profile::HeadProfile;
+use melon_world::item_model::{
     self, Count, HandPose, HeldAnimation, HeldItem, HeldUse, ItemKey, ItemModel, Sheet, StackKey,
 };
-use crate::world::transparency::AlphaMap;
+use melon_world::transparency::AlphaMap;
 
 /// The atlases held items sample, made with the resources.
 pub struct Sheets {
@@ -37,11 +37,11 @@ impl Sheets {
     /// Where texture `id` is: the item atlas first (vanilla's item models
     /// use it), then the block atlas.
     fn find(&self, id: &str) -> Option<(Sheet, [f32; 4], AlphaMap)> {
-        let canonical = crate::world::item_atlas::canonical(id);
+        let canonical = melon_world::item_atlas::canonical(id);
         if let Some((rect, alpha)) = self.item_sprites.get(&canonical) {
             return Some((Sheet::Items, *rect, alpha.clone()));
         }
-        let (namespace, path) = crate::assets::split_id(id);
+        let (namespace, path) = melon_assets::assets::split_id(id);
         let block = self.models.sprite_info(id).or_else(|| {
             let other = if id.contains(':') {
                 (namespace == "minecraft").then(|| path.to_owned())
@@ -123,7 +123,7 @@ impl HeldItems {
         )
         .and_then(|held| {
             upload(renderer, &self.sheets, held)
-                .map_err(|e| crate::warn!("Held item {name} not uploaded: {e:#}"))
+                .map_err(|e| melon_base::warn!("Held item {name} not uploaded: {e:#}"))
                 .ok()
         });
         self.items.insert(key, held);
@@ -152,7 +152,7 @@ impl HeldItems {
                 })
                 .and_then(|held| {
                     upload(renderer, &self.sheets, held)
-                        .map_err(|e| crate::warn!("Held head not uploaded: {e:#}"))
+                        .map_err(|e| melon_base::warn!("Held head not uploaded: {e:#}"))
                         .ok()
                 });
         if let Some((_, Some(old))) = self.heads.insert(key, (own_skin, held)) {
@@ -169,7 +169,7 @@ impl HeldItems {
             .and_then(|item| item.held(&self.assets_root, &|id| self.sheets.find(id)))
             .and_then(|held| {
                 upload(renderer, &self.sheets, held)
-                    .map_err(|e| crate::warn!("Block {model} not uploaded: {e:#}"))
+                    .map_err(|e| melon_base::warn!("Block {model} not uploaded: {e:#}"))
                     .ok()
             });
         self.blocks.insert(model, held);
@@ -218,7 +218,7 @@ impl HeldItems {
 
     /// The meshes and textures for `stack` held in `pose`, in use or not,
     /// one per part (opaque ones first), each blended or not.
-    /// Texels per UV unit of `texture`, for [`crate::renderer::Glint`]: an
+    /// Texels per UV unit of `texture`, for [`melon_render::Glint`]: an
     /// atlas's side, or 16 for an item's own texture (UVs over the sprite).
     pub fn glint_texels(&self, texture: TextureId) -> u32 {
         if texture == self.sheets.items {

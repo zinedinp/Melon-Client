@@ -15,7 +15,7 @@ use numerobis::elem::{Pod, as_bytes};
 use super::create_buffer;
 use super::staging::Staging;
 use super::vk_util::{self, create_buffer_placed};
-use crate::world::mesh::QUAD_INDICES;
+use melon_world::mesh::QUAD_INDICES;
 
 /// Bytes per arena block.
 const BLOCK_BYTES: u64 = 64 << 20;

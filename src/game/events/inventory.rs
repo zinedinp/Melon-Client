@@ -5,15 +5,15 @@
 
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::component::Component;
+use melon_protocol::component::Component;
 use crate::game::InWorld;
-use crate::gui::overlay::OverlayKind;
-use crate::gui::text::StyledText;
-use crate::i18n::Lang;
-use crate::network::play::game::recipes::{FLAG_HIGHLIGHT, RecipeEvent};
-use crate::world::entity::kind::EntityKind;
-use crate::world::inventory::merchant::Offers;
-use crate::world::inventory::{ContainerKind, MountLook, OpenContainer, empty};
+use melon_gui::overlay::OverlayKind;
+use melon_gui::text::StyledText;
+use melon_assets::i18n::Lang;
+use melon_net::play::game::recipes::{FLAG_HIGHLIGHT, RecipeEvent};
+use melon_world::entity::kind::EntityKind;
+use melon_world::inventory::merchant::Offers;
+use melon_world::inventory::{ContainerKind, MountLook, OpenContainer, empty};
 
 /// The open menu, if `id` is its id.
 fn menu_with(open: &mut Option<OpenContainer>, id: i32) -> Option<&mut OpenContainer> {

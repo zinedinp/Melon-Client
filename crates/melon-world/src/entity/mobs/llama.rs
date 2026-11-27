@@ -6,7 +6,7 @@ use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::{self, QuadrupedParts};
 use crate::entity::wire::EquipmentSlot;
-use crate::math::angle::HALF_PI;
+use melon_core::math::angle::HALF_PI;
 use crate::model_part::{Cube, Pose};
 
 /// `Llama.Variant` ids: creamy, white, brown, gray.

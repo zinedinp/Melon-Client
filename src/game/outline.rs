@@ -3,10 +3,10 @@
 
 use glam::{DVec3, IVec3, Mat4};
 
-use crate::renderer::{LineDraw, LineStyle, MeshId, Renderer, WorldVertex};
-use crate::world::level::Level;
-use crate::world::physics::Aabb;
-use crate::world::pick::{self, BlockHit};
+use melon_render::{LineDraw, LineStyle, MeshId, Renderer, WorldVertex};
+use melon_world::level::Level;
+use melon_world::physics::Aabb;
+use melon_world::pick::{self, BlockHit};
 
 /// `ARGB.black(102)`.
 const COLOR: [f32; 4] = [0.0, 0.0, 0.0, 102.0 / 255.0];
@@ -98,7 +98,7 @@ impl BlockOutline {
                 }
                 match renderer.upload_mesh(&vertices) {
                     Ok(mesh) => self.meshes.push((mesh, style)),
-                    Err(e) => crate::warn!("Outline mesh failed: {e:#}"),
+                    Err(e) => melon_base::warn!("Outline mesh failed: {e:#}"),
                 }
             }
         }

@@ -3,15 +3,15 @@
 use super::InWorld;
 use super::PlayerEntry;
 use super::world_resources::WorldResources;
-use crate::component::Component;
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::hud::player_tab::{MAX_PLAYERS, TabDraw, TabEntry};
-use crate::gui::hud::sidebar::{self, SidebarRow};
-use crate::gui::text::StyledText;
-use crate::i18n::Lang;
-use crate::renderer::quad::DrawList;
-use crate::world::entity::magic_name::Magic;
-use crate::world::scoreboard::{DisplaySlot, NumberFormat, compare_ignore_case};
+use melon_protocol::component::Component;
+use melon_gui::hud::item_slot::ItemPainter;
+use melon_gui::hud::player_tab::{MAX_PLAYERS, TabDraw, TabEntry};
+use melon_gui::hud::sidebar::{self, SidebarRow};
+use melon_gui::text::StyledText;
+use melon_assets::i18n::Lang;
+use melon_render::quad::DrawList;
+use melon_world::entity::magic_name::Magic;
+use melon_world::scoreboard::{DisplaySlot, NumberFormat, compare_ignore_case};
 
 impl InWorld {
     /// `TeleportToPlayerMenuCategory`.
@@ -29,9 +29,9 @@ impl InWorld {
     /// Picks from the spectator menu, teleporting when a player is chosen.
     pub fn spectator_action(
         &mut self,
-        action: crate::gui::overlay::spectator_menu::SpectatorAction,
+        action: melon_gui::overlay::spectator_menu::SpectatorAction,
     ) {
-        if let crate::gui::overlay::spectator_menu::SpectatorAction::TeleportTo(id) = action {
+        if let melon_gui::overlay::spectator_menu::SpectatorAction::TeleportTo(id) = action {
             self.joined.session.send_teleport_to_entity(id);
         }
     }
@@ -180,7 +180,7 @@ impl InWorld {
                 let flip = Magic::of(&p.name) == Magic::UpsideDown
                     && (id == self.uuid || self.entities.iter().any(|e| e.uuid == id));
                 if p.display_name.is_some() {
-                    crate::probe::note("tab.text", &p.name, || tab_text_detail(&name, lang));
+                    melon_core::probe::note("tab.text", &p.name, || tab_text_detail(&name, lang));
                 }
                 TabEntry {
                     id,

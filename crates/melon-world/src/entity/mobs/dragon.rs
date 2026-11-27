@@ -2,7 +2,7 @@
 
 use super::{LayerSpec, ModelId as M};
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle::{self, DEG_TO_RAD, PI, wrap_degrees};
+use melon_core::math::angle::{self, DEG_TO_RAD, PI, wrap_degrees};
 use crate::model_part::{Cube, Pose};
 
 const NECK: usize = 5;

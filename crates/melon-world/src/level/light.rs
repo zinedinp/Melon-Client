@@ -6,7 +6,7 @@ use std::sync::Arc;
 use pumpkin_data::BlockStateId;
 
 use super::Level;
-use crate::math::{SectionSet, section_coord};
+use melon_core::math::{SectionSet, section_coord};
 
 /// The six neighbours, `(dx, dy, dz)`; index 0 is straight down.
 const STEPS: [[i32; 3]; 6] = [

@@ -211,7 +211,7 @@ pub fn rank_cap() -> u32 {
             .find(|(name, _)| name.eq_ignore_ascii_case(&wanted))
             .map(|&(_, r)| r);
         if cap.is_none() {
-            crate::warn!("MELON_SIMD={wanted} names no tier; taking the widest");
+            melon_base::warn!("MELON_SIMD={wanted} names no tier; taking the widest");
         }
         cap.unwrap_or(u32::MAX)
     })
@@ -232,7 +232,7 @@ pub fn init() -> (Tier, ByteTier) {
     #[cfg(target_arch = "aarch64")]
     miraculix::aarch64::warm_up();
     let tiers = (tier(), byte_tier());
-    crate::info!("SIMD: {} floats, {} bytes", tiers.0.name(), tiers.1.name());
+    melon_base::info!("SIMD: {} floats, {} bytes", tiers.0.name(), tiers.1.name());
     tiers
 }
 

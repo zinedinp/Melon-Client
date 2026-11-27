@@ -6,7 +6,7 @@ use crate::entity::keyframe::AnimationDefinition;
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::Legs;
-use crate::math::angle::{self, PI};
+use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
 
 /// `Fox.DATA_FLAGS_ID` bits.

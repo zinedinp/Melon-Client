@@ -8,8 +8,3 @@
 pub mod assets;
 pub mod i18n;
 pub mod text;
-
-// The lower crates' modules, under the paths the moved code names them by.
-use melon_base::{home, warn};
-use melon_core::{instances, probe};
-use melon_protocol::component;

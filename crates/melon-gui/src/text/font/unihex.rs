@@ -67,13 +67,13 @@ impl Lazy {
                 let (namespace, path) = melon_assets::assets::split_id(&self.file);
                 let Some(zip) = melon_assets::assets::resource_top(&self.root, namespace, path)
                 else {
-                    crate::warn!("hex file {} missing (launcher: Prepare)", self.file);
+                    melon_base::warn!("hex file {} missing (launcher: Prepare)", self.file);
                     return None;
                 };
                 match Unihex::from_zip(&zip, &self.overrides) {
                     Ok(unihex) => Some(unihex),
                     Err(e) => {
-                        crate::warn!("hex file {}: {e:#}", self.file);
+                        melon_base::warn!("hex file {}: {e:#}", self.file);
                         None
                     }
                 }

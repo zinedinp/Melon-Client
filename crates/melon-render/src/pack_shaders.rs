@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use crate::GuiShader;
-use crate::assets::shaders::{self, Interface, Stage};
+use melon_assets::assets::shaders::{self, Interface, Stage};
 use crate::quad::Program;
 
 /// One GUI pipeline as vanilla declares it.
@@ -69,7 +69,7 @@ pub fn compile(assets_root: &Path) -> Vec<GuiShader> {
         .filter_map(|pipeline| match compile_one(assets_root, pipeline) {
             Ok(shader) => shader,
             Err(e) => {
-                crate::warn!(
+                melon_base::warn!(
                     "Shader core/{} from a resource pack dropped: {e:#}",
                     pipeline.shader
                 );
@@ -153,7 +153,7 @@ mod tests {
     /// Vanilla's three GUI shaders, if `assets/` has them, compile against Melon's pipelines.
     #[test]
     fn vanilla_gui_shaders_fit_their_pipelines() {
-        let root = crate::assets::default_root();
+        let root = melon_assets::assets::default_root();
         if !root.join("minecraft/shaders/core/text.vsh").is_file() {
             eprintln!("assets/minecraft/shaders missing, test skipped");
             return;
@@ -164,8 +164,8 @@ mod tests {
     /// A real pack's GUI shaders (`MELON_PACK`, a zip or folder) compile.
     #[test]
     fn a_real_packs_gui_shaders_compile() {
-        use crate::assets::packs::{self, Pack, ResourceStack};
-        let (Some(root), Some(path)) = (crate::assets::test_root(), std::env::var_os("MELON_PACK"))
+        use melon_assets::assets::packs::{self, Pack, ResourceStack};
+        let (Some(root), Some(path)) = (melon_assets::assets::test_root(), std::env::var_os("MELON_PACK"))
         else {
             eprintln!("no pack in MELON_PACK (or no assets), test skipped");
             return;

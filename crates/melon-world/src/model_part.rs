@@ -4,7 +4,7 @@ use glam::{Mat3, Mat4, Vec2, Vec3};
 
 use crate::block::direction::{Direction, Directions};
 use crate::geometry;
-use crate::math::angle::Rotation;
+use melon_core::math::angle::Rotation;
 use crate::mesh::WorldVertex as Vertex;
 
 /// All six faces.
@@ -279,7 +279,7 @@ pub fn emit(part: &Part, transform: Mat4, sprite: &Sprite, tint: [f32; 3], out: 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::math::angle::HALF_PI;
+    use melon_core::math::angle::HALF_PI;
 
     #[test]
     fn a_pose_matrix_is_translate_rotate_scale() {

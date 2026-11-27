@@ -291,7 +291,7 @@ impl DebugEntries {
         {
             Some(()) => {}
             None => {
-                crate::warn!("{FILE} unreadable, F3 back on the default profile");
+                melon_base::warn!("{FILE} unreadable, F3 back on the default profile");
                 entries.reset_to_profile(Profile::Default);
                 entries.save();
             }
@@ -337,7 +337,7 @@ impl DebugEntries {
             }
         }
         if let Err(e) = std::fs::write(path, Value::Object(json).to_string()) {
-            crate::warn!("{FILE} not saved: {e}");
+            melon_base::warn!("{FILE} not saved: {e}");
         }
     }
 

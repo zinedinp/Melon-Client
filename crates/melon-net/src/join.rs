@@ -53,9 +53,9 @@ pub fn join(
     match target {
         Target::Server(address) => {
             let session = crate::join_server(&address, identity, client)?;
-            if crate::probe::enabled() {
+            if melon_core::probe::enabled() {
                 let info = &session.info;
-                crate::probe::section(
+                melon_core::probe::section(
                     "Server",
                     format!(
                         "- address `{address}`\n- player `{}` entity {}\n- dimension `{}`, game mode {:?}\n- online mode {}, hardcore {}, flat {}",
@@ -83,7 +83,7 @@ pub fn join(
                 save_path,
                 game_dir,
                 settings,
-                view_distance: crate::settings::options::RENDER_DISTANCE_RANGE.1,
+                view_distance: melon_settings::options::RENDER_DISTANCE_RANGE.1,
                 simulation_distance,
                 host: server::Host {
                     uuid: identity.uuid(),

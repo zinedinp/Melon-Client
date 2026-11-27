@@ -6,10 +6,10 @@ use numerobis::vulkan::swapchain::PresentMode as Mode;
 use winit::window::Fullscreen;
 
 use super::RunningState;
-use crate::i18n::Lang;
-use crate::i18n::languages::Language;
-use crate::network::ClientInfo;
-use crate::settings::options::{self, Config, PresentMode};
+use melon_assets::i18n::Lang;
+use melon_assets::i18n::languages::Language;
+use melon_net::ClientInfo;
+use melon_settings::options::{self, Config, PresentMode};
 
 impl RunningState {
     /// Puts VSync and fullscreen as the options say.
@@ -22,7 +22,7 @@ impl RunningState {
             PresentMode::FifoLatestReady => Some(Mode::FifoLatestReady),
         };
         if let Err(e) = self.renderer.set_present(self.env.config.vsync, requested) {
-            crate::warn!("Present mode not changed: {e:#}");
+            melon_base::warn!("Present mode not changed: {e:#}");
         }
         let fullscreen = self
             .env
@@ -71,7 +71,7 @@ impl RunningState {
         // `Options.createSoundSliderOptionInstance`: outside a world the
         // slider's source is heard (`SoundPreviewHandler.preview`).
         if self.world.is_none()
-            && let Some(source) = crate::audio::source::SoundSource::ALL
+            && let Some(source) = melon_audio::source::SoundSource::ALL
                 .into_iter()
                 .find(|&s| config.sound_volumes.get(s) != old.sound_volumes.get(s))
         {

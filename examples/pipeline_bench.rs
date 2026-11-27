@@ -12,18 +12,18 @@ use serde::{Deserialize, Serialize};
 
 use melon::game::camera;
 use melon::game::level_meshes::LevelMeshes;
-use melon::math::euler::{Look, Orientation};
-use melon::network::{self, Identity, WorldEvent};
-use melon::renderer::world_projection;
-use melon::singleplayer::{self, server};
-use melon::world::block_models::BlockModels;
-use melon::world::block_tint::TintSettings;
-use melon::world::chunk::{Chunk, ChunkLight, ChunkScan, LightSection, Section};
-use melon::world::culling::frustum::Frustum;
-use melon::world::culling::{CullSettings, Culler};
-use melon::world::fluid::FluidSprites;
-use melon::world::level::Level;
-use melon::world::terrain::{self, MeshContext, Neighborhood};
+use melon_core::math::euler::{Look, Orientation};
+use melon_net::{self, Identity, WorldEvent};
+use melon_render::world_projection;
+use melon_net::singleplayer::{self, server};
+use melon_world::block_models::BlockModels;
+use melon_world::block_tint::TintSettings;
+use melon_world::chunk::{Chunk, ChunkLight, ChunkScan, LightSection, Section};
+use melon_world::culling::frustum::Frustum;
+use melon_world::culling::{CullSettings, Culler};
+use melon_world::fluid::FluidSprites;
+use melon_world::level::Level;
+use melon_world::terrain::{self, MeshContext, Neighborhood};
 
 /// Chunks around the spawn chunk: 17 x 17.
 const RADIUS: i32 = 8;
@@ -144,7 +144,7 @@ fn args() -> anyhow::Result<Args> {
 }
 
 fn main() -> anyhow::Result<()> {
-    melon::platform::drop_cargo_stack();
+    melon_base::platform::drop_cargo_stack();
     let args = args()?;
     let mut report = Report {
         machine: machine(),
@@ -157,7 +157,7 @@ fn main() -> anyhow::Result<()> {
     );
 
     println!("\nStartup");
-    let assets = melon::assets::Assets::discover()?;
+    let assets = melon_assets::assets::Assets::discover()?;
     let models = report.passes("startup.block_models_bake", 3, || {
         BlockModels::bake(assets.root(), Vec::new(), 16384).0
     });
@@ -177,7 +177,7 @@ fn main() -> anyhow::Result<()> {
     );
     let decoded = network::play::level::chunk::decode(
         &packets[0],
-        melon::world::dimension::Height::OVERWORLD,
+        melon_world::dimension::Height::OVERWORLD,
     )?;
     let roundtrip = decoded
         .sections
@@ -193,7 +193,7 @@ fn main() -> anyhow::Result<()> {
             let t = Instant::now();
             std::hint::black_box(network::play::level::chunk::decode(
                 packet,
-                melon::world::dimension::Height::OVERWORLD,
+                melon_world::dimension::Height::OVERWORLD,
             )?);
             samples.push(t.elapsed());
         }
@@ -212,7 +212,7 @@ fn main() -> anyhow::Result<()> {
             let scan = std::hint::black_box(ChunkScan::of(
                 chunk.x,
                 chunk.z,
-                melon::world::dimension::Height::OVERWORLD.min_y,
+                melon_world::dimension::Height::OVERWORLD.min_y,
                 sections,
             ));
             samples.push(t.elapsed());
@@ -241,7 +241,7 @@ fn main() -> anyhow::Result<()> {
         cutout_leaves: true,
         models: &models,
         fluids: &fluids,
-        min_y: melon::world::dimension::Height::OVERWORLD.min_y,
+        min_y: melon_world::dimension::Height::OVERWORLD.min_y,
         cardinal: [1.0; 6],
         tints: &plains_tints,
     };
@@ -268,7 +268,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn machine() -> Machine {
-    let cpu = melon::platform::cpu_name().unwrap_or_else(|| "unbekannt".to_owned());
+    let cpu = melon_base::platform::cpu_name().unwrap_or_else(|| "unbekannt".to_owned());
     Machine {
         cpu,
         threads: std::thread::available_parallelism().map_or(1, |n| n.get()),
@@ -302,10 +302,10 @@ fn fluid_sprites(models: &BlockModels) -> FluidSprites {
 
 /// Item icons, as the creative inventory's search tab bakes them.
 fn icon_bake(report: &mut Report, root: &Path) {
-    let tabs = &*melon::world::creative_tabs::TABS;
+    let tabs = &*melon_world::creative_tabs::TABS;
     let Some(search) = tabs
         .iter()
-        .find(|t| t.kind == melon::world::creative_tabs::TabType::Search)
+        .find(|t| t.kind == melon_world::creative_tabs::TabType::Search)
     else {
         return;
     };
@@ -318,7 +318,7 @@ fn icon_bake(report: &mut Report, root: &Path) {
         .take(300)
     {
         let t = Instant::now();
-        std::hint::black_box(melon::gui::hud::item_icon::bake(
+        std::hint::black_box(melon_gui::hud::item_icon::bake(
             root,
             stack.item.registry_key,
         ));
@@ -337,7 +337,7 @@ fn frozen_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec<
         let chunks = packets
             .iter()
             .map(|p| {
-                network::play::level::chunk::decode(p, melon::world::dimension::Height::OVERWORLD)
+                network::play::level::chunk::decode(p, melon_world::dimension::Height::OVERWORLD)
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
         return Ok((spawn, chunks));
@@ -360,7 +360,7 @@ fn frozen_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec<
     let (_, packets) = read_frozen(&bytes).expect("just written");
     let chunks = packets
         .iter()
-        .map(|p| network::play::level::chunk::decode(p, melon::world::dimension::Height::OVERWORLD))
+        .map(|p| network::play::level::chunk::decode(p, melon_world::dimension::Height::OVERWORLD))
         .collect::<anyhow::Result<Vec<_>>>()?;
     Ok((spawn, chunks))
 }
@@ -417,7 +417,7 @@ fn receive_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec
         },
         view_distance: RADIUS as u8 + 2,
         simulation_distance: RADIUS as u8 + 2,
-        host: melon::singleplayer::server::Host {
+        host: melon_net::singleplayer::server::Host {
             uuid: Identity::Offline {
                 username: "Bench".into(),
             }
@@ -607,7 +607,7 @@ fn mesh_pipeline(
     models: &Arc<BlockModels>,
     fluids: FluidSprites,
     eye: Vec3,
-) -> anyhow::Result<Vec<melon::world::level::FinishedMesh>> {
+) -> anyhow::Result<Vec<melon_world::level::FinishedMesh>> {
     let mut finished = Vec::new();
     let mut frames = Vec::new();
     let t = Instant::now();
@@ -639,7 +639,7 @@ fn surface_y(level: &Level, x: i32, z: i32) -> i32 {
 
 /// Draw lists from a few cameras: above ground in four directions, looking
 fn cull(report: &mut Report, level: &Level, meshes: &mut LevelMeshes, spawn: Vec3, surface: i32) {
-    let eye_y = surface as f32 + 1.0 + melon::world::player::EYE_HEIGHT;
+    let eye_y = surface as f32 + 1.0 + melon_world::player::EYE_HEIGHT;
     let views = [
         ("north", Vec3::new(spawn.x, eye_y, spawn.z), 180.0, 0.0),
         ("east", Vec3::new(spawn.x, eye_y, spawn.z), 270.0, 0.0),
@@ -699,7 +699,7 @@ fn edits(
     spawn: Vec3,
     surface: i32,
 ) -> anyhow::Result<()> {
-    level.set_chunk_builder(melon::settings::options::ChunkBuilder::PlayerAffected);
+    level.set_chunk_builder(melon_settings::options::ChunkBuilder::PlayerAffected);
     let stone = pumpkin_data::Block::STONE.default_state.id.as_u16();
     let torch = pumpkin_data::Block::TORCH.default_state.id.as_u16();
     let (x, z) = (spawn.x.floor() as i32, spawn.z.floor() as i32);

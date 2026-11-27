@@ -4,7 +4,7 @@ use glam::Mat4;
 
 use crate::block_entity::models::{self, SkullType};
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle::{self, PI};
+use melon_core::math::angle::{self, PI};
 use crate::model_part::{Part, Pose};
 
 /// Names for a head's child parts, in [`models::skull`]'s order.

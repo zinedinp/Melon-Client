@@ -44,7 +44,7 @@ pub fn layer() -> LayerDefinition {
 
 /// `CarriedBlockLayer`'s transform, from the entity's root.
 pub fn carried_block_transform(root: glam::Mat4) -> glam::Mat4 {
-    use crate::math::angle::Rotation;
+    use melon_core::math::angle::Rotation;
     use glam::{Mat4, Vec3};
     root * Mat4::from_translation(Vec3::new(0.0, 0.6875, -0.75))
         * Mat4::rot_x_deg(20.0)

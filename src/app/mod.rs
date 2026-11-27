@@ -19,24 +19,24 @@ use winit::event::{DeviceEvent, DeviceId, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
 
-use crate::assets::Assets;
-use crate::audio::AudioEngine;
+use melon_assets::assets::Assets;
+use melon_audio::AudioEngine;
 use crate::game::InWorld;
 use crate::game::world_resources::{PendingBake, WorldResources};
-use crate::gui::assets::GuiAssets;
-use crate::gui::panorama::Panorama;
-use crate::gui::screen::{GuiScale, ScreenAction, ScreenContext};
-use crate::gui::screens::ingame::death::DeathScreen;
-use crate::gui::screens::ingame::loading::LevelLoadingScreen;
-use crate::gui::screens::ingame::pause::PauseScreen;
-use crate::gui::screens::menu::connecting::{ConnectingScreen, disconnected_screen};
-use crate::gui::screens::menu::title::TitleScreen;
-use crate::i18n::Lang;
-use crate::join::{Joined, Target};
-use crate::platform::{copy_to_clipboard, open_url};
-use crate::renderer::Renderer;
-use crate::renderer::quad::DrawList;
-use crate::settings::options::Config;
+use melon_gui::assets::GuiAssets;
+use melon_gui::panorama::Panorama;
+use melon_gui::screen::{GuiScale, ScreenAction, ScreenContext};
+use melon_gui::screens::ingame::death::DeathScreen;
+use melon_gui::screens::ingame::loading::LevelLoadingScreen;
+use melon_gui::screens::ingame::pause::PauseScreen;
+use melon_gui::screens::menu::connecting::{ConnectingScreen, disconnected_screen};
+use melon_gui::screens::menu::title::TitleScreen;
+use melon_assets::i18n::Lang;
+use melon_net::join::{Joined, Target};
+use melon_base::platform::{copy_to_clipboard, open_url};
+use melon_render::Renderer;
+use melon_render::quad::DrawList;
+use melon_settings::options::Config;
 use cli::LaunchOptions;
 use input::InputState;
 use screen_stack::ScreenStack;
@@ -76,13 +76,13 @@ struct Env {
     assets: Assets,
     gui_assets: GuiAssets,
     /// The texture slots `gui_assets` was uploaded to, reused by a reload.
-    gui_textures: Vec<crate::renderer::TextureId>,
+    gui_textures: Vec<melon_render::TextureId>,
     lang: Lang,
     audio: AudioEngine,
     /// `options.txt`, as the options screens last changed it.
     config: Config,
     /// Shift, Alt and Control as they are held now.
-    modifiers: crate::gui::screen::Modifiers,
+    modifiers: melon_gui::screen::Modifiers,
 }
 
 impl Env {
@@ -143,7 +143,7 @@ struct RunningState {
     /// F2's pictures: the one asked for and the ones being written.
     screenshots: screenshot::Screenshots,
     /// The volume sliders' sounds outside a world.
-    sound_preview: crate::audio::preview::SoundPreview,
+    sound_preview: melon_audio::preview::SoundPreview,
 }
 
 impl App {
@@ -166,7 +166,7 @@ impl App {
             attributes =
                 attributes.with_fullscreen(Some(winit::window::Fullscreen::Borderless(largest)));
         }
-        let window = crate::platform::create_centered_window(event_loop, attributes)?;
+        let window = melon_base::platform::create_centered_window(event_loop, attributes)?;
 
         let mut renderer = Renderer::new(&window, options.validation)?;
         reload::activate_packs(&assets, &config);
@@ -176,15 +176,15 @@ impl App {
         let gui_assets = match GuiAssets::load(&mut renderer, &assets) {
             Ok(gui_assets) => gui_assets,
             Err(e) => {
-                crate::warn!("Resource packs not loaded, using the defaults: {e:#}");
-                let mut stack = crate::assets::packs::ResourceStack::default();
+                melon_base::warn!("Resource packs not loaded, using the defaults: {e:#}");
+                let mut stack = melon_assets::assets::packs::ResourceStack::default();
                 stack
                     .packs
-                    .extend(crate::assets::packs::repository::discover_mods(
+                    .extend(melon_assets::assets::packs::repository::discover_mods(
                         assets.game_dir(),
                     ));
-                crate::assets::packs::activate(stack);
-                crate::world::creative_tabs::apply_from_game_dir(assets.game_dir());
+                melon_assets::assets::packs::activate(stack);
+                melon_world::creative_tabs::apply_from_game_dir(assets.game_dir());
                 reload::apply_gui_shaders(&mut renderer, &assets);
                 reload::apply_post_chains(&mut renderer, &assets);
                 let (failed, _) = renderer.take_tracked();
@@ -195,7 +195,7 @@ impl App {
         };
         let (gui_textures, _) = renderer.take_tracked();
         let lang = Lang::load(&assets, config.lang);
-        let splashes = crate::gui::text::splash::load_splashes(&assets);
+        let splashes = melon_gui::text::splash::load_splashes(&assets);
         let audio = AudioEngine::init(
             &assets,
             &config.sound_device,
@@ -263,14 +263,14 @@ fn load_panorama(renderer: &mut Renderer, assets: &Assets) -> Option<Panorama> {
     match Panorama::load(renderer, assets) {
         Ok(Some(panorama)) => Some(panorama),
         Ok(None) => {
-            crate::warn!(
+            melon_base::warn!(
                 "No panorama (assets/.../title/background/panorama_0..5.png missing or the jar's 1x1 placeholders: \
                  prepared without the asset index): using the gradient, see notes/Assets.md"
             );
             None
         }
         Err(e) => {
-            crate::warn!("Panorama not loaded: {e:#}");
+            melon_base::warn!("Panorama not loaded: {e:#}");
             None
         }
     }
@@ -334,7 +334,7 @@ impl RunningState {
                 if let Some(state) = self.world.as_ref().and_then(InWorld::world_options_state) {
                     let ctx = self.env.ctx(self.scale());
                     let screen =
-                        crate::gui::screens::ingame::world_options::WorldOptionsScreen::new(state);
+                        melon_gui::screens::ingame::world_options::WorldOptionsScreen::new(state);
                     self.screens.push(Box::new(screen), &ctx);
                 }
             }
@@ -469,8 +469,8 @@ impl RunningState {
         let Some(mut world) = self.world.take() else {
             return;
         };
-        crate::assets::packs::server::end();
-        crate::dialog::connection::end();
+        melon_assets::assets::packs::server::end();
+        melon_net::dialog::connection::end();
         self.lasting = world.lasting();
         // `Minecraft.disconnect` -> `updateLevelInEngines(null)`: silence.
         self.env.audio.stop_all();
@@ -494,7 +494,7 @@ impl RunningState {
     }
 
     fn show_failure(&mut self, reason: String) {
-        crate::warn!("Connection lost: {reason}");
+        melon_base::warn!("Connection lost: {reason}");
         if self.screens.is_empty() {
             return;
         }
@@ -506,7 +506,7 @@ impl RunningState {
     pub(super) fn open_pause_menu(&mut self) {
         let local_server = self.world.as_ref().is_some_and(InWorld::is_integrated);
         let scale = self.scale();
-        let addition = crate::dialog::connection::pause_screen_addition();
+        let addition = melon_net::dialog::connection::pause_screen_addition();
         let pause = PauseScreen::new(local_server, addition, &self.env.lang);
         self.screens.push(Box::new(pause), &self.env.ctx(scale));
     }
@@ -517,7 +517,7 @@ impl ApplicationHandler for App {
         if self.state.is_none()
             && let Err(e) = self.init(event_loop)
         {
-            crate::warn!("Start-up failed: {e:#}");
+            melon_base::warn!("Start-up failed: {e:#}");
             event_loop.exit();
         }
     }
@@ -558,7 +558,7 @@ impl ApplicationHandler for App {
             WindowEvent::Resized(size) => {
                 let started = Instant::now();
                 if let Err(e) = state.renderer.resize(size.width, size.height) {
-                    crate::warn!("Resize failed: {e:#}");
+                    melon_base::warn!("Resize failed: {e:#}");
                 }
                 state.resize_gui();
                 state.count_event(started);

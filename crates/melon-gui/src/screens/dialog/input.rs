@@ -4,12 +4,12 @@
 use pumpkin_nbt::tag::NbtTag;
 
 use super::element::{Element, Press};
-use crate::component::Component;
-use crate::dialog::action::escape_without_quotes;
-use crate::dialog::input::{
+use melon_protocol::component::Component;
+use melon_net::dialog::action::escape_without_quotes;
+use melon_net::dialog::input::{
     BooleanInput, NumberRangeInput, SingleOptionInput, TextInput, value_to_string,
 };
-use crate::dialog::{Input, InputControl, InputValue};
+use melon_net::dialog::{Input, InputControl, InputValue};
 use crate::screen::{CursorKind, ScreenContext, TextEvent};
 use crate::text::{self, StyledText};
 use crate::widgets::button::Button;
@@ -441,7 +441,7 @@ impl RangeSlider {
     }
 
     /// `computeMessage`: the label format with the value.
-    fn message(&self, lang: &crate::i18n::Lang) -> StyledText {
+    fn message(&self, lang: &melon_assets::i18n::Lang) -> StyledText {
         let label = self.input.label_for(&value_to_string(self.scaled()));
         StyledText::from_component(&label, lang)
     }

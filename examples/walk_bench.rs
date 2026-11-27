@@ -6,11 +6,11 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use glam::DVec3;
-use melon::network::{self, ClientInfo, Identity, WorldEvent};
-use melon::singleplayer::{self, server};
-use melon::world::culling::occlusion::{self, Column, Eye, SectionGrid, WalkJob};
-use melon::world::culling::visgraph::VisibilitySet;
-use melon::world::terrain;
+use melon_net::{self, ClientInfo, Identity, WorldEvent};
+use melon_net::singleplayer::{self, server};
+use melon_world::culling::occlusion::{self, Column, Eye, SectionGrid, WalkJob};
+use melon_world::culling::visgraph::VisibilitySet;
+use melon_world::terrain;
 
 const VIEW_DISTANCE: i32 = 32;
 const HEIGHT: i32 = 24;
@@ -19,7 +19,7 @@ const MIN_Y: i32 = -64;
 type Sets = HashMap<(i32, i32), Vec<VisibilitySet>>;
 
 fn main() -> anyhow::Result<()> {
-    melon::platform::drop_cargo_stack();
+    melon_base::platform::drop_cargo_stack();
     let dir = std::env::args().nth(1).expect("save dir");
     let cache = std::env::args()
         .nth(2)
@@ -122,7 +122,7 @@ fn gather(dir: &str) -> anyhow::Result<Sets> {
         },
         view_distance: VIEW_DISTANCE as u8,
         simulation_distance: 8,
-        host: melon::singleplayer::server::Host {
+        host: melon_net::singleplayer::server::Host {
             uuid: Identity::Offline {
                 username: "Walk".into(),
             }

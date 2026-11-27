@@ -118,9 +118,9 @@ impl PacketDebug {
 
     /// A packet came in, before anything decodes it.
     pub fn received(&mut self, pid: i32, body: &[u8]) {
-        if crate::probe::enabled() {
-            crate::probe::count("packet.seen", label(pid));
-            crate::probe::trace_packet(packet_name(pid).unwrap_or("(unknown)"));
+        if melon_core::probe::enabled() {
+            melon_core::probe::count("packet.seen", label(pid));
+            melon_core::probe::trace_packet(packet_name(pid).unwrap_or("(unknown)"));
         }
         if let Some(capture) = &mut self.capture
             && let Err(e) = record(capture, pid, body)
@@ -140,13 +140,13 @@ impl PacketDebug {
 
     /// No decoder resolved the packet (`error`: or the decoder failed).
     pub fn unresolved(&mut self, pid: i32, body: &[u8], error: Option<String>) {
-        if crate::probe::enabled() {
+        if melon_core::probe::enabled() {
             let category = if error.is_some() {
                 "decode.error"
             } else {
                 "packet.unresolved"
             };
-            crate::probe::note(category, label(pid), || {
+            melon_core::probe::note(category, label(pid), || {
                 format!(
                     "{} B{}{}",
                     body.len(),

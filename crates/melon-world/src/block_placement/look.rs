@@ -3,7 +3,7 @@
 
 use pumpkin_data::block_properties::{Axis, Facing};
 
-use crate::math::angle;
+use melon_core::math::angle;
 
 /// `Direction` in 3D data order (a hit's `face`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

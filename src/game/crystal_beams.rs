@@ -6,8 +6,8 @@ use rustc_hash::FxHashMap;
 use glam::{DVec3, Mat4};
 
 use super::world_resources::WorldResources;
-use crate::renderer::{Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer};
-use crate::world::entity::crystal_beam;
+use melon_render::{Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer};
+use melon_world::entity::crystal_beam;
 
 /// A crystal beam: where it starts, toward where (in blocks) and the time it
 /// scrolls by.
@@ -52,7 +52,7 @@ impl BeamMeshes {
         match renderer.upload_mesh(&crystal_beam::vertices(delta, time_in_ticks)) {
             Ok(new) => *mesh = Some(new),
             Err(e) => {
-                crate::warn!("Crystal beam mesh failed: {e:#}");
+                melon_base::warn!("Crystal beam mesh failed: {e:#}");
                 return;
             }
         }

@@ -106,14 +106,14 @@ pub fn build(
                 prev_pitch,
                 ..
             } => {
-                let sway = ((p.age as f32 + partial - crate::math::angle::TAU) * 0.05).sin() * 2.0;
+                let sway = ((p.age as f32 + partial - melon_core::math::angle::TAU) * 0.05).sin() * 2.0;
                 let rot = prev_rot + (rot - prev_rot) * partial;
                 let pitch =
-                    prev_pitch + (pitch - prev_pitch) * partial + crate::math::angle::HALF_PI;
+                    prev_pitch + (pitch - prev_pitch) * partial + melon_core::math::angle::HALF_PI;
                 let front = Quat::from_rotation_y(rot)
                     * Quat::from_rotation_x(-pitch)
                     * Quat::from_rotation_y(sway);
-                let back = Quat::from_rotation_y(-crate::math::angle::PI + rot)
+                let back = Quat::from_rotation_y(-melon_core::math::angle::PI + rot)
                     * Quat::from_rotation_x(pitch)
                     * Quat::from_rotation_y(sway);
                 for q in [front, back] {
@@ -129,7 +129,7 @@ pub fn build(
                 }
             }
             Behavior::Shriek { .. } => {
-                use crate::math::angle::{PI, THIRD_PI};
+                use melon_core::math::angle::{PI, THIRD_PI};
                 let front = Quat::from_rotation_x(-THIRD_PI);
                 let back = Quat::from_euler(glam::EulerRot::YXZ, -PI, THIRD_PI, 0.0);
                 for q in [front, back] {

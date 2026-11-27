@@ -11,25 +11,25 @@ use super::entity_sprites;
 use super::held_items::Held;
 use super::shadows::{OWN, ShadowScene};
 use super::world_resources::WorldResources;
-use crate::math::angle::Rotation;
-use crate::network::play::game::EntityPacket;
-use crate::renderer::{EntityDraw, Glint, MeshId, RenderLayer, Renderer, TextureId};
-use crate::world::block_tint::TintKind;
-use crate::world::culling::Culler;
-use crate::world::culling::occlusion::SectionPos;
-use crate::world::entity::humanoid::{self, ArmPose, HumanoidParts};
-use crate::world::entity::item_drop;
-use crate::world::entity::kind::EntityKind;
-use crate::world::entity::mobs::{self, LayerSpec, MobModel, ModelId, Rig, tnt, villager};
-use crate::world::entity::model::{Model, ModelPose};
-use crate::world::entity::player::{self as player_model, Arm, AvatarRenderState, PlayerModel};
-use crate::world::entity::pose_cache::PoseCache;
-use crate::world::entity::tracker::{ClientEntity, Entities};
-use crate::world::item_model::HandPose;
-use crate::world::item_model::{HeldUse, StackKey};
-use crate::world::lightmap::{self, LightmapParams};
-use crate::world::player::ArmPoses;
-use crate::world::player::hands::{Hand, ItemUse};
+use melon_core::math::angle::Rotation;
+use melon_net::play::game::EntityPacket;
+use melon_render::{EntityDraw, Glint, MeshId, RenderLayer, Renderer, TextureId};
+use melon_world::block_tint::TintKind;
+use melon_world::culling::Culler;
+use melon_world::culling::occlusion::SectionPos;
+use melon_world::entity::humanoid::{self, ArmPose, HumanoidParts};
+use melon_world::entity::item_drop;
+use melon_world::entity::kind::EntityKind;
+use melon_world::entity::mobs::{self, LayerSpec, MobModel, ModelId, Rig, tnt, villager};
+use melon_world::entity::model::{Model, ModelPose};
+use melon_world::entity::player::{self as player_model, Arm, AvatarRenderState, PlayerModel};
+use melon_world::entity::pose_cache::PoseCache;
+use melon_world::entity::tracker::{ClientEntity, Entities};
+use melon_world::item_model::HandPose;
+use melon_world::item_model::{HeldUse, StackKey};
+use melon_world::lightmap::{self, LightmapParams};
+use melon_world::player::ArmPoses;
+use melon_world::player::hands::{Hand, ItemUse};
 
 /// A player to draw: the local one in third person, or another.
 pub(super) struct Avatar<'a> {
@@ -144,7 +144,7 @@ impl InWorld {
         if let EntityPacket::Hurt { id, .. } | EntityPacket::Damage { id, .. } = &packet
             && *id == own
         {
-            self.body.hurt = crate::world::entity::tracker::HURT_DURATION;
+            self.body.hurt = melon_world::entity::tracker::HURT_DURATION;
             return;
         }
         self.entities.apply(packet, own);
@@ -169,7 +169,7 @@ impl InWorld {
     /// A sound of the local player's own voice (`getVoicePitch`).
     pub(super) fn play_own_voice(&mut self, event: &'static str) {
         let at = self.player.tick_eye();
-        let mut sound = crate::audio::SoundInstance::of(event).at([at.x, at.y, at.z]);
+        let mut sound = melon_audio::SoundInstance::of(event).at([at.x, at.y, at.z]);
         sound.pitch = (rand::random::<f32>() - rand::random::<f32>()) * 0.2 + 1.0;
         self.audio.push(sound);
     }
@@ -193,15 +193,15 @@ impl InWorld {
         });
         // `Warden.tick`'s heartbeat: volume 5, `getVoicePitch`.
         for sound in self.entities.take_own_sounds() {
-            let mut instance = crate::audio::SoundInstance::of(sound.event)
-                .on(crate::audio::source::SoundSource::Hostile)
+            let mut instance = melon_audio::SoundInstance::of(sound.event)
+                .on(melon_audio::source::SoundSource::Hostile)
                 .at([sound.at.x, sound.at.y, sound.at.z]);
             instance.volume = 5.0;
             instance.pitch = (rand::random::<f32>() - rand::random::<f32>()) * 0.2 + 1.0;
             self.audio.push(instance);
         }
         for sound in self.entities.take_pickup_sounds() {
-            let mut instance = crate::audio::SoundInstance::of("entity.item.pickup")
+            let mut instance = melon_audio::SoundInstance::of("entity.item.pickup")
                 .at([sound.at.x, sound.at.y, sound.at.z]);
             instance.volume = 0.2;
             instance.pitch = (sound.jitter - 0.5) * 1.4 + 2.0;
@@ -291,7 +291,7 @@ impl InWorld {
                 EntityKind::EndCrystal | EntityKind::EnderDragon => {
                     assets
                         .mobs
-                        .prepare_texture(renderer, crate::world::entity::crystal_beam::TEXTURE);
+                        .prepare_texture(renderer, melon_world::entity::crystal_beam::TEXTURE);
                 }
                 EntityKind::Minecart => {
                     if let Some((state, _)) = minecart_block(entity) {
@@ -303,7 +303,7 @@ impl InWorld {
                     }
                 }
                 EntityKind::Painting => {
-                    use crate::world::entity::painting;
+                    use melon_world::entity::painting;
                     if let Some(variant) = painting::variant(entity.appearance.thing.variant) {
                         assets
                             .mobs
@@ -375,14 +375,14 @@ impl InWorld {
 
     /// The own armor, by [`ArmorSlot::ALL`] (`InventoryMenu`'s slots 5-8).
     pub(super) fn own_armor(&self) -> [&ItemStack; 4] {
-        let slots = &self.inventory.slots()[crate::world::inventory::ARMOR_SLOTS];
+        let slots = &self.inventory.slots()[melon_world::inventory::ARMOR_SLOTS];
         std::array::from_fn(|i| &*slots[i])
     }
 
     /// What a shadow's light reads: the time of day's darkening and the
     /// dimension's ambient light.
-    pub(super) fn shadow_light(&self) -> crate::world::shadow::ShadowLight {
-        crate::world::shadow::ShadowLight {
+    pub(super) fn shadow_light(&self) -> melon_world::shadow::ShadowLight {
+        melon_world::shadow::ShadowLight {
             sky_light_level: self.effects.sky_light_level(),
             ambient: self.level_info.dimension_type.ambient_light,
         }
@@ -593,7 +593,7 @@ impl InWorld {
     /// target to itself (`EndCrystalRenderer.submit`), a dragon's from itself
     /// to the crystal healing it (`EnderDragonRenderer`).
     fn crystal_beam(&self, entity: &ClientEntity, partial: f32) -> Option<Beam> {
-        use crate::world::entity::mobs::projectile::crystal_y;
+        use melon_world::entity::mobs::projectile::crystal_y;
         let at = entity.pos(partial);
         match entity.kind {
             EntityKind::EndCrystal => {
@@ -631,7 +631,7 @@ impl InWorld {
         frame: EntityFrame<'_>,
         out: &mut Vec<EntityDraw>,
     ) {
-        use crate::world::entity::display;
+        use melon_world::entity::display;
         let EntityFrame {
             camera,
             angles: view,
@@ -692,7 +692,7 @@ impl InWorld {
                         model,
                         origin,
                         layer: RenderLayer::Entities,
-                        blend: crate::renderer::Blending::Opaque,
+                        blend: melon_render::Blending::Opaque,
                         light: Some(light),
                         overlay: 0.0,
                         glint: Glint::None,
@@ -749,7 +749,7 @@ impl InWorld {
                 model: base,
                 origin,
                 layer: RenderLayer::Entities,
-                blend: crate::renderer::Blending::of(translucent),
+                blend: melon_render::Blending::of(translucent),
                 light: Some(light),
                 overlay: 0.0,
                 glint: Glint::None,
@@ -790,7 +790,7 @@ impl InWorld {
     /// `Entity.getTeamColor` of a glowing entity.
     fn outline_color(
         &self,
-        entity: &crate::world::entity::tracker::ClientEntity,
+        entity: &melon_world::entity::tracker::ClientEntity,
     ) -> Option<[u8; 3]> {
         if !entity.appearance.glowing() {
             return None;
@@ -887,7 +887,7 @@ impl InWorld {
                 OWN,
                 feet,
                 (
-                    crate::world::shadow::PLAYER_RADIUS * self.player.scale() as f32,
+                    melon_world::shadow::PLAYER_RADIUS * self.player.scale() as f32,
                     1.0,
                 ),
                 out,
@@ -897,7 +897,7 @@ impl InWorld {
 }
 
 /// `LivingEntityRenderer`.
-fn shows_when_invisible(entity: &crate::world::entity::tracker::ClientEntity) -> bool {
+fn shows_when_invisible(entity: &melon_world::entity::tracker::ClientEntity) -> bool {
     !entity.appearance.invisible()
         || (mobs::wears_armor(entity.kind) && !entity.equipment.is_empty())
 }
@@ -1139,7 +1139,7 @@ fn submit_block_entity(
         model,
         origin: placed.origin,
         layer: placed.layer,
-        blend: crate::renderer::Blending::Opaque,
+        blend: melon_render::Blending::Opaque,
         light: Some(placed.light),
         overlay,
         glint: Glint::None,
@@ -1191,7 +1191,7 @@ fn submit_minecart_block(
         model: mobs::vehicle::minecart_block_matrix(root, offset, swell),
         origin: placed.origin,
         layer: placed.layer,
-        blend: crate::renderer::Blending::Opaque,
+        blend: melon_render::Blending::Opaque,
         light: Some(placed.light),
         overlay: if tnt && tnt::is_lit(fuse) { -1.0 } else { 0.0 },
         glint: Glint::None,
@@ -1237,7 +1237,7 @@ fn submit_swallowed_block(
         model,
         origin: placed.origin,
         layer: placed.layer,
-        blend: crate::renderer::Blending::Opaque,
+        blend: melon_render::Blending::Opaque,
         light: Some(placed.light),
         overlay,
         glint: Glint::None,
@@ -1302,7 +1302,7 @@ pub(super) fn submit_item_cluster(
     out: &mut Vec<EntityDraw>,
 ) {
     if let Some(held) = assets.held.held(stack, false) {
-        let foil = crate::world::glint::has_foil(stack);
+        let foil = melon_world::glint::has_foil(stack);
         submit_held_cluster(assets, (stack, foil), held, base, placed, out);
     }
 }
@@ -1424,7 +1424,7 @@ fn submit_mob(
         // `entityTranslucent`: lit and sorted with the other entities.
         if layer.translucent {
             for draw in &mut out[first..] {
-                draw.blend = crate::renderer::Blending::Translucent;
+                draw.blend = melon_render::Blending::Translucent;
             }
         }
         if layer.alpha < 1.0 {
@@ -1436,9 +1436,9 @@ fn submit_mob(
             for draw in &mut out[first..] {
                 draw.scroll = Some(scroll);
                 draw.blend = if layer.additive {
-                    crate::renderer::Blending::Additive
+                    melon_render::Blending::Additive
                 } else {
-                    crate::renderer::Blending::Translucent
+                    melon_render::Blending::Translucent
                 };
             }
         }
@@ -1480,7 +1480,7 @@ fn submit_mob(
             model: mobs::enderman::carried_block_transform(root),
             origin: placed.origin,
             layer: placed.layer,
-            blend: crate::renderer::Blending::Opaque,
+            blend: melon_render::Blending::Opaque,
             light: Some(placed.light),
             overlay: 0.0,
             glint: Glint::None,
@@ -1585,7 +1585,7 @@ fn submit_flower(assets: &WorldResources, arm: Mat4, placed: Placed, out: &mut V
             model,
             origin: placed.origin,
             layer: placed.layer,
-            blend: crate::renderer::Blending::of(translucent),
+            blend: melon_render::Blending::of(translucent),
             light: Some(placed.light),
             overlay: 0.0,
             glint: Glint::None,
@@ -1615,7 +1615,7 @@ fn submit_pumpkin(
             model,
             origin: placed.origin,
             layer: placed.layer,
-            blend: crate::renderer::Blending::of(translucent),
+            blend: melon_render::Blending::of(translucent),
             light: Some(placed.light),
             overlay,
             glint: Glint::None,
@@ -1654,7 +1654,7 @@ fn submit_mushrooms(
                 model,
                 origin: placed.origin,
                 layer: placed.layer,
-                blend: crate::renderer::Blending::of(translucent),
+                blend: melon_render::Blending::of(translucent),
                 light: Some(placed.light),
                 overlay,
                 glint: Glint::None,
@@ -1728,7 +1728,7 @@ fn submit_held(
             model: at,
             origin: placed.origin,
             layer: placed.layer,
-            blend: crate::renderer::Blending::of(translucent),
+            blend: melon_render::Blending::of(translucent),
             light: Some(placed.light),
             overlay: 0.0,
             glint: Glint::entity(foil, assets.held.glint_texels(atlas)),
@@ -1766,7 +1766,7 @@ fn remote_held_use(entity: &ClientEntity, hand: Hand, using: bool, fishing: bool
     }
     let rod = |h: Hand| entity.equipment.hand(h).item.registry_key == "fishing_rod";
     if rod(hand)
-        && crate::world::entity::fishing::rod_looks_cast(
+        && melon_world::entity::fishing::rod_looks_cast(
             fishing,
             hand == Hand::Main,
             rod(Hand::Main),

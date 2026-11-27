@@ -5,11 +5,11 @@ use super::level::chunk_batch::ChunkBatchSizeCalculator;
 use super::stats::NetStats;
 use super::{chat, game};
 use crate::login::{self, ClientInfo, JoinInfo, write_client_information};
-use crate::protocol::connection::{ReadHalf, WriteHalf};
-use crate::protocol::packet::{self, Reader, write_packet};
-use crate::protocol::{id, varint};
-use crate::world::dimension::{DimensionTypes, Height};
-use crate::world::player::hands::Hand;
+use melon_protocol::connection::{ReadHalf, WriteHalf};
+use melon_protocol::packet::{self, Reader, write_packet};
+use melon_protocol::{id, varint};
+use melon_world::dimension::{DimensionTypes, Height};
+use melon_world::player::hands::Hand;
 use anyhow::{Context, Result};
 use pumpkin_data::packet::clientbound::play as cb;
 use std::io::Write;
@@ -19,16 +19,16 @@ use std::thread;
 
 /// Something the connection thread received that the game loop acts on.
 pub enum WorldEvent {
-    ChunkLoaded(crate::world::chunk::Chunk),
+    ChunkLoaded(melon_world::chunk::Chunk),
     /// `ClientboundForgetLevelChunkPacket`: chunk `(x, z)` left view distance.
     ChunkUnloaded(i32, i32),
     /// `ClientboundChunksBiomesPacket`.
-    BiomesChanged(Vec<(i32, i32, crate::world::biome::ChunkBiomes)>),
+    BiomesChanged(Vec<(i32, i32, melon_world::biome::ChunkBiomes)>),
     /// `ClientboundLightUpdatePacket`: sky/block light for one column.
     LightUpdated {
         x: i32,
         z: i32,
-        update: crate::world::chunk::LightUpdate,
+        update: melon_world::chunk::LightUpdate,
     },
     /// `ClientboundPlayerPositionPacket`: the server moved the player.
     Teleport(Teleport),
@@ -170,8 +170,8 @@ impl Session {
 
     /// `ServerboundMovePlayerPacket.PosRot`.
     pub fn send_accept_teleport(&self, id: i32, pos: (f64, f64, f64), yaw: f32, pitch: f32) {
-        if crate::probe::enabled() {
-            crate::probe::trace_io(
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(
                 true,
                 "accept_teleportation",
                 format!(
@@ -201,8 +201,8 @@ impl Session {
 
     /// `ServerboundPongPacket`: the same number the ping carried.
     pub fn send_pong(&self, ping_id: i32) {
-        if crate::probe::enabled() {
-            crate::probe::trace_io(
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(
                 true,
                 "pong",
                 format!("id={ping_id} handler=game-thread in packet order"),
@@ -222,8 +222,8 @@ impl Session {
         on_ground: bool,
         horizontal_collision: bool,
     ) {
-        if crate::probe::enabled() {
-            crate::probe::trace_io(
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(
                 true,
                 "move_player_pos_rot",
                 format!(
@@ -245,8 +245,8 @@ impl Session {
 
     /// `ServerboundMovePlayerPacket.Pos`.
     pub fn send_position_only(&self, pos: (f64, f64, f64), on_ground: bool, wall: bool) {
-        if crate::probe::enabled() {
-            crate::probe::trace_io(
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(
                 true,
                 "move_player_pos",
                 format!(
@@ -266,8 +266,8 @@ impl Session {
 
     /// `ServerboundMovePlayerPacket.StatusOnly`.
     pub fn send_status_only(&self, on_ground: bool, wall: bool) {
-        if crate::probe::enabled() {
-            crate::probe::trace_io(
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(
                 true,
                 "move_player_status_only",
                 format!("ground={on_ground} wall={wall}"),
@@ -292,7 +292,7 @@ impl Session {
         &self,
         container: i32,
         state_id: i32,
-        click: &crate::world::inventory::Click,
+        click: &melon_world::inventory::Click,
         changed: &[(i16, &pumpkin_data::item_stack::ItemStack)],
         carried: &pumpkin_data::item_stack::ItemStack,
     ) {
@@ -497,8 +497,8 @@ impl Session {
 
     /// The same with its data: how hard a ridden horse jumps (0-100).
     pub fn send_player_command_with(&self, command: game::PlayerCommand, data: i32) {
-        if crate::probe::enabled() {
-            crate::probe::trace_io(
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(
                 true,
                 "player_command",
                 format!("command={} data={data}", command as i32),
@@ -514,8 +514,8 @@ impl Session {
 
     /// `ServerboundMovePlayerPacket.Rot`.
     pub fn send_rotation(&self, yaw: f32, pitch: f32, on_ground: bool, horizontal: bool) {
-        if crate::probe::enabled() {
-            crate::probe::trace_io(
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(
                 true,
                 "move_player_rot",
                 format!("yaw={yaw:.3} pitch={pitch:.3} ground={on_ground} wall={horizontal}"),
@@ -551,8 +551,8 @@ impl Session {
 
     /// `ServerboundPlayerInputPacket`.
     pub fn send_player_input(&self, input: game::PlayerInput) {
-        if crate::probe::enabled() {
-            crate::probe::trace_io(true, "player_input", format!("bits={:#04x}", input.bits()));
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(true, "player_input", format!("bits={:#04x}", input.bits()));
         }
         self.send(game::id::SB_PLAYER_INPUT, |buf| {
             buf.write_all(&[input.bits()])?;
@@ -562,8 +562,8 @@ impl Session {
 
     /// `ServerboundClientInformationPacket` in play: the options changed.
     pub fn send_client_tick_end(&self) {
-        if crate::probe::enabled() {
-            crate::probe::trace_io(true, "client_tick_end", "handler=end of client tick");
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(true, "client_tick_end", "handler=end of client tick");
         }
         self.send(game::id::SB_CLIENT_TICK_END, |_| Ok(()));
     }
@@ -601,7 +601,7 @@ impl Session {
     }
 
     /// `ServerboundChangeGameModePacket`: the game mode switcher's choice.
-    pub fn send_change_game_mode(&self, mode: crate::world::game_mode::GameMode) {
+    pub fn send_change_game_mode(&self, mode: melon_world::game_mode::GameMode) {
         self.send(game::id::SB_CHANGE_GAME_MODE, |buf| {
             buf.write_all(&[mode.id()])?;
             Ok(())
@@ -641,8 +641,8 @@ impl Session {
 
     /// `ServerboundPlayerLoadedPacket`.
     pub fn send_player_loaded(&self) {
-        if crate::probe::enabled() {
-            crate::probe::trace_io(
+        if melon_core::probe::enabled() {
+            melon_core::probe::trace_io(
                 true,
                 "player_loaded",
                 "handler=game-thread after LevelLoadTracker; server starts accepting moves",
@@ -673,7 +673,7 @@ impl Session {
         if !writer.play {
             return;
         }
-        crate::probe::trace_sent(id);
+        melon_core::probe::trace_sent(id);
         let _ = writer.write_packet(id, body);
         if let Some(kind) = writer.failed() {
             let failure = timed_out(std::io::Error::from(kind).into());
@@ -783,8 +783,8 @@ fn handle_play_packet(
         id::CB_PLAY_PING => {
             let ping_id = i32::from_be_bytes(body.try_into().unwrap_or([0; 4]));
             if listener.ack_teleports {
-                if crate::probe::enabled() {
-                    crate::probe::trace_io(
+                if melon_core::probe::enabled() {
+                    melon_core::probe::trace_io(
                         false,
                         "ping",
                         format!("id={ping_id} handler=net-thread pong (join, no game loop)"),
@@ -798,8 +798,8 @@ fn handle_play_packet(
                     Play::Nothing,
                 )
             } else {
-                if crate::probe::enabled() {
-                    crate::probe::trace_io(
+                if melon_core::probe::enabled() {
+                    melon_core::probe::trace_io(
                         false,
                         "ping",
                         format!("id={ping_id} handler=queued for game-thread pong"),
@@ -850,8 +850,8 @@ fn handle_play_packet(
             let mut teleport = read_player_position(&mut r)?;
             let reply = if listener.ack_teleports {
                 teleport.acked = true;
-                if crate::probe::enabled() {
-                    crate::probe::trace_io(
+                if melon_core::probe::enabled() {
+                    melon_core::probe::trace_io(
                         false,
                         "player_position",
                         format!(
@@ -863,7 +863,7 @@ fn handle_play_packet(
                             teleport.delta,
                             teleport.yaw,
                             teleport.pitch,
-                            crate::probe::relative_flags(teleport.relative),
+                            melon_core::probe::relative_flags(teleport.relative),
                         ),
                     );
                 }
@@ -874,8 +874,8 @@ fn handle_play_packet(
                     teleport.pitch,
                 )?)
             } else {
-                if crate::probe::enabled() {
-                    crate::probe::trace_io(
+                if melon_core::probe::enabled() {
+                    melon_core::probe::trace_io(
                         false,
                         "player_position",
                         format!(
@@ -887,7 +887,7 @@ fn handle_play_packet(
                             teleport.delta,
                             teleport.yaw,
                             teleport.pitch,
-                            crate::probe::relative_flags(teleport.relative),
+                            melon_core::probe::relative_flags(teleport.relative),
                         ),
                     );
                 }

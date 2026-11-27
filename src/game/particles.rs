@@ -7,16 +7,16 @@ use super::camera::Camera;
 use super::controls::WorldContext;
 use super::particle_meshes::ParticleMeshes;
 use super::world_resources::WorldResources;
-use crate::network::play::game::EquipmentSlot;
-use crate::network::play::game::sound::{Explosion, LevelEvent};
-use crate::particle::client::{self, entity as own};
-use crate::particle::mesh::View;
-use crate::particle::server::{LevelParticles, entity_event, level_event};
-use crate::particle::{EntityBox, Kind, ParticleEngine, Spawn, World};
-use crate::renderer::{ParticleDraw, Renderer};
-use crate::world::entity::tracker::Entities;
-use crate::world::inventory::Inventory;
-use crate::world::player::PlayerState;
+use melon_net::play::game::EquipmentSlot;
+use melon_net::play::game::sound::{Explosion, LevelEvent};
+use melon_world::particle::client::{self, entity as own};
+use melon_world::particle::mesh::View;
+use melon_world::particle::server::{LevelParticles, entity_event, level_event};
+use melon_world::particle::{EntityBox, Kind, ParticleEngine, Spawn, World};
+use melon_render::{ParticleDraw, Renderer};
+use melon_world::entity::tracker::Entities;
+use melon_world::inventory::Inventory;
+use melon_world::player::PlayerState;
 
 /// A level event 2001 for a block this client broke itself within this many ticks is its own.
 const OWN_BREAK_TICKS: u64 = 20;
@@ -61,7 +61,7 @@ fn equipment_item(
     id: i32,
     slot: EquipmentSlot,
 ) -> Option<u16> {
-    use crate::world::inventory::{ARMOR_SLOTS, OFFHAND_SLOT};
+    use melon_world::inventory::{ARMOR_SLOTS, OFFHAND_SLOT};
     let stack = if id == own {
         let armor = |i: usize| inventory.slots().get(ARMOR_SLOTS.start + i).map(|s| &**s);
         match slot {
@@ -194,7 +194,7 @@ impl InWorld {
     pub(super) fn mining_particles(
         &mut self,
         pos: [i32; 3],
-        face: crate::world::block::direction::Direction,
+        face: melon_world::block::direction::Direction,
     ) {
         self.with_particles(|engine, world| client::terrain::crack(engine, world, pos, face));
     }
@@ -237,7 +237,7 @@ impl InWorld {
             level
                 .biome(pos.x, pos.y, pos.z)
                 .and_then(|id| biomes.biome(id))
-                .is_some_and(|b| b.precipitation() == crate::world::weather::Precipitation::Rain)
+                .is_some_and(|b| b.precipitation() == melon_world::weather::Precipitation::Rain)
         };
         let rain = self.weather.rain;
         let raining_at = |pos: IVec3| {
@@ -248,7 +248,7 @@ impl InWorld {
         let lookup = |id: i32| entity_box(entities, player, own, id);
         let nearest = |at: DVec3, d: f64| nearest_player(entities, player, own, at, d);
         let held = self.inventory.selected_stack().item;
-        let creative = self.game_mode.current == crate::world::game_mode::GameMode::Creative;
+        let creative = self.game_mode.current == melon_world::game_mode::GameMode::Creative;
         let marker = [
             pumpkin_data::item::Item::BARRIER.id,
             pumpkin_data::item::Item::LIGHT.id,
@@ -327,7 +327,7 @@ impl InWorld {
         renderer: &mut Renderer,
         assets: &WorldResources,
         camera: &Camera,
-        frustum: &crate::world::culling::frustum::Frustum,
+        frustum: &melon_world::culling::frustum::Frustum,
         partial: f32,
         out: &mut Vec<ParticleDraw>,
     ) {
@@ -337,9 +337,9 @@ impl InWorld {
         // `-left`, `up` and the yaw (`Camera.yRot`) of vanilla's camera.
         let right = -camera.left();
         let up = camera.up();
-        let yaw = crate::math::angle::axis_angle(
+        let yaw = melon_core::math::angle::axis_angle(
             Vec3::Y,
-            (180.0 - camera.look().y_rot) * crate::math::DEG_TO_RAD,
+            (180.0 - camera.look().y_rot) * melon_core::math::DEG_TO_RAD,
         );
         let view = View {
             origin: camera.position.floor().as_ivec3(),

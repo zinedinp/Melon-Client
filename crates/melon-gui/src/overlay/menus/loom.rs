@@ -6,12 +6,12 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::scroll::Scroller;
 use super::{Frame, Loader, MenuDraw, MenuScreen, MenuSprites};
-use crate::math::argb;
+use melon_core::math::argb;
 use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::{OverlayAction, OverlayContext};
-use crate::renderer::TextureId;
+use melon_render::TextureId;
 use crate::sprite::GuiSprite;
-use crate::world::inventory::{OpenContainer, loom};
+use melon_world::inventory::{OpenContainer, loom};
 
 const COLUMNS: usize = 4;
 const ROWS: usize = 4;
@@ -96,7 +96,7 @@ impl LoomScreen {
             known
                 .iter()
                 .zip(inputs)
-                .all(|(a, b)| crate::world::inventory::stacks_equal(a, b))
+                .all(|(a, b)| melon_world::inventory::stacks_equal(a, b))
         });
         if same {
             return;
@@ -324,7 +324,7 @@ impl LoomScreen {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::inventory::{ContainerKind, empty};
+    use melon_world::inventory::{ContainerKind, empty};
     use pumpkin_data::item::Item;
 
     fn menu() -> OpenContainer {

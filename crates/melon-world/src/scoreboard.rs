@@ -1,6 +1,6 @@
 //! The client's `Scoreboard`.
 
-use crate::component::{Component, Contents, Style, TextColor};
+use melon_protocol::component::{Component, Contents, Style, TextColor};
 use std::collections::HashMap;
 
 /// `ObjectiveCriteria.RenderType`, in wire order.
@@ -652,10 +652,10 @@ mod tests {
 
     #[test]
     fn a_team_name_keeps_everything_a_prefix_and_suffix_can_carry() {
-        use crate::i18n::Lang;
-        use crate::text::StyledText;
+        use melon_assets::i18n::Lang;
+        use melon_assets::text::StyledText;
         use serde_json::json;
-        let prefix = crate::component::decode::component(&json!([
+        let prefix = melon_protocol::component::decode::component(&json!([
             {"text": "A", "color": "#12ab34", "bold": true, "font": "minecraft:alt"},
             {"translate": "rank.%s", "with": [{"text": "x", "obfuscated": true}], "italic": true},
             {"object": "atlas", "sprite": "minecraft:item/apple"},

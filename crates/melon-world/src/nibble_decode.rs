@@ -8,8 +8,8 @@ use crate::chunk::{LIGHT_NIBBLES, nibble};
     target_arch = "x86_64",
     all(target_arch = "aarch64", target_endian = "little")
 ))]
-use crate::math::bytes::Bytes;
-use crate::math::simd::{self, ByteTier};
+use melon_core::math::bytes::Bytes;
+use melon_core::math::simd::{self, ByteTier};
 use crate::section::BLOCKS_PER_SECTION;
 
 /// Packed nibbles (`LIGHT_NIBBLES` bytes) to one level per block.
@@ -60,7 +60,7 @@ pub(super) fn unpack_with<B: Bytes>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::xorshift::XorShift;
+    use melon_core::util::xorshift::XorShift;
 
     #[test]
     fn every_tier_unpacks_as_the_scalar_code() {

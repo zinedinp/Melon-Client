@@ -73,7 +73,7 @@ impl SoundEvents {
     /// Adds one `sounds.json` of `namespace` on top, as vanilla's `SoundManager` merges them.
     pub fn merge(&mut self, namespace: &str, json: &[u8]) -> Option<()> {
         let root: Value =
-            serde_json::from_slice(crate::assets::packs::meta::strip_bom(json)).ok()?;
+            serde_json::from_slice(melon_assets::assets::packs::meta::strip_bom(json)).ok()?;
         for (name, event) in root.as_object()? {
             let key: Box<str> = if namespace == "minecraft" {
                 plain(name).into()
@@ -121,10 +121,10 @@ impl SoundEvents {
     /// Every namespace's `sounds.json`, vanilla's and each resource pack's, merged.
     pub fn load(assets_root: &Path) -> Self {
         let mut events = Self::default();
-        for namespace in crate::assets::namespaces(assets_root) {
-            for json in crate::assets::resource_stack(assets_root, &namespace, "sounds.json") {
+        for namespace in melon_assets::assets::namespaces(assets_root) {
+            for json in melon_assets::assets::resource_stack(assets_root, &namespace, "sounds.json") {
                 if events.merge(&namespace, &json).is_none() {
-                    crate::warn!("{namespace}:sounds.json unreadable");
+                    melon_base::warn!("{namespace}:sounds.json unreadable");
                 }
             }
         }
@@ -164,8 +164,8 @@ impl SoundEvents {
 
     /// The sound `event` plays this time.
     pub fn pick(&self, event: &str, roll: f32) -> Option<Sound> {
-        if crate::probe::enabled() && !self.events.contains_key(plain(event)) {
-            crate::probe::count("sound.unknown", event);
+        if melon_core::probe::enabled() && !self.events.contains_key(plain(event)) {
+            melon_core::probe::count("sound.unknown", event);
         }
         self.pick_at(plain(event), roll, 0)
     }

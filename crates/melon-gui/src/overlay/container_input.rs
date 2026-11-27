@@ -4,10 +4,10 @@ use std::time::{Duration, Instant};
 
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::settings::input::{Action, InputBind};
-use crate::settings::options::Config;
-use crate::world::inventory::{ClickType, quick_craft_mask};
-use crate::world::inventory::{OUTSIDE, can_item_quick_replace, empty};
+use melon_settings::input::{Action, InputBind};
+use melon_settings::options::Config;
+use melon_world::inventory::{ClickType, quick_craft_mask};
+use melon_world::inventory::{OUTSIDE, can_item_quick_replace, empty};
 
 /// `MouseHandler`'s double click window.
 const DOUBLE_CLICK: Duration = Duration::from_millis(250);
@@ -62,7 +62,7 @@ pub fn slot_bind(
     let binds = &config.input.binds;
     if carried_empty && binds.get(Action::SwapOffhand) == bind {
         Some(click(
-            crate::world::inventory::SWAP_OFFHAND_BUTTON,
+            melon_world::inventory::SWAP_OFFHAND_BUTTON,
             ClickType::Swap,
         ))
     } else if let Some(n) = binds
@@ -360,7 +360,7 @@ pub fn drag_preview(
         i32::from(current.item_count)
     };
     let placed =
-        crate::world::inventory::quick_craft_place_count(drag.slots.len(), drag.kind, carried)
+        melon_world::inventory::quick_craft_place_count(drag.slots.len(), drag.kind, carried)
             + carry;
     Some(if placed > max {
         (carried.copy_with_count(max as u8), true)
@@ -387,7 +387,7 @@ pub fn drag_remainder(
             i32::from(current.item_count)
         };
         let max = i32::from(carried.get_max_stack_size().min(max_in_slot));
-        let placed = (crate::world::inventory::quick_craft_place_count(
+        let placed = (melon_world::inventory::quick_craft_place_count(
             drag.slots.len(),
             drag.kind,
             carried,

@@ -1,11 +1,11 @@
 //! Vanilla `SkinCustomizationScreen`.
 
-use crate::i18n::Lang;
+use melon_assets::i18n::Lang;
 use crate::screen::{ConfigChange, ScreenContext};
 use crate::screens::options::{on_off_label, value_label};
-use crate::settings::options::Config;
+use melon_settings::options::Config;
 use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
-use crate::world::entity::player::PlayerModelPart;
+use melon_world::entity::player::PlayerModelPart;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SkinOption {

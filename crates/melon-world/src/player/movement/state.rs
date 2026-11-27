@@ -48,7 +48,7 @@ impl<'a> Travel<'a> {
         heights: FluidHeights,
     ) -> Self {
         let (forward, strafe) = player.movement_input(input);
-        let (sin, cos) = crate::math::sin_cos_degrees(player.yaw() + 180.0);
+        let (sin, cos) = melon_core::math::sin_cos_degrees(player.yaw() + 180.0);
         Self {
             level,
             input,

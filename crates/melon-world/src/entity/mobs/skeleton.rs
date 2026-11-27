@@ -4,7 +4,7 @@ use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::animation::bob_arms;
 use crate::entity::humanoid::{self, HumanoidParts};
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::math::angle::{self, PI};
+use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
 
 pub fn layer() -> LayerDefinition {

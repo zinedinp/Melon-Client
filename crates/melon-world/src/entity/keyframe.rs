@@ -131,7 +131,7 @@ pub const fn pos_vec(x: f32, y: f32, z: f32) -> Vec3 {
 
 /// `KeyframeAnimations.degreeVec`.
 pub const fn degree_vec(x: f32, y: f32, z: f32) -> Vec3 {
-    const RADIANS: f32 = (crate::math::angle::double::PI / 180.0) as f32;
+    const RADIANS: f32 = (melon_core::math::angle::double::PI / 180.0) as f32;
     Vec3::new(x * RADIANS, y * RADIANS, z * RADIANS)
 }
 
@@ -757,7 +757,7 @@ mod tests {
         assert_eq!(pos_vec(1.0, 2.0, 3.0), Vec3::new(1.0, -2.0, 3.0));
         assert!(
             (degree_vec(180.0, 0.0, 90.0)
-                - Vec3::new(crate::math::angle::PI, 0.0, crate::math::angle::HALF_PI))
+                - Vec3::new(melon_core::math::angle::PI, 0.0, melon_core::math::angle::HALF_PI))
             .length()
                 < 1e-6
         );

@@ -187,8 +187,8 @@ pub static CREAKING_ATTACK: AnimationDefinition = AnimationDefinition {
             ]),
             Channel::new(Target::Position, &[
                 Keyframe::linear(0.0, pos(0.0, 0.0, 0.0)),
-                Keyframe::linear(0.1667, pos(crate::math::FRAC_1_SQRT_2, 0.0, 0.0)),
-                Keyframe::linear(0.625, pos(crate::math::FRAC_1_SQRT_2, 0.0, 0.0)),
+                Keyframe::linear(0.1667, pos(melon_core::math::FRAC_1_SQRT_2, 0.0, 0.0)),
+                Keyframe::linear(0.625, pos(melon_core::math::FRAC_1_SQRT_2, 0.0, 0.0)),
                 Keyframe::linear(0.7083, pos(0.0, 0.0, 0.0)),
             ]),
         ]),

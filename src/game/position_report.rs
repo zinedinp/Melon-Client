@@ -16,7 +16,7 @@ pub enum Report {
 #[derive(Default)]
 pub struct LastSent {
     pub position: PositionReport,
-    pub input: crate::network::play::game::PlayerInput,
+    pub input: melon_net::play::game::PlayerInput,
     pub sprinting: bool,
     /// Send input again even if the keys have not changed: after a teleport.
     pub input_dirty: bool,

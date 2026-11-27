@@ -4,7 +4,7 @@ use super::{LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::look;
-use crate::math::angle;
+use melon_core::math::angle;
 use crate::model_part::{Cube, Pose};
 
 const RODS: usize = 12;
@@ -33,17 +33,17 @@ pub fn layer() -> LayerDefinition {
     for i in 0..RODS {
         let (angle, radius, y) = match ring(i) {
             0 => (
-                i as f32 * crate::math::angle::HALF_PI,
+                i as f32 * melon_core::math::angle::HALF_PI,
                 9.0,
                 -2.0 + angle::cos(i as f32 * 2.0 * 0.25),
             ),
             1 => (
-                crate::math::angle::QUARTER_PI + (i - 4) as f32 * crate::math::angle::HALF_PI,
+                melon_core::math::angle::QUARTER_PI + (i - 4) as f32 * melon_core::math::angle::HALF_PI,
                 7.0,
                 2.0 + angle::cos(i as f32 * 2.0 * 0.25),
             ),
             _ => (
-                0.471_238_9 + (i - 8) as f32 * crate::math::angle::HALF_PI,
+                0.471_238_9 + (i - 8) as f32 * melon_core::math::angle::HALF_PI,
                 5.0,
                 11.0 + angle::cos(i as f32 * 1.5 * 0.5),
             ),
@@ -75,7 +75,7 @@ impl BlazeParts {
 /// `BlazeModel.setupAnim`.
 pub fn setup_anim(parts: &BlazeParts, pose: &mut ModelPose, state: &LivingRenderState) {
     let age = state.age_in_ticks;
-    let pi = crate::math::angle::PI;
+    let pi = melon_core::math::angle::PI;
     for ring in 0..3 {
         let (mut turn, radius, base_y) = match ring {
             0 => (age * pi * -0.1, 9.0, -2.0),

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use glam::DVec3;
 
 use crate::block_models::BlockModels;
-use crate::cycle::Cycle;
+use melon_core::cycle::Cycle;
 use crate::java_random::JavaRandom;
 use crate::level::Level;
 

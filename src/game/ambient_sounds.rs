@@ -4,9 +4,9 @@ use rand::RngExt;
 
 use super::InWorld;
 use super::controls::WorldContext;
-use crate::audio::SoundInstance;
-use crate::audio::source::SoundSource;
-use crate::world::physics::eye_in_water;
+use melon_audio::SoundInstance;
+use melon_audio::source::SoundSource;
+use melon_world::physics::eye_in_water;
 
 /// `UnderwaterAmbientSoundHandler`'s chances per tick.
 const ULTRA_RARE: f32 = 1.0e-4;
@@ -91,7 +91,7 @@ impl InWorld {
 
     /// `minecraft:audio/ambient_sounds` where the player is: the biome's,
     /// else the dimension's.
-    fn ambient_sounds_here(&self) -> Option<&crate::world::biome::AmbientSounds> {
+    fn ambient_sounds_here(&self) -> Option<&melon_world::biome::AmbientSounds> {
         let feet = self.player.feet().floor().as_ivec3();
         self.level
             .biome(feet.x, feet.y, feet.z)
@@ -225,7 +225,7 @@ impl InWorld {
                 .biome(x, y, z)
                 .and_then(|id| self.level_info.biomes.biome(id))
                 .is_some_and(|biome| {
-                    biome.precipitation() == crate::world::weather::Precipitation::Rain
+                    biome.precipitation() == melon_world::weather::Precipitation::Rain
                 });
             if y > self.level.height().0 && (y - camera.y).abs() <= 10 && rains {
                 spot = Some([x, y - 1, z]);

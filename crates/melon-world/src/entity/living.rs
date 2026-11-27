@@ -2,8 +2,8 @@
 
 use glam::{Mat4, Vec3};
 
-use crate::math::angle::Rotation;
-use crate::math::wrap_degrees;
+use melon_core::math::angle::Rotation;
+use melon_core::math::wrap_degrees;
 
 /// How a swimming body is laid down.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

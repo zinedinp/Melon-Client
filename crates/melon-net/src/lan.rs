@@ -105,7 +105,7 @@ impl LanDetector {
         let socket = match bind() {
             Ok(socket) => socket,
             Err(error) => {
-                crate::warn!("No LAN server detection: {error}");
+                melon_base::warn!("No LAN server detection: {error}");
                 return None;
             }
         };
@@ -181,7 +181,7 @@ fn listen(socket: &UdpSocket, list: &Mutex<List>, stop: &AtomicBool) {
                     std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
                 ) => {}
             Err(error) => {
-                crate::warn!("LAN server detection stopped: {error}");
+                melon_base::warn!("LAN server detection stopped: {error}");
                 break;
             }
         }
