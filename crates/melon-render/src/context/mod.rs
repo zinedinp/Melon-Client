@@ -79,15 +79,9 @@ impl Renderer {
         let globals = super::globals::GlobalBuffers::new(&layer, &ring)?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let layouts = unsafe { pipelines::create_set_layouts(&device, globals.layout()) }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let gui_uniforms = unsafe {
-            super::gui_uniforms::GuiUniforms::new(
-                &device,
-                &mem_props,
-                layouts.gui,
-                MAX_FRAMES_IN_FLIGHT,
-            )
-        }?;
+        // SAFETY: `layouts.gui` was made just now by `create_layout` on the layer's device.
+        let gui_uniforms =
+            unsafe { super::gui_uniforms::GuiUniforms::new(&layer, &ring, layouts.gui) }?;
         let indirect = if features.multi_draw() {
             // SAFETY: `device` is live, and the infos name only its own live handles.
             Some(unsafe {
@@ -213,7 +207,15 @@ impl Renderer {
             width: size.width.max(1),
             height: size.height.max(1),
         };
-        let swapchain = resources::swapchain(window_extent, surface_format, depth_format);
+        // What the presenter will grant, known before its first swapchain:
+        // the post chains are loaded before the first frame.
+        // SAFETY: `instance` is live, and the physical device and surface are its own.
+        let can_copy = unsafe {
+            surface_loader.get_physical_device_surface_capabilities(gpu.physical, surface)
+        }?
+        .supported_usage_flags
+        .contains(vk::ImageUsageFlags::TRANSFER_SRC);
+        let swapchain = resources::swapchain(window_extent, surface_format, depth_format, can_copy);
         // SAFETY: `surface` is the instance's, outlives the presenter (dropped
         // first in `Drop`), and `device_pick` chose a family that presents to it.
         let presenter = unsafe {

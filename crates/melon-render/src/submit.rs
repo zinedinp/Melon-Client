@@ -196,20 +196,17 @@ impl Renderer {
             0.0,
         ];
         self.globals.write(&gpu_frame, &globals);
-        // SAFETY: this frame's fence was waited on, so the GPU no longer reads its uniform slot.
-        unsafe {
-            self.gui_uniforms.write(
-                self.frames.current,
-                &super::gui_uniforms::GuiFrame {
-                    gui_size: frame.ui_size,
-                    screen_size: (
-                        self.swapchain.extent.width as f32,
-                        self.swapchain.extent.height as f32,
-                    ),
-                    game_time: super::gui_uniforms::game_time(),
-                },
-            )
-        };
+        self.gui_uniforms.write(
+            &gpu_frame,
+            &super::gui_uniforms::GuiFrame {
+                gui_size: frame.ui_size,
+                screen_size: (
+                    self.swapchain.extent.width as f32,
+                    self.swapchain.extent.height as f32,
+                ),
+                game_time: super::gui_uniforms::game_time(),
+            },
+        );
 
         let mut rec = gpu_frame.record()?;
         let cmd = rec.raw();

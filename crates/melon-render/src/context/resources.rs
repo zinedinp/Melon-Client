@@ -104,6 +104,7 @@ pub(super) fn swapchain(
     window: vk::Extent2D,
     format: vk::Format,
     depth_format: vk::Format,
+    can_copy: bool,
 ) -> Swapchain {
     Swapchain {
         window,
@@ -114,7 +115,7 @@ pub(super) fn swapchain(
         images: Vec::new(),
         views: Vec::new(),
         format,
-        can_copy: false,
+        can_copy,
         depth_format,
         depth_sampled: false,
         depth: DepthImage::default(),

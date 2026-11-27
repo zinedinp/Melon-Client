@@ -1,10 +1,8 @@
 //! The uniform blocks vanilla's GUI shaders read (`DynamicTransforms`, `Projection`).
 
 use ash::vk;
+use majestix_vk::{Frames, Mapped, MemoryUse};
 use numerobis::elem::Pod;
-
-use super::mapped::MappedBuffer;
-use super::vk_util::Place;
 
 /// Each block's binding in set 1, by the name a shader declares it with.
 pub const BLOCKS: [&str; 3] = ["DynamicTransforms", "Projection", "Globals"];
@@ -118,15 +116,14 @@ fn projection(w: f32, h: f32) -> [f32; 16] {
     ]
 }
 
+/// Each frame slot's blocks in one ring, and a set per slot naming them.
 pub struct GuiUniforms {
     pub layout: vk::DescriptorSetLayout,
     pool: vk::DescriptorPool,
-    frames: Vec<Frame>,
-}
-
-struct Frame {
-    buffer: MappedBuffer,
-    set: vk::DescriptorSet,
+    /// By slot index.
+    sets: Vec<vk::DescriptorSet>,
+    /// majestix-vk's part; given up in [`Self::destroy`], before the device goes.
+    ring: Option<Mapped<u8>>,
 }
 
 /// Binding of the item-glint sampler in set 1.
@@ -164,26 +161,34 @@ pub unsafe fn create_layout(device: &ash::Device) -> anyhow::Result<vk::Descript
 }
 
 impl GuiUniforms {
-    /// One uniform block per frame in flight, each with its set.
+    /// The blocks of every slot of `frames` in one ring, each slot with its set.
     ///
     /// # Safety
     ///
-    /// `device` must be live, `layout` from [`create_layout`] on it.
+    /// `layout` must be from [`create_layout`] on `layer`'s device.
     pub unsafe fn new(
-        device: &ash::Device,
-        mem_props: &vk::PhysicalDeviceMemoryProperties,
+        layer: &majestix_vk::Device,
+        frames: &Frames,
         layout: vk::DescriptorSetLayout,
-        frames: usize,
     ) -> anyhow::Result<Self> {
+        let device = layer.raw();
         let blocks = BLOCKS.len() as u32;
+        let count = frames.count();
+        let ring = Mapped::<u8>::new(
+            layer,
+            frames,
+            (STRIDE * u64::from(blocks)) as usize,
+            vk::BufferUsageFlags::UNIFORM_BUFFER,
+            MemoryUse::Upload,
+        )?;
         let sizes = [
             vk::DescriptorPoolSize {
                 ty: vk::DescriptorType::UNIFORM_BUFFER,
-                descriptor_count: frames as u32 * blocks,
+                descriptor_count: count * blocks,
             },
             vk::DescriptorPoolSize {
                 ty: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
-                descriptor_count: frames as u32,
+                descriptor_count: count,
             },
         ];
         // SAFETY: `device` is live, and the infos name only its own live handles.
@@ -191,37 +196,33 @@ impl GuiUniforms {
             device.create_descriptor_pool(
                 &vk::DescriptorPoolCreateInfo::default()
                     .pool_sizes(&sizes)
-                    .max_sets(frames as u32),
+                    .max_sets(count),
                 None,
             )
         }?;
-        let layouts = vec![layout; frames];
+        let layouts = vec![layout; count as usize];
         // SAFETY: `device` is live, and the infos name only its own live handles.
-        let sets = unsafe {
+        let sets = match unsafe {
             device.allocate_descriptor_sets(
                 &vk::DescriptorSetAllocateInfo::default()
                     .descriptor_pool(pool)
                     .set_layouts(&layouts),
             )
-        }?;
-        let size = STRIDE * u64::from(blocks);
-        let mut out = Vec::with_capacity(frames);
-        for set in sets {
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            let buffer = unsafe {
-                MappedBuffer::new(
-                    device,
-                    mem_props,
-                    size,
-                    vk::BufferUsageFlags::UNIFORM_BUFFER,
-                    Place::UPLOAD,
-                )
-            }?;
+        } {
+            Ok(sets) => sets,
+            Err(e) => {
+                // SAFETY: made just now, and nothing uses it.
+                unsafe { device.destroy_descriptor_pool(pool, None) };
+                return Err(e.into());
+            }
+        };
+        for (slot, &set) in frames.slots().zip(&sets) {
+            let start = ring.offset(slot);
             let infos: Vec<[vk::DescriptorBufferInfo; 1]> = (0..u64::from(blocks))
                 .map(|i| {
                     [vk::DescriptorBufferInfo::default()
-                        .buffer(buffer.buffer)
-                        .offset(i * STRIDE)
+                        .buffer(ring.buffer().raw())
+                        .offset(start + i * STRIDE)
                         .range(STRIDE)]
                 })
                 .collect();
@@ -238,32 +239,32 @@ impl GuiUniforms {
                 .collect();
             // SAFETY: `device` is live, and the infos name only its own live handles.
             unsafe { device.update_descriptor_sets(&writes, &[]) };
-            let frame = Frame { buffer, set };
-            // SAFETY: the frame was just mapped, and the GPU hasn't used it yet.
-            unsafe {
-                frame.write(&GuiFrame {
-                    gui_size: (1.0, 1.0),
-                    screen_size: (1.0, 1.0),
-                    game_time: 0.0,
-                })
-            };
-            out.push(frame);
         }
         Ok(Self {
             layout,
             pool,
-            frames: out,
+            sets,
+            ring: Some(ring),
         })
     }
 
-    /// Writes frame `frame`'s blocks; call once its fence was waited on.
-    ///
-    /// # Safety
-    ///
-    /// No submitted frame may still read frame `frame`'s blocks.
-    pub unsafe fn write(&self, frame: usize, gui: &GuiFrame) {
-        // SAFETY: this frame's fence was waited on, so the GPU no longer reads its uniform slot.
-        unsafe { self.frames[frame].write(gui) };
+    /// Writes the frame's blocks.
+    pub fn write(&mut self, frame: &majestix_vk::Frame<'_>, gui: &GuiFrame) {
+        let ring = self
+            .ring
+            .as_mut()
+            .expect("gui uniforms written after destroy");
+        let transforms = DynamicTransforms {
+            model_view: IDENTITY,
+            texture: IDENTITY,
+            color_modulator: [1.0; 4],
+            model_offset: [0.0; 4],
+        };
+        let globals = Globals::gui(glint_millis(), gui.game_time, gui.screen_size);
+        let stride = STRIDE as usize;
+        ring.write(frame, 0, &transforms);
+        ring.write(frame, stride, &projection(gui.gui_size.0, gui.gui_size.1));
+        ring.write(frame, 2 * stride, &globals);
     }
 
     /// Binds `view` sampled by `sampler` as the item glint, every frame.
@@ -277,7 +278,7 @@ impl GuiUniforms {
         view: vk::ImageView,
         sampler: vk::Sampler,
     ) {
-        for frame in &self.frames {
+        for &set in &self.sets {
             let info = [vk::DescriptorImageInfo::default()
                 .sampler(sampler)
                 .image_view(view)
@@ -286,7 +287,7 @@ impl GuiUniforms {
             unsafe {
                 device.update_descriptor_sets(
                     &[vk::WriteDescriptorSet::default()
-                        .dst_set(frame.set)
+                        .dst_set(set)
                         .dst_binding(GLINT_BINDING)
                         .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
                         .image_info(&info)],
@@ -296,44 +297,25 @@ impl GuiUniforms {
         }
     }
 
-    pub fn set(&self, frame: usize) -> vk::DescriptorSet {
-        self.frames[frame].set
+    /// Frame slot `slot`'s set.
+    pub fn set(&self, slot: usize) -> vk::DescriptorSet {
+        self.sets[slot]
     }
 
-    /// Frees the buffers and the sets' pool.
+    /// Retires the ring and frees the sets' pool and the layout.
     ///
     /// # Safety
     ///
     /// `device` must be live and done with them.
     pub unsafe fn destroy(&mut self, device: &ash::Device) {
-        for frame in self.frames.drain(..) {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { frame.buffer.destroy(device) };
+        if self.ring.take().is_none() {
+            return;
         }
+        self.sets.clear();
         // SAFETY: made by this device, and no frame in flight uses it any more.
         unsafe {
             device.destroy_descriptor_pool(self.pool, None);
             device.destroy_descriptor_set_layout(self.layout, None);
-        }
-    }
-}
-
-impl Frame {
-    unsafe fn write(&self, gui: &GuiFrame) {
-        let transforms = DynamicTransforms {
-            model_view: IDENTITY,
-            texture: IDENTITY,
-            color_modulator: [1.0; 4],
-            model_offset: [0.0; 4],
-        };
-        let globals = Globals::gui(glint_millis(), gui.game_time, gui.screen_size);
-        let projection = projection(gui.gui_size.0, gui.gui_size.1);
-        let stride = STRIDE as usize;
-        // SAFETY: the caller keeps the GPU off this frame's blocks (its fence was waited on).
-        unsafe {
-            self.buffer.write_one(0, &transforms);
-            self.buffer.write_one(stride, &projection);
-            self.buffer.write_one(2 * stride, &globals);
         }
     }
 }

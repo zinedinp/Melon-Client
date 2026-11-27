@@ -6,8 +6,8 @@ they are about; this file holds the plans that span modules or crates.
 
 Melon is on majestix-vk 0.2.1 and numerobis 0.6.0.
 
-**Next:** melon-base's `gui_uniforms.rs` onto a `Mapped` ring, the
-renderer move's next step (below).
+**Next:** melon-render's `pack_outline.rs` onto a `Mapped` ring, which
+also ends a race (below).
 
 ## melon (the client)
 
@@ -39,13 +39,18 @@ their frame ring (`Frames`) and swapchain (`Presenter`) from majestix-vk:
 the game's and the launcher's `Renderer2d`. Through majestix-vk besides:
 melon-render's `blur.rs`, the world's per-frame globals (`globals.rs`),
 the UI's vertices and indices (melon-base's `gfx/ui_vertices.rs`, shared by
-both), and the pipeline cache (melon-render's `pipeline_cache.rs`,
-`cache/pipelines.bin`). About 775 `unsafe` blocks are left: ~545 in
-melon-render, ~230 in melon-base's `gfx`.
+both), the GUI's uniform blocks (`gfx/gui_uniforms.rs`), and the pipeline
+cache (melon-render's `pipeline_cache.rs`, `cache/pipelines.bin`). About
+770 `unsafe` blocks are left: ~545 in melon-render, ~225 in melon-base's
+`gfx`.
 
 A fixed-size per-frame buffer moves as the globals and the UI vertices did:
 a `Mapped` ring, each slot's set or offset fixed up front from
-`Frames::slots`. Next of those: melon-base's `gfx/gui_uniforms.rs`.
+`Frames::slots`. `gui_uniforms`' sets stay raw, as their glint binding
+names a texture melon-base owns and rebinds on a reload (see majestix-vk's
+"Descriptor sets"). Next of those: melon-render's `pack_outline.rs`, one
+buffer for every frame in flight that each frame rewrites while the one
+before may still read it; per-slot ranges end that.
 
 Of the rest, the memory modules go first, as melon-base and majestix-vk
 would otherwise keep two memory managers. In this order, each waiting on one gap in
@@ -135,6 +140,11 @@ What Melon's renderer needs from it, most important first.
 
 ### Descriptor sets
 
+- **Sets naming the host's images.** `Descriptor` takes majestix-vk's own
+  `ImageView` and `Sampler`, and a set is written whole, once. melon-base's
+  textures (views it destroys itself) and the GUI's glint, rebound on a
+  reload, need a view lent for as long as the host says, or one binding of
+  a set no frame uses rewritten.
 - **Texel buffers and immutable samplers.** `create_descriptor_set` panics
   on `*_TEXEL_BUFFER` (no buffer views yet), and `Binding` has no immutable
   samplers.

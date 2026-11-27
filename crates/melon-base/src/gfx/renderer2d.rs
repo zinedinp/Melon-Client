@@ -155,8 +155,8 @@ impl Renderer2d {
         let texture_layout = unsafe { pipeline::create_descriptor_set_layout(&device) }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let gui_layout = unsafe { gui_uniforms::create_layout(&device) }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let gui = unsafe { GuiUniforms::new(&device, &mem_props, gui_layout, FRAMES_IN_FLIGHT) }?;
+        // SAFETY: `gui_layout` was made just now by `create_layout` on the layer's device.
+        let gui = unsafe { GuiUniforms::new(&layer, &ring, gui_layout) }?;
         let pipelines = UiPipelines {
             // SAFETY: `device` is live, and the infos name only its own live handles.
             built_in: unsafe {
@@ -467,17 +467,14 @@ impl Renderer2d {
         let (width, height) = (self.swapchain.extent.width, self.swapchain.extent.height);
 
         self.vertices.write(&frame, &ui.vertices);
-        // SAFETY: `ring.begin` waited for the slot's last frame, so the GPU no longer reads its uniforms.
-        unsafe {
-            self.gui.write(
-                current,
-                &GuiFrame {
-                    gui_size: ui_size,
-                    screen_size: (width as f32, height as f32),
-                    game_time: gui_uniforms::game_time(),
-                },
-            )
-        };
+        self.gui.write(
+            &frame,
+            &GuiFrame {
+                gui_size: ui_size,
+                screen_size: (width as f32, height as f32),
+                game_time: gui_uniforms::game_time(),
+            },
+        );
 
         let rec = frame.record()?;
         let cmd = rec.raw();
