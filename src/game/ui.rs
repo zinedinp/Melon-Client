@@ -4,10 +4,10 @@ use super::camera::CameraMode;
 use super::world_resources::WorldResources;
 use super::{DebugFrame, InWorld};
 use melon_assets::i18n::Lang;
+use melon_base::gfx::quad::DrawList;
 use melon_gui::hud::item_slot::ItemPainter;
 use melon_gui::overlay::{OverlayDraw, OverlayKind, OverlayTextures};
 use melon_render::Renderer;
-use melon_render::quad::DrawList;
 use melon_settings::options::Config;
 use std::time::Instant;
 

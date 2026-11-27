@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use crate::GuiShader;
-use crate::quad::Program;
 use melon_assets::assets::shaders::{self, Interface, Stage};
+use melon_base::gfx::quad::Program;
 
 /// One GUI pipeline as vanilla declares it.
 struct Pipeline {

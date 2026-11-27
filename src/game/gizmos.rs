@@ -2,13 +2,12 @@
 
 use glam::{DVec3, IVec3, Mat4, Vec3};
 
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::{DrawList, Vertex};
 use melon_gui::text::font::Font;
-use melon_render::quad::{DrawList, Vertex};
-use melon_render::{
-    Blending, EntityDraw, LineDraw, LineStyle, MeshId, RenderLayer, Renderer, TextureId,
-    WorldVertex,
-};
+use melon_render::{Blending, EntityDraw, LineDraw, LineStyle, MeshId, RenderLayer, Renderer};
 use melon_world::block::direction::Direction;
+use melon_world::mesh::WorldVertex;
 use melon_world::physics::Aabb;
 
 /// `GizmoStyle.stroke`'s width, in pixels.

@@ -34,7 +34,7 @@ pub struct PaintingMeshes {
     by_entity: HashMap<i32, Kept, ChunkHash>,
 }
 
-fn upload(renderer: &mut Renderer, vertices: &[melon_render::WorldVertex]) -> Option<MeshId> {
+fn upload(renderer: &mut Renderer, vertices: &[melon_world::mesh::WorldVertex]) -> Option<MeshId> {
     if vertices.is_empty() {
         return None;
     }

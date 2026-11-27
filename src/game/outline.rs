@@ -3,8 +3,9 @@
 
 use glam::{DVec3, IVec3, Mat4};
 
-use melon_render::{LineDraw, LineStyle, MeshId, Renderer, WorldVertex};
+use melon_render::{LineDraw, LineStyle, MeshId, Renderer};
 use melon_world::level::Level;
+use melon_world::mesh::WorldVertex;
 use melon_world::physics::Aabb;
 use melon_world::pick::{self, BlockHit};
 

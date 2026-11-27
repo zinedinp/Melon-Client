@@ -2,7 +2,8 @@
 
 use ash::vk;
 
-use super::{QuadCorner, Renderer, WorldVertex, create_buffer, vk_util};
+use super::{QuadCorner, Renderer, create_buffer, vk_util};
+use melon_world::mesh::WorldVertex;
 
 /// The table's buffer and the descriptor set binding it (set 1 of the terrain pipelines).
 pub(super) struct QuadTable {

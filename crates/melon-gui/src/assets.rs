@@ -6,7 +6,8 @@ use crate::widgets::button::{ButtonTextures, TabTextures};
 use crate::widgets::row_icon::{Arrow, RowIconSprites};
 use crate::widgets::slider::SliderTextures;
 use melon_assets::assets::Assets;
-use melon_render::{Renderer, TextureId};
+use melon_base::gfx::TextureId;
+use melon_render::Renderer;
 
 /// `ServerSelectionList`'s sprites: the status bars and the icon overlays.
 pub struct ServerListSprites {

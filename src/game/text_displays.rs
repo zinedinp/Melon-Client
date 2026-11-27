@@ -6,19 +6,19 @@ use glam::{IVec3, Mat4, Vec3};
 
 use super::InWorld;
 use melon_assets::i18n::Lang;
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::{DrawList, Vertex};
 use melon_core::math::ChunkHash;
 use melon_core::math::argb;
 use melon_gui::hud::item_slot::ItemPainter;
 use melon_gui::text::{self, StyledText};
-use melon_render::quad::{DrawList, Vertex};
-use melon_render::{
-    Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer, TextureId, WorldVertex,
-};
+use melon_render::{Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer};
 use melon_world::entity::display::{
     self, FLAG_ALIGN_LEFT, FLAG_ALIGN_RIGHT, FLAG_DEFAULT_BACKGROUND, FLAG_SEE_THROUGH, FLAG_SHADOW,
 };
 use melon_world::entity::kind::EntityKind;
 use melon_world::lightmap::LightmapParams;
+use melon_world::mesh::WorldVertex;
 
 /// Blocks a pixel of text covers (`scale(-0.025)`).
 const PIXEL: f32 = 0.025;

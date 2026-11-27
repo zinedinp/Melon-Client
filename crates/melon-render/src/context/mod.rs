@@ -161,7 +161,7 @@ impl Renderer {
         let sky_cube = unsafe { resources::create_sky_cube(&device, &mem_props) }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let meshes = unsafe {
-            mesh_arena::MeshArena::new::<super::WorldVertex>(
+            mesh_arena::MeshArena::new::<melon_world::mesh::WorldVertex>(
                 &device,
                 &mem_props,
                 MAX_FRAMES_IN_FLIGHT,
@@ -170,7 +170,7 @@ impl Renderer {
         }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let quad_meshes = unsafe {
-            mesh_arena::MeshArena::new::<super::TerrainQuad>(
+            mesh_arena::MeshArena::new::<melon_world::mesh::TerrainQuad>(
                 &device,
                 &mem_props,
                 MAX_FRAMES_IN_FLIGHT,
@@ -179,7 +179,7 @@ impl Renderer {
         }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let particle_meshes = unsafe {
-            mesh_arena::MeshArena::new::<super::ParticleQuad>(
+            mesh_arena::MeshArena::new::<melon_world::particle::mesh::ParticleQuad>(
                 &device,
                 &mem_props,
                 MAX_FRAMES_IN_FLIGHT,

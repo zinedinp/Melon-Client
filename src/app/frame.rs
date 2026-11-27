@@ -401,7 +401,7 @@ fn render_failed(e: &anyhow::Error) -> bool {
 /// The blur behind `screen`, if it has one.
 fn menu_blur(
     screen: &dyn melon_gui::screen::Screen,
-    draw_list: &mut melon_render::quad::DrawList,
+    draw_list: &mut melon_base::gfx::quad::DrawList,
     has_background: bool,
 ) -> Option<Blur> {
     (has_background && screen.blurs_background()).then(|| Blur {

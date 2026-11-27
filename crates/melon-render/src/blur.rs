@@ -4,13 +4,13 @@
 //! swapchain in the frame's own render pass.
 
 use super::{Frame, Place, Renderer, pipeline, vk_util};
-use crate::quad::DrawCall;
 use ash::vk;
 use majestix_vk::{
     Attachment, Barriers, Binding, Descriptor, DescriptorSet, DescriptorSetLayout, Graphics,
     ImageBarrier, ImageDesc, ImageView, Pass, Pipeline, PipelineLayout, Recording, Sampler, Scope,
     Shader, Target, ViewDesc, Write,
 };
+use melon_base::gfx::quad::DrawCall;
 
 /// What blurring needs besides the swapchain.
 pub(super) struct Blur {

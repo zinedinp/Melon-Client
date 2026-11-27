@@ -9,9 +9,10 @@ use crate::sprite::GuiSprite;
 use crate::text::{self, StyledText, colors};
 use melon_assets::assets::Assets;
 use melon_assets::i18n::Lang;
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::DrawList;
 use melon_protocol::component::Component;
-use melon_render::quad::DrawList;
-use melon_render::{Renderer, TextureId};
+use melon_render::Renderer;
 use melon_world::scoreboard::{NumberFormat, Objective, RenderType, Score};
 
 /// `PlayerTabOverlay.MAX_ROWS_PER_COL`.

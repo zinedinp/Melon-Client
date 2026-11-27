@@ -2,9 +2,11 @@
 
 use rustc_hash::FxHashMap;
 
-use melon_render::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId, WorldVertex};
+use melon_base::gfx::TextureId;
+use melon_render::{EntityDraw, MeshId, RenderLayer, Renderer};
 use melon_world::block_models::BlockModels;
 use melon_world::level::Level;
+use melon_world::mesh::WorldVertex;
 
 /// `LevelRenderer`: a breaker not heard of for this many ticks is dropped.
 const EXPIRY_TICKS: u64 = 400;

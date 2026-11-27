@@ -9,8 +9,8 @@ use super::{Frame, Loader, MenuDraw, MenuScreen, MenuSprites};
 use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::{OverlayAction, OverlayContext};
 use crate::sprite::GuiSprite;
+use melon_base::gfx::TextureId;
 use melon_core::math::argb;
-use melon_render::TextureId;
 use melon_world::inventory::{OpenContainer, loom};
 
 const COLUMNS: usize = 4;

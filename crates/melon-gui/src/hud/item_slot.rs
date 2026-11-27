@@ -15,9 +15,9 @@ use crate::text::font::{Font, Glyphs};
 use crate::text::{self, StyledText, TextPaint, TextStyle, colors};
 use crate::widgets::tooltip;
 use melon_assets::i18n::Lang;
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::{DrawList, Program};
 use melon_core::math::argb;
-use melon_render::TextureId;
-use melon_render::quad::{DrawList, Program};
 use melon_world::item_model::StackKey;
 
 /// Everything drawing an item needs, bundled so the HUD and the screens pass one value.

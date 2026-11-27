@@ -38,7 +38,7 @@ impl LeadMeshes {
         renderer: &mut Renderer,
         entity: i32,
         lead: Lead,
-        white: melon_render::TextureId,
+        white: melon_base::gfx::TextureId,
         out: &mut Vec<EntityDraw>,
     ) {
         let kept = self.by_entity.entry(entity).or_insert_with(|| Kept {

@@ -4,11 +4,11 @@ use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use anyhow::Context;
-use melon_render::WorldVertex;
 use melon_world::block_models::BlockModels;
 use melon_world::block_tint::TintSettings;
 use melon_world::chunk::Chunk;
 use melon_world::fluid::FluidSprites;
+use melon_world::mesh::WorldVertex;
 use melon_world::terrain::{self, MeshContext, Neighborhood};
 
 /// What two faces must share to merge.

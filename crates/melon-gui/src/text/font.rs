@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use super::{StyledText, TextPaint};
 use melon_assets::assets::Assets;
-use melon_render::TextureId;
-use melon_render::quad::{DrawList, Program, Transform2D};
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::{DrawList, Program, Transform2D};
 
 mod load;
 pub mod unihex;

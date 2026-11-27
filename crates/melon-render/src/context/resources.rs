@@ -4,9 +4,10 @@
 use ash::vk;
 
 use crate::{
-    DepthImage, FrameWaits, Frames, MAX_FRAMES_IN_FLIGHT, SkyCube, Swapchain, TextureId, Textures,
+    DepthImage, FrameWaits, Frames, MAX_FRAMES_IN_FLIGHT, SkyCube, Swapchain, Textures,
     create_sampler, descriptor_pools::DescriptorPools, pipeline, staging::Staging,
 };
+use melon_base::gfx::TextureId;
 use melon_base::gfx::mapped;
 
 /// The samplers every texture picks from.

@@ -22,8 +22,9 @@ use crate::screen::TextEvent;
 use crate::sprite::GuiSprite;
 use crate::text::font::Font;
 use melon_assets::assets::Assets;
+use melon_base::gfx::TextureId;
 use melon_core::math::argb;
-use melon_render::{Renderer, TextureId};
+use melon_render::Renderer;
 use melon_settings::input::InputBind;
 use melon_world::inventory::{ContainerKind, OpenContainer};
 

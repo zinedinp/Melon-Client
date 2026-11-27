@@ -4,7 +4,7 @@ use super::{BOTTOM_MARGIN, Chat, Line, Tag};
 use crate::text::font::{Font, Glyphs};
 use crate::text::{self, StyledText, TextPaint, TextStyle};
 use melon_assets::i18n::Lang;
-use melon_render::quad::DrawList;
+use melon_base::gfx::quad::DrawList;
 
 impl Chat {
     /// The lines on screen, newest first, with their alpha.

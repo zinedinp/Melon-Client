@@ -15,7 +15,6 @@ use melon::game::level_meshes::LevelMeshes;
 use melon_core::math::euler::{Look, Orientation};
 use melon_net::singleplayer::{self, server};
 use melon_net::{Identity, WorldEvent};
-use melon_render::world_projection;
 use melon_world::block_models::BlockModels;
 use melon_world::block_tint::TintSettings;
 use melon_world::chunk::{Chunk, ChunkLight, ChunkScan, LightSection, Section};
@@ -23,6 +22,7 @@ use melon_world::culling::frustum::Frustum;
 use melon_world::culling::{CullSettings, Culler};
 use melon_world::fluid::FluidSprites;
 use melon_world::level::Level;
+use melon_world::projection::world_projection;
 use melon_world::terrain::{self, MeshContext, Neighborhood};
 
 /// Chunks around the spawn chunk: 17 x 17.

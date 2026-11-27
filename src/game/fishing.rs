@@ -8,12 +8,13 @@ use super::InWorld;
 use super::entities::EntityFrame;
 use super::world_resources::WorldResources;
 use melon_core::math::ChunkHash;
-use melon_render::{EntityDraw, Glint, MeshId, RenderLayer, Renderer, WorldVertex};
+use melon_render::{EntityDraw, Glint, MeshId, RenderLayer, Renderer};
 use melon_world::entity::display;
 use melon_world::entity::fishing::{self, NearPlane};
 use melon_world::entity::kind::EntityKind;
 use melon_world::entity::player::Arm;
 use melon_world::item_model::HeldUse;
+use melon_world::mesh::WorldVertex;
 use melon_world::player::hands::Hand;
 use pumpkin_data::item_stack::ItemStack;
 
@@ -65,7 +66,7 @@ impl FishingMeshes {
         renderer: &mut Renderer,
         id: i32,
         from: (Vec3, Vec3, Vec3, [u8; 2]),
-        white: melon_render::TextureId,
+        white: melon_base::gfx::TextureId,
         out: &mut Vec<EntityDraw>,
     ) {
         let kept = self.lines.entry(id).or_insert_with(|| Kept {

@@ -13,12 +13,13 @@ use pumpkin_data::item_stack::ItemStack;
 use super::entities::{EntityFrame, Placed, from_block, submit_item, submit_item_cluster};
 use super::world_resources::WorldResources;
 use melon_core::math::angle::{self, Rotation};
-use melon_render::{Blending, EntityDraw, Glint, MeshId, Renderer, WorldVertex};
+use melon_render::{Blending, EntityDraw, Glint, MeshId, Renderer};
 use melon_world::entity::display;
 use melon_world::entity::kind::EntityKind;
 use melon_world::entity::mobs::projectile::thrown_look;
 use melon_world::entity::tracker::ClientEntity;
 use melon_world::item_model::HandPose;
+use melon_world::mesh::WorldVertex;
 
 /// `ExperienceOrbRenderer.EXPERIENCE_ORB_LOCATION`.
 pub const ORB_TEXTURE: &str = "minecraft:entity/experience/experience_orb";

@@ -19,8 +19,8 @@ use crate::assets::GuiAssets;
 use crate::screen::CursorKind;
 use crate::text::font::Font;
 use melon_assets::i18n::Lang;
-use melon_render::TextureId;
-use melon_render::quad::DrawList;
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::DrawList;
 
 /// A widget's area in GUI pixels.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

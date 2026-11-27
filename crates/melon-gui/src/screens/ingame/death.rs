@@ -8,8 +8,8 @@ use crate::widgets::Ui;
 use crate::widgets::button::Button;
 use crate::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_left};
 use crate::widgets::set::{KeyResult, WidgetSet};
+use melon_base::gfx::quad::Transform2D;
 use melon_core::math::argb;
-use melon_render::quad::Transform2D;
 
 const BUTTON_DELAY: Duration = Duration::from_secs(1);
 

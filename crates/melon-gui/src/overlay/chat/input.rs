@@ -11,11 +11,11 @@ use crate::text::font::Font;
 use crate::text::{self, Hover, StyledText, TextStyle, colors};
 use crate::widgets::text_input::{Edit, TextInput};
 use melon_assets::i18n::Lang;
+use melon_base::gfx::quad::DrawList;
 use melon_core::math::argb;
 use melon_net::play::chat::Suggestions;
 use melon_net::play::chat::command_suggestions::{self, SELECTOR_LEVEL, Source};
 use melon_net::play::chat::commands::{CommandTree, SpanKind};
-use melon_render::quad::DrawList;
 use melon_settings::input::InputBind;
 use melon_settings::options::{ChatSettings, ChatVisibility};
 

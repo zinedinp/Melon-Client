@@ -2,7 +2,8 @@
 
 use glam::{DVec3, Mat4};
 
-use melon_render::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId};
+use melon_base::gfx::TextureId;
+use melon_render::{EntityDraw, MeshId, RenderLayer, Renderer};
 use melon_world::border::WorldBorder;
 
 /// How far above and below the camera the wall reaches.

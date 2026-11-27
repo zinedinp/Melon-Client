@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use crate::screen::TextEvent;
 use crate::text::font::{Font, Glyphs};
-use melon_render::quad::{BlendMode, DrawList};
+use melon_base::gfx::quad::{BlendMode, DrawList};
 
 /// `TextCursorUtils.isCursorVisible`.
 pub fn cursor_visible(since: Instant) -> bool {

@@ -5,12 +5,13 @@ use std::path::Path;
 use ash::vk;
 use glam::Mat4;
 
+use super::Renderer;
 use super::gui_uniforms::{BLOCKS, DynamicTransforms, Globals, IDENTITY, STRIDE};
 use super::pipeline::{Pass, PipelineDesc, depth_disabled};
 use super::vk_util::Place;
-use super::{Renderer, WorldVertex};
 use melon_assets::assets::shaders::{self, Interface, Stage};
 use melon_base::gfx::mapped::MappedBuffer;
+use melon_world::mesh::WorldVertex;
 
 /// Glowing entities that write pack-outline markers this frame.
 const SLOTS: usize = 64;

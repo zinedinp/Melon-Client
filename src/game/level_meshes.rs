@@ -7,8 +7,7 @@ use glam::{DVec3, IVec3, Vec3};
 
 use melon_core::math::{ChunkMap, SECTION_SIZE, radix, section_coord};
 use melon_render::{
-    ChunkDraw, IndexMeshId, MeshId, QuadMeshId, Renderer, SectionCull, TerrainMesh, TerrainQuad,
-    WorldVertex,
+    ChunkDraw, IndexMeshId, MeshId, QuadMeshId, Renderer, SectionCull, TerrainMesh,
 };
 use melon_world::block::direction::Direction;
 use melon_world::block_entity::BlockEntities;
@@ -17,6 +16,8 @@ use melon_world::culling::Culler;
 use melon_world::culling::occlusion::SectionPos;
 use melon_world::dimension::Height;
 use melon_world::level::{FinishedMesh, Level};
+use melon_world::mesh::TerrainQuad;
+use melon_world::mesh::WorldVertex;
 use melon_world::terrain::{self, LayerMesh, SectionMesh, TranslucentMesh};
 
 /// How many mesh bytes go to the GPU per frame at most.
@@ -1161,7 +1162,7 @@ mod tests {
         // Turns +x to the view's -z: looking along the row.
         let view = glam::Mat4::from_rotation_y(std::f32::consts::FRAC_PI_2);
         let frustum = Frustum::from_view_projection(
-            melon_render::world_projection(70.0, 16.0 / 9.0, 512.0) * view,
+            melon_world::projection::world_projection(70.0, 16.0 / 9.0, 512.0) * view,
         );
         let culler = Culler::new(frustum, None, eye, (-64, 24), CullSettings::default());
         let rounds = 300;

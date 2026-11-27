@@ -6,11 +6,11 @@ use melon_core::math::euler::{self, Look, Orientation};
 
 use super::InWorld;
 use melon_core::math::angle::{self, Rotation};
-use melon_render::world_projection;
 use melon_world::culling::frustum::Frustum;
 use melon_world::level::Level;
 use melon_world::pick;
 use melon_world::player::PlayerState;
+use melon_world::projection::world_projection;
 
 /// `Camera.getMaxZoom`'s starting distance behind or in front of the head.
 const THIRD_PERSON_DISTANCE: f32 = 4.0;
@@ -126,7 +126,7 @@ impl Camera {
 
     /// `Camera.getNearPlane`.
     pub fn near_plane(&self, aspect: f32) -> [Vec3; 5] {
-        let near = melon_render::WORLD_Z_NEAR;
+        let near = melon_world::projection::WORLD_Z_NEAR;
         let half_height = (self.fov.to_radians() / 2.0).tan() * near;
         let half_width = half_height * aspect;
         let forward = self.forward() * near;

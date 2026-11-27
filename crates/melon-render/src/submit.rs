@@ -2,9 +2,10 @@
 
 use super::globals::Globals;
 use super::record::scene::ScenePart;
-use super::{Frame, FrameWaits, Renderer, VERTEX_CAPACITY, quad};
+use super::{Frame, FrameWaits, Renderer, VERTEX_CAPACITY};
 use ash::vk;
 use majestix_vk::{Frames, Presenter};
+use melon_base::gfx::quad;
 use numerobis::vulkan::swapchain::Extent;
 use std::time::Instant;
 
@@ -487,7 +488,7 @@ fn fitting(calls: &[quad::DrawCall], vertices: usize) -> &[quad::DrawCall] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TextureId;
+    use melon_base::gfx::TextureId;
 
     fn call(first: u32, count: u32) -> quad::DrawCall {
         quad::DrawCall {

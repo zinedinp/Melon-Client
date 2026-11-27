@@ -3,8 +3,10 @@
 use ash::vk;
 
 use super::{Pass, PipelineDesc};
-use crate::{ParticleQuad, TerrainQuad, WorldVertex as Vertex};
 use melon_world::lightmap::LightmapParams;
+use melon_world::mesh::TerrainQuad;
+use melon_world::mesh::WorldVertex as Vertex;
+use melon_world::particle::mesh::ParticleQuad;
 
 const VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/world.vert.spv"));
 const WEATHER_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/weather.vert.spv"));

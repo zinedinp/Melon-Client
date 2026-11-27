@@ -6,8 +6,8 @@ use crate::hud::item_slot::ItemPainter;
 use crate::text::{self, StyledText};
 use melon_assets::i18n::Lang;
 use melon_audio::Heard;
+use melon_base::gfx::quad::DrawList;
 use melon_core::math::argb;
-use melon_render::quad::DrawList;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

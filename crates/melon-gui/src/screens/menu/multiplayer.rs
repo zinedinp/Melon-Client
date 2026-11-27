@@ -25,10 +25,10 @@ use crate::widgets::row_icon::{self, Layout, Moves, Zone};
 use crate::widgets::scroll_list::{ListClick, ScrollList};
 use crate::widgets::set::{KeyResult, WidgetSet};
 use crate::widgets::{Rect, Ui};
+use melon_base::gfx::TextureId;
 use melon_net::join::Target;
 use melon_net::lan::{LanDetector, LanServer};
 use melon_net::status::{self, CannotResolve, ServerStatus};
-use melon_render::TextureId;
 use melon_settings::server_list::{self, ServerEntry};
 
 /// `HeaderAndFooterLayout`: the default header, and the two-row footer.

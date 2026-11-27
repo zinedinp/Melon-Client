@@ -1,9 +1,9 @@
 //! Fallback menu background when the panorama cubemap is missing.
 
 use crate::assets::GuiAssets;
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::DrawList;
 use melon_core::math::argb;
-use melon_render::TextureId;
-use melon_render::quad::DrawList;
 
 /// Render-pass clear color. Hidden once a cubemap scene is present.
 pub const CLEAR_COLOR: [f32; 4] = [0.02, 0.02, 0.04, 1.0];

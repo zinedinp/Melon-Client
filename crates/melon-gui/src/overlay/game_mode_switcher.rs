@@ -10,8 +10,9 @@ use crate::sprite::GuiSprite;
 use crate::text::{self, StyledText, TextStyle, colors};
 use melon_assets::assets::Assets;
 use melon_assets::i18n::Lang;
-use melon_render::quad::DrawList;
-use melon_render::{Renderer, TextureId};
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::DrawList;
+use melon_render::Renderer;
 use melon_world::game_mode::{GameMode, LocalGameMode};
 use melon_world::inventory::Inventory;
 

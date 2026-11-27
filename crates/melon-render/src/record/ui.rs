@@ -1,8 +1,8 @@
 //! Recording the UI quads over the scene.
 
-use crate::quad::DrawCall;
 use crate::{Frame, Renderer, pipeline};
 use ash::vk;
+use melon_base::gfx::quad::DrawCall;
 
 impl Renderer {
     /// UI quads, in GUI coordinates: `calls` of `frame.ui`.

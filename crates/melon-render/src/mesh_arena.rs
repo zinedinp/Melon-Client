@@ -79,7 +79,7 @@ pub enum Kind {
     Quads,
     /// Read as vertex input per instance.
     Instances,
-    /// Index lists of sorted vertex meshes ([`quad_index_list`]).
+    /// Index lists of sorted vertex meshes ([`quad_index_list`](melon_world::mesh::quad_index_list)).
     Indices,
 }
 

@@ -12,9 +12,10 @@ use crate::sprite::GuiSprite;
 use crate::text::StyledText;
 use crate::widgets::text_input::TextInput;
 use melon_assets::assets::Assets;
+use melon_base::gfx::TextureId;
 use melon_core::math::angle::PI;
 use melon_core::math::argb;
-use melon_render::{Renderer, TextureId};
+use melon_render::Renderer;
 use melon_world::recipes::{BookType, Category, RecipeBook, RecipeDisplay, RecipeId, Stock, Tab};
 
 const WIDTH: f32 = 147.0;

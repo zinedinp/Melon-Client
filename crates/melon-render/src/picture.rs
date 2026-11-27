@@ -10,9 +10,10 @@ use rustc_hash::FxHashMap;
 use super::frame::DEPTH_CLEAR;
 use super::pipeline::world::{DrawLight, Mode};
 use super::{
-    Blending, EntityDraw, PassStart, Renderer, TextureId, blur, create_depth_image,
-    create_render_pass, texture, vk_util,
+    Blending, EntityDraw, PassStart, Renderer, blur, create_depth_image, create_render_pass,
+    texture, vk_util,
 };
+use melon_base::gfx::TextureId;
 
 /// One picture for this frame: `entities` drawn into `target`.
 pub struct PictureDraw {

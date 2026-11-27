@@ -5,11 +5,11 @@ use glam::{DVec3, Mat4, Vec3};
 use super::InWorld;
 use super::camera::Camera;
 use melon_assets::i18n::Lang;
+use melon_base::gfx::quad::DrawList;
 use melon_core::math::argb;
 use melon_gui::hud::item_slot::ItemPainter;
 use melon_gui::text::{self, StyledText};
 use melon_protocol::component::Component;
-use melon_render::quad::DrawList;
 use melon_world::entity::kind::EntityKind;
 use melon_world::entity::tracker::ClientEntity;
 use melon_world::pick;
@@ -64,7 +64,7 @@ impl NameView {
             .view
             .transform_point3((point - self.position).as_vec3());
         let depth = -v.z;
-        if depth < melon_render::WORLD_Z_NEAR {
+        if depth < melon_world::projection::WORLD_Z_NEAR {
             return None;
         }
         let x = v.x / (depth * self.tan_half_fov * self.aspect);

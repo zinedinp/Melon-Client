@@ -12,7 +12,8 @@ use pumpkin_data::item_stack::ItemStack;
 
 use image::RgbaImage;
 
-use melon_render::{MeshId, Renderer, TextureId};
+use melon_base::gfx::TextureId;
+use melon_render::{MeshId, Renderer};
 use melon_world::block_models::BlockModels;
 use melon_world::head_profile::HeadProfile;
 use melon_world::item_model::{

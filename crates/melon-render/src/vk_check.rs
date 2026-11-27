@@ -827,10 +827,10 @@ fn queued_texture_uploads_land_without_waiting() {
 /// them; later meshes fill the spare first, then get a new block.
 #[test]
 fn empty_mesh_blocks_are_released() {
-    use super::TerrainQuad;
     use super::mesh_arena::{Kind, MeshArena};
     use super::quad_table::{QuadSets, create_layout};
     use melon_base::gfx::residency::Residency;
+    use melon_world::mesh::TerrainQuad;
 
     let _serial = serial();
     messages().clear();
@@ -911,9 +911,9 @@ fn empty_mesh_blocks_are_released() {
 /// VRAM the CPU maps where the device has it.
 #[test]
 fn written_and_copied_meshes_land() {
-    use super::TerrainQuad;
     use super::mesh_arena::{Kind, MeshArena};
     use melon_base::gfx::residency::Residency;
+    use melon_world::mesh::TerrainQuad;
     use numerobis::elem::as_bytes;
 
     let _serial = serial();
@@ -1308,7 +1308,7 @@ fn occlusion_culls_what_the_depth_hides() {
             counts,
         };
 
-        let projection = super::world_projection(70.0, 37.0 / 23.0, 256.0);
+        let projection = melon_world::projection::world_projection(70.0, 37.0 / 23.0, 256.0);
         let wall_clip = projection * glam::Vec4::new(0.0, 0.0, -wall, 1.0);
         let wall_depth = wall_clip.z / wall_clip.w;
         let cmd = device

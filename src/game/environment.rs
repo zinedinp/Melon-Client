@@ -198,7 +198,7 @@ impl InWorld {
         assets: &WorldResources,
         look: &FrameEnvironment,
         camera: &Camera,
-        white: melon_render::TextureId,
+        white: melon_base::gfx::TextureId,
     ) -> Vec<CelestialDraw> {
         let atmosphere = &look.atmosphere;
         let mut out = Vec::new();

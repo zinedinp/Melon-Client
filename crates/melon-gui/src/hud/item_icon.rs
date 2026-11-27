@@ -11,9 +11,10 @@ use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::icon_atlas::{IconAtlas, Slot};
 use crate::sprite::GuiSprite;
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::DrawList;
 use melon_core::math::angle::Rotation;
-use melon_render::quad::DrawList;
-use melon_render::{Renderer, TextureId};
+use melon_render::Renderer;
 use melon_world::block_entity::models::SkullType;
 use melon_world::glint::GlintUv;
 use melon_world::head_profile::HeadProfile;

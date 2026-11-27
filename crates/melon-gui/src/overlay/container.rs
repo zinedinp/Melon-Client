@@ -16,8 +16,9 @@ use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDr
 use crate::screen::TextEvent;
 use crate::text::{self, StyledText};
 use melon_assets::assets::Assets;
-use melon_render::quad::DrawList;
-use melon_render::{Renderer, TextureId};
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::DrawList;
+use melon_render::Renderer;
 use melon_settings::input::InputBind;
 use melon_world::inventory::{self, ContainerKind, OpenContainer};
 

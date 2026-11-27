@@ -122,7 +122,7 @@ pub(super) unsafe fn create(
                     render_pass,
                     texture,
                     layouts.gui,
-                    crate::quad::BlendMode::Alpha,
+                    melon_base::gfx::quad::BlendMode::Alpha,
                     pipeline::ui::GLINT,
                 )
             }?,

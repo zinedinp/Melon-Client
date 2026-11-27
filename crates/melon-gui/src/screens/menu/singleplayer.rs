@@ -15,9 +15,9 @@ use crate::widgets::scroll_list::{ListClick, ScrollList};
 use crate::widgets::set::{KeyResult, WidgetSet};
 use crate::widgets::{Rect, Ui};
 use image::RgbaImage;
+use melon_base::gfx::TextureId;
 use melon_net::join::Target;
 use melon_net::singleplayer::{self, WorldCreationMode, WorldEntry};
-use melon_render::TextureId;
 use std::collections::HashMap;
 
 const ROW_W: f32 = 270.0;

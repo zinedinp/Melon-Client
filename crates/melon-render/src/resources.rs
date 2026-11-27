@@ -1,11 +1,14 @@
 //! Textures, cube maps and meshes: uploading, updating and freeing them.
 
 use super::{
-    CubeMapId, IndexMeshId, MeshId, ParticleMeshId, ParticleQuad, QuadMeshId, Renderer,
-    TerrainQuad, TextureId, WorldVertex, texture, texture_update,
+    CubeMapId, IndexMeshId, MeshId, ParticleMeshId, QuadMeshId, Renderer, texture, texture_update,
 };
 use ash::vk;
 use image::RgbaImage;
+use melon_base::gfx::TextureId;
+use melon_world::mesh::TerrainQuad;
+use melon_world::mesh::WorldVertex;
+use melon_world::particle::mesh::ParticleQuad;
 
 /// Bytes of new textures queued for the next frame before they are
 /// uploaded at once instead.
@@ -382,7 +385,7 @@ impl Renderer {
         self.particle_meshes.free(quads.0, self.frames.number);
     }
 
-    /// Uploads an index list ([`super::quad_index_list`]) for a vertex mesh.
+    /// Uploads an index list ([`melon_world::mesh::quad_index_list`]) for a vertex mesh.
     pub fn upload_indices(&mut self, list: &[u32]) -> anyhow::Result<IndexMeshId> {
         // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let id = unsafe {
@@ -429,7 +432,7 @@ impl Renderer {
     pub fn set_gui_shaders(
         &mut self,
         shaders: &[super::GuiShader],
-    ) -> Vec<(super::quad::Program, anyhow::Error)> {
+    ) -> Vec<(melon_base::gfx::quad::Program, anyhow::Error)> {
         let mut failed = Vec::new();
         // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
         unsafe {

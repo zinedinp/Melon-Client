@@ -22,7 +22,7 @@ use std::time::Instant;
 /// The font debug labels are written with, and its pages.
 pub type DebugFont<'a> = (
     &'a melon_gui::text::font::Font,
-    &'a [melon_render::TextureId],
+    &'a [melon_base::gfx::TextureId],
 );
 
 impl InWorld {

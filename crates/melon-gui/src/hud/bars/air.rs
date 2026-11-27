@@ -3,7 +3,7 @@
 use super::Layout;
 use crate::hud::{ICON, JavaRandom, PlayerStatus};
 use crate::sprite::GuiSprite;
-use melon_render::quad::DrawList;
+use melon_base::gfx::quad::DrawList;
 
 /// `Entity.getMaxAirSupply` of a player.
 pub const MAX_AIR: i32 = 300;

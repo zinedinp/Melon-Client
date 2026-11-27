@@ -29,9 +29,9 @@ mod swapchain;
 mod vk_check;
 
 pub use gpu_timer::PassStats;
-pub use melon_base::gfx::quad;
+use melon_base::gfx::quad;
 use melon_base::gfx::residency::Residency;
-pub use melon_base::gfx::{DeviceInfo, TextureId};
+use melon_base::gfx::{DeviceInfo, TextureId};
 use melon_base::gfx::{descriptor_pools, gui_uniforms, staging, texture, texture_update, vk_util};
 pub use picture::{PictureDraw, pixel_projection};
 use vk_util::{
@@ -44,12 +44,6 @@ pub use frame::{
     LineStyle, ParticleDraw, QuadCorner, RenderLayer, SceneFrame, SectionCull, Sky, SkyKind,
     TerrainMesh, WeatherDraw, WorldDraw,
 };
-// The formats the world builds its meshes in, and its camera.
-#[cfg(test)]
-pub use melon_world::mesh::quads_of_index_list;
-pub use melon_world::mesh::{CornerLight, TerrainQuad, WorldVertex, quad_index_list};
-pub use melon_world::particle::mesh::ParticleQuad;
-pub use melon_world::projection::{WORLD_Z_NEAR, world_projection};
 
 use ash::vk;
 use melon_base::gfx::suballoc;
@@ -75,19 +69,19 @@ pub struct GuiShader {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct CubeMapId(pub usize);
 
-/// Handle to an uploaded mesh ([`WorldVertex`] list).
+/// Handle to an uploaded mesh ([`WorldVertex`](melon_world::mesh::WorldVertex) list).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MeshId(pub usize);
 
-/// Handle to an uploaded list of [`TerrainQuad`]s.
+/// Handle to an uploaded list of [`TerrainQuad`](melon_world::mesh::TerrainQuad)s.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct QuadMeshId(pub usize);
 
-/// Handle to an uploaded list of [`ParticleQuad`]s.
+/// Handle to an uploaded list of [`ParticleQuad`](melon_world::particle::mesh::ParticleQuad)s.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ParticleMeshId(pub usize);
 
-/// Handle to an uploaded index list ([`quad_index_list`]).
+/// Handle to an uploaded index list ([`quad_index_list`](melon_world::mesh::quad_index_list)).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct IndexMeshId(pub usize);
 
@@ -127,9 +121,9 @@ pub struct Renderer {
     sky_cube: SkyCube,
     /// Entity, fluid and other vertex meshes, slices of a few device-local buffers.
     meshes: mesh_arena::MeshArena,
-    /// Terrain [`TerrainQuad`] lists, the same way.
+    /// Terrain [`TerrainQuad`](melon_world::mesh::TerrainQuad) lists, the same way.
     quad_meshes: mesh_arena::MeshArena,
-    /// The particles' [`ParticleQuad`]s, rebuilt every frame.
+    /// The particles' [`ParticleQuad`](melon_world::particle::mesh::ParticleQuad)s, rebuilt every frame.
     particle_meshes: mesh_arena::MeshArena,
     /// The translucent terrain's index lists, sorted far to near.
     index_lists: mesh_arena::MeshArena,
@@ -241,9 +235,9 @@ struct Pipelines {
     lines: [pipeline::Pass; 4],
     /// The sets after the texture's that the world pipelines share.
     layouts: pipeline::world::Layouts,
-    /// Terrain from [`TerrainQuad`]s.
+    /// Terrain from [`TerrainQuad`](melon_world::mesh::TerrainQuad)s.
     terrain: [pipeline::Pass; 2],
-    /// [`ParticleQuad`]s: cut out, then blended.
+    /// [`ParticleQuad`](melon_world::particle::mesh::ParticleQuad)s: cut out, then blended.
     particles: [pipeline::Pass; 2],
 }
 

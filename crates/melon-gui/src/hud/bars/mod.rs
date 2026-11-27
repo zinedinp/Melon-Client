@@ -7,7 +7,7 @@ pub mod vehicle;
 
 use super::{ICON, JavaRandom, PlayerStatus};
 use crate::sprite::GuiSprite;
-use melon_render::quad::DrawList;
+use melon_base::gfx::quad::DrawList;
 
 /// Where the bars sit and how tall their rows are.
 #[derive(Clone, Copy, Debug, PartialEq)]

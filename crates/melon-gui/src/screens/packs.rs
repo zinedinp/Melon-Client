@@ -22,7 +22,7 @@ use crate::widgets::{Rect, Ui};
 use melon_assets::assets::packs::server::PromptRequest;
 use melon_assets::assets::packs::{Compatibility, repository};
 use melon_assets::i18n::Lang;
-use melon_render::TextureId;
+use melon_base::gfx::TextureId;
 
 /// `LIST_WIDTH`.
 const LIST_W: f32 = 200.0;

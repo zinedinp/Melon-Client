@@ -1,8 +1,8 @@
 //! Vanilla `SplashManager` / `SplashRenderer` (rotated yellow text by the logo).
 
 use melon_assets::assets::Assets;
+use melon_base::gfx::quad::Transform2D;
 use melon_core::math::angle::{self, PI, TAU};
-use melon_render::quad::Transform2D;
 use melon_world::java_random::java_string_hash;
 use rand::RngExt;
 

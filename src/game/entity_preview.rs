@@ -12,10 +12,9 @@ use super::InWorld;
 use super::entities::{Avatar, submit_avatar};
 use super::entity_models::DrawStyle;
 use super::world_resources::WorldResources;
+use melon_base::gfx::TextureId;
 use melon_gui::entity_preview::{self, EntityPreview, PreviewLayer};
-use melon_render::{
-    EntityDraw, Glint, PictureDraw, RenderLayer, Renderer, TextureId, pixel_projection,
-};
+use melon_render::{EntityDraw, Glint, PictureDraw, RenderLayer, Renderer, pixel_projection};
 use melon_settings::options::Config;
 use melon_world::block_entity::models::SkullType;
 use melon_world::entity::kind::EntityKind;

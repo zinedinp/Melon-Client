@@ -16,7 +16,7 @@ members = ["crates/*"]
 # The client's crates are versioned with it: `CARGO_PKG_VERSION` is the
 # client's in each (the `+mc` part names the game version servers see).
 [workspace.package]
-version = "0.11.0+mc26.3"
+version = "0.11.1+mc26.3"
 authors = ["Zinedin Polic"]
 edition = "2024"
 rust-version = "1.100.0"

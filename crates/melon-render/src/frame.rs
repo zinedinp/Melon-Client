@@ -3,8 +3,10 @@
 use glam::Mat4;
 use numerobis::elem::Pod;
 
-use super::quad::DrawList;
-use super::{CubeMapId, IndexMeshId, MeshId, ParticleMeshId, QuadMeshId, TextureId, WorldVertex};
+use super::{CubeMapId, IndexMeshId, MeshId, ParticleMeshId, QuadMeshId};
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::DrawList;
+use melon_world::mesh::WorldVertex;
 
 /// One frame: scene first, then UI on top.
 pub struct Frame<'a> {
@@ -550,7 +552,7 @@ mod tests {
             chunks: Vec::new(),
             cutout: Vec::new(),
             translucent: Vec::new(),
-            atlas: crate::TextureId(0),
+            atlas: melon_base::gfx::TextureId(0),
             view: Mat4::IDENTITY,
             eye: glam::DVec3::new(1234.567, 70.31, -987.654),
             fov_y_degrees: 70.0,

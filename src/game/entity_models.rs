@@ -8,7 +8,8 @@ use image::RgbaImage;
 
 use melon_assets::assets::Assets;
 use melon_base::auth::skin::DownloadedSkin;
-use melon_render::{EntityDraw, Glint, MeshId, RenderLayer, Renderer, TextureId};
+use melon_base::gfx::TextureId;
+use melon_render::{EntityDraw, Glint, MeshId, RenderLayer, Renderer};
 use melon_world::block_entity::models::SkullType;
 use melon_world::entity::mobs::villager::Hat;
 use melon_world::entity::mobs::{MobModel, ModelId};

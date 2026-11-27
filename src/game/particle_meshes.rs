@@ -4,7 +4,8 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use melon_render::{ParticleDraw, ParticleMeshId, Renderer, TextureId};
+use melon_base::gfx::TextureId;
+use melon_render::{ParticleDraw, ParticleMeshId, Renderer};
 use melon_world::level::Level;
 use melon_world::particle::Particle;
 use melon_world::particle::base::Atlas;

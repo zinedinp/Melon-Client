@@ -4,9 +4,10 @@ use super::InWorld;
 use super::scene::FrameView;
 use super::world_resources::WorldResources;
 use glam::Mat4;
-use melon_render::{CloudDraw, EntityDraw, MeshId, Renderer, WeatherDraw, WorldVertex};
+use melon_render::{CloudDraw, EntityDraw, MeshId, Renderer, WeatherDraw};
 use melon_settings::options::Config;
 use melon_world::clouds::{self, CloudFrame};
+use melon_world::mesh::WorldVertex;
 use melon_world::weather::{self, WeatherQuery};
 
 /// What the clouds and the weather keep between frames.

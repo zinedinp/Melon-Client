@@ -23,9 +23,9 @@ use creative::CreativeTextures;
 use game_mode_switcher::SwitcherTextures;
 use inventory::InventoryTextures;
 use melon_assets::i18n::Lang;
+use melon_base::gfx::quad::DrawList;
 use melon_net::play::chat::Suggestions;
 use melon_net::play::chat::commands::CommandTree;
-use melon_render::quad::DrawList;
 use melon_settings::input::InputBind;
 use melon_settings::options::{ChatSettings, Config};
 use melon_world::game_mode::GameMode;
@@ -178,7 +178,7 @@ pub struct OverlayDraw<'a> {
     pub experience_level: i32,
     pub infinite_materials: bool,
     /// The texture of the entity the overlay asked to show.
-    pub entity_preview: Option<melon_render::TextureId>,
+    pub entity_preview: Option<melon_base::gfx::TextureId>,
 }
 
 /// A screen over the running world (vanilla's in-game `Screen`s that don't pause it).

@@ -6,9 +6,9 @@ use crate::sprite::GuiSprite;
 use crate::text::StyledText;
 use melon_assets::assets::Assets;
 use melon_assets::i18n::Lang;
+use melon_base::gfx::quad::DrawList;
 use melon_core::math::argb;
 use melon_render::Renderer;
-use melon_render::quad::DrawList;
 use melon_world::player::status_effects::{ActiveEffect, ActiveEffects, format_duration};
 
 use super::item_slot::ItemPainter;

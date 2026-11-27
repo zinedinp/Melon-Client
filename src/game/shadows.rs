@@ -4,8 +4,10 @@ use rustc_hash::FxHashMap;
 
 use glam::{IVec3, Mat4, Vec3};
 
-use melon_render::{EntityDraw, MeshId, RenderLayer, Renderer, TextureId, WorldVertex};
+use melon_base::gfx::TextureId;
+use melon_render::{EntityDraw, MeshId, RenderLayer, Renderer};
 use melon_world::level::Level;
+use melon_world::mesh::WorldVertex;
 use melon_world::shadow;
 
 /// The local player's key among the casters (entity ids are the others).

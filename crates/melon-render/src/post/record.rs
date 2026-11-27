@@ -636,8 +636,9 @@ impl Renderer {
         world: &crate::WorldDraw,
     ) {
         use crate::RenderLayer;
-        use crate::{mesh_arena, world_projection};
+        use crate::mesh_arena;
         use glam::{Mat4, Vec4};
+        use melon_world::projection::world_projection;
         let Some(pack) = self.pack_outline.as_ref() else {
             return;
         };

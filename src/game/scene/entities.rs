@@ -86,7 +86,7 @@ impl InWorld {
                     forward: camera.forward(),
                     left: camera.left(),
                     up: camera.up(),
-                    near: melon_render::WORLD_Z_NEAR,
+                    near: melon_world::projection::WORLD_Z_NEAR,
                     fov: f32::from(config.fov),
                     aspect,
                 },

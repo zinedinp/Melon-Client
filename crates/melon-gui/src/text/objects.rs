@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 use super::font::Font;
+use melon_base::gfx::TextureId;
 use melon_protocol::component::{AtlasSprite, ObjectInfo, PlayerSprite};
-use melon_render::TextureId;
 
 /// A rectangle of a texture, `[u0, v0, u1, v1]`.
 #[derive(Clone, Copy, Debug, PartialEq)]

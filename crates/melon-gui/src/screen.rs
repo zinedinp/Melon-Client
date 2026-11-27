@@ -7,7 +7,7 @@ use crate::widgets::Ui;
 use melon_assets::i18n::Lang;
 use melon_assets::i18n::languages::Language;
 use melon_audio::AudioEngine;
-use melon_render::TextureId;
+use melon_base::gfx::TextureId;
 use melon_settings::options::Config;
 
 /// A change to the options, applied and saved at once, as vanilla's options screens do.

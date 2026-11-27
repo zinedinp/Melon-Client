@@ -2,9 +2,10 @@
 
 use std::collections::HashMap;
 
-use melon_render::{MeshId, Renderer, WorldVertex};
+use melon_render::{MeshId, Renderer};
 use melon_world::block_models::BlockModels;
 use melon_world::block_tint::TintKind;
+use melon_world::mesh::WorldVertex;
 
 /// What one block state draws as: its tint, and a mesh per colour of it.
 struct Entry {

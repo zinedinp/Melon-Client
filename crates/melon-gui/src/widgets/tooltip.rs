@@ -3,9 +3,9 @@
 use crate::assets::TooltipSprites;
 use crate::text::{self, StyledText, TextPaint};
 use crate::widgets::Rect;
+use melon_base::gfx::TextureId;
+use melon_base::gfx::quad::DrawList;
 use melon_core::math::argb;
-use melon_render::TextureId;
-use melon_render::quad::DrawList;
 
 /// `Tooltip.MAX_WIDTH`: option tooltips wrap at this width.
 pub const MAX_WIDTH: f32 = 170.0;

@@ -5,7 +5,8 @@
 
 use image::RgbaImage;
 
-use melon_render::{Renderer, TextureId};
+use melon_base::gfx::TextureId;
+use melon_render::Renderer;
 
 /// Edge length of a page, at most the device's limit.
 const PAGE_SIDE: u32 = 1024;

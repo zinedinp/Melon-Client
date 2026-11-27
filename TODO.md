@@ -6,9 +6,8 @@ they are about; this file holds the plans that span modules or crates.
 
 Melon is on majestix-vk 0.2.1 and numerobis 0.6.0.
 
-**Next:** melon-render's re-exports (below), which finish the split's
-naming; then `gui_uniforms.rs` onto a `Mapped` ring, the renderer move's
-next step.
+**Next:** melon-base's `gui_uniforms.rs` onto a `Mapped` ring, the
+renderer move's next step (below).
 
 ## melon (the client)
 
@@ -16,16 +15,9 @@ next step.
 
 The client is ten crates in `crates/` (the layering is in `src/lib.rs`);
 the bin keeps `game` and `app`. Code names other crates by their own names
-(`melon_world::chunk::Chunk`); no crate re-exports another under an old
-module name. What the cut left behind:
+(`melon_world::chunk::Chunk`); no crate re-exports another's items, but
+melon-net's `Stream`, which `join_stream` takes. What the cut left behind:
 
-- **melon-render's re-exports.** Its root still hands out other crates'
-  items: `melon_base::gfx::quad` (42 uses as `melon_render::quad`),
-  `TextureId` (20) and `DeviceInfo`, and melon-world's `WorldVertex`,
-  `TerrainQuad`, `CornerLight`, `quad_index_list`, `ParticleQuad`,
-  `WORLD_Z_NEAR`, `world_projection`. Users in melon-gui, `game`, `app` and
-  the examples name the owning crate instead. (melon-net's `Stream` stays:
-  `join_stream` takes it.)
 - **Widened visibility.** What was `pub(crate)` in a moved module is `pub`
   now, so the crates above still reach it. `unreachable_pub` catches only
   `pub` in private modules (395: 124 in the bin, 108 in melon-render, 76 in
