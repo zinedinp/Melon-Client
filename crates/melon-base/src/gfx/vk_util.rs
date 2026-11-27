@@ -180,7 +180,9 @@ pub fn memory_types(
     // SAFETY: ash's `PhysicalDeviceMemoryProperties` is the C struct numerobis reads.
     let memory = unsafe { Memory::from_properties(std::ptr::from_ref(mem_props).cast()) };
     memory.map_or_else(Vec::new, |memory| {
-        memory.types_for(type_bits, place.usage, place.host_first)
+        memory
+            .types_for(type_bits, place.usage, place.host_first)
+            .to_vec()
     })
 }
 

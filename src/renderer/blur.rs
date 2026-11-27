@@ -82,6 +82,7 @@ impl Blur {
         set_layout: vk::DescriptorSetLayout,
         pools: &super::descriptor_pools::DescriptorPools,
         sampler: vk::Sampler,
+        cache: Option<majestix_vk::PipelineCache>,
     ) -> anyhow::Result<Self> {
         let device = layer.raw();
         let pass = Pass::new(layer, &[Attachment::cleared(format)], None)?;
@@ -110,6 +111,7 @@ impl Blur {
         let mut desc = Graphics::new(layout, Shader::main(vert), Some(Shader::main(frag)));
         desc.blend = &[majestix_vk::render::pipeline::OPAQUE];
         desc.dynamic = &[vk::DynamicState::VIEWPORT, vk::DynamicState::SCISSOR];
+        desc.cache = cache;
         let horizontal = layer.create_graphics_pipeline(&pass, &desc);
         layer.retire(vert);
         layer.retire(frag);

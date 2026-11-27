@@ -57,6 +57,7 @@ impl Renderer {
                 &[(gpu.queue_family, 1)],
             )
         }?;
+        let pipeline_cache = super::pipeline_cache::PipelineCache::open(&layer);
         let device = layer.raw().clone();
         let queue = layer.queue(gpu.queue_family, 0)?;
         let ring = majestix_vk::Frames::new(&layer, &queue, MAX_FRAMES_IN_FLIGHT as u32)?;
@@ -156,6 +157,9 @@ impl Renderer {
                 layouts.texture,
                 &descriptor_pools,
                 samplers.linear,
+                pipeline_cache
+                    .as_ref()
+                    .map(super::pipeline_cache::PipelineCache::handle),
             )
         }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
@@ -245,6 +249,7 @@ impl Renderer {
             passes,
             post,
             blur,
+            pipeline_cache,
             device_info: gpu.info,
             swapchain,
             pipelines,

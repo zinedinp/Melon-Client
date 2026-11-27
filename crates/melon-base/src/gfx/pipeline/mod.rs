@@ -1,5 +1,6 @@
 //! Pipeline building shared by the passes, and the GUI's [`ui`] pipeline.
 
+pub mod cache;
 pub mod ui;
 
 use ash::vk;
@@ -245,13 +246,10 @@ impl PipelineDesc<'_> {
             .layout(layout)
             .render_pass(render_pass)
             .subpass(0);
-        // TODO(perf): a pipeline cache saved to disk; without one every start
-        // compiles every pipeline again.
         // SAFETY: `device` is live, and the infos name only its own live handles.
-        let pipeline = unsafe {
-            device.create_graphics_pipelines(vk::PipelineCache::null(), &[pipeline_info], None)
-        }
-        .map_err(|(_, e)| e);
+        let pipeline =
+            unsafe { device.create_graphics_pipelines(cache::of(device), &[pipeline_info], None) }
+                .map_err(|(_, e)| e);
         // SAFETY: made by this device, and no frame in flight uses it any more.
         unsafe {
             device.destroy_shader_module(vert_module, None);

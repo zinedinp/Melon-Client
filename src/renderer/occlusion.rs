@@ -182,10 +182,9 @@ unsafe fn compute_pipeline(
     let info = vk::ComputePipelineCreateInfo::default()
         .stage(stage)
         .layout(layout);
-    // TODO(perf): the pipeline cache on disk, as in `gfx::pipeline`.
+    let cache = super::pipeline::cache::of(device);
     // SAFETY: `device` is live, and the infos name only its own live handles.
-    let result =
-        unsafe { device.create_compute_pipelines(vk::PipelineCache::null(), &[info], None) };
+    let result = unsafe { device.create_compute_pipelines(cache, &[info], None) };
     // SAFETY: made by this device, and no frame in flight uses it any more.
     unsafe { device.destroy_shader_module(module, None) };
     match result {

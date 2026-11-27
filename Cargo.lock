@@ -2580,9 +2580,7 @@ checksum = "dae608c151f68243f2b000364e1f7b186d9c29845f7d2d85bd31b9ad77ad552b"
 
 [[package]]
 name = "majestix-vk"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92c7e8d1b28dbaf29cebf1c3effb1802abb93335f7dbe2417b303a8e85860b97"
+version = "0.1.3"
 dependencies = [
  "ash",
  "numerobis",
@@ -2630,7 +2628,7 @@ checksum = "7ebb8d8732c6a6df3d8f032a82911cfc747e00efb95cc46e8d0acd5b5b88570c"
 
 [[package]]
 name = "melon"
-version = "0.10.6+mc26.3"
+version = "0.10.7+mc26.3"
 dependencies = [
  "aes 0.9.4",
  "anyhow",
@@ -3049,9 +3047,9 @@ dependencies = [
 
 [[package]]
 name = "numerobis"
-version = "0.5.6"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2057d8ca06a390dd2231bd3ea0b45e60457f4d2fc5d0c2da5f08f79f357ceaf"
+checksum = "fe1723c636ac7569f4842c883b1402473fe20962eb81523dbf51ca0f3e8e2977"
 dependencies = [
  "keinbonus",
  "libc",
@@ -7364,9 +7362,9 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "9.8.1"
+version = "9.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9534624d547e3f516ecde0ed9a70d37788f01d340efcfdd03bf3ea8e163c1d0"
+checksum = "2d8dbe089cf6b0448b78f5fc50139ab5aaa40d08ac07cdc1baf2c13add35fcce"
 dependencies = [
  "constant_time_eq",
  "crc32fast",

@@ -16,9 +16,9 @@
 // TODO(majestix): `suballoc`, `mapped`, `staging`, `residency` and
 // `descriptor_pools` do what majestix-vk does too; fold them into it so there
 // is one memory manager, not two. Blocked on what it lacks (its TODO.md):
-// pipeline caches, timeline semaphores, BAR ranges freed per finished epoch
-// (mesh arena), specialization constants, texel buffers, immutable samplers,
-// a budget per heap incl. the BAR heap, queue family release/acquire pairs.
+// timeline semaphores, BAR ranges freed per finished epoch (mesh arena),
+// specialization constants, texel buffers, immutable samplers, a budget per
+// heap incl. the BAR heap, queue family release/acquire pairs.
 
 pub mod api;
 pub mod ascii8;

@@ -17,6 +17,7 @@ mod occlusion;
 pub(crate) mod pack_outline;
 mod picture;
 mod pipeline;
+mod pipeline_cache;
 pub mod post;
 mod quad_table;
 mod record;
@@ -111,6 +112,8 @@ pub struct Renderer {
     post: post::gpu::Post,
     /// The menu background blur.
     blur: blur::Blur,
+    /// What the pipelines are built with, saved on drop.
+    pipeline_cache: Option<pipeline_cache::PipelineCache>,
     device_info: DeviceInfo,
 
     swapchain: Swapchain,
@@ -378,6 +381,9 @@ impl Drop for Renderer {
         // SAFETY: the device is waited idle first, and every handle freed is this renderer's own.
         unsafe {
             let _ = self.device.device_wait_idle();
+            if let Some(cache) = self.pipeline_cache.take() {
+                cache.close(&self.layer.device);
+            }
 
             self.ui_vertices.destroy(&self.device);
             self.device.destroy_buffer(self.sky_cube.buffer, None);
