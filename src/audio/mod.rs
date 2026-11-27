@@ -1,7 +1,4 @@
 //! Sound, through `rodio` (cpal output and symphonia vorbis).
-//!
-//! TODO: Opus proximity voice chat, each speaker a `Binaural`/`Placed`
-//! source at their position
 
 pub mod block_sounds;
 mod device;

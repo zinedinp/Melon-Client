@@ -399,7 +399,7 @@ impl Drop for Renderer {
             if let Some(occlusion) = &mut self.occlusion {
                 occlusion.destroy(&self.device);
             }
-            self.globals.destroy(&self.device);
+            self.globals.destroy();
             self.gui_uniforms.destroy(&self.device);
             if let Some(table) = self.quad_table.take() {
                 table.destroy(&self.device);

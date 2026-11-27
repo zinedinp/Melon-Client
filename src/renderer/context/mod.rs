@@ -76,8 +76,9 @@ impl Renderer {
         let pictures =
             unsafe { super::picture::Pictures::new(&device, surface_format, depth_format) }?;
 
+        let globals = super::globals::GlobalBuffers::new(&layer, &ring)?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
-        let layouts = unsafe { pipelines::create_set_layouts(&device) }?;
+        let layouts = unsafe { pipelines::create_set_layouts(&device, globals.layout()) }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let gui_uniforms = unsafe {
             super::gui_uniforms::GuiUniforms::new(
@@ -123,15 +124,6 @@ impl Renderer {
         } else {
             None
         };
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let globals = unsafe {
-            super::globals::GlobalBuffers::new(
-                &device,
-                &mem_props,
-                layouts.world.globals,
-                MAX_FRAMES_IN_FLIGHT,
-            )
-        }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let pipelines = unsafe {
             pipelines::create(

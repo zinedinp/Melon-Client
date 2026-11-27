@@ -198,8 +198,7 @@ impl Renderer {
             0.0,
             0.0,
         ];
-        // SAFETY: this frame's fence was waited on, so the GPU no longer reads its uniform slot.
-        unsafe { self.globals.write(self.frames.current, &globals) };
+        self.globals.write(&gpu_frame, &globals)?;
         // SAFETY: this frame's fence was waited on, so the GPU no longer reads its uniform slot.
         unsafe {
             self.gui_uniforms.write(

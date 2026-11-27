@@ -4,9 +4,11 @@ use ash::vk;
 use glam::Mat4;
 
 use super::frame::WorldDraw;
-use super::vk_util::Place;
 use crate::world::fog::FogData;
-use melon_base::gfx::mapped::MappedBuffer;
+use majestix_vk::{
+    Binding, Descriptor, DescriptorSet, DescriptorSetLayout, Frames, Mapped, MemoryUse,
+    Simple as _, Write,
+};
 use numerobis::elem::Pod;
 
 /// `Globals` in `globals.glsl`, std140: ten `vec4`s.
@@ -102,27 +104,36 @@ pub fn up_in_view(view: &Mat4) -> glam::Vec3 {
     view.y_axis.truncate()
 }
 
-/// One buffer per frame in flight and the set binding it.
+/// The globals' binding: one uniform buffer, for both shader stages.
+const TYPE: vk::DescriptorType = vk::DescriptorType::UNIFORM_BUFFER;
+const STAGES: vk::ShaderStageFlags = vk::ShaderStageFlags::from_raw(
+    vk::ShaderStageFlags::VERTEX.as_raw() | vk::ShaderStageFlags::FRAGMENT.as_raw(),
+);
+
+/// A range per frame slot and the set binding it.
 pub(super) struct GlobalBuffers {
-    pub layout: vk::DescriptorSetLayout,
-    pool: vk::DescriptorPool,
-    frames: Vec<Frame>,
+    /// majestix-vk's part; given up in [`Self::destroy`], before the device goes.
+    own: Option<Own>,
 }
 
-struct Frame {
-    buffer: MappedBuffer,
-    set: vk::DescriptorSet,
+struct Own {
+    device: majestix_vk::Device,
+    layout: DescriptorSetLayout,
+    ring: Mapped<Globals>,
+    /// Each slot's set, made in the slot's first frame.
+    sets: Vec<Option<DescriptorSet>>,
 }
 
-/// The set layout: one uniform buffer, for both shader stages.
+/// The set layout, made apart from the renderer for the headless check.
+#[cfg(test)]
 pub(super) unsafe fn create_layout(
     device: &ash::Device,
 ) -> anyhow::Result<vk::DescriptorSetLayout> {
     let bindings = [vk::DescriptorSetLayoutBinding::default()
         .binding(0)
-        .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
+        .descriptor_type(TYPE)
         .descriptor_count(1)
-        .stage_flags(vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT)];
+        .stage_flags(STAGES)];
     // SAFETY: `device` is live, and the infos name only its own live handles.
     Ok(unsafe {
         device.create_descriptor_set_layout(
@@ -133,93 +144,87 @@ pub(super) unsafe fn create_layout(
 }
 
 impl GlobalBuffers {
-    pub unsafe fn new(
-        device: &ash::Device,
-        mem_props: &vk::PhysicalDeviceMemoryProperties,
-        layout: vk::DescriptorSetLayout,
-        frames: usize,
-    ) -> anyhow::Result<Self> {
-        let sizes = [vk::DescriptorPoolSize {
-            ty: vk::DescriptorType::UNIFORM_BUFFER,
-            descriptor_count: frames as u32,
-        }];
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let pool = unsafe {
-            device.create_descriptor_pool(
-                &vk::DescriptorPoolCreateInfo::default()
-                    .pool_sizes(&sizes)
-                    .max_sets(frames as u32),
-                None,
-            )
-        }?;
-        let layouts = vec![layout; frames];
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let sets = unsafe {
-            device.allocate_descriptor_sets(
-                &vk::DescriptorSetAllocateInfo::default()
-                    .descriptor_pool(pool)
-                    .set_layouts(&layouts),
-            )
-        }?;
-        let size = std::mem::size_of::<Globals>() as u64;
-        let mut out = Vec::with_capacity(frames);
-        for set in sets {
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            let buffer = unsafe {
-                MappedBuffer::new(
-                    device,
-                    mem_props,
-                    size,
-                    vk::BufferUsageFlags::UNIFORM_BUFFER,
-                    Place::UPLOAD,
-                )
-            }?;
-            // SAFETY: the buffer is new, so no submit names it yet.
-            unsafe { buffer.write_one(0, &Globals::plain()) };
-            let info = [vk::DescriptorBufferInfo::default()
-                .buffer(buffer.buffer)
-                .offset(0)
-                .range(size)];
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            unsafe {
-                device.update_descriptor_sets(
-                    &[vk::WriteDescriptorSet::default()
-                        .dst_set(set)
-                        .dst_binding(0)
-                        .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-                        .buffer_info(&info)],
-                    &[],
-                )
-            };
-            out.push(Frame { buffer, set });
-        }
+    pub fn new(layer: &majestix_vk::Device, frames: &Frames) -> anyhow::Result<Self> {
+        let layout = layer.create_descriptor_set_layout(&[Binding {
+            binding: 0,
+            ty: TYPE,
+            count: 1,
+            stages: STAGES,
+        }])?;
+        let ring = match Mapped::new(
+            layer,
+            frames,
+            1,
+            vk::BufferUsageFlags::UNIFORM_BUFFER,
+            MemoryUse::Upload,
+        ) {
+            Ok(ring) => ring,
+            Err(e) => {
+                layer.retire(layout);
+                return Err(e.into());
+            }
+        };
         Ok(Self {
-            layout,
-            pool,
-            frames: out,
+            own: Some(Own {
+                device: layer.clone(),
+                layout,
+                ring,
+                sets: vec![None; frames.count() as usize],
+            }),
         })
     }
 
-    /// Writes frame `frame`'s globals; call once its fence was waited on.
-    pub unsafe fn write(&self, frame: usize, globals: &Globals) {
-        // SAFETY: the caller waited on this frame's fence (this fn's contract), so the GPU doesn't read it.
-        unsafe { self.frames[frame].buffer.write_one(0, globals) };
+    /// Set 3 of the world pipelines.
+    pub fn layout(&self) -> vk::DescriptorSetLayout {
+        self.own().layout.raw()
     }
 
-    pub fn set(&self, frame: usize) -> vk::DescriptorSet {
-        self.frames[frame].set
+    /// Writes the frame's globals, and makes its slot's set the first time.
+    pub fn write(
+        &mut self,
+        frame: &majestix_vk::Frame<'_>,
+        globals: &Globals,
+    ) -> anyhow::Result<()> {
+        let own = self.own.as_mut().expect("globals written after destroy");
+        let slot = frame.slot();
+        own.ring.get_mut(frame)[0] = *globals;
+        let at = slot.index() as usize;
+        if own.sets[at].is_none() {
+            let set = own.device.create_descriptor_set(
+                own.layout,
+                &[Write::new(
+                    0,
+                    Descriptor::Buffer {
+                        buffer: own.ring.buffer(),
+                        offset: own.ring.offset(slot),
+                        range: own.ring.bytes(),
+                    },
+                )],
+            )?;
+            own.sets[at] = Some(set);
+        }
+        Ok(())
     }
 
-    pub unsafe fn destroy(&mut self, device: &ash::Device) {
-        for frame in self.frames.drain(..) {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { frame.buffer.destroy(device) };
+    /// The set of frame slot `slot`, once [`Self::write`] wrote it.
+    pub fn set(&self, slot: usize) -> vk::DescriptorSet {
+        self.own().sets[slot]
+            .expect("globals bound before written")
+            .raw()
+    }
+
+    /// Retires the buffer, the sets and the layout.
+    pub fn destroy(&mut self) {
+        if let Some(own) = self.own.take() {
+            for set in own.sets.into_iter().flatten() {
+                own.device.retire(set);
+            }
+            own.device.retire(own.layout);
         }
-        // SAFETY: made by this device, and no frame in flight uses it any more.
-        unsafe {
-            device.destroy_descriptor_pool(self.pool, None);
-            device.destroy_descriptor_set_layout(self.layout, None);
-        }
+    }
+
+    fn own(&self) -> &Own {
+        self.own.as_ref().expect("globals used after destroy")
     }
 }
 
