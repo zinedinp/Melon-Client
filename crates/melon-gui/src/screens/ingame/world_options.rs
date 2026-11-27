@@ -1,6 +1,6 @@
 //! Vanilla `WorldOptionsScreen` (26.3): the world's game modes, commands and
 //! difficulty, and opening it to the LAN, which replaced "Open to LAN".
-//! Melon adds two LAN switches: whether guests are verified, and Bedrock.
+//! Melon adds whether guests are verified, and Bedrock players with their port.
 
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::text::{StyledText, TextStyle, colors};
@@ -8,8 +8,8 @@ use crate::widgets::button::Button;
 use crate::widgets::edit_box::EditBox;
 use crate::widgets::layout::{BUTTON_H, HeaderFooter};
 use crate::widgets::set::{KeyResult, WidgetSet};
-use crate::widgets::{Rect, Ui, Widget};
-use melon_net::singleplayer::server::Publish;
+use crate::widgets::{Label, Rect, Ui, Widget};
+use melon_net::singleplayer::server::{BEDROCK_PORT, Publish};
 use melon_world::game_mode::GameMode;
 
 /// `Button.builder`'s and `CycleButton`'s default width, and the grids' gap.
@@ -79,6 +79,7 @@ enum Id {
     ForceGameMode,
     OnlineMode,
     Bedrock,
+    BedrockPort,
     Apply,
     Cancel,
     /// The difficulty lock's confirmation.
@@ -99,6 +100,9 @@ pub struct WorldOptionsScreen {
     port_error: Option<&'static str>,
     online_mode: bool,
     bedrock: bool,
+    /// Bedrock's port: the field's, or [`BEDROCK_PORT`] while it is blank.
+    bedrock_port: u16,
+    bedrock_port_error: Option<&'static str>,
     guest_command_access: bool,
     force_game_mode: bool,
     widgets: WidgetSet<Id>,
@@ -123,6 +127,11 @@ fn port_available(port: u16) -> bool {
     std::net::TcpListener::bind(("0.0.0.0", port)).is_ok()
 }
 
+/// Bedrock takes the port over UDP and TCP both.
+fn bedrock_port_available(port: u16) -> bool {
+    port_available(port) && std::net::UdpSocket::bind(("0.0.0.0", port)).is_ok()
+}
+
 /// `tryParsePort`: the port and no error, or the error. `None` for a blank field.
 fn parse_port(
     value: &str,
@@ -145,6 +154,20 @@ fn parse_port(
     Ok(Some(port))
 }
 
+/// [`parse_port`] for Bedrock: blank is [`BEDROCK_PORT`], and the Java port is taken.
+fn parse_bedrock_port(
+    value: &str,
+    initial: Option<u16>,
+    java: u16,
+    available: impl Fn(u16) -> bool,
+) -> Result<u16, &'static str> {
+    let port = parse_port(value, initial, &available)?.unwrap_or(BEDROCK_PORT);
+    if port == java || (Some(port) != initial && !available(port)) {
+        return Err("lanServer.port.unavailable");
+    }
+    Ok(port)
+}
+
 impl WorldOptionsScreen {
     pub fn new(state: WorldOptionsState) -> Self {
         let cycle = |w| Button::sized(String::new(), w, BUTTON_H);
@@ -153,6 +176,12 @@ impl WorldOptionsScreen {
         let initial_port = state.published.map(|p| p.port);
         if let Some(value) = initial_port {
             port.set_value(&value.to_string());
+        }
+        let mut bedrock_port = EditBox::new("melon.worldOptions.bedrockPort", W, BUTTON_H);
+        bedrock_port.set_max_length(5);
+        let initial_bedrock = state.published.and_then(|p| p.bedrock);
+        if let Some(value) = initial_bedrock {
+            bedrock_port.set_value(&value.to_string());
         }
         let widgets = WidgetSet::new()
             .with_button(Id::DefaultGameMode, cycle(WIDE))
@@ -172,8 +201,9 @@ impl WorldOptionsScreen {
             .with_field(Id::Port, port)
             .with_button(Id::GuestCommands, cycle(W))
             .with_button(Id::ForceGameMode, cycle(W))
-            .with_button(Id::OnlineMode, cycle(W))
+            .with_button(Id::OnlineMode, cycle(WIDE))
             .with_button(Id::Bedrock, cycle(W))
+            .with_field(Id::BedrockPort, bedrock_port)
             .with_button(
                 Id::Apply,
                 Button::sized("menu.multiplayerOptions.applyChanges", W, BUTTON_H),
@@ -191,7 +221,9 @@ impl WorldOptionsScreen {
             port: initial_port.unwrap_or_else(available_port),
             port_error: None,
             online_mode: state.published.is_none_or(|p| p.online_mode),
-            bedrock: state.published.is_some_and(|p| p.bedrock),
+            bedrock: initial_bedrock.is_some(),
+            bedrock_port: initial_bedrock.unwrap_or(BEDROCK_PORT),
+            bedrock_port_error: None,
             guest_command_access: state.guest_command_access,
             force_game_mode: state.force_game_mode,
             initial: state,
@@ -214,6 +246,24 @@ impl WorldOptionsScreen {
 
     fn initial_port(&self) -> Option<u16> {
         self.initial.published.map(|p| p.port)
+    }
+
+    fn initial_bedrock_port(&self) -> Option<u16> {
+        self.initial.published.and_then(|p| p.bedrock)
+    }
+
+    /// For a port field, whether it takes input (`setEditable`).
+    fn field_live(&self, id: Id) -> Option<bool> {
+        match id {
+            Id::Port => Some(self.lan),
+            Id::BedrockPort => Some(self.bedrock_wanted()),
+            _ => None,
+        }
+    }
+
+    /// Whether the Bedrock port is asked for.
+    fn bedrock_wanted(&self) -> bool {
+        self.lan && self.bedrock
     }
 
     /// `updateButton`'s rule: game modes and game rules need commands, and
@@ -253,11 +303,23 @@ impl WorldOptionsScreen {
         let commands = self.commands_usable();
         let can_allow = !self.initial.hardcore || self.initial.permission_level >= 4;
         let difficulty = self.difficulty_usable();
-        let apply = self.has_changes() && (!self.lan || self.port_error.is_none());
-        let port_color = if self.port_error.is_some() {
-            PORT_BAD
+        let bedrock = self.bedrock_wanted();
+        let apply = self.has_changes()
+            && (!self.lan || self.port_error.is_none())
+            && (!bedrock || self.bedrock_port_error.is_none());
+        let color = |error: Option<&str>| if error.is_some() { PORT_BAD } else { PORT_OK };
+        let port_color = color(self.port_error);
+        let bedrock_color = color(self.bedrock_port_error);
+        // `updatePortControlsState`: the port a blank field stands for, or what the field is.
+        let port_hint = if self.lan {
+            Label::Text(self.port.to_string())
         } else {
-            PORT_OK
+            Label::Key("lanServer.port")
+        };
+        let bedrock_hint = if bedrock {
+            Label::Text(self.bedrock_port.to_string())
+        } else {
+            Label::Key("melon.worldOptions.bedrockPort")
         };
         let w = &mut self.widgets;
         w.set_enabled(Id::DefaultGameMode, commands);
@@ -272,13 +334,20 @@ impl WorldOptionsScreen {
         w.set_enabled(Id::OnlineMode, self.lan);
         w.set_enabled(Id::Bedrock, self.lan);
         w.set_enabled(Id::Apply, apply);
-        if !self.lan {
-            w.field_mut(Id::Port).set_value("");
-            if w.focused() == Some(Id::Port) {
-                w.blur();
+        for (id, live) in [(Id::Port, self.lan), (Id::BedrockPort, bedrock)] {
+            if !live {
+                w.field_mut(id).set_value("");
+                if w.focused() == Some(id) {
+                    w.blur();
+                }
             }
         }
-        w.field_mut(Id::Port).set_text_color(Some(port_color));
+        let port = w.field_mut(Id::Port);
+        port.set_text_color(Some(port_color));
+        port.hint = port_hint;
+        let field = w.field_mut(Id::BedrockPort);
+        field.set_text_color(Some(bedrock_color));
+        field.hint = bedrock_hint;
     }
 
     /// The publish this screen asks for, if the LAN is on.
@@ -286,7 +355,7 @@ impl WorldOptionsScreen {
         self.lan.then_some(Publish {
             port: self.port,
             online_mode: self.online_mode,
-            bedrock: self.bedrock,
+            bedrock: self.bedrock.then_some(self.bedrock_port),
         })
     }
 
@@ -353,6 +422,7 @@ impl WorldOptionsScreen {
                         .set_value(&port.to_string());
                     self.port = port;
                 }
+                self.reset_bedrock_port();
                 self.refresh_guest_access();
             }
             Id::GuestCommands => {
@@ -361,7 +431,10 @@ impl WorldOptionsScreen {
             }
             Id::ForceGameMode => self.force_game_mode = !self.force_game_mode,
             Id::OnlineMode => self.online_mode = !self.online_mode,
-            Id::Bedrock => self.bedrock = !self.bedrock,
+            Id::Bedrock => {
+                self.bedrock = !self.bedrock;
+                self.reset_bedrock_port();
+            }
             Id::Apply => {
                 if self.locked != (self.initial.difficulty_locked || self.initial.hardcore) {
                     self.set_confirming(true);
@@ -372,10 +445,39 @@ impl WorldOptionsScreen {
             Id::Cancel => return ScreenAction::Back,
             Id::Yes => return self.apply(),
             Id::No => self.set_confirming(false),
-            Id::GameRules | Id::Restrictions | Id::Port => {}
+            Id::GameRules | Id::Restrictions | Id::Port | Id::BedrockPort => {}
         }
         self.update();
         ScreenAction::None
+    }
+
+    /// The Bedrock port field as the toggles leave it: the published port, or blank.
+    fn reset_bedrock_port(&mut self) {
+        let value = self
+            .initial_bedrock_port()
+            .filter(|_| self.bedrock_wanted())
+            .map(|port| port.to_string())
+            .unwrap_or_default();
+        self.widgets.field_mut(Id::BedrockPort).set_value(&value);
+        self.check_bedrock_port();
+    }
+
+    /// Checks the Bedrock port against its field and the Java port.
+    fn check_bedrock_port(&mut self) {
+        let value = self.widgets.field(Id::BedrockPort).value();
+        let initial = self.initial_bedrock_port();
+        let checked = if self.bedrock_wanted() {
+            parse_bedrock_port(&value, initial, self.port, bedrock_port_available)
+        } else {
+            Ok(initial.unwrap_or(BEDROCK_PORT))
+        };
+        match checked {
+            Ok(port) => {
+                self.bedrock_port_error = None;
+                self.bedrock_port = port;
+            }
+            Err(error) => self.bedrock_port_error = Some(error),
+        }
     }
 
     fn set_confirming(&mut self, on: bool) {
@@ -394,6 +496,7 @@ impl WorldOptionsScreen {
             }
             Err(error) => self.port_error = Some(error),
         }
+        self.check_bedrock_port();
         self.update();
     }
 
@@ -473,8 +576,9 @@ impl WorldOptionsScreen {
                 "options.worldOptions.difficulty.disabled.hardcore.tooltip"
             }
             Id::GameRules | Id::Restrictions => "melon.worldOptions.unavailable.tooltip",
-            Id::Lan if self.lan => "menu.multiplayerOptions.lan.tooltip",
-            Id::Lan => "menu.multiplayerOptions.off.tooltip",
+            // `MultiplayerScope.getTooltip`.
+            Id::Lan if self.lan => "menu.multiplayerOptions.network.lan.tooltip",
+            Id::Lan => "menu.multiplayerOptions.network.off.tooltip",
             Id::Port => self.port_error.unwrap_or("lanServer.port"),
             Id::GuestCommands if !self.lan => {
                 "options.worldOptions.guest.command_access.disabled.scope.tooltip"
@@ -498,6 +602,9 @@ impl WorldOptionsScreen {
             Id::ForceGameMode => "options.worldOptions.guest.force_game_mode.off.tooltip",
             Id::OnlineMode => "melon.worldOptions.onlineMode.tooltip",
             Id::Bedrock => "melon.worldOptions.bedrock.tooltip",
+            Id::BedrockPort => self
+                .bedrock_port_error
+                .unwrap_or("melon.worldOptions.bedrockPort.tooltip"),
             _ => return None,
         })
     }
@@ -531,7 +638,9 @@ impl WorldOptionsScreen {
         y += BUTTON_H + ROW_GAP;
         w.row(&[Id::GuestCommands, Id::ForceGameMode], left, y, GAP);
         y += BUTTON_H + ROW_GAP;
-        w.row(&[Id::OnlineMode, Id::Bedrock], left, y, GAP);
+        w.set_position(Id::OnlineMode, left, y);
+        y += BUTTON_H + ROW_GAP;
+        w.row(&[Id::Bedrock, Id::BedrockPort], left, y, GAP);
         y += BUTTON_H + SECTION_PAD;
         self.content_h = y + self.scroll - frame.top();
         let footer = frame.footer_y(height, BUTTON_H);
@@ -616,8 +725,8 @@ impl Screen for WorldOptionsScreen {
         if !confirm && !matches!(id, Id::Apply | Id::Cancel) && !in_list {
             return ScreenAction::None;
         }
-        if id == Id::Port {
-            if !self.lan {
+        if let Some(live) = self.field_live(id) {
+            if !live {
                 self.widgets.blur();
             }
             return ScreenAction::None;
@@ -629,7 +738,9 @@ impl Screen for WorldOptionsScreen {
     }
 
     fn on_text_event(&mut self, event: TextEvent, ctx: &ScreenContext) -> ScreenAction {
-        if self.widgets.focused() == Some(Id::Port) && !self.lan {
+        if let Some(id) = self.widgets.focused()
+            && self.field_live(id) == Some(false)
+        {
             self.widgets.blur();
         }
         match self.widgets.key(&event) {
@@ -639,6 +750,11 @@ impl Screen for WorldOptionsScreen {
             }
             KeyResult::Edited(Id::Port) => {
                 self.port_edited();
+                ScreenAction::None
+            }
+            KeyResult::Edited(Id::BedrockPort) => {
+                self.check_bedrock_port();
+                self.update();
                 ScreenAction::None
             }
             _ => ScreenAction::None,
@@ -720,12 +836,8 @@ impl Screen for WorldOptionsScreen {
             icons[0]
         };
         ui.sprite(sprite, lock.rect());
-        let port = self.widgets.field(Id::Port);
-        port.draw(ui);
-        if self.lan && port.value().is_empty() {
-            let hint = self.port.to_string();
-            ui.text(&hint, port.x + 4.0, port.y + 6.0, [0.4, 0.4, 0.4, 1.0]);
-        }
+        self.widgets.field(Id::Port).draw(ui);
+        self.widgets.field(Id::BedrockPort).draw(ui);
         ui.unclip();
         self.widgets.button(Id::Apply).draw(ui);
         self.widgets.button(Id::Cancel).draw(ui);
@@ -743,6 +855,7 @@ impl Screen for WorldOptionsScreen {
             Id::ForceGameMode,
             Id::OnlineMode,
             Id::Bedrock,
+            Id::BedrockPort,
         ]
         .into_iter()
         .filter(|&id| id != Id::PersonalGameMode || self.personal_game_mode.is_some())
@@ -802,6 +915,60 @@ mod tests {
     }
 
     #[test]
+    fn a_bedrock_port_defaults_and_keeps_off_the_java_one() {
+        let free = |_| true;
+        assert_eq!(parse_bedrock_port("", None, 25565, free), Ok(BEDROCK_PORT));
+        assert_eq!(parse_bedrock_port("19133", None, 25565, free), Ok(19133));
+        assert_eq!(
+            parse_bedrock_port("25565", None, 25565, free),
+            Err("lanServer.port.unavailable")
+        );
+        assert_eq!(
+            parse_bedrock_port("80", None, 25565, free),
+            Err("lanServer.port.invalid")
+        );
+        let taken = |_| false;
+        assert_eq!(
+            parse_bedrock_port("", None, 25565, taken),
+            Err("lanServer.port.unavailable")
+        );
+        assert_eq!(parse_bedrock_port("", Some(19132), 25565, taken), Ok(19132));
+    }
+
+    #[test]
+    fn bedrock_players_join_at_the_bedrock_port() {
+        let mut screen = WorldOptionsScreen::new(state());
+        screen.press(Id::Lan);
+        screen.press(Id::Bedrock);
+        screen.widgets.field_mut(Id::BedrockPort).set_value("19140");
+        screen.check_bedrock_port();
+        screen.update();
+        let publish = screen.change().publish.flatten().expect("a publish");
+        // 19140 may be taken on the machine running the test.
+        if screen.bedrock_port_error.is_none() {
+            assert_eq!(publish.bedrock, Some(19140));
+        }
+        // Without Bedrock, the field is emptied again.
+        screen.press(Id::Bedrock);
+        assert!(screen.widgets.field(Id::BedrockPort).value().is_empty());
+        assert_eq!(screen.change().publish.flatten().unwrap().bedrock, None);
+    }
+
+    #[test]
+    fn a_published_world_shows_its_ports() {
+        let mut published = state();
+        published.published = Some(Publish {
+            port: 25570,
+            online_mode: true,
+            bedrock: Some(19150),
+        });
+        let screen = WorldOptionsScreen::new(published);
+        assert_eq!(screen.widgets.field(Id::BedrockPort).value(), "19150");
+        assert_eq!(screen.widgets.field(Id::Port).value(), "25570");
+        assert!(!screen.has_changes());
+    }
+
+    #[test]
     fn nothing_changed_applies_nothing() {
         let screen = WorldOptionsScreen::new(state());
         assert!(!screen.has_changes());
@@ -829,7 +996,7 @@ mod tests {
         screen.press(Id::Lan);
         let change = screen.change();
         let publish = change.publish.flatten().expect("a publish");
-        assert!(publish.online_mode && !publish.bedrock);
+        assert!(publish.online_mode && publish.bedrock.is_none());
         assert!(screen.widgets.button(Id::Apply).enabled);
     }
 

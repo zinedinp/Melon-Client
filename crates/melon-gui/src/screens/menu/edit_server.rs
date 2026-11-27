@@ -7,10 +7,15 @@ use crate::widgets::edit_box::EditBox;
 use crate::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_left};
 use crate::widgets::set::{KeyResult, WidgetSet};
 use melon_assets::assets::packs::server::Policy;
+use melon_net::login::resolver::parse_address;
 use melon_settings::server_list::{self, ServerEntry};
 
 /// `0xA0A0A0`, the labels above the fields.
 const LABEL_COLOR: [f32; 4] = [0.63, 0.63, 0.63, 1.0];
+/// `EditBox`'s default `maxLength`, which the name keeps.
+const NAME_MAX: usize = 32;
+/// `ipEdit.setMaxLength(128)`.
+const ADDRESS_MAX: usize = 128;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Id {
@@ -24,30 +29,34 @@ enum Id {
 pub struct EditServerScreen {
     /// `Some(i)` edits saved server `i`; `None` adds a new one.
     index: Option<usize>,
+    /// `manageServer.add.title` or `manageServer.edit.title`.
+    title: &'static str,
     widgets: WidgetSet<Id>,
     /// The "Server Resource Packs" cycle button's value.
     pack_policy: Policy,
 }
 
 impl EditServerScreen {
-    /// Add Server: `new ServerData(I18n.get("selectServer.defaultName"), "", ...)`.
-    pub fn new_add(ctx: &ScreenContext) -> Self {
+    /// Add Server: `new ServerData("", "", ...)`, the default name only as the hint.
+    pub fn new_add() -> Self {
         let entry = ServerEntry {
-            name: ctx.lang.get("selectServer.defaultName").to_owned(),
+            name: String::new(),
             ip: String::new(),
             accept_textures: None,
         };
-        Self::build(None, &entry)
+        Self::build(None, "manageServer.add.title", &entry)
     }
 
     pub fn new_edit(index: usize, entry: &ServerEntry) -> Self {
-        Self::build(Some(index), entry)
+        Self::build(Some(index), "manageServer.edit.title", entry)
     }
 
-    fn build(index: Option<usize>, entry: &ServerEntry) -> Self {
-        let mut name = EditBox::new("", WIDE_BUTTON_W, BUTTON_H);
+    fn build(index: Option<usize>, title: &'static str, entry: &ServerEntry) -> Self {
+        let mut name = EditBox::new("selectServer.defaultName", WIDE_BUTTON_W, BUTTON_H);
+        name.set_max_length(NAME_MAX);
         name.set_value(&entry.name);
         let mut address = EditBox::new("", WIDE_BUTTON_W, BUTTON_H);
+        address.set_max_length(ADDRESS_MAX);
         address.set_value(&entry.ip);
         let mut widgets = WidgetSet::new()
             .with_field(Id::Name, name)
@@ -64,6 +73,7 @@ impl EditServerScreen {
         widgets.focus(Id::Name);
         let mut screen = Self {
             index,
+            title,
             widgets,
             pack_policy: Policy::from_accept(entry.accept_textures),
         };
@@ -75,9 +85,9 @@ impl EditServerScreen {
         self.widgets.field(id).value().trim().to_owned()
     }
 
-    /// `updateAddButtonStatus`: needs an address, and a name that isn't blank.
+    /// `updateAddButtonStatus`: `ServerAddress.isValidAddress`; the name may be blank.
     fn update_done_enabled(&mut self) {
-        let ok = !self.value(Id::Address).is_empty() && !self.value(Id::Name).is_empty();
+        let ok = parse_address(&self.value(Id::Address)).is_some();
         self.widgets.set_enabled(Id::Done, ok);
     }
 
@@ -86,11 +96,16 @@ impl EditServerScreen {
         if !self.widgets.button(Id::Done).enabled {
             return ScreenAction::None;
         }
+        // `onAdd`: a blank name saves as the default one.
+        let mut name = self.value(Id::Name);
+        if name.is_empty() {
+            ctx.lang.get("selectServer.defaultName").clone_into(&mut name);
+        }
         server_list::upsert(
             ctx.game_dir,
             self.index,
             ServerEntry {
-                name: self.value(Id::Name),
+                name,
                 ip: self.value(Id::Address),
                 accept_textures: self.pack_policy.accept(),
             },
@@ -158,12 +173,13 @@ impl Screen for EditServerScreen {
 
     fn draw(&self, ui: &mut Ui, _ctx: &ScreenContext) {
         ui.menu_background();
-        let title = ui.tr("addServer.title");
+        let title = ui.tr(self.title);
         ui.title(title, 17.0);
-        let left = wide_column_left(ui.width);
-        let name_label = ui.tr("addServer.enterName");
+        // `width / 2 - 100 + 1`.
+        let left = wide_column_left(ui.width) + 1.0;
+        let name_label = ui.tr("manageServer.enterName");
         ui.text(name_label, left, 53.0, LABEL_COLOR);
-        let address_label = ui.tr("addServer.enterIp");
+        let address_label = ui.tr("manageServer.enterIp");
         ui.text(address_label, left, 94.0, LABEL_COLOR);
         let caption = ui.tr("manageServer.resourcePack");
         let value_key = format!("manageServer.resourcePack.{}", self.pack_policy.key());

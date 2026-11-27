@@ -1,6 +1,8 @@
 //! CPU time per subsystem, from the kernel's own count of each thread's time.
 
 use std::collections::BTreeMap;
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::time::Instant;
 
 /// Nanoseconds on a core per thread group, since each thread started.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -15,7 +17,8 @@ pub fn group_of(name: &str) -> &str {
 }
 
 impl ThreadTimes {
-    /// All threads of this process right now.
+    /// All threads of this process right now. Milliseconds on Windows, so
+    /// the frame asks [`ThreadSampler`] instead.
     #[cfg(windows)]
     pub fn sample() -> Self {
         let mut groups = BTreeMap::new();
@@ -68,6 +71,55 @@ impl ThreadTimes {
     }
 }
 
+/// Takes [`ThreadTimes::sample`] on a thread of its own, when asked.
+pub struct ThreadSampler {
+    asks: Sender<()>,
+    answers: Receiver<(Instant, ThreadTimes)>,
+    /// Whether an ask has no answer yet.
+    pending: bool,
+}
+
+impl ThreadSampler {
+    /// The thread, below the game's threads.
+    pub fn start() -> Self {
+        let (asks, asked) = mpsc::channel::<()>();
+        let (answer, answers) = mpsc::channel();
+        let spawned = std::thread::Builder::new()
+            .name("thread-sampler".to_owned())
+            .spawn(move || {
+                melon_base::platform::lower_thread_priority();
+                for () in asked {
+                    let sample = ThreadTimes::sample();
+                    if answer.send((Instant::now(), sample)).is_err() {
+                        break;
+                    }
+                }
+            });
+        if let Err(e) = spawned {
+            melon_base::warn!("No thread for the CPU times per thread: {e}");
+        }
+        Self {
+            asks,
+            answers,
+            pending: false,
+        }
+    }
+
+    /// Asks for a sample, unless one is on its way.
+    pub fn ask(&mut self) {
+        if !self.pending {
+            self.pending = self.asks.send(()).is_ok();
+        }
+    }
+
+    /// The sample asked for, once it is taken.
+    pub fn answer(&mut self) -> Option<(Instant, ThreadTimes)> {
+        let answer = self.answers.try_recv().ok()?;
+        self.pending = false;
+        Some(answer)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,6 +146,23 @@ mod tests {
         assert_eq!(load[0].0, "melon");
         assert!((load[0].1 - 0.5).abs() < 1e-9);
         assert!((load[1].1 - 0.01).abs() < 1e-9);
+    }
+
+    #[cfg(any(target_os = "linux", windows))]
+    #[test]
+    fn the_sampler_answers_what_it_was_asked() {
+        let mut sampler = ThreadSampler::start();
+        assert!(sampler.answer().is_none());
+        sampler.ask();
+        let started = Instant::now();
+        let answer = loop {
+            if let Some(answer) = sampler.answer() {
+                break answer;
+            }
+            assert!(started.elapsed().as_secs() < 10, "no answer");
+            std::thread::yield_now();
+        };
+        assert!(answer.1.0.contains_key("thread-sampler"));
     }
 
     #[cfg(any(target_os = "linux", windows))]

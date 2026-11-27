@@ -39,6 +39,9 @@
   "melon.worldOptions.onlineMode": "Online Mode",
   "melon.worldOptions.onlineMode.tooltip": "Guests must sign in with their Microsoft account (Java) or Xbox account (Bedrock). Off, anyone can join under any name.",
   "melon.worldOptions.bedrock": "Bedrock Players",
-  "melon.worldOptions.bedrock.tooltip": "Lets Bedrock Edition players join over the LAN as well (UDP and TCP port 19132).",
+  "melon.worldOptions.bedrock.tooltip": "Lets Bedrock Edition players join over the LAN as well, at the Bedrock port.",
+  "melon.worldOptions.bedrockPort": "Bedrock Port",
+  "melon.worldOptions.bedrockPort.tooltip": "The port Bedrock players join at, over UDP and TCP. Leave it empty for Bedrock's default, 19132.",
+  "melon.worldOptions.publish.bedrock": "Bedrock players can join at port %s",
   "melon.worldOptions.unavailable.tooltip": "Not available in Melon yet."
 }

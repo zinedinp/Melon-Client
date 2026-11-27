@@ -2,12 +2,14 @@
 
 use std::time::Instant;
 
-use super::thread_cpu::ThreadTimes;
+use super::thread_cpu::{ThreadSampler, ThreadTimes};
 use melon_audio::stats::{AudioStats, AudioTotals};
 use melon_net::play::stats::{NetStats, NetTotals};
 
 /// F3's lines are renewed this often.
 const F3_PERIOD_SECONDS: f64 = 1.0;
+/// The threads' times are asked for this often, while their lines show.
+const THREADS_PERIOD_SECONDS: f64 = 5.0;
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
@@ -18,12 +20,21 @@ pub struct Snapshot {
 }
 
 impl Snapshot {
+    /// With the threads' times, which take milliseconds (see [`ThreadTimes::sample`]).
     pub fn take(net: &NetStats, audio: &AudioStats) -> Self {
+        Self {
+            threads: ThreadTimes::sample(),
+            ..Self::counters(net, audio)
+        }
+    }
+
+    /// Without the threads' times.
+    fn counters(net: &NetStats, audio: &AudioStats) -> Self {
         Self {
             at: Instant::now(),
             net: net.totals(),
             audio: audio.totals(),
-            threads: ThreadTimes::sample(),
+            threads: ThreadTimes::default(),
         }
     }
 }
@@ -124,17 +135,27 @@ impl Rates {
     }
 }
 
-/// F3's subsystem lines, renewed once a second while F3 is open.
+/// F3's subsystem lines, renewed once a second while F3 is open. The
+/// threads' times come from a thread of their own, every few seconds.
 #[derive(Default)]
 pub struct SubsystemMeter {
     last: Option<Snapshot>,
     lines: Vec<String>,
     /// Packets written and read per second, last second.
     packets: (f64, f64),
+    sampler: Option<ThreadSampler>,
+    /// The last sample back from [`Self::sampler`], and when it was taken.
+    threads: Option<(Instant, ThreadTimes)>,
+    /// Cores busy per thread group between the last two samples.
+    load: Vec<(String, f64)>,
 }
 
 impl SubsystemMeter {
-    pub fn update(&mut self, net: &NetStats, audio: &AudioStats, mspt: Option<f64>) {
+    /// Renews the lines when due; `threads` when the threads' lines show.
+    pub fn update(&mut self, net: &NetStats, audio: &AudioStats, mspt: Option<f64>, threads: bool) {
+        if threads {
+            self.update_threads();
+        }
         let due = self
             .last
             .as_ref()
@@ -142,13 +163,33 @@ impl SubsystemMeter {
         if !due {
             return;
         }
-        let now = Snapshot::take(net, audio);
+        let now = Snapshot::counters(net, audio);
         if let Some(last) = &self.last {
-            let rates = Rates::between(last, &now);
+            let mut rates = Rates::between(last, &now);
+            rates.threads.clone_from(&self.load);
             self.packets = (rates.net_sent_packets, rates.net_packets);
             self.lines = rates.lines(mspt);
         }
         self.last = Some(now);
+    }
+
+    /// Takes the sampler's answer, and asks again when due.
+    fn update_threads(&mut self) {
+        let sampler = self.sampler.get_or_insert_with(ThreadSampler::start);
+        if let Some(sample) = sampler.answer() {
+            if let Some((then, earlier)) = &self.threads {
+                let seconds = sample.0.duration_since(*then).as_secs_f64();
+                self.load = sample.1.load_since(earlier, seconds);
+            }
+            self.threads = Some(sample);
+        }
+        let due = self
+            .threads
+            .as_ref()
+            .is_none_or(|(at, _)| at.elapsed().as_secs_f64() >= THREADS_PERIOD_SECONDS);
+        if due {
+            sampler.ask();
+        }
     }
 
     /// Forgets the last snapshot, so F3 opened later starts afresh.
@@ -156,6 +197,8 @@ impl SubsystemMeter {
         self.last = None;
         self.lines.clear();
         self.packets = (0.0, 0.0);
+        self.threads = None;
+        self.load.clear();
     }
 
     pub fn lines(&self) -> &[String] {

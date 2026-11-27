@@ -223,7 +223,7 @@ impl MultiplayerScreen {
         match (id, selected) {
             (Id::Join, _) => self.join_selected(ctx),
             (Id::Direct, _) => ScreenAction::open(DirectConnectScreen::new(ctx)),
-            (Id::Add, _) => ScreenAction::open(EditServerScreen::new_add(ctx)),
+            (Id::Add, _) => ScreenAction::open(EditServerScreen::new_add()),
             (Id::Edit, Some(i)) if i < self.servers.len() => {
                 ScreenAction::open(EditServerScreen::new_edit(i, &self.servers[i]))
             }

@@ -1629,7 +1629,7 @@ fn a_published_world_takes_a_lan_guest_and_sends_it_off() {
         .publish(server::Publish {
             port,
             online_mode: false,
-            bedrock: false,
+            bedrock: None,
         })
         .expect("publishing should work");
     assert!(server.published().is_some());

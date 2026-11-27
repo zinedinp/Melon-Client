@@ -55,14 +55,17 @@ pub struct Host {
     pub online: bool,
 }
 
+/// Bedrock's own default port, where its clients look first.
+pub const BEDROCK_PORT: u16 = 19132;
+
 /// How the world is opened to others.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Publish {
     pub port: u16,
     /// Guests are verified with Mojang (Java) or Xbox (Bedrock).
     pub online_mode: bool,
-    /// Bedrock clients may join too, at the `NetherNet` address (UDP/TCP 19132).
-    pub bedrock: bool,
+    /// The port Bedrock clients may join at too (`NetherNet`, UDP and TCP).
+    pub bedrock: Option<u16>,
 }
 
 /// Everything the integrated server needs to open one world.
@@ -145,8 +148,8 @@ impl IntegratedServer {
     }
 
     /// `IntegratedServer.publishServer`: listens on `publish.port` for Java
-    /// clients (and on the `NetherNet` address for Bedrock ones), and says so
-    /// on the LAN. The game no longer pauses after this.
+    /// clients (and on `publish.bedrock` for Bedrock ones), and says so on the
+    /// LAN. The game no longer pauses after this.
     pub fn publish(&mut self, publish: Publish) -> Result<()> {
         if self.published.is_some() {
             return Err(anyhow!("already published"));
@@ -165,14 +168,16 @@ impl IntegratedServer {
         let listener = handle
             .block_on(tokio::net::TcpListener::bind(address))
             .with_context(|| format!("listening on port {}", publish.port))?;
-        if publish.bedrock {
+        if let Some(port) = publish.bedrock {
+            let bedrock = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, port));
             handle
                 .block_on(pumpkin::listen_bedrock(
                     Arc::clone(&server),
+                    bedrock,
                     stop.clone(),
                     Arc::new(self.tasks.clone()),
                 ))
-                .context("listening for Bedrock")?;
+                .with_context(|| format!("listening for Bedrock on port {port}"))?;
         }
         handle.spawn(accept_java(
             Arc::clone(&server),

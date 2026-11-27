@@ -9,6 +9,8 @@ const SMOOTHING: f32 = 1.0 / 30.0;
 const KERNEL_PERIOD: Duration = Duration::from_secs(1);
 /// The frame's phases spent waiting off the CPU, on the GPU or the compositor.
 pub const WAITS: [&str; 3] = ["gpu wait", "acquire wait", "present"];
+/// How often the tester's report takes the profile.
+const PROBE_PERIOD: Duration = Duration::from_secs(2);
 
 pub struct FrameProfiler {
     /// Each phase's smoothed milliseconds, in the order first seen.
@@ -32,6 +34,8 @@ pub struct FrameProfiler {
     kernel: KernelClock,
     /// Since the kernel's last count: the frames' time not spent in [`WAITS`], and the events'.
     working: Duration,
+    /// When the tester's report last took the profile.
+    probed: Instant,
 }
 
 impl Default for FrameProfiler {
@@ -53,6 +57,7 @@ impl Default for FrameProfiler {
             interval_ms: 0.0,
             kernel: KernelClock::default(),
             working: Duration::ZERO,
+            probed: now,
         }
     }
 }
@@ -122,6 +127,11 @@ impl FrameProfiler {
             .sum();
         self.working += Duration::from_secs_f32(((total - waited) / 1000.0).max(0.0));
         self.ended = Some(now);
+        if melon_core::probe::enabled() && now - self.probed >= PROBE_PERIOD {
+            self.probed = now;
+            melon_core::probe::section("Frame profile (F3, smoothed)", self.lines().join("
+"));
+        }
     }
 
     /// The last whole frame: its CPU time and each phase's, unsmoothed.

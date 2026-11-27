@@ -140,6 +140,8 @@ struct RunningState {
     bench: Option<bench::BenchRun>,
     /// The singleplayer world's picture for the world list.
     world_icon: world_icon::WorldIcon,
+    /// F3's refresh rate and when the monitor was last asked for it.
+    refresh_rate: Option<(Instant, Option<String>)>,
     /// F2's pictures: the one asked for and the ones being written.
     screenshots: screenshot::Screenshots,
     /// The volume sliders' sounds outside a world.
@@ -233,6 +235,7 @@ impl App {
             draw_list: DrawList::new(),
             bench: None,
             world_icon: world_icon::WorldIcon::new(),
+            refresh_rate: None,
             screenshots: screenshot::Screenshots::default(),
             sound_preview: Default::default(),
         };

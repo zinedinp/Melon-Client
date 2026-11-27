@@ -498,11 +498,16 @@ pub fn drop_cargo_stack() {
 }
 
 /// The name and time on a core (user and kernel, in ns) of every thread of
-/// this process. The calling thread is named `melon`, as Linux names the main
-/// thread after the process.
+/// this process. It takes milliseconds: the kernel's snapshot lists the whole system's threads.
 #[cfg(windows)]
 pub fn thread_cpu_times() -> Vec<(String, u64)> {
     win_threads::all()
+}
+
+/// Names the calling thread `melon`, as Linux names the main thread after the process.
+pub fn name_main_thread() {
+    #[cfg(windows)]
+    win_threads::name_current("melon");
 }
 
 /// The calling thread's time on a core: user and kernel, in ns.
@@ -559,7 +564,6 @@ mod win_threads {
         ) -> i32;
         fn CloseHandle(handle: isize) -> i32;
         fn GetCurrentProcessId() -> u32;
-        fn GetCurrentThreadId() -> u32;
         fn GetCurrentThread() -> isize;
         fn SetThreadPriority(thread: isize, priority: i32) -> i32;
         fn GetModuleHandleW(name: *const u16) -> isize;
@@ -570,22 +574,40 @@ mod win_threads {
     /// `GetThreadDescription` (Windows 10 1607 on), looked up as std does.
     type GetThreadDescription = unsafe extern "system" fn(isize, *mut *mut u16) -> i32;
 
+    /// `SetThreadDescription`, from the same Windows on.
+    type SetThreadDescription = unsafe extern "system" fn(isize, *const u16) -> i32;
+
+    /// Kernel32's `name`, if this Windows has it.
+    fn kernel32_proc(name: &std::ffi::CStr) -> Option<usize> {
+        let module: Vec<u16> = "kernel32.dll\0".encode_utf16().collect();
+        // SAFETY: NUL-terminated names, and kernel32 stays loaded for the whole process.
+        unsafe {
+            let module = GetModuleHandleW(module.as_ptr());
+            if module == 0 {
+                return None;
+            }
+            let proc = GetProcAddress(module, name.as_ptr().cast());
+            (!proc.is_null()).then_some(proc as usize)
+        }
+    }
+
     fn get_thread_description() -> Option<GetThreadDescription> {
         static FOUND: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
-        let address = (*FOUND.get_or_init(|| {
-            let name: Vec<u16> = "kernel32.dll\0".encode_utf16().collect();
-            // SAFETY: a NUL-terminated module name, and kernel32 stays loaded for the whole process.
-            unsafe {
-                let module = GetModuleHandleW(name.as_ptr());
-                if module == 0 {
-                    return None;
-                }
-                let proc = GetProcAddress(module, c"GetThreadDescription".as_ptr().cast());
-                (!proc.is_null()).then_some(proc as usize)
-            }
-        }))?;
+        let address = (*FOUND.get_or_init(|| kernel32_proc(c"GetThreadDescription")))?;
         // SAFETY: the address is kernel32's `GetThreadDescription`.
         Some(unsafe { std::mem::transmute::<usize, GetThreadDescription>(address) })
+    }
+
+    /// Names the calling thread, where Windows can.
+    pub fn name_current(name: &str) {
+        let Some(address) = kernel32_proc(c"SetThreadDescription") else {
+            return;
+        };
+        // SAFETY: the address is kernel32's `SetThreadDescription`.
+        let describe = unsafe { std::mem::transmute::<usize, SetThreadDescription>(address) };
+        let wide: Vec<u16> = name.encode_utf16().chain([0]).collect();
+        // SAFETY: the current thread's pseudo handle and a NUL-terminated name.
+        unsafe { describe(GetCurrentThread(), wide.as_ptr()) };
     }
 
     /// User and kernel ns of an open thread handle.
@@ -641,7 +663,6 @@ mod win_threads {
                 return out;
             }
             let process = GetCurrentProcessId();
-            let me = GetCurrentThreadId();
             let mut entry = ThreadEntry32 {
                 size: std::mem::size_of::<ThreadEntry32>() as u32,
                 usage: 0,
@@ -657,13 +678,9 @@ mod win_threads {
                     let thread = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, 0, entry.thread_id);
                     if thread != 0 {
                         if let Some((user, kernel)) = times(thread) {
-                            let name = if entry.thread_id == me {
-                                "melon".to_owned()
-                            } else {
-                                name(thread)
-                                    .filter(|n| !n.is_empty())
-                                    .unwrap_or_else(|| "unnamed".to_owned())
-                            };
+                            let name = name(thread)
+                                .filter(|n| !n.is_empty())
+                                .unwrap_or_else(|| "unnamed".to_owned());
                             out.push((name, user + kernel));
                         }
                         CloseHandle(thread);

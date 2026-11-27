@@ -7,6 +7,7 @@ use melon_settings::options::Config;
 
 fn main() -> anyhow::Result<()> {
     melon_base::platform::drop_cargo_stack();
+    melon_base::platform::name_main_thread();
     // The frame is drawn here: ahead of the meshers and the server's generation.
     melon_base::platform::raise_frame_thread_priority();
     // The CPU's vector unit, probed once: every SIMD kernel runs on it.

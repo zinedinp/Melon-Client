@@ -130,7 +130,7 @@ impl Screen for DirectConnectScreen {
         ui.menu_background();
         let title = ui.tr("selectServer.direct");
         ui.title(title, 20.0);
-        let label = ui.tr("addServer.enterIp");
+        let label = ui.tr("manageServer.enterIp");
         ui.text(label, wide_column_left(ui.width), 100.0, LABEL_COLOR);
         self.widgets.draw(ui);
     }

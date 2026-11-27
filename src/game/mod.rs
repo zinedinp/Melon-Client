@@ -535,8 +535,12 @@ impl InWorld {
             return;
         }
         let mspt = self.server_mspt();
+        let threads = self
+            .debug
+            .entries()
+            .is_enabled(melon_gui::hud::debug_entries::Entry::Subsystems);
         self.subsystems
-            .update(self.joined.session.stats(), audio, mspt);
+            .update(self.joined.session.stats(), audio, mspt, threads);
     }
 
     /// Whether the world is hardcore: dying ends it.

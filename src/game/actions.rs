@@ -142,16 +142,24 @@ impl InWorld {
                     );
                 }
                 if let Some(publish) = publish {
-                    messages.push(match server.publish(publish) {
-                        Ok(()) => lang.format(
-                            "menu.multiplayerOptions.publish.started.lan",
-                            &[&publish.port.to_string()],
-                        ),
+                    match server.publish(publish) {
+                        Ok(()) => {
+                            messages.push(lang.format(
+                                "menu.multiplayerOptions.publish.started.lan",
+                                &[&publish.port.to_string()],
+                            ));
+                            if let Some(port) = publish.bedrock {
+                                messages.push(lang.format(
+                                    "melon.worldOptions.publish.bedrock",
+                                    &[&port.to_string()],
+                                ));
+                            }
+                        }
                         Err(error) => {
                             melon_base::warn!("Not published: {error:#}");
-                            lang.get("commands.publish.failed").to_owned()
+                            messages.push(lang.get("commands.publish.failed").to_owned());
                         }
-                    });
+                    }
                 }
             }
         }
