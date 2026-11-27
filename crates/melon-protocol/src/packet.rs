@@ -163,9 +163,9 @@ mod tests {
         })
         .unwrap();
         let mut rest = wire.as_slice();
-        let frame_len = crate::network::protocol::varint::read_var_int(&mut rest).unwrap();
+        let frame_len = crate::varint::read_var_int(&mut rest).unwrap();
         let mut frame = &rest[..frame_len as usize];
-        let data_len = crate::network::protocol::varint::read_var_int(&mut frame).unwrap();
+        let data_len = crate::varint::read_var_int(&mut frame).unwrap();
         assert_eq!(data_len, 0);
     }
 
@@ -179,9 +179,9 @@ mod tests {
         })
         .unwrap();
         let mut rest = wire.as_slice();
-        let frame_len = crate::network::protocol::varint::read_var_int(&mut rest).unwrap();
+        let frame_len = crate::varint::read_var_int(&mut rest).unwrap();
         let mut frame = &rest[..frame_len as usize];
-        let data_len = crate::network::protocol::varint::read_var_int(&mut frame).unwrap();
+        let data_len = crate::varint::read_var_int(&mut frame).unwrap();
         assert_eq!(data_len, 1 + 256);
         assert_ne!(frame, body.as_slice());
     }

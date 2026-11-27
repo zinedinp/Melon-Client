@@ -3,10 +3,20 @@
 mod contents;
 pub mod decode;
 pub mod pumpkin;
+mod wire;
 mod style;
 
 pub use contents::{AtlasSprite, Contents, NbtSource, ObjectInfo, PlayerSprite, Profile};
 pub use style::{ClickEvent, FontDescription, HoverEvent, Style, TextColor};
+
+/// `Util.parseAndValidateUntrustedUri`: a scheme, and it is http or https.
+pub fn is_trusted_url(url: &str) -> bool {
+    url.split_once(':').is_some_and(|(scheme, rest)| {
+        !rest.is_empty()
+            && matches!(scheme.to_ascii_lowercase().as_str(), "http" | "https")
+            && !url.chars().any(|c| c.is_whitespace() || c.is_control())
+    })
+}
 
 /// A text component.
 #[derive(Clone, Debug, PartialEq)]

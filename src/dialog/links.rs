@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 
-use crate::component::Component;
+use crate::component::{Component, is_trusted_url};
 use crate::network::protocol::reader::{Reader, initial_capacity};
 
 /// `ServerLinks.KnownLinkType`, by its wire id.
@@ -100,14 +100,6 @@ pub fn read(body: &[u8]) -> Result<Vec<ServerLink>> {
     Ok(links)
 }
 
-/// `Util.parseAndValidateUntrustedUri`: a scheme, and it is http or https.
-pub fn is_trusted_url(url: &str) -> bool {
-    url.split_once(':').is_some_and(|(scheme, rest)| {
-        !rest.is_empty()
-            && matches!(scheme.to_ascii_lowercase().as_str(), "http" | "https")
-            && !url.chars().any(|c| c.is_whitespace() || c.is_control())
-    })
-}
 
 #[cfg(test)]
 mod tests {

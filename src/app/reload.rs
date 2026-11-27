@@ -28,7 +28,90 @@ pub(super) fn activate_packs(assets: &Assets, config: &Config) {
     packs::activate(stack);
     crate::world::entity::equipment_asset::install(assets.root());
     crate::world::creative_tabs::apply_from_game_dir(assets.game_dir());
-    crate::probe::describe_packs(assets.root());
+    describe_packs();
+}
+
+/// What the active resource packs hold, and which of it Melon has no use for.
+fn describe_packs() {
+    use std::collections::{BTreeMap, BTreeSet};
+
+    use crate::probe::{enabled, note, section};
+    if !enabled() {
+        return;
+    }
+    use crate::assets::packs;
+    const USED: &[&str] = &[
+        "models",
+        "textures",
+        "items",
+        "blockstates",
+        "font",
+        "lang",
+        "sounds",
+        "post_effect",
+        "shaders",
+        "atlases",
+        "particles",
+        "texts",
+    ];
+    let stack = packs::active();
+    let mut text = String::new();
+    if stack.packs.is_empty() {
+        return;
+    }
+    for pack in &stack.packs {
+        text.push_str(&format!("### {} ({})\n\n", pack.title, pack.id));
+        let inventory = pack.inventory();
+        let mut by_namespace: BTreeMap<&str, Vec<(&str, usize)>> = BTreeMap::new();
+        for ((namespace, folder), n) in &inventory {
+            by_namespace
+                .entry(namespace)
+                .or_default()
+                .push((folder, *n));
+        }
+        for (namespace, folders) in by_namespace {
+            let list: Vec<String> = folders.iter().map(|(f, n)| format!("{f} {n}")).collect();
+            text.push_str(&format!("- `{namespace}`: {}\n", list.join(", ")));
+            for (folder, n) in &folders {
+                if !USED.contains(folder) {
+                    note("pack.feature", format!("{namespace}/{folder}"), || {
+                        format!("{n} files in {}, not read by Melon", pack.id)
+                    });
+                }
+            }
+        }
+        let mut files = BTreeSet::new();
+        pack.list("minecraft", "shaders/core", &mut files);
+        for file in &files {
+            let name = file.trim_start_matches("shaders/core/");
+            let stem = name.split('.').next().unwrap_or(name);
+            if !["text", "gui", "position_tex_color"].contains(&stem) {
+                note("pack.feature", format!("core shader {name}"), || {
+                    format!(
+                        "replaces a vanilla world shader in {}; Melon draws the world with its own",
+                        pack.id
+                    )
+                });
+            }
+        }
+        files.clear();
+        pack.list("minecraft", "post_effect", &mut files);
+        for file in &files {
+            let id = file
+                .trim_start_matches("post_effect/")
+                .trim_end_matches(".json");
+            if !crate::renderer::post::load::IDS
+                .iter()
+                .any(|known| known.trim_start_matches("minecraft:") == id)
+            {
+                note("pack.feature", format!("post effect {id}"), || {
+                    format!("a chain Melon doesn't run, in {}", pack.id)
+                });
+            }
+        }
+        text.push('\n');
+    }
+    section("Packs", text);
 }
 
 /// The active packs' replacements for vanilla's GUI shaders, compiled and handed to the

@@ -7,70 +7,68 @@ use crate::particle::Kind;
 use crate::particle::options::{Codec, ParticleData, ParticleSpec, PositionSource, codec};
 use crate::particle::server::{LevelParticles, Randomization};
 
-impl Reader<'_> {
-    /// `ParticleTypes.STREAM_CODEC`: the type id, then its data.
-    pub fn particle(&mut self) -> Result<ParticleSpec> {
-        let id = self.var_int()?;
-        let kind = u16::try_from(id)
-            .ok()
-            .and_then(Kind::from_id)
-            .ok_or_else(|| anyhow!("unknown particle {id}"))?;
-        let data = match codec(kind) {
-            Codec::None => ParticleData::None,
-            Codec::Block => ParticleData::Block(state_id(self.var_int()?)),
-            Codec::Item => ParticleData::Item(self.particle_item()?),
-            Codec::Dust => ParticleData::Dust {
-                rgb: self.i32_be()? as u32,
-                scale: self.f32_be()?.clamp(0.01, 4.0),
-            },
-            Codec::DustTransition => ParticleData::DustTransition {
-                from: self.i32_be()? as u32,
-                to: self.i32_be()? as u32,
-                scale: self.f32_be()?.clamp(0.01, 4.0),
-            },
-            Codec::Color => ParticleData::Color(self.i32_be()? as u32),
-            Codec::Spell => ParticleData::Spell {
-                rgb: self.i32_be()? as u32,
-                power: self.f32_be()?,
-            },
-            Codec::Power => ParticleData::Power(self.f32_be()?),
-            Codec::SculkCharge => ParticleData::SculkCharge(self.f32_be()?),
-            Codec::Shriek => ParticleData::Shriek(self.var_int()?),
-            Codec::Vibration => {
-                let to = match self.var_int()? {
-                    0 => PositionSource::Block(self.block_pos()?),
-                    1 => PositionSource::Entity {
-                        id: self.var_int()?,
-                        y_offset: self.f32_be()?,
-                    },
-                    other => return Err(anyhow!("unknown position source {other}")),
-                };
-                ParticleData::Vibration {
-                    to,
-                    ticks: self.var_int()?,
-                }
+/// `ParticleTypes.STREAM_CODEC`: the type id, then its data.
+pub fn particle(r: &mut Reader<'_>) -> Result<ParticleSpec> {
+    let id = r.var_int()?;
+    let kind = u16::try_from(id)
+        .ok()
+        .and_then(Kind::from_id)
+        .ok_or_else(|| anyhow!("unknown particle {id}"))?;
+    let data = match codec(kind) {
+        Codec::None => ParticleData::None,
+        Codec::Block => ParticleData::Block(state_id(r.var_int()?)),
+        Codec::Item => ParticleData::Item(particle_item(r)?),
+        Codec::Dust => ParticleData::Dust {
+            rgb: r.i32_be()? as u32,
+            scale: r.f32_be()?.clamp(0.01, 4.0),
+        },
+        Codec::DustTransition => ParticleData::DustTransition {
+            from: r.i32_be()? as u32,
+            to: r.i32_be()? as u32,
+            scale: r.f32_be()?.clamp(0.01, 4.0),
+        },
+        Codec::Color => ParticleData::Color(r.i32_be()? as u32),
+        Codec::Spell => ParticleData::Spell {
+            rgb: r.i32_be()? as u32,
+            power: r.f32_be()?,
+        },
+        Codec::Power => ParticleData::Power(r.f32_be()?),
+        Codec::SculkCharge => ParticleData::SculkCharge(r.f32_be()?),
+        Codec::Shriek => ParticleData::Shriek(r.var_int()?),
+        Codec::Vibration => {
+            let to = match r.var_int()? {
+                0 => PositionSource::Block(r.block_pos()?),
+                1 => PositionSource::Entity {
+                    id: r.var_int()?,
+                    y_offset: r.f32_be()?,
+                },
+                other => return Err(anyhow!("unknown position source {other}")),
+            };
+            ParticleData::Vibration {
+                to,
+                ticks: r.var_int()?,
             }
-            Codec::Trail => ParticleData::Trail {
-                target: self.vec3_f64()?,
-                rgb: self.i32_be()? as u32,
-                ticks: self.var_int()?,
-            },
-            Codec::Geyser => ParticleData::Geyser {
-                water_blocks: self.i32_be()?,
-            },
-            Codec::GeyserBase => ParticleData::GeyserBase {
-                water_blocks: self.i32_be()?,
-                impulse: self.f32_be()?,
-            },
-        };
-        Ok(ParticleSpec { kind, data })
-    }
+        }
+        Codec::Trail => ParticleData::Trail {
+            target: r.vec3_f64()?,
+            rgb: r.i32_be()? as u32,
+            ticks: r.var_int()?,
+        },
+        Codec::Geyser => ParticleData::Geyser {
+            water_blocks: r.i32_be()?,
+        },
+        Codec::GeyserBase => ParticleData::GeyserBase {
+            water_blocks: r.i32_be()?,
+            impulse: r.f32_be()?,
+        },
+    };
+    Ok(ParticleSpec { kind, data })
+}
 
-    /// `ItemStackTemplate.STREAM_CODEC` of an item particle.
-    fn particle_item(&mut self) -> Result<u16> {
-        let stack = self.item_template()?;
-        Ok(stack.item.id)
-    }
+/// `ItemStackTemplate.STREAM_CODEC` of an item particle.
+fn particle_item(r: &mut Reader<'_>) -> Result<u16> {
+    let stack = r.item_template()?;
+    Ok(stack.item.id)
 }
 
 /// A block state id as sent; out of range is air.
@@ -80,7 +78,7 @@ fn state_id(id: i32) -> u16 {
 
 /// `ClientboundLevelParticlesPacket.STREAM_CODEC`.
 pub(super) fn read_level_particles(r: &mut Reader) -> Result<LevelParticles> {
-    let spec = r.particle()?;
+    let spec = particle(r)?;
     let override_limiter = r.bool()?;
     let always_show = r.bool()?;
     let pos = r.vec3_f64()?;
@@ -155,7 +153,7 @@ mod codec_tests {
 
     fn read(body: &[u8]) -> ParticleSpec {
         let mut r = Reader::new(body);
-        let spec = r.particle().unwrap();
+        let spec = particle(&mut r).unwrap();
         assert!(r.remaining().is_empty(), "{spec:?} left bytes over");
         spec
     }
@@ -284,6 +282,6 @@ mod codec_tests {
     fn an_unknown_type_is_an_error() {
         let mut body = Vec::new();
         write_var_int(&mut body, 9999).unwrap();
-        assert!(Reader::new(&body).particle().is_err());
+        assert!(particle(&mut Reader::new(&body)).is_err());
     }
 }

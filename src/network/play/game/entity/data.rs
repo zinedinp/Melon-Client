@@ -269,12 +269,12 @@ fn read_value(r: &mut Reader<'_>, ty: i32) -> Result<Option<DataValue>> {
             }
             DataValue::Int(id - 1)
         }
-        PARTICLE => DataValue::Particles(vec![r.particle()?]),
+        PARTICLE => DataValue::Particles(vec![super::super::particle::particle(r)?]),
         PARTICLES => {
             let count = r.list_count()?;
             let mut list = Vec::with_capacity(initial_capacity(count));
             for _ in 0..count {
-                list.push(r.particle()?);
+                list.push(super::super::particle::particle(r)?);
             }
             DataValue::Particles(list)
         }

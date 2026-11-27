@@ -142,7 +142,7 @@ pub struct WriteHalf {
 }
 
 impl WriteHalf {
-    pub(crate) fn compression(&self) -> Option<i32> {
+    pub fn compression(&self) -> Option<i32> {
         self.compression
     }
 
@@ -254,7 +254,7 @@ fn write_encrypted(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::network::protocol::packet::write_packet;
+    use crate::packet::write_packet;
     use std::collections::VecDeque;
     use std::sync::{Arc, Mutex};
 
@@ -471,7 +471,7 @@ mod tests {
         let threshold = 64;
         let stream = Trickle::new(usize::MAX);
         let mut threshold_body = Vec::new();
-        crate::network::protocol::varint::write_var_int(&mut threshold_body, threshold).unwrap();
+        crate::varint::write_var_int(&mut threshold_body, threshold).unwrap();
         let mut wire = packet(3, &threshold_body);
         wire.extend(packet_with(Some(threshold), 2, &[9; 300]));
         stream.push(&wire);

@@ -306,7 +306,7 @@ fn click(value: &Value) -> Option<ClickEvent> {
     Some(match string(map, "action")?.as_str() {
         // `ExtraCodecs.UNTRUSTED_URI`: only http(s) links are kept.
         "open_url" => ClickEvent::OpenUrl {
-            url: string(map, "url").filter(|url| crate::dialog::links::is_trusted_url(url))?,
+            url: string(map, "url").filter(|url| super::is_trusted_url(url))?,
         },
         "run_command" => ClickEvent::RunCommand {
             command: string(map, "command")?,

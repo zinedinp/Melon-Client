@@ -3,7 +3,6 @@
 use anyhow::Result;
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
-use pumpkin_protocol::codec::item_stack_seralizer::ItemStackSerializer;
 
 use super::id;
 use crate::network::protocol::packet::Reader;
@@ -372,7 +371,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
         },
         id::CB_MERCHANT_OFFERS => GameEvent::MerchantOffers {
             container: r.var_int()?,
-            offers: r.merchant_offers()?,
+            offers: merchant_offers(&mut r)?,
         },
         id::CB_SET_CURSOR_ITEM => GameEvent::CursorItem(r.item_stack()?),
         id::CB_SET_PLAYER_INVENTORY => GameEvent::PlayerInventorySlot {
@@ -621,65 +620,57 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
     }))
 }
 
-impl Reader<'_> {
-    /// `ItemStack.OPTIONAL_STREAM_CODEC`, through Pumpkin's decoder.
-    pub fn merchant_offers(&mut self) -> Result<Offers> {
-        let count = self.list_count()?;
-        let mut offers = Vec::with_capacity(initial_capacity(count));
-        for _ in 0..count {
-            let base_cost_a = self.item_cost()?;
-            let result = self.item_stack()?;
-            let cost_b = if self.bool()? {
-                self.item_cost()?
-            } else {
-                crate::world::inventory::empty()
-            };
-            let out_of_stock = self.bool()?;
-            let uses = self.i32_be()?;
-            let max_uses = self.i32_be()?;
-            let xp = self.i32_be()?;
-            let special_price_diff = self.i32_be()?;
-            let price_multiplier = self.f32_be()?;
-            let demand = self.i32_be()?;
-            offers.push(Offer {
-                base_cost_a,
-                cost_b,
-                result,
-                out_of_stock,
-                uses,
-                max_uses,
-                xp,
-                special_price_diff,
-                price_multiplier,
-                demand,
-            });
-        }
-        Ok(Offers {
-            offers,
-            level: self.var_int()?,
-            xp: self.var_int()?,
-            show_progress: self.bool()?,
-            can_restock: self.bool()?,
-        })
+/// The offers of `ClientboundMerchantOffersPacket`.
+fn merchant_offers(r: &mut Reader<'_>) -> Result<Offers> {
+    let count = r.list_count()?;
+    let mut offers = Vec::with_capacity(initial_capacity(count));
+    for _ in 0..count {
+        let base_cost_a = item_cost(r)?;
+        let result = r.item_stack()?;
+        let cost_b = if r.bool()? {
+            item_cost(r)?
+        } else {
+            crate::world::inventory::empty()
+        };
+        let out_of_stock = r.bool()?;
+        let uses = r.i32_be()?;
+        let max_uses = r.i32_be()?;
+        let xp = r.i32_be()?;
+        let special_price_diff = r.i32_be()?;
+        let price_multiplier = r.f32_be()?;
+        let demand = r.i32_be()?;
+        offers.push(Offer {
+            base_cost_a,
+            cost_b,
+            result,
+            out_of_stock,
+            uses,
+            max_uses,
+            xp,
+            special_price_diff,
+            price_multiplier,
+            demand,
+        });
     }
+    Ok(Offers {
+        offers,
+        level: r.var_int()?,
+        xp: r.var_int()?,
+        show_progress: r.bool()?,
+        can_restock: r.bool()?,
+    })
+}
 
-    /// `ItemCost.STREAM_CODEC`.
-    fn item_cost(&mut self) -> Result<ItemStack> {
-        let id = self.var_int()?;
-        let count = self.var_int()?.clamp(1, 99);
-        anyhow::ensure!(self.var_int()? == 0, "item cost with components");
-        let item = u16::try_from(id)
-            .ok()
-            .and_then(Item::from_id)
-            .ok_or_else(|| anyhow::anyhow!("unknown item {id}"))?;
-        Ok(ItemStack::new(count as u8, item))
-    }
-
-    pub fn item_stack(&mut self) -> Result<ItemStack> {
-        ItemStackSerializer::read(self.remaining())
-            .map(ItemStackSerializer::to_stack)
-            .map_err(|e| anyhow::anyhow!("item stack: {e}"))
-    }
+/// `ItemCost.STREAM_CODEC`.
+fn item_cost(r: &mut Reader<'_>) -> Result<ItemStack> {
+    let id = r.var_int()?;
+    let count = r.var_int()?.clamp(1, 99);
+    anyhow::ensure!(r.var_int()? == 0, "item cost with components");
+    let item = u16::try_from(id)
+        .ok()
+        .and_then(Item::from_id)
+        .ok_or_else(|| anyhow::anyhow!("unknown item {id}"))?;
+    Ok(ItemStack::new(count as u8, item))
 }
 
 #[cfg(test)]

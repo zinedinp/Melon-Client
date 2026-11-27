@@ -176,55 +176,26 @@ pub struct Suggestions {
     pub matches: Vec<(String, Option<Component>)>,
 }
 
-impl Reader<'_> {
-    /// A text component (NBT since 1.20.3), turned into JSON by Pumpkin's reader.
-    pub fn component(&mut self) -> Result<Component> {
-        let tag = self
-            .remaining()
-            .get_nbt(&VERSION)
-            .map_err(|e| anyhow::anyhow!("text component: {e}"))?;
-        Ok(tag.map_or_else(Component::empty, |tag| {
-            component::decode::component(&pumpkin_protocol::ser::nbt_tag_to_json_ext(&tag, true))
-        }))
-    }
+fn signature(r: &mut Reader<'_>) -> Result<Box<[u8; 256]>> {
+    let bytes = r.bytes(256)?;
+    Ok(Box::new(
+        bytes.try_into().map_err(|_| anyhow::anyhow!("signature"))?,
+    ))
+}
 
-    /// A text component as plain text (keys of translated parts stay keys).
-    pub fn component_text(&mut self) -> Result<String> {
-        Ok(self.component()?.plain_text())
-    }
-
-    /// A `Style` on its own (`Style.Serializer.TRUSTED_STREAM_CODEC`).
-    pub fn style(&mut self) -> Result<Style> {
-        let tag = self
-            .remaining()
-            .get_nbt(&VERSION)
-            .map_err(|e| anyhow::anyhow!("style: {e}"))?;
-        Ok(tag.map_or_else(Style::default, |tag| {
-            component::decode::style_of(&pumpkin_protocol::ser::nbt_tag_to_json_ext(&tag, true))
-        }))
-    }
-
-    fn signature(&mut self) -> Result<Box<[u8; 256]>> {
-        let bytes = self.bytes(256)?;
-        Ok(Box::new(
-            bytes.try_into().map_err(|_| anyhow::anyhow!("signature"))?,
-        ))
-    }
-
-    fn bound_chat_type(&mut self) -> Result<BoundChatType> {
-        let chat_type = self.var_int()?;
-        let sender_name = self.component()?;
-        let target_name = if self.bool()? {
-            Some(self.component()?)
-        } else {
-            None
-        };
-        Ok(BoundChatType {
-            chat_type,
-            sender_name,
-            target_name,
-        })
-    }
+fn bound_chat_type(r: &mut Reader<'_>) -> Result<BoundChatType> {
+    let chat_type = r.var_int()?;
+    let sender_name = r.component()?;
+    let target_name = if r.bool()? {
+        Some(r.component()?)
+    } else {
+        None
+    };
+    Ok(BoundChatType {
+        chat_type,
+        sender_name,
+        target_name,
+    })
 }
 
 /// Decodes `pid` if it is a chat packet.
@@ -246,14 +217,14 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<ChatEvent>> {
         id::CB_CLEAR_TITLES => ChatEvent::ClearTitles { reset: r.bool()? },
         id::CB_DISGUISED_CHAT => ChatEvent::Disguised {
             message: r.component()?,
-            bound: r.bound_chat_type()?,
+            bound: bound_chat_type(&mut r)?,
         },
         id::CB_PLAYER_CHAT => {
             let _global_index = r.var_int()?;
             let sender = r.uuid()?;
             let _index = r.var_int()?;
             let signature = if r.bool()? {
-                Some(r.signature()?)
+                Some(signature(&mut r)?)
             } else {
                 None
             };
@@ -283,14 +254,14 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<ChatEvent>> {
                 message,
                 unsigned_content,
                 fully_filtered: filter == 1,
-                bound: r.bound_chat_type()?,
+                bound: bound_chat_type(&mut r)?,
             }
         }
         id::CB_DELETE_CHAT => {
             if r.var_int()? != 0 {
                 return Ok(None);
             }
-            ChatEvent::Delete(r.signature()?)
+            ChatEvent::Delete(signature(&mut r)?)
         }
         id::CB_COMMAND_SUGGESTIONS => {
             let transaction = r.var_int()?;

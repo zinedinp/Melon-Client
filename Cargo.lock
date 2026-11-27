@@ -2630,7 +2630,7 @@ checksum = "7ebb8d8732c6a6df3d8f032a82911cfc747e00efb95cc46e8d0acd5b5b88570c"
 
 [[package]]
 name = "melon"
-version = "0.10.10+mc26.3"
+version = "0.11.0+mc26.3"
 dependencies = [
  "aes 0.9.4",
  "anyhow",
@@ -2647,6 +2647,8 @@ dependencies = [
  "libloading 0.9.1",
  "majestix-vk",
  "melon-base",
+ "melon-core",
+ "melon-protocol",
  "miraculix",
  "num-bigint 0.5.1",
  "numerobis",
@@ -2705,6 +2707,37 @@ dependencies = [
  "windows-sys 0.61.2",
  "winit",
  "zip",
+]
+
+[[package]]
+name = "melon-core"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "melon-base",
+ "miraculix",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "melon-protocol"
+version = "0.1.0"
+dependencies = [
+ "aes 0.9.4",
+ "anyhow",
+ "cfb8",
+ "flate2",
+ "num-bigint 0.5.1",
+ "pumpkin-data",
+ "pumpkin-protocol",
+ "pumpkin-util",
+ "rand 0.10.4",
+ "rsa",
+ "serde_json",
+ "sha1 0.11.0",
+ "uuid",
 ]
 
 [[package]]

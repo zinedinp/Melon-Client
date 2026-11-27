@@ -1,6 +1,6 @@
 [package]
 name = "melon"
-version = "0.10.10+mc26.3"
+version = "0.11.0+mc26.3"
 authors = ["Zinedin Polic"]
 edition = "2024"
 rust-version = "1.100.0"
@@ -11,24 +11,55 @@ license = "GPL-3.0"
 default-run = "melon"
 
 [workspace]
-members = ["crates/melon-base"]
+members = ["crates/*"]
 
 [workspace.dependencies]
-# What the client and melon-base both use, at one version each.
+# What the client and its crates share, at one version each.
+aes = "0.9.4"
 anyhow = "1.0.105"
 arboard = { version = "3.7.0", features = ["wayland-data-control"] }
+arc-swap = "1.9.5"
 ash = "0.38.0"
 ash-window = "0.13.0"
+cfb8 = "0.9.1"
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+crossbeam-channel = "0.5.17"
+flate2 = { version = "1.1.11", default-features = false, features = ["rust_backend"] }
+glam = "0.34.3"
 image = { version = "0.25.10", default-features = false, features = ["png"] }
+libloading = "0.9.1"
 # The safe Vulkan call layer: devices, frame rings, swapchains, mapped rings.
 majestix-vk = "0.2.1"
+miraculix = "0.7.1"
+num-bigint = "0.5.1"
 # The GPU's vendor and architecture from its PCI ids, for vendor paths at run time.
 numerobis = { version = "0.6.0", default-features = false, features = ["vulkan"] }
 open = "5.4.5"
+png = "0.18.1"
+pumpkin = { package = "pumpkin-core", git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
+pumpkin-config = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
+pumpkin-data = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
+pumpkin-mod = { git = "https://github.com/zinedinp/pumpkin-mod", branch = "main" }
+pumpkin-nbt = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
+pumpkin-protocol = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
+pumpkin-util = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
+pumpkin-wasm-host = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
+pumpkin-world = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
+rand = "0.10.4"
 raw-window-handle = "0.6.2"
+rayon = "1.12.0"
+regex = { version = "1.13.2", default-features = false, features = ["std", "perf", "unicode"] }
+rodio = { version = "0.23.0", default-features = false, features = ["playback", "vorbis"] }
+rsa = { version = "0.10", default-features = false, features = ["std", "encoding", "pkcs1v15"] }
+rustc-hash = "2.1.3"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 sha1 = "0.11.0"
+sha2 = "0.11.2"
+shaderc = "0.10.1"
+socket2 = { version = "0.6.5", features = ["all"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "io-util", "macros", "time"] }
+tokio-util = { version = "0.7.20", features = ["rt", "io-util"] }
 ureq = { version = "3.5.2", default-features = false, features = ["rustls", "json"] }
 uuid = { version = "1.29.3", features = ["v3", "v4", "v5"] }
 windows-sys = "0.61.2"
@@ -41,60 +72,62 @@ undocumented_unsafe_blocks = "warn"
 
 [dependencies]
 melon-base = { path = "crates/melon-base" }
-aes = "0.9.4"
+melon-core = { path = "crates/melon-core" }
+melon-protocol = { path = "crates/melon-protocol" }
+aes.workspace = true
 anyhow.workspace = true
 # Pumpkin's game profile holds its properties in one.
-arc-swap = "1.9.5"
-chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+arc-swap.workspace = true
+chrono.workspace = true
 arboard.workspace = true
 ash.workspace = true
 ash-window.workspace = true
-cfb8 = "0.9.1"
-crossbeam-channel = "0.5.17"
-flate2 = { version = "1.1.11", default-features = false, features = ["rust_backend"] }
-glam = "0.34.3"
+cfb8.workspace = true
+crossbeam-channel.workspace = true
+flate2.workspace = true
+glam.workspace = true
 # NVML (`libnvidia-ml`) for the benchmark, loaded only if it is there.
-libloading = "0.9.1"
-rustc-hash = "2.1.3"
+libloading.workspace = true
+rustc-hash.workspace = true
 image.workspace = true
 # Pack PNGs with wrong checksums, which `image` refuses and vanilla reads.
-png = "0.18.1"
-num-bigint = "0.5.1"
+png.workspace = true
+num-bigint.workspace = true
 open.workspace = true
 # The integrated server: Pumpkin, from the `mod-zip` branch of our fork.
-pumpkin = { package = "pumpkin-core", git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-config = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-mod = { git = "https://github.com/zinedinp/pumpkin-mod", branch = "main" }
-pumpkin-data = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-nbt = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-protocol = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-util = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-wasm-host = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-pumpkin-world = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
-rand = "0.10.4"
+pumpkin.workspace = true
+pumpkin-config.workspace = true
+pumpkin-mod.workspace = true
+pumpkin-data.workspace = true
+pumpkin-nbt.workspace = true
+pumpkin-protocol.workspace = true
+pumpkin-util.workspace = true
+pumpkin-wasm-host.workspace = true
+pumpkin-world.workspace = true
+rand.workspace = true
 # The integrated server's global pool, built with its threads ranked.
-rayon = "1.12.0"
+rayon.workspace = true
 raw-window-handle.workspace = true
-rodio = { version = "0.23.0", default-features = false, features = ["playback", "vorbis"] }
-rsa = { version = "0.10", default-features = false, features = ["std", "encoding"] }
+rodio.workspace = true
+rsa.workspace = true
 serde.workspace = true
 # The LAN world list shares its multicast port (`SO_REUSEADDR`/`SO_REUSEPORT`).
-socket2 = { version = "0.6.5", features = ["all"] }
+socket2.workspace = true
 serde_json.workspace = true
 sha1.workspace = true
-sha2 = "0.11.2"
-tokio = { version = "1.54.1", features = ["rt-multi-thread", "io-util", "macros", "time"] }
-tokio-util = { version = "0.7.20", features = ["rt", "io-util"] }
+sha2.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
 ureq.workspace = true
 uuid.workspace = true
 winit.workspace = true
 # Resource packs: their `filter` patterns.
-regex = { version = "1.13.2", default-features = false, features = ["std", "perf", "unicode"] }
+regex.workspace = true
 # Resource packs' core shaders, compiled at runtime as vanilla does: the
 # system's shaderc library, from the same install `glslc` comes from.
-shaderc = "0.10.1"
+shaderc.workspace = true
 zip.workspace = true
-miraculix = "0.7.1"
+miraculix.workspace = true
 numerobis.workspace = true
 majestix-vk.workspace = true
 

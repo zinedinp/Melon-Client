@@ -80,13 +80,13 @@ pub(super) fn read_explosion(r: &mut Reader) -> Result<Explosion> {
     let radius = r.f32_be()?;
     let block_count = r.i32_be()?;
     let knockback = if r.bool()? { Some(r.vec3_f64()?) } else { None };
-    let particle = r.particle()?;
+    let particle = super::particle::particle(r)?;
     let event = read_event(r)?;
     let pool = r.list_count()?;
     let mut debris = Vec::with_capacity(initial_capacity(pool));
     for _ in 0..pool {
         debris.push(Debris {
-            spec: r.particle()?,
+            spec: super::particle::particle(r)?,
             scaling: r.f32_be()?,
             speed: r.f32_be()?,
             weight: r.var_int()?,

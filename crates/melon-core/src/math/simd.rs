@@ -200,7 +200,7 @@ fn rank(name: &str) -> u32 {
 }
 
 /// The newest tier rank `MELON_SIMD` allows; `u32::MAX` when it names none.
-pub(crate) fn rank_cap() -> u32 {
+pub fn rank_cap() -> u32 {
     static CAP: OnceLock<u32> = OnceLock::new();
     *CAP.get_or_init(|| {
         let Ok(wanted) = std::env::var("MELON_SIMD") else {

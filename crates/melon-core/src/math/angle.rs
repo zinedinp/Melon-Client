@@ -161,19 +161,19 @@ pub fn wrap_degrees(degrees: f32) -> f32 {
 }
 
 /// `2 / π`, for the quarter turns in an angle.
-pub(crate) const FRAC_2_PI: f64 = std::f64::consts::FRAC_2_PI;
+pub const FRAC_2_PI: f64 = std::f64::consts::FRAC_2_PI;
 /// `π / 2` in two parts (fdlibm's `pio2_1`, `pio2_1t`): the first has
 /// 33 significant bits, so a quarter-turn count below `2^20` times it
 /// is exact.
-pub(crate) const PIO2_HI: f64 = 1.570_796_326_734_125_6;
-pub(crate) const PIO2_LO: f64 = 6.077_100_506_506_192e-11;
+pub const PIO2_HI: f64 = 1.570_796_326_734_125_6;
+pub const PIO2_LO: f64 = 6.077_100_506_506_192e-11;
 /// Past this the split above loses digits: [`sin_cos_exact`] asks libm.
-pub(crate) const REDUCE_LIMIT: f32 = 400_000.0;
+pub const REDUCE_LIMIT: f32 = 400_000.0;
 /// Adding and taking away `1.5 · 2^52` rounds a double to an integer.
-pub(crate) const ROUND_MAGIC: f64 = 6_755_399_441_055_744.0;
+pub const ROUND_MAGIC: f64 = 6_755_399_441_055_744.0;
 
 /// fdlibm's `__kernel_sin` coefficients, `S1` first.
-pub(crate) const SIN_COEFFS: [f64; 6] = [
+pub const SIN_COEFFS: [f64; 6] = [
     -1.666_666_666_666_663_2e-01,
     8.333_333_333_322_49e-03,
     -1.984_126_982_985_795e-04,
@@ -182,7 +182,7 @@ pub(crate) const SIN_COEFFS: [f64; 6] = [
     1.589_690_995_211_55e-10,
 ];
 /// fdlibm's `__kernel_cos` coefficients, `C1` first.
-pub(crate) const COS_COEFFS: [f64; 6] = [
+pub const COS_COEFFS: [f64; 6] = [
     4.166_666_666_666_66e-02,
     -1.388_888_888_887_411e-03,
     2.480_158_728_947_673e-05,

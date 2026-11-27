@@ -3,13 +3,9 @@
 use std::collections::HashMap;
 
 use anyhow::{Result, bail};
-use pumpkin_data::item::Item;
-use pumpkin_data::item_stack::ItemStack;
-use pumpkin_protocol::codec::item_stack_seralizer::ItemStackSerializer;
 
 use crate::network::protocol::packet::Reader;
 use crate::network::protocol::reader::initial_capacity;
-use crate::network::protocol::varint;
 use crate::world::recipes::book::{BookSettings, Category, Entry, RecipeId, TypeSettings};
 use crate::world::recipes::display::Shown;
 use crate::world::recipes::sets::{PropertySet, StonecutterOption};
@@ -44,12 +40,12 @@ const MAX_DEPTH: u32 = 16;
 pub fn decode(pid: i32, r: &mut Reader) -> Result<Option<RecipeEvent>> {
     use pumpkin_data::packet::clientbound::play as cb;
     Ok(Some(match pid {
-        p if p == cb::UPDATE_RECIPES.0 => RecipeEvent::Update(r.recipe_sets()?),
+        p if p == cb::UPDATE_RECIPES.0 => RecipeEvent::Update(recipe_sets(r)?),
         p if p == cb::RECIPE_BOOK_ADD.0 => {
             let count = r.list_count()?;
             let mut entries = Vec::with_capacity(count.min(1024));
             for _ in 0..count {
-                let entry = r.recipe_entry()?;
+                let entry = recipe_entry(r)?;
                 entries.push((entry, r.u8()?));
             }
             RecipeEvent::BookAdd {
@@ -77,231 +73,201 @@ pub fn decode(pid: i32, r: &mut Reader) -> Result<Option<RecipeEvent>> {
         }
         p if p == cb::PLACE_GHOST_RECIPE.0 => RecipeEvent::Ghost {
             container: r.var_int()?,
-            display: r.recipe_display()?,
+            display: recipe_display(r)?,
         },
         _ => return Ok(None),
     }))
 }
 
-impl Reader<'_> {
-    /// `Item.STREAM_CODEC`: the item's registry number.
-    fn item_by_id(&mut self) -> Result<&'static Item> {
-        let id = self.var_int()?;
-        match u16::try_from(id).ok().and_then(Item::from_id) {
-            Some(item) => Ok(item),
-            None => bail!("unknown item {id}"),
+/// `ByteBufCodecs.holderSet(ITEM)`.
+pub fn item_set(r: &mut Reader<'_>) -> Result<ItemSet> {
+    let n = r.var_int()?;
+    if n == 0 {
+        return Ok(ItemSet::Tag(r.string()?));
+    }
+    let Ok(count) = usize::try_from(n.wrapping_sub(1)) else {
+        bail!("negative holder set size {}", n.wrapping_sub(1));
+    };
+    let mut items = Vec::with_capacity(count.min(1024));
+    for _ in 0..count {
+        items.push(r.item_by_id()?);
+    }
+    Ok(ItemSet::Items(items))
+}
+
+pub fn slot_display(r: &mut Reader<'_>) -> Result<SlotDisplay> {
+    slot_display_at(r, 0)
+}
+
+fn slot_display_at(r: &mut Reader<'_>, depth: u32) -> Result<SlotDisplay> {
+    if depth > MAX_DEPTH {
+        bail!("slot display nested too deep");
+    }
+    let boxed = |r: &mut Reader<'_>| slot_display_at(r, depth + 1).map(Box::new);
+    Ok(match r.var_int()? {
+        0 => SlotDisplay::Empty,
+        1 => SlotDisplay::AnyFuel,
+        2 => SlotDisplay::WithAnyPotion(boxed(r)?),
+        3 => {
+            let inner = boxed(r)?;
+            SlotDisplay::OnlyWithComponent(inner, r.var_int()?)
         }
-    }
-
-    /// `ByteBufCodecs.holderSet(ITEM)`.
-    pub fn item_set(&mut self) -> Result<ItemSet> {
-        let n = self.var_int()?;
-        if n == 0 {
-            return Ok(ItemSet::Tag(self.string()?));
+        4 => SlotDisplay::Item(r.item_by_id()?),
+        5 => SlotDisplay::Stack(Shown(r.item_template()?)),
+        6 => SlotDisplay::Set(item_set(r)?),
+        7 => {
+            let dye = boxed(r)?;
+            SlotDisplay::Dyed {
+                dye,
+                target: boxed(r)?,
+            }
         }
-        let Ok(count) = usize::try_from(n.wrapping_sub(1)) else {
-            bail!("negative holder set size {}", n.wrapping_sub(1));
-        };
-        let mut items = Vec::with_capacity(count.min(1024));
-        for _ in 0..count {
-            items.push(self.item_by_id()?);
+        8 => {
+            let base = boxed(r)?;
+            let material = boxed(r)?;
+            let pattern = r.var_int()?;
+            if pattern == 0 {
+                bail!("trim pattern written inline");
+            }
+            SlotDisplay::SmithingTrim {
+                base,
+                material,
+                pattern: pattern - 1,
+            }
         }
-        Ok(ItemSet::Items(items))
-    }
-
-    /// `ItemStackTemplate.STREAM_CODEC`.
-    pub(crate) fn item_template(&mut self) -> Result<ItemStack> {
-        let item = self.var_int()?;
-        let count = self.var_int()?;
-        let mut head = Vec::new();
-        varint::write_var_int(&mut head, count)?;
-        varint::write_var_int(&mut head, item)?;
-        let rest = *self.remaining();
-        let mut joined = head.clone();
-        joined.extend_from_slice(rest);
-        let mut slice = joined.as_slice();
-        let stack = ItemStackSerializer::read(&mut slice)
-            .map(ItemStackSerializer::to_stack)
-            .map_err(|e| anyhow::anyhow!("item stack template: {e}"))?;
-        let used = joined.len() - slice.len() - head.len();
-        self.skip(used)?;
-        Ok(stack)
-    }
-
-    pub fn slot_display(&mut self) -> Result<SlotDisplay> {
-        self.slot_display_at(0)
-    }
-
-    fn slot_display_at(&mut self, depth: u32) -> Result<SlotDisplay> {
-        if depth > MAX_DEPTH {
-            bail!("slot display nested too deep");
+        9 => {
+            let input = boxed(r)?;
+            SlotDisplay::WithRemainder {
+                input,
+                remainder: boxed(r)?,
+            }
         }
-        let boxed = |r: &mut Self| r.slot_display_at(depth + 1).map(Box::new);
-        Ok(match self.var_int()? {
-            0 => SlotDisplay::Empty,
-            1 => SlotDisplay::AnyFuel,
-            2 => SlotDisplay::WithAnyPotion(boxed(self)?),
-            3 => {
-                let inner = boxed(self)?;
-                SlotDisplay::OnlyWithComponent(inner, self.var_int()?)
-            }
-            4 => SlotDisplay::Item(self.item_by_id()?),
-            5 => SlotDisplay::Stack(Shown(self.item_template()?)),
-            6 => SlotDisplay::Set(self.item_set()?),
-            7 => {
-                let dye = boxed(self)?;
-                SlotDisplay::Dyed {
-                    dye,
-                    target: boxed(self)?,
-                }
-            }
-            8 => {
-                let base = boxed(self)?;
-                let material = boxed(self)?;
-                let pattern = self.var_int()?;
-                if pattern == 0 {
-                    bail!("trim pattern written inline");
-                }
-                SlotDisplay::SmithingTrim {
-                    base,
-                    material,
-                    pattern: pattern - 1,
-                }
-            }
-            9 => {
-                let input = boxed(self)?;
-                SlotDisplay::WithRemainder {
-                    input,
-                    remainder: boxed(self)?,
-                }
-            }
-            10 => {
-                let count = self.list_count()?;
-                let mut parts = Vec::with_capacity(count.min(64));
-                for _ in 0..count {
-                    parts.push(self.slot_display_at(depth + 1)?);
-                }
-                SlotDisplay::Composite(parts)
-            }
-            other => bail!("unknown slot display type {other}"),
-        })
-    }
-
-    pub fn recipe_display(&mut self) -> Result<RecipeDisplay> {
-        Ok(match self.var_int()? {
-            0 => {
-                let ingredients = self.slot_displays()?;
-                RecipeDisplay::Shapeless {
-                    ingredients,
-                    result: self.slot_display()?,
-                    station: self.slot_display()?,
-                }
-            }
-            1 => {
-                let width = self.var_int()?.clamp(0, 64) as usize;
-                let height = self.var_int()?.clamp(0, 64) as usize;
-                let ingredients = self.slot_displays()?;
-                if ingredients.len() != width * height {
-                    bail!(
-                        "shaped recipe display of {width}x{height} has {} slots",
-                        ingredients.len()
-                    );
-                }
-                RecipeDisplay::Shaped {
-                    width,
-                    height,
-                    ingredients,
-                    result: self.slot_display()?,
-                    station: self.slot_display()?,
-                }
-            }
-            2 => RecipeDisplay::Furnace {
-                ingredient: self.slot_display()?,
-                fuel: self.slot_display()?,
-                result: self.slot_display()?,
-                station: self.slot_display()?,
-                duration: self.var_int()?,
-                experience: self.f32_be()?,
-            },
-            3 => RecipeDisplay::Stonecutter {
-                input: self.slot_display()?,
-                result: self.slot_display()?,
-                station: self.slot_display()?,
-            },
-            4 => RecipeDisplay::Smithing {
-                template: self.slot_display()?,
-                base: self.slot_display()?,
-                addition: self.slot_display()?,
-                result: self.slot_display()?,
-                station: self.slot_display()?,
-            },
-            other => bail!("unknown recipe display type {other}"),
-        })
-    }
-
-    fn slot_displays(&mut self) -> Result<Vec<SlotDisplay>> {
-        let count = self.list_count()?;
-        let mut list = Vec::with_capacity(count.min(64));
-        for _ in 0..count {
-            list.push(self.slot_display()?);
-        }
-        Ok(list)
-    }
-
-    /// `RecipeDisplayEntry.STREAM_CODEC`.
-    pub fn recipe_entry(&mut self) -> Result<Entry> {
-        let id = RecipeId(self.var_int()?);
-        let display = self.recipe_display()?;
-        let group = match self.var_int()? {
-            0 => None,
-            n => Some(n - 1),
-        };
-        let category = self.var_int()?;
-        let Some(category) = Category::from_wire(category) else {
-            bail!("unknown recipe book category {category}");
-        };
-        let requirements = if self.bool()? {
-            let count = self.list_count()?;
-            let mut sets = Vec::with_capacity(count.min(64));
+        10 => {
+            let count = r.list_count()?;
+            let mut parts = Vec::with_capacity(count.min(64));
             for _ in 0..count {
-                sets.push(self.item_set()?);
+                parts.push(slot_display_at(r, depth + 1)?);
             }
-            Some(sets)
-        } else {
-            None
-        };
-        Ok(Entry {
-            id,
-            display,
-            group,
-            category,
-            requirements,
-        })
-    }
+            SlotDisplay::Composite(parts)
+        }
+        other => bail!("unknown slot display type {other}"),
+    })
+}
 
-    /// `ClientboundUpdateRecipesPacket.STREAM_CODEC`.
-    pub fn recipe_sets(&mut self) -> Result<RecipeSets> {
-        let count = self.list_count()?;
-        let mut sets = HashMap::with_capacity(initial_capacity(count));
-        for _ in 0..count {
-            let name = self.string()?;
-            let n = self.list_count()?;
-            let mut items = Vec::with_capacity(n.min(1024));
-            for _ in 0..n {
-                items.push(self.item_by_id()?);
+pub fn recipe_display(r: &mut Reader<'_>) -> Result<RecipeDisplay> {
+    Ok(match r.var_int()? {
+        0 => {
+            let ingredients = slot_displays(r)?;
+            RecipeDisplay::Shapeless {
+                ingredients,
+                result: slot_display(r)?,
+                station: slot_display(r)?,
             }
-            sets.insert(name, PropertySet::new(items));
         }
-        let count = self.list_count()?;
-        let mut stonecutter = Vec::with_capacity(count.min(1024));
-        for _ in 0..count {
-            stonecutter.push(StonecutterOption {
-                input: self.item_set()?,
-                display: self.slot_display()?,
-            });
+        1 => {
+            let width = r.var_int()?.clamp(0, 64) as usize;
+            let height = r.var_int()?.clamp(0, 64) as usize;
+            let ingredients = slot_displays(r)?;
+            if ingredients.len() != width * height {
+                bail!(
+                    "shaped recipe display of {width}x{height} has {} slots",
+                    ingredients.len()
+                );
+            }
+            RecipeDisplay::Shaped {
+                width,
+                height,
+                ingredients,
+                result: slot_display(r)?,
+                station: slot_display(r)?,
+            }
         }
-        Ok(RecipeSets::new(sets, stonecutter))
+        2 => RecipeDisplay::Furnace {
+            ingredient: slot_display(r)?,
+            fuel: slot_display(r)?,
+            result: slot_display(r)?,
+            station: slot_display(r)?,
+            duration: r.var_int()?,
+            experience: r.f32_be()?,
+        },
+        3 => RecipeDisplay::Stonecutter {
+            input: slot_display(r)?,
+            result: slot_display(r)?,
+            station: slot_display(r)?,
+        },
+        4 => RecipeDisplay::Smithing {
+            template: slot_display(r)?,
+            base: slot_display(r)?,
+            addition: slot_display(r)?,
+            result: slot_display(r)?,
+            station: slot_display(r)?,
+        },
+        other => bail!("unknown recipe display type {other}"),
+    })
+}
+
+fn slot_displays(r: &mut Reader<'_>) -> Result<Vec<SlotDisplay>> {
+    let count = r.list_count()?;
+    let mut list = Vec::with_capacity(count.min(64));
+    for _ in 0..count {
+        list.push(slot_display(r)?);
     }
+    Ok(list)
+}
+
+/// `RecipeDisplayEntry.STREAM_CODEC`.
+pub fn recipe_entry(r: &mut Reader<'_>) -> Result<Entry> {
+    let id = RecipeId(r.var_int()?);
+    let display = recipe_display(r)?;
+    let group = match r.var_int()? {
+        0 => None,
+        n => Some(n - 1),
+    };
+    let category = r.var_int()?;
+    let Some(category) = Category::from_wire(category) else {
+        bail!("unknown recipe book category {category}");
+    };
+    let requirements = if r.bool()? {
+        let count = r.list_count()?;
+        let mut sets = Vec::with_capacity(count.min(64));
+        for _ in 0..count {
+            sets.push(item_set(r)?);
+        }
+        Some(sets)
+    } else {
+        None
+    };
+    Ok(Entry {
+        id,
+        display,
+        group,
+        category,
+        requirements,
+    })
+}
+
+/// `ClientboundUpdateRecipesPacket.STREAM_CODEC`.
+pub fn recipe_sets(r: &mut Reader<'_>) -> Result<RecipeSets> {
+    let count = r.list_count()?;
+    let mut sets = HashMap::with_capacity(initial_capacity(count));
+    for _ in 0..count {
+        let name = r.string()?;
+        let n = r.list_count()?;
+        let mut items = Vec::with_capacity(n.min(1024));
+        for _ in 0..n {
+            items.push(r.item_by_id()?);
+        }
+        sets.insert(name, PropertySet::new(items));
+    }
+    let count = r.list_count()?;
+    let mut stonecutter = Vec::with_capacity(count.min(1024));
+    for _ in 0..count {
+        stonecutter.push(StonecutterOption {
+            input: item_set(r)?,
+            display: slot_display(r)?,
+        });
+    }
+    Ok(RecipeSets::new(sets, stonecutter))
 }
 
 #[cfg(test)]
@@ -340,7 +306,7 @@ mod tests {
             var(b, i32::from(Item::STICK.id)).unwrap();
         });
         let mut r = Reader::new(&body);
-        let entry = r.recipe_entry().unwrap();
+        let entry = recipe_entry(&mut r).unwrap();
         assert!(r.remaining().is_empty());
         assert_eq!(entry.id, RecipeId(5));
         assert_eq!(entry.group, Some(2));
@@ -373,11 +339,11 @@ mod tests {
             var(b, 0).unwrap();
         });
         let mut r = Reader::new(&body);
-        let SlotDisplay::Stack(stack) = r.slot_display().unwrap() else {
+        let SlotDisplay::Stack(stack) = slot_display(&mut r).unwrap() else {
             panic!("not a stack");
         };
         assert_eq!((stack.0.item.id, stack.0.item_count), (Item::DIAMOND.id, 3));
-        assert_eq!(r.slot_display().unwrap(), SlotDisplay::Empty);
+        assert_eq!(slot_display(&mut r).unwrap(), SlotDisplay::Empty);
     }
 
     #[test]
@@ -395,7 +361,7 @@ mod tests {
             var(b, i32::from(Item::STONE_SLAB.id)).unwrap();
         });
         let mut r = Reader::new(&body);
-        let sets = r.recipe_sets().unwrap();
+        let sets = recipe_sets(&mut r).unwrap();
         assert!(r.remaining().is_empty());
         assert!(sets.accepts(
             crate::world::recipes::sets::FURNACE_INPUT,
@@ -416,6 +382,6 @@ mod tests {
                 var(b, 1).unwrap();
             }
         });
-        assert!(Reader::new(&body).slot_display().is_err());
+        assert!(slot_display(&mut Reader::new(&body)).is_err());
     }
 }

@@ -5,7 +5,7 @@
 pub mod lan;
 pub mod login;
 pub mod play;
-pub(crate) mod protocol;
+pub(crate) use melon_protocol as protocol;
 pub mod status;
 
 pub use login::{ClientInfo, Identity, JoinInfo, connect_and_join, join_server, join_stream};

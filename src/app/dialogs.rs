@@ -119,7 +119,7 @@ impl RunningState {
                 }
             }
             ClickEvent::OpenUrl { url } => {
-                if !crate::dialog::links::is_trusted_url(&url) {
+                if !crate::component::is_trusted_url(&url) {
                     return;
                 }
                 if self.env.config.chat.links_prompt {

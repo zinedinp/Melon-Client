@@ -1,6 +1,6 @@
 //! The tester.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -232,8 +232,8 @@ pub fn trace_sent(id: i32) {
     ring.push_back((Instant::now(), id));
 }
 
-/// The play packets sent in the last `secs` seconds, named, runs folded.
-pub fn recent_sent(secs: u64) -> String {
+/// The play packets sent in the last `secs` seconds, named by `name`, runs folded.
+pub fn recent_sent(secs: u64, name: impl Fn(i32) -> Option<&'static str>) -> String {
     let ring = SENT.lock().unwrap_or_else(|e| e.into_inner());
     let mut out: Vec<(i32, u32)> = Vec::new();
     for (at, id) in ring.iter() {
@@ -247,7 +247,7 @@ pub fn recent_sent(secs: u64) -> String {
     }
     out.iter()
         .map(|(id, n)| {
-            let name = crate::network::play::debug::serverbound_name(*id).unwrap_or("unknown");
+            let name = name(*id).unwrap_or("unknown");
             if *n > 1 {
                 format!("{name} x{n}")
             } else {
@@ -481,87 +481,6 @@ fn render(state: &State) -> String {
         out.push('\n');
     }
     out
-}
-
-/// What the active resource packs hold, and which of it Melon has no use for.
-pub fn describe_packs(assets_root: &std::path::Path) {
-    if !enabled() {
-        return;
-    }
-    use crate::assets::packs;
-    const USED: &[&str] = &[
-        "models",
-        "textures",
-        "items",
-        "blockstates",
-        "font",
-        "lang",
-        "sounds",
-        "post_effect",
-        "shaders",
-        "atlases",
-        "particles",
-        "texts",
-    ];
-    let stack = packs::active();
-    let mut text = String::new();
-    if stack.packs.is_empty() {
-        return;
-    }
-    for pack in &stack.packs {
-        text.push_str(&format!("### {} ({})\n\n", pack.title, pack.id));
-        let inventory = pack.inventory();
-        let mut by_namespace: BTreeMap<&str, Vec<(&str, usize)>> = BTreeMap::new();
-        for ((namespace, folder), n) in &inventory {
-            by_namespace
-                .entry(namespace)
-                .or_default()
-                .push((folder, *n));
-        }
-        for (namespace, folders) in by_namespace {
-            let list: Vec<String> = folders.iter().map(|(f, n)| format!("{f} {n}")).collect();
-            text.push_str(&format!("- `{namespace}`: {}\n", list.join(", ")));
-            for (folder, n) in &folders {
-                if !USED.contains(folder) {
-                    note("pack.feature", format!("{namespace}/{folder}"), || {
-                        format!("{n} files in {}, not read by Melon", pack.id)
-                    });
-                }
-            }
-        }
-        let mut files = BTreeSet::new();
-        pack.list("minecraft", "shaders/core", &mut files);
-        for file in &files {
-            let name = file.trim_start_matches("shaders/core/");
-            let stem = name.split('.').next().unwrap_or(name);
-            if !["text", "gui", "position_tex_color"].contains(&stem) {
-                note("pack.feature", format!("core shader {name}"), || {
-                    format!(
-                        "replaces a vanilla world shader in {}; Melon draws the world with its own",
-                        pack.id
-                    )
-                });
-            }
-        }
-        files.clear();
-        pack.list("minecraft", "post_effect", &mut files);
-        for file in &files {
-            let id = file
-                .trim_start_matches("post_effect/")
-                .trim_end_matches(".json");
-            if !crate::renderer::post::load::IDS
-                .iter()
-                .any(|known| known.trim_start_matches("minecraft:") == id)
-            {
-                note("pack.feature", format!("post effect {id}"), || {
-                    format!("a chain Melon doesn't run, in {}", pack.id)
-                });
-            }
-        }
-        text.push('\n');
-    }
-    let _ = assets_root;
-    section("Packs", text);
 }
 
 #[cfg(test)]
