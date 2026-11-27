@@ -1,7 +1,11 @@
 //! The uniform blocks vanilla's GUI shaders read (`DynamicTransforms`, `Projection`).
 
 use ash::vk;
-use majestix_vk::{Frames, Mapped, MemoryUse};
+use image::RgbaImage;
+use majestix_vk::{
+    Binding, Descriptor, DescriptorSet, DescriptorSetLayout, Frames, Image, ImageDesc, ImageView,
+    Mapped, MemoryUse, Queue, Sampler, Simple as _, Slot, ViewDesc, Write,
+};
 use numerobis::elem::Pod;
 
 /// Each block's binding in set 1, by the name a shader declares it with.
@@ -116,41 +120,51 @@ fn projection(w: f32, h: f32) -> [f32; 16] {
     ]
 }
 
-/// Each frame slot's blocks in one ring, and a set per slot naming them.
-pub struct GuiUniforms {
-    pub layout: vk::DescriptorSetLayout,
-    pool: vk::DescriptorPool,
-    /// By slot index.
-    sets: Vec<vk::DescriptorSet>,
-    /// majestix-vk's part; given up in [`Self::destroy`], before the device goes.
-    ring: Option<Mapped<u8>>,
-}
-
 /// Binding of the item-glint sampler in set 1.
 pub const GLINT_BINDING: u32 = BLOCKS.len() as u32;
 
-/// The set layout.
+/// The blocks' stages.
+const BLOCK_STAGES: vk::ShaderStageFlags = vk::ShaderStageFlags::from_raw(
+    vk::ShaderStageFlags::VERTEX.as_raw() | vk::ShaderStageFlags::FRAGMENT.as_raw(),
+);
+
+/// The set's bindings: the blocks, then the glint.
+const BINDINGS: [Binding; 4] = [
+    block_binding(0),
+    block_binding(1),
+    block_binding(2),
+    Binding {
+        binding: GLINT_BINDING,
+        ty: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
+        count: 1,
+        stages: vk::ShaderStageFlags::FRAGMENT,
+    },
+];
+const _: () = assert!(BLOCKS.len() == 3);
+
+const fn block_binding(binding: u32) -> Binding {
+    Binding {
+        binding,
+        ty: vk::DescriptorType::UNIFORM_BUFFER,
+        count: 1,
+        stages: BLOCK_STAGES,
+    }
+}
+
+/// The set layout, made apart from a layer: the headless checks build their
+/// pipelines against it.
 ///
 /// # Safety
 ///
 /// `device` must be live.
 pub unsafe fn create_layout(device: &ash::Device) -> anyhow::Result<vk::DescriptorSetLayout> {
-    let mut bindings: Vec<_> = (0..BLOCKS.len() as u32)
-        .map(|binding| {
-            vk::DescriptorSetLayoutBinding::default()
-                .binding(binding)
-                .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-                .descriptor_count(1)
-                .stage_flags(vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT)
-        })
-        .collect();
-    bindings.push(
+    let bindings = BINDINGS.map(|b| {
         vk::DescriptorSetLayoutBinding::default()
-            .binding(GLINT_BINDING)
-            .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-            .descriptor_count(1)
-            .stage_flags(vk::ShaderStageFlags::FRAGMENT),
-    );
+            .binding(b.binding)
+            .descriptor_type(b.ty)
+            .descriptor_count(b.count)
+            .stage_flags(b.stages)
+    });
     // SAFETY: `device` is live, and the infos name only its own live handles.
     Ok(unsafe {
         device.create_descriptor_set_layout(
@@ -160,98 +174,92 @@ pub unsafe fn create_layout(device: &ash::Device) -> anyhow::Result<vk::Descript
     }?)
 }
 
+/// Each frame slot's blocks in one ring, and a set per slot naming them and
+/// the glint.
+pub struct GuiUniforms {
+    /// majestix-vk's part; given up in [`Self::destroy`], before the device goes.
+    own: Option<Own>,
+}
+
+struct Own {
+    device: majestix_vk::Device,
+    layout: DescriptorSetLayout,
+    ring: Mapped<u8>,
+    /// The ring's slots, by index.
+    slots: Vec<Slot>,
+    /// Linear and repeating, as the glint scrolls.
+    sampler: Sampler,
+    /// The glint's own copy and its view.
+    glint: (Image, ImageView),
+    /// By slot index.
+    sets: Vec<DescriptorSet>,
+}
+
 impl GuiUniforms {
-    /// The blocks of every slot of `frames` in one ring, each slot with its set.
-    ///
-    /// # Safety
-    ///
-    /// `layout` must be from [`create_layout`] on `layer`'s device.
-    pub unsafe fn new(
+    /// The blocks of every slot of `frames` in one ring, each slot with its
+    /// set, `glint` uploaded on `queue` as the item glint.
+    pub fn new(
         layer: &majestix_vk::Device,
+        queue: &Queue,
         frames: &Frames,
-        layout: vk::DescriptorSetLayout,
+        glint: &RgbaImage,
     ) -> anyhow::Result<Self> {
-        let device = layer.raw();
-        let blocks = BLOCKS.len() as u32;
-        let count = frames.count();
-        let ring = Mapped::<u8>::new(
+        let layout = layer.create_descriptor_set_layout(&BINDINGS)?;
+        let made = Mapped::<u8>::new(
             layer,
             frames,
-            (STRIDE * u64::from(blocks)) as usize,
+            (STRIDE * BLOCKS.len() as u64) as usize,
             vk::BufferUsageFlags::UNIFORM_BUFFER,
             MemoryUse::Upload,
-        )?;
-        let sizes = [
-            vk::DescriptorPoolSize {
-                ty: vk::DescriptorType::UNIFORM_BUFFER,
-                descriptor_count: count * blocks,
-            },
-            vk::DescriptorPoolSize {
-                ty: vk::DescriptorType::COMBINED_IMAGE_SAMPLER,
-                descriptor_count: count,
-            },
-        ];
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let pool = unsafe {
-            device.create_descriptor_pool(
-                &vk::DescriptorPoolCreateInfo::default()
-                    .pool_sizes(&sizes)
-                    .max_sets(count),
-                None,
-            )
-        }?;
-        let layouts = vec![layout; count as usize];
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let sets = match unsafe {
-            device.allocate_descriptor_sets(
-                &vk::DescriptorSetAllocateInfo::default()
-                    .descriptor_pool(pool)
-                    .set_layouts(&layouts),
-            )
-        } {
-            Ok(sets) => sets,
+        )
+        .and_then(|ring| Ok((ring, layer.create_sampler(&sampler_info())?)));
+        let (ring, sampler) = match made {
+            Ok(made) => made,
             Err(e) => {
-                // SAFETY: made just now, and nothing uses it.
-                unsafe { device.destroy_descriptor_pool(pool, None) };
+                layer.retire(layout);
                 return Err(e.into());
             }
         };
-        for (slot, &set) in frames.slots().zip(&sets) {
-            let start = ring.offset(slot);
-            let infos: Vec<[vk::DescriptorBufferInfo; 1]> = (0..u64::from(blocks))
-                .map(|i| {
-                    [vk::DescriptorBufferInfo::default()
-                        .buffer(ring.buffer().raw())
-                        .offset(start + i * STRIDE)
-                        .range(STRIDE)]
-                })
-                .collect();
-            let writes: Vec<_> = infos
-                .iter()
-                .enumerate()
-                .map(|(binding, info)| {
-                    vk::WriteDescriptorSet::default()
-                        .dst_set(set)
-                        .dst_binding(binding as u32)
-                        .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-                        .buffer_info(info)
-                })
-                .collect();
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            unsafe { device.update_descriptor_sets(&writes, &[]) };
-        }
+        let slots: Vec<Slot> = frames.slots().collect();
+        let made = upload(layer, queue, glint).and_then(|glint| {
+            match sets(layer, layout, &ring, &slots, glint.1, sampler) {
+                Ok(sets) => Ok((glint, sets)),
+                Err(e) => {
+                    retire_glint(layer, glint);
+                    Err(e)
+                }
+            }
+        });
+        let (glint, sets) = match made {
+            Ok(made) => made,
+            Err(e) => {
+                layer.retire(sampler);
+                layer.retire(layout);
+                return Err(e);
+            }
+        };
         Ok(Self {
-            layout,
-            pool,
-            sets,
-            ring: Some(ring),
+            own: Some(Own {
+                device: layer.clone(),
+                layout,
+                ring,
+                slots,
+                sampler,
+                glint,
+                sets,
+            }),
         })
+    }
+
+    /// Set 1 of the GUI pipelines.
+    pub fn layout(&self) -> vk::DescriptorSetLayout {
+        self.own().layout.raw()
     }
 
     /// Writes the frame's blocks.
     pub fn write(&mut self, frame: &majestix_vk::Frame<'_>, gui: &GuiFrame) {
-        let ring = self
-            .ring
+        let own = self
+            .own
             .as_mut()
             .expect("gui uniforms written after destroy");
         let transforms = DynamicTransforms {
@@ -262,62 +270,168 @@ impl GuiUniforms {
         };
         let globals = Globals::gui(glint_millis(), gui.game_time, gui.screen_size);
         let stride = STRIDE as usize;
-        ring.write(frame, 0, &transforms);
-        ring.write(frame, stride, &projection(gui.gui_size.0, gui.gui_size.1));
-        ring.write(frame, 2 * stride, &globals);
+        own.ring.write(frame, 0, &transforms);
+        own.ring
+            .write(frame, stride, &projection(gui.gui_size.0, gui.gui_size.1));
+        own.ring.write(frame, 2 * stride, &globals);
     }
 
-    /// Binds `view` sampled by `sampler` as the item glint, every frame.
-    ///
-    /// # Safety
-    ///
-    /// `device` must be live, `view` and `sampler` live; no frame in flight may use the sets.
-    pub unsafe fn bind_glint(
-        &self,
-        device: &ash::Device,
-        view: vk::ImageView,
-        sampler: vk::Sampler,
-    ) {
-        for &set in &self.sets {
-            let info = [vk::DescriptorImageInfo::default()
-                .sampler(sampler)
-                .image_view(view)
-                .image_layout(vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL)];
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            unsafe {
-                device.update_descriptor_sets(
-                    &[vk::WriteDescriptorSet::default()
-                        .dst_set(set)
-                        .dst_binding(GLINT_BINDING)
-                        .descriptor_type(vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-                        .image_info(&info)],
-                    &[],
-                )
-            };
+    /// Uploads `glint` on `queue` as the item glint, in new sets; the old
+    /// ones and the old glint are retired, so frames in flight keep theirs.
+    pub fn bind_glint(&mut self, queue: &Queue, glint: &RgbaImage) -> anyhow::Result<()> {
+        let own = self.own.as_mut().expect("gui uniforms bound after destroy");
+        let device = &own.device;
+        let new = upload(device, queue, glint)?;
+        let sets = match sets(
+            device,
+            own.layout,
+            &own.ring,
+            &own.slots,
+            new.1,
+            own.sampler,
+        ) {
+            Ok(sets) => sets,
+            Err(e) => {
+                retire_glint(device, new);
+                return Err(e);
+            }
+        };
+        for set in std::mem::replace(&mut own.sets, sets) {
+            device.retire(set);
         }
+        retire_glint(device, std::mem::replace(&mut own.glint, new));
+        Ok(())
     }
 
     /// Frame slot `slot`'s set.
     pub fn set(&self, slot: usize) -> vk::DescriptorSet {
-        self.sets[slot]
+        self.own().sets[slot].raw()
     }
 
-    /// Retires the ring and frees the sets' pool and the layout.
-    ///
-    /// # Safety
-    ///
-    /// `device` must be live and done with them.
-    pub unsafe fn destroy(&mut self, device: &ash::Device) {
-        if self.ring.take().is_none() {
-            return;
-        }
-        self.sets.clear();
-        // SAFETY: made by this device, and no frame in flight uses it any more.
-        unsafe {
-            device.destroy_descriptor_pool(self.pool, None);
-            device.destroy_descriptor_set_layout(self.layout, None);
+    /// Retires the ring, the sets, the glint, the sampler and the layout.
+    pub fn destroy(&mut self) {
+        if let Some(own) = self.own.take() {
+            for set in own.sets {
+                own.device.retire(set);
+            }
+            retire_glint(&own.device, own.glint);
+            own.device.retire(own.sampler);
+            own.device.retire(own.layout);
         }
     }
+
+    fn own(&self) -> &Own {
+        self.own.as_ref().expect("gui uniforms used after destroy")
+    }
+}
+
+/// Linear and repeating, one level: what the glint is drawn with.
+fn sampler_info() -> vk::SamplerCreateInfo<'static> {
+    vk::SamplerCreateInfo::default()
+        .mag_filter(vk::Filter::LINEAR)
+        .min_filter(vk::Filter::LINEAR)
+        .mipmap_mode(vk::SamplerMipmapMode::NEAREST)
+        .address_mode_u(vk::SamplerAddressMode::REPEAT)
+        .address_mode_v(vk::SamplerAddressMode::REPEAT)
+        .address_mode_w(vk::SamplerAddressMode::REPEAT)
+        .max_lod(0.0)
+}
+
+/// `pixels` in an image of its own, ready to sample, and its view.
+fn upload(
+    device: &majestix_vk::Device,
+    queue: &Queue,
+    pixels: &RgbaImage,
+) -> anyhow::Result<(Image, ImageView)> {
+    let (width, height) = pixels.dimensions();
+    let image = device.create_image(&ImageDesc::d2(
+        vk::Format::R8G8B8A8_UNORM,
+        width,
+        height,
+        vk::ImageUsageFlags::SAMPLED | vk::ImageUsageFlags::TRANSFER_DST,
+    ))?;
+    let region = vk::BufferImageCopy::default()
+        .image_subresource(vk::ImageSubresourceLayers {
+            aspect_mask: vk::ImageAspectFlags::COLOR,
+            mip_level: 0,
+            base_array_layer: 0,
+            layer_count: 1,
+        })
+        .image_extent(vk::Extent3D {
+            width,
+            height,
+            depth: 1,
+        });
+    let view = device
+        .upload_image(
+            queue,
+            image,
+            pixels.as_raw(),
+            &[region],
+            vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+        )
+        .and_then(|()| device.create_image_view(&ViewDesc::d2(image)));
+    match view {
+        Ok(view) => Ok((image, view)),
+        Err(e) => {
+            device.retire(image);
+            Err(e.into())
+        }
+    }
+}
+
+/// A set per slot: its range of `ring` and the glint.
+fn sets(
+    device: &majestix_vk::Device,
+    layout: DescriptorSetLayout,
+    ring: &Mapped<u8>,
+    slots: &[Slot],
+    glint: ImageView,
+    sampler: Sampler,
+) -> anyhow::Result<Vec<DescriptorSet>> {
+    let mut sets = Vec::with_capacity(slots.len());
+    for &slot in slots {
+        let start = ring.offset(slot);
+        let block = |i: u32| {
+            Write::new(
+                i,
+                Descriptor::Buffer {
+                    buffer: ring.buffer(),
+                    offset: start + u64::from(i) * STRIDE,
+                    range: STRIDE,
+                },
+            )
+        };
+        let writes = [
+            block(0),
+            block(1),
+            block(2),
+            Write::new(
+                GLINT_BINDING,
+                Descriptor::Sampled {
+                    view: glint,
+                    sampler,
+                    layout: vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
+                },
+            ),
+        ];
+        match device.create_descriptor_set(layout, &writes) {
+            Ok(set) => sets.push(set),
+            Err(e) => {
+                for set in sets {
+                    device.retire(set);
+                }
+                return Err(e.into());
+            }
+        }
+    }
+    Ok(sets)
+}
+
+/// Retires a glint's view, then its image.
+fn retire_glint(device: &majestix_vk::Device, (image, view): (Image, ImageView)) {
+    device.retire(view);
+    device.retire(image);
 }
 
 #[cfg(test)]

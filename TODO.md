@@ -39,16 +39,14 @@ their frame ring (`Frames`) and swapchain (`Presenter`) from majestix-vk:
 the game's and the launcher's `Renderer2d`. Through majestix-vk besides:
 melon-render's `blur.rs`, the world's per-frame globals (`globals.rs`),
 the UI's vertices and indices (melon-base's `gfx/ui_vertices.rs`, shared by
-both), the GUI's uniform blocks (`gfx/gui_uniforms.rs`), and the pipeline
-cache (melon-render's `pipeline_cache.rs`, `cache/pipelines.bin`). About
-770 `unsafe` blocks are left: ~545 in melon-render, ~225 in melon-base's
-`gfx`.
+both), the GUI's uniform blocks and their sets (`gfx/gui_uniforms.rs`,
+with a copy of the glint of its own), and the pipeline cache
+(melon-render's `pipeline_cache.rs`, `cache/pipelines.bin`). About 760
+`unsafe` blocks are left: ~540 in melon-render, ~215 in melon-base's `gfx`.
 
 A fixed-size per-frame buffer moves as the globals and the UI vertices did:
 a `Mapped` ring, each slot's set or offset fixed up front from
-`Frames::slots`. `gui_uniforms`' sets stay raw, as their glint binding
-names a texture melon-base owns and rebinds on a reload (see majestix-vk's
-"Descriptor sets"). Next of those: melon-render's `pack_outline.rs`, one
+`Frames::slots`. Next of those: melon-render's `pack_outline.rs`, one
 buffer for every frame in flight that each frame rewrites while the one
 before may still read it; per-slot ranges end that.
 
@@ -142,9 +140,8 @@ What Melon's renderer needs from it, most important first.
 
 - **Sets naming the host's images.** `Descriptor` takes majestix-vk's own
   `ImageView` and `Sampler`, and a set is written whole, once. melon-base's
-  textures (views it destroys itself) and the GUI's glint, rebound on a
-  reload, need a view lent for as long as the host says, or one binding of
-  a set no frame uses rewritten.
+  textures (views it destroys itself) need a view lent for as long as the
+  host says; the GUI's glint works around it with a copy of its own.
 - **Texel buffers and immutable samplers.** `create_descriptor_set` panics
   on `*_TEXEL_BUFFER` (no buffer views yet), and `Binding` has no immutable
   samplers.

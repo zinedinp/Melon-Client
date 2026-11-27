@@ -58,16 +58,17 @@ pub(super) struct SetLayouts {
     pub world: Layouts,
 }
 
-/// The set layouts; the globals' comes from [`GlobalBuffers`](crate::globals::GlobalBuffers).
+/// The set layouts; the globals' comes from [`GlobalBuffers`](crate::globals::GlobalBuffers),
+/// the GUI's from [`GuiUniforms`](crate::gui_uniforms::GuiUniforms).
 pub(super) unsafe fn create_set_layouts(
     device: &ash::Device,
     globals: vk::DescriptorSetLayout,
+    gui: vk::DescriptorSetLayout,
 ) -> anyhow::Result<SetLayouts> {
     Ok(SetLayouts {
         // SAFETY: `device` is live, and the infos name only its own live handles.
         texture: unsafe { pipeline::create_descriptor_set_layout(device) }?,
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        gui: unsafe { crate::gui_uniforms::create_layout(device) }?,
+        gui,
         world: Layouts {
             // SAFETY: `device` is live, and the infos name only its own live handles.
             table: unsafe { crate::quad_table::create_layout(device) }?,

@@ -77,11 +77,13 @@ impl Renderer {
             unsafe { super::picture::Pictures::new(&device, surface_format, depth_format) }?;
 
         let globals = super::globals::GlobalBuffers::new(&layer, &ring)?;
+        // The glint is white until a world's resources bind theirs.
+        let white = RgbaImage::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
+        let gui_uniforms = super::gui_uniforms::GuiUniforms::new(&layer, &queue, &ring, &white)?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
-        let layouts = unsafe { pipelines::create_set_layouts(&device, globals.layout()) }?;
-        // SAFETY: `layouts.gui` was made just now by `create_layout` on the layer's device.
-        let gui_uniforms =
-            unsafe { super::gui_uniforms::GuiUniforms::new(&layer, &ring, layouts.gui) }?;
+        let layouts = unsafe {
+            pipelines::create_set_layouts(&device, globals.layout(), gui_uniforms.layout())
+        }?;
         let indirect = if features.multi_draw() {
             // SAFETY: `device` is live, and the infos name only its own live handles.
             Some(unsafe {
@@ -270,10 +272,8 @@ impl Renderer {
 
         renderer.swapchain.depth_sampled = renderer.occlusion.is_some();
 
-        let white = RgbaImage::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
         renderer.textures.white = renderer.load_texture(&white)?;
         melon_base::info!("renderer: terrain draws {}", renderer.terrain_path().name());
-        renderer.bind_gui_glint(renderer.textures.white);
 
         Ok(renderer)
     }

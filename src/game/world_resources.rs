@@ -239,6 +239,8 @@ impl WeatherResources {
 /// `textures/misc/enchanted_glint_{item,armor}.png`.
 pub struct GlintTextures {
     pub item: TextureId,
+    /// The item glint's pixels, for the GUI's own copy.
+    pub item_image: RgbaImage,
     pub armor: TextureId,
     /// The armor glint's pixels, for the entity previews drawn on the CPU.
     pub armor_image: RgbaImage,
@@ -250,6 +252,7 @@ impl GlintTextures {
         let armor_image = assets.image("minecraft:misc/enchanted_glint_armor.png")?;
         Ok(Self {
             item: renderer.load_texture_linear_tiled(&item)?,
+            item_image: item,
             armor: renderer.load_texture_linear_tiled(&armor_image)?,
             armor_image,
         })
@@ -270,7 +273,7 @@ impl WorldResources {
             Ok(mut loaded) => {
                 loaded.textures = textures;
                 loaded.meshes = meshes;
-                renderer.bind_gui_glint(loaded.glint.item);
+                renderer.bind_gui_glint(&loaded.glint.item_image);
                 renderer.compact_textures();
                 Ok(loaded)
             }
@@ -300,7 +303,7 @@ impl WorldResources {
                 loaded.players.adopt_fetched(&mut self.players);
                 self.textures.clear();
                 self.release(renderer);
-                renderer.bind_gui_glint(loaded.glint.item);
+                renderer.bind_gui_glint(&loaded.glint.item_image);
                 Ok(loaded)
             }
             Err(e) => {

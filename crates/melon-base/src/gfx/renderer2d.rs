@@ -153,10 +153,9 @@ impl Renderer2d {
             unsafe { create_render_pass(&device, surface_format, depth_format, PassStart::Clear) }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let texture_layout = unsafe { pipeline::create_descriptor_set_layout(&device) }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let gui_layout = unsafe { gui_uniforms::create_layout(&device) }?;
-        // SAFETY: `gui_layout` was made just now by `create_layout` on the layer's device.
-        let gui = unsafe { GuiUniforms::new(&layer, &ring, gui_layout) }?;
+        let white = RgbaImage::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
+        let gui = GuiUniforms::new(&layer, &queue, &ring, &white)?;
+        let gui_layout = gui.layout();
         let pipelines = UiPipelines {
             // SAFETY: `device` is live, and the infos name only its own live handles.
             built_in: unsafe {
@@ -245,15 +244,7 @@ impl Renderer2d {
             white: TextureId(0),
             vertices,
         };
-        let white = RgbaImage::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
         renderer.white = renderer.load_texture(&white)?;
-        let view = renderer.textures[renderer.white.0].view;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe {
-            renderer
-                .gui
-                .bind_glint(&renderer.device, view, renderer.sampler)
-        };
         Ok(renderer)
     }
 
@@ -578,7 +569,7 @@ impl Drop for Renderer2d {
             self.destroy_swapchain_resources();
             self.device.destroy_sampler(self.sampler, None);
             self.pipelines.destroy(&self.device);
-            self.gui.destroy(&self.device);
+            self.gui.destroy();
             self.device
                 .destroy_descriptor_set_layout(self.texture_layout, None);
             self.pools.destroy(&self.device);

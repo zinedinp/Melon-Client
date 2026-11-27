@@ -45,7 +45,7 @@ impl Renderer {
             failed.extend(self.post.set_chains(
                 &self.device,
                 &self.mem_props,
-                self.gui_uniforms.layout,
+                self.gui_uniforms.layout(),
                 prepared,
                 &|t| free_effect_texture(&device, pools, t),
             ));

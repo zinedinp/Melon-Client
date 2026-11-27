@@ -61,18 +61,10 @@ impl Renderer {
         Ok(self.put_new(made))
     }
 
-    /// The item-glint sampler the GUI shaders read at set 1 binding 3.
-    pub fn bind_gui_glint(&mut self, texture: TextureId) {
-        let Some(tex) = self.textures.list.get(texture.0) else {
-            return;
-        };
-        // SAFETY: the glint set is rewritten before this frame is recorded; earlier frames keep theirs.
-        unsafe {
-            self.gui_uniforms.bind_glint(
-                &self.device,
-                tex.view,
-                self.textures.linear_repeat_sampler,
-            );
+    /// The item glint the GUI shaders read at set 1 binding 3.
+    pub fn bind_gui_glint(&mut self, glint: &RgbaImage) {
+        if let Err(e) = self.gui_uniforms.bind_glint(&self.layer.queue, glint) {
+            melon_base::warn!("GUI glint not bound: {e}");
         }
     }
 
@@ -449,7 +441,7 @@ impl Renderer {
                     &self.device,
                     self.passes.clear,
                     self.pipelines.layout,
-                    self.gui_uniforms.layout,
+                    self.gui_uniforms.layout(),
                     super::pipeline::ui::Shaders {
                         vert: &vert,
                         frag: &frag,

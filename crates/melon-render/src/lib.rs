@@ -397,7 +397,7 @@ impl Drop for Renderer {
                 occlusion.destroy(&self.device);
             }
             self.globals.destroy();
-            self.gui_uniforms.destroy(&self.device);
+            self.gui_uniforms.destroy();
             if let Some(table) = self.quad_table.take() {
                 table.destroy(&self.device);
             }
