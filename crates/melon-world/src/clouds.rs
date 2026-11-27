@@ -141,7 +141,9 @@ pub struct CloudFrame {
 
 /// Camera-relative quads of the cells around the camera.
 pub fn build(texture: &CloudTexture, frame: CloudFrame) -> Vec<WorldVertex> {
-    build_with(texture, frame, false)
+    let mut out = Vec::new();
+    build_with(texture, frame, false, &mut out);
+    out
 }
 
 /// What decides the quads [`build_anchored`] makes.
@@ -189,9 +191,17 @@ pub fn key(texture: &CloudTexture, frame: &CloudFrame) -> Option<CloudKey> {
     })
 }
 
-/// The quads of [`build`] for the camera at the cell's corner.
+/// The quads of [`build`] for the camera at the cell's corner, into `out` (cleared first).
+pub fn build_anchored_into(texture: &CloudTexture, frame: CloudFrame, out: &mut Vec<WorldVertex>) {
+    out.clear();
+    build_with(texture, frame, true, out);
+}
+
+/// [`build_anchored_into`] a new list.
 pub fn build_anchored(texture: &CloudTexture, frame: CloudFrame) -> Vec<WorldVertex> {
-    build_with(texture, frame, true)
+    let mut out = Vec::new();
+    build_anchored_into(texture, frame, &mut out);
+    out
 }
 
 /// Where [`build_anchored`]'s mesh sits: the corner of the camera's cell.
@@ -207,9 +217,14 @@ pub fn anchor(texture: &CloudTexture, frame: &CloudFrame) -> glam::DVec3 {
     )
 }
 
-fn build_with(texture: &CloudTexture, frame: CloudFrame, anchored: bool) -> Vec<WorldVertex> {
+fn build_with(
+    texture: &CloudTexture,
+    frame: CloudFrame,
+    anchored: bool,
+    out: &mut Vec<WorldVertex>,
+) {
     if matches!(frame.status, CloudStatus::Off) || texture.width == 0 || frame.color[3] <= 0.0 {
-        return Vec::new();
+        return;
     }
     let radius_blocks = f32::from(frame.range_chunks) * 16.0;
     let radius_cells = (radius_blocks / CELL_SIZE).ceil() as i32;
@@ -229,7 +244,6 @@ fn build_with(texture: &CloudTexture, frame: CloudFrame, anchored: bool) -> Vec<
         shift,
         fancy: frame.status == CloudStatus::Fancy,
     };
-    let mut out = Vec::new();
     for ring in 0..=2 * radius_cells {
         for rel_x in -ring..=ring {
             let rel_z = ring - rel_x.abs();
@@ -240,12 +254,11 @@ fn build_with(texture: &CloudTexture, frame: CloudFrame, anchored: bool) -> Vec<
                 continue;
             }
             if rel_z != 0 {
-                push_cell(&mut out, &cells, rel_x, -rel_z);
+                push_cell(out, &cells, rel_x, -rel_z);
             }
-            push_cell(&mut out, &cells, rel_x, rel_z);
+            push_cell(out, &cells, rel_x, rel_z);
         }
     }
-    out
 }
 
 /// What the cells of one cloud mesh share: the camera's cell and where in it
@@ -446,9 +459,9 @@ fn push_face(
     if inside {
         corners.reverse();
     }
-    for pos in corners {
-        out.push(WorldVertex::rgba(pos, [0.0, 0.0], color));
-    }
+    // The colour's bytes once for the face's four corners.
+    let vertex = WorldVertex::rgba([0.0; 3], [0.0, 0.0], color);
+    out.extend(corners.map(|pos| WorldVertex { pos, ..vertex }));
 }
 
 #[cfg(test)]

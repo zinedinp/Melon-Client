@@ -16,6 +16,8 @@ pub(super) struct SkyMeshes {
     /// The weather columns around the camera, for what they were made for.
     weather_columns: Option<(weather::PrepareKey, Vec<weather::Prepared>)>,
     cloud_mesh: Option<MeshId>,
+    /// `cloud_mesh`'s vertices as last built, the list kept for the next build.
+    cloud_vertices: Vec<WorldVertex>,
     /// What `cloud_mesh` was built for.
     cloud_key: Option<clouds::CloudKey>,
     rain_mesh: Option<MeshId>,
@@ -73,8 +75,9 @@ impl InWorld {
         let cloud_key = clouds::key(&assets.weather.clouds, &cloud_frame);
         if cloud_key != self.sky.cloud_key || (cloud_key.is_some() && self.sky.cloud_mesh.is_none())
         {
-            let verts = clouds::build_anchored(&assets.weather.clouds, cloud_frame);
-            replace_mesh(renderer, &mut self.sky.cloud_mesh, &verts);
+            let verts = &mut self.sky.cloud_vertices;
+            clouds::build_anchored_into(&assets.weather.clouds, cloud_frame, verts);
+            replace_mesh(renderer, &mut self.sky.cloud_mesh, verts);
             self.sky.cloud_key = cloud_key;
         }
         let cloud_anchor = {

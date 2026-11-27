@@ -109,6 +109,18 @@ Open:
 - **Shader packs**: loading and picking (M2), the GLSL translator (M3), the
   pipeline (M4), breadth (M5).
 
+### Frame hitches
+
+Measured per frame in the bench CSV (`notes/render-performance.md`,
+"Hitches"). Left on the main thread:
+
+- **A mob texture's first load** (~0.2-0.7 ms each, mostly the pack
+  lookup in `texture_with_meta`); a crowd spawning loads dozens.
+- **The cloud mesh** (~3.4 ms per cell crossed at cloud range 128): built
+  on a worker, it would swap in a frame later.
+- **Leaving a singleplayer world** waits for the server's save
+  (`IntegratedServer::drop` joins its shutdown): the window freezes.
+
 ### Features
 
 - **Opus proximity voice chat** (`audio`): each speaker a `Binaural` /

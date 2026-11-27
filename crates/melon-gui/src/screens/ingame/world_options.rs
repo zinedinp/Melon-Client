@@ -108,6 +108,8 @@ pub struct WorldOptionsScreen {
     widgets: WidgetSet<Id>,
     scroll: f32,
     content_h: f32,
+    /// Where the General and Multiplayer headers' text goes, from the last layout.
+    headers: (f32, f32),
     /// The GUI size of the last layout.
     size: (f32, f32),
     mouse: (f32, f32),
@@ -230,6 +232,7 @@ impl WorldOptionsScreen {
             widgets,
             scroll: 0.0,
             content_h: 0.0,
+            headers: (0.0, 0.0),
             size: (0.0, 0.0),
             mouse: (0.0, 0.0),
             confirming: false,
@@ -618,7 +621,8 @@ impl WorldOptionsScreen {
         let personal = self.personal_game_mode.is_some();
         let w = &mut self.widgets;
         let mut y = frame.top() + SECTION_PAD - self.scroll;
-        // General.
+        // General; `FocusableTextWidget` pads its text by 4.
+        let general = y + 4.0;
         y += HEADER_H + ROW_GAP;
         w.set_position(Id::DefaultGameMode, left, y);
         y += BUTTON_H + ROW_GAP;
@@ -633,6 +637,7 @@ impl WorldOptionsScreen {
         w.row(&[Id::GameRules, Id::Restrictions], left, y, GAP);
         y += BUTTON_H + SECTION_PAD * 2.0 + GAP;
         // Multiplayer.
+        let multiplayer = y + 4.0;
         y += HEADER_H + ROW_GAP;
         w.row(&[Id::Lan, Id::Port], left, y, GAP);
         y += BUTTON_H + ROW_GAP;
@@ -647,25 +652,7 @@ impl WorldOptionsScreen {
         w.row(&[Id::Apply, Id::Cancel], left, footer, GAP);
         let middle = (height / 2.0).floor();
         w.row(&[Id::Yes, Id::No], left, middle + 10.0, GAP);
-    }
-
-    /// The headers' places, as [`Self::layout`] puts them.
-    fn header_ys(&self) -> (f32, f32) {
-        let frame = HeaderFooter::DEFAULT;
-        let general = frame.top() + SECTION_PAD - self.scroll + 4.0;
-        let rows = if self.personal_game_mode.is_some() {
-            4.0
-        } else {
-            3.0
-        };
-        let multiplayer = general
-            + HEADER_H
-            + ROW_GAP
-            + (BUTTON_H + ROW_GAP) * rows
-            + BUTTON_H
-            + SECTION_PAD * 2.0
-            + GAP;
-        (general, multiplayer)
+        self.headers = (general, multiplayer);
     }
 
     fn max_scroll(&self, height: f32) -> f32 {
@@ -788,7 +775,7 @@ impl Screen for WorldOptionsScreen {
             ui.width,
             frame.bottom(ui.height) - frame.top(),
         ));
-        let (general, multiplayer) = self.header_ys();
+        let (general, multiplayer) = self.headers;
         let header = |ui: &mut Ui, key: &'static str, y: f32| {
             let style = TextStyle {
                 bold: true,
@@ -966,6 +953,25 @@ mod tests {
         assert_eq!(screen.widgets.field(Id::BedrockPort).value(), "19150");
         assert_eq!(screen.widgets.field(Id::Port).value(), "25570");
         assert!(!screen.has_changes());
+    }
+
+    #[test]
+    fn each_header_sits_right_above_its_grid() {
+        for personal in [Some(GameMode::Survival), None] {
+            let mut screen = WorldOptionsScreen::new(WorldOptionsState {
+                personal_game_mode: personal,
+                ..state()
+            });
+            screen.personal_game_mode = personal;
+            screen.layout(427.0, 240.0);
+            let (general, multiplayer) = screen.headers;
+            let first_row = |id| screen.widgets.widget(id).rect().y;
+            assert_eq!(general - 4.0 + HEADER_H + ROW_GAP, first_row(Id::DefaultGameMode));
+            assert_eq!(multiplayer - 4.0 + HEADER_H + ROW_GAP, first_row(Id::Lan));
+            // `LinearLayout.spacing(8)` and `padding(8)` between the grids.
+            let rules_bottom = first_row(Id::GameRules) + BUTTON_H;
+            assert_eq!(multiplayer - 4.0, rules_bottom + SECTION_PAD * 2.0 + GAP);
+        }
     }
 
     #[test]

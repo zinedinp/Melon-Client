@@ -121,12 +121,14 @@ pub fn potion_color(stack: &ItemStack) -> Option<[u8; 3]> {
 }
 
 /// One thing an item definition draws in a GUI slot (`ItemModel.Unbaked`).
+#[derive(PartialEq)]
 pub struct Layer {
     source: Source,
     /// Model space (blocks) to the item's.
     transform: Mat4,
 }
 
+#[derive(PartialEq)]
 pub enum Source {
     /// A JSON model, with the tint for each `tintindex`.
     Model {
@@ -189,36 +191,18 @@ impl ItemModel {
         display: HandPose,
     ) -> Option<Self> {
         let id = definition_id(key, variant);
-        let Some(definition) = melon_assets::assets::json_resource(assets_root, "items", id) else {
-            if melon_core::probe::enabled() {
-                melon_core::probe::count("item.definition_missing", id);
-            }
-            return None;
-        };
-        let mut layers = Vec::new();
-        let held = held.into();
-        let state = State {
-            using: held == HeldUse::Using,
-            cast: held == HeldUse::Cast,
-            count,
-            variant,
-            display,
-        };
-        collect_layers(&definition["model"], Mat4::IDENTITY, &state, &mut layers);
-        if let Some(color) = potion {
-            for layer in &mut layers {
-                if let Source::Model {
-                    tints, tint_kinds, ..
-                } = &mut layer.source
-                {
-                    for (tint, kind) in tints.iter_mut().zip(tint_kinds.iter()) {
-                        if kind == "potion" {
-                            *tint = color;
-                        }
-                    }
-                }
-            }
-        }
+        let definition = definition(assets_root, id)?;
+        let layers = definition_layers(&definition, potion, (held.into(), count), variant, display);
+        Self::with_layers(assets_root, id, layers, variant)
+    }
+
+    /// The item `id` drawing `layers`, its first layer's model resolved.
+    fn with_layers(
+        assets_root: &Path,
+        id: &str,
+        layers: Vec<Layer>,
+        variant: Option<&Variant>,
+    ) -> Option<Self> {
         let first = layers.first()?.source.model();
         let Some(model) = Model::resolve(assets_root, first) else {
             if melon_core::probe::enabled() {
@@ -324,19 +308,31 @@ impl ItemModel {
                 skin.clone(),
             );
         }
-        let mut per_pose: [Option<(ItemModel, Vec<ItemQuad>)>; 10] = std::array::from_fn(|_| None);
+        let id = definition_id(key, variant);
+        let definition = definition(assets_root, id)?;
+        // Most poses draw the same layers: each different set is resolved and cut into quads once.
+        let mut distinct: Vec<(ItemModel, Vec<ItemQuad>)> = Vec::new();
+        let mut of_pose = [None; 10];
         for pose in HandPose::ALL {
-            if let Some(item) =
-                Self::resolve_for_display(assets_root, key, potion, (held, count), variant, pose)
-            {
-                let quads = item.quads(assets_root, &mut textures);
-                per_pose[pose as usize] = Some((item, quads));
-            }
+            let layers = definition_layers(&definition, potion, (held, count), variant, pose);
+            let index = match distinct.iter().position(|(item, _)| item.layers == layers) {
+                Some(index) => index,
+                None => {
+                    let Some(item) = Self::with_layers(assets_root, id, layers, variant) else {
+                        continue;
+                    };
+                    let quads = item.quads(assets_root, &mut textures);
+                    distinct.push((item, quads));
+                    distinct.len() - 1
+                }
+            };
+            of_pose[pose as usize] = Some(index);
         }
-        let poses = std::array::from_fn(|i| {
-            per_pose[i]
-                .as_ref()
-                .map(|(item, quads)| (item, quads.as_slice()))
+        let poses = of_pose.map(|index| {
+            index.map(|index| {
+                let (item, quads) = &distinct[index];
+                (item, quads.as_slice())
+            })
         });
         bake_held(&poses, &mut textures, sprites)
     }
@@ -1139,6 +1135,49 @@ pub struct ItemQuad {
 }
 
 /// `layer`'s faces through its transform into `out`.
+/// The item definition `id` (`items/<id>.json`).
+fn definition(assets_root: &Path, id: &str) -> Option<Value> {
+    let definition = melon_assets::assets::json_resource(assets_root, "items", id);
+    if definition.is_none() && melon_core::probe::enabled() {
+        melon_core::probe::count("item.definition_missing", id);
+    }
+    definition
+}
+
+/// What `definition` draws for the item in this use, count, variant and pose, potion tinted.
+fn definition_layers(
+    definition: &Value,
+    potion: Option<[u8; 3]>,
+    (held, count): (HeldUse, Count),
+    variant: Option<&Variant>,
+    display: HandPose,
+) -> Vec<Layer> {
+    let mut layers = Vec::new();
+    let state = State {
+        using: held == HeldUse::Using,
+        cast: held == HeldUse::Cast,
+        count,
+        variant,
+        display,
+    };
+    collect_layers(&definition["model"], Mat4::IDENTITY, &state, &mut layers);
+    if let Some(color) = potion {
+        for layer in &mut layers {
+            if let Source::Model {
+                tints, tint_kinds, ..
+            } = &mut layer.source
+            {
+                for (tint, kind) in tints.iter_mut().zip(tint_kinds.iter()) {
+                    if kind == "potion" {
+                        *tint = color;
+                    }
+                }
+            }
+        }
+    }
+    layers
+}
+
 fn layer_quads(
     assets_root: &Path,
     layer: &Layer,
@@ -1738,5 +1777,61 @@ mod tests {
                 .iter()
                 .all(|mesh| mesh.len() == quads.len() * 4)
         );
+    }
+
+    /// `held_poses` as it was: each pose resolved and cut into quads on its own.
+    fn held_poses_one_by_one(root: &Path, key: &str) -> Option<HeldItem> {
+        let mut textures = TextureCache::new(root);
+        let per_pose: Vec<Option<(ItemModel, Vec<ItemQuad>)>> = HandPose::ALL
+            .iter()
+            .map(|&pose| {
+                let item = ItemModel::resolve_for_display(
+                    root,
+                    key,
+                    None,
+                    (HeldUse::Idle, Count::ONE),
+                    None,
+                    pose,
+                )?;
+                let quads = item.quads(root, &mut textures);
+                Some((item, quads))
+            })
+            .collect();
+        let poses = std::array::from_fn(|i| {
+            per_pose[i]
+                .as_ref()
+                .map(|(item, quads)| (item, quads.as_slice()))
+        });
+        bake_held(&poses, &mut textures, &|_| None)
+    }
+
+    #[test]
+    fn held_poses_bake_what_each_pose_alone_bakes() {
+        let Some(root) = melon_assets::assets::test_root() else {
+            return;
+        };
+        // Flat, block, special and per-pose (`display_context`) definitions.
+        for key in ["diamond", "bow", "stone", "trident", "spyglass", "shield", "chest"] {
+            let fast = ItemModel::held_poses(
+                &root,
+                key,
+                None,
+                (HeldUse::Idle, Count::ONE),
+                None,
+                None,
+                &|_| None,
+            );
+            let slow = held_poses_one_by_one(&root, key);
+            assert_eq!(fast.is_some(), slow.is_some(), "{key}");
+            let (Some(fast), Some(slow)) = (fast, slow) else {
+                continue;
+            };
+            assert_eq!(fast.texture, slow.texture, "{key}");
+            assert_eq!(fast.parts.len(), slow.parts.len(), "{key}");
+            for (a, b) in fast.parts.iter().zip(&slow.parts) {
+                assert!(a.sheet == b.sheet && a.translucent == b.translucent, "{key}");
+                assert_eq!(a.meshes, b.meshes, "{key}");
+            }
+        }
     }
 }

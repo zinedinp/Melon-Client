@@ -200,21 +200,17 @@ impl RunningState {
         world.mesh(&mut self.renderer, world_resources);
         world.profiler.mark("mesh");
         let screens = &self.screens;
-        let t0 = std::time::Instant::now();
         world_resources.prepare_icons(&mut self.renderer, |visit| {
             world.visit_shown_stacks(visit);
             if let Some(screen) = screens.top() {
                 screen.visit_stacks(visit);
             }
         });
-        let t1 = std::time::Instant::now();
         for (stack, using) in world.held_stacks() {
             world_resources.prepare_held(&mut self.renderer, stack, using);
         }
         world.debug_view.gui_scale = scale.scale() as f32;
-        let t2 = std::time::Instant::now();
         world.prepare_entities(&mut self.renderer, world_resources);
-        let t3 = std::time::Instant::now();
         let own = world.profile_id();
         world_resources
             .players
@@ -226,10 +222,6 @@ impl RunningState {
             &env.config,
             scale.scale(),
         );
-        let t4 = std::time::Instant::now();
-        if (t4 - t0).as_millis() >= 3 {
-            eprintln!("TMPICONS icons {:?} held {:?} entities {:?} rest {:?}", t1 - t0, t2 - t1, t3 - t2, t4 - t3);
-        }
         world.profiler.mark("icons");
         let aspect = self.renderer.aspect_ratio();
         {
