@@ -51,6 +51,33 @@ numerobis writes them (see its section).
 - **Opus proximity voice chat** (`audio`): each speaker a `Binaural` /
   `Placed` source at their position.
 
+### Vulkan paths not taken yet
+
+`features::GAME` asks for six capabilities; these others would each add a
+path beside the 1.0 one:
+
+- **Memory priorities.** `PageableDeviceLocalMemory` is on (with
+  `VK_EXT_memory_priority` beneath it), but every allocation keeps the
+  default priority. Render targets high, far mesh blocks low
+  (`vkSetDeviceMemoryPriorityEXT`) would decide what pages out first.
+- **Dynamic rendering.** majestix-vk's passes take it when the plan has it,
+  but Melon's own render passes are raw and `GAME` doesn't ask for it.
+- **Host image copy** (`VK_EXT_host_image_copy`): texture uploads without
+  the staging buffer and its copy.
+- **Push descriptors, descriptor indexing, buffer device addresses**: the
+  per-draw sets and bindless (see majestix-vk's "Later").
+
+### Lints, tests, CI
+
+- **`clippy::pedantic`**, as majestix-vk and keinbonus have it. Shared lints
+  live in `[workspace.lints]` now, but turning pedantic on gives 6244
+  warnings (313 in melon-base): ~2000 `must_use`, ~2400 casts (mostly game
+  math), the rest docs and style. Fixed in code, not allowed: melon-base
+  first, then the client module by module.
+- **CI.** There is none. The GPU checks (`renderer/vk_check.rs`) are unit
+  tests that need a device; with lavapipe or SwiftShader they could run on
+  a runner, as majestix-vk's could.
+
 ## melon-base
 
 - **OpenGL and DirectX backends** beside Vulkan, for systems without a

@@ -13,16 +13,42 @@ default-run = "melon"
 [workspace]
 members = ["crates/melon-base"]
 
-[dependencies]
-melon-base = { path = "crates/melon-base" }
-aes = "0.9.4"
+[workspace.dependencies]
+# What the client and melon-base both use, at one version each.
 anyhow = "1.0.105"
-# Pumpkin's game profile holds its properties in one.
-arc-swap = "1.9.5"
-chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
 arboard = { version = "3.7.0", features = ["wayland-data-control"] }
 ash = "0.38.0"
 ash-window = "0.13.0"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+# The safe Vulkan call layer: devices, frame rings, swapchains, mapped rings.
+majestix-vk = "0.2.1"
+# The GPU's vendor and architecture from its PCI ids, for vendor paths at run time.
+numerobis = { version = "0.6.0", default-features = false, features = ["vulkan"] }
+open = "5.4.5"
+raw-window-handle = "0.6.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha1 = "0.11.0"
+ureq = { version = "3.5.2", default-features = false, features = ["rustls", "json"] }
+uuid = { version = "1.29.3", features = ["v3", "v4", "v5"] }
+windows-sys = "0.61.2"
+winit = "0.30.13"
+zip = { version = "9.8.2", default-features = false, features = ["deflate-flate2"] }
+
+[workspace.lints.clippy]
+# Every `unsafe {}` says why it holds.
+undocumented_unsafe_blocks = "warn"
+
+[dependencies]
+melon-base = { path = "crates/melon-base" }
+aes = "0.9.4"
+anyhow.workspace = true
+# Pumpkin's game profile holds its properties in one.
+arc-swap = "1.9.5"
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+arboard.workspace = true
+ash.workspace = true
+ash-window.workspace = true
 cfb8 = "0.9.1"
 crossbeam-channel = "0.5.17"
 flate2 = { version = "1.1.11", default-features = false, features = ["rust_backend"] }
@@ -30,11 +56,11 @@ glam = "0.34.3"
 # NVML (`libnvidia-ml`) for the benchmark, loaded only if it is there.
 libloading = "0.9.1"
 rustc-hash = "2.1.3"
-image = { version = "0.25.10", default-features = false, features = ["png"] }
+image.workspace = true
 # Pack PNGs with wrong checksums, which `image` refuses and vanilla reads.
 png = "0.18.1"
 num-bigint = "0.5.1"
-open = "5.4.5"
+open.workspace = true
 # The integrated server: Pumpkin, from the `mod-zip` branch of our fork.
 pumpkin = { package = "pumpkin-core", git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
 pumpkin-config = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip" }
@@ -48,35 +74,33 @@ pumpkin-world = { git = "https://github.com/zinedinp/Pumpkin", branch = "mod-zip
 rand = "0.10.4"
 # The integrated server's global pool, built with its threads ranked.
 rayon = "1.12.0"
-raw-window-handle = "0.6.2"
+raw-window-handle.workspace = true
 rodio = { version = "0.23.0", default-features = false, features = ["playback", "vorbis"] }
 rsa = { version = "0.10", default-features = false, features = ["std", "encoding"] }
-serde = { version = "1.0.229", features = ["derive"] }
+serde.workspace = true
 # The LAN world list shares its multicast port (`SO_REUSEADDR`/`SO_REUSEPORT`).
 socket2 = { version = "0.6.5", features = ["all"] }
-serde_json = "1.0.154"
-sha1 = "0.11.0"
+serde_json.workspace = true
+sha1.workspace = true
 sha2 = "0.11.2"
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "io-util", "macros", "time"] }
 tokio-util = { version = "0.7.20", features = ["rt", "io-util"] }
-ureq = { version = "3.5.2", default-features = false, features = ["rustls", "json"] }
-uuid = { version = "1.29.3", features = ["v3", "v4", "v5"] }
-winit = "0.30.13"
+ureq.workspace = true
+uuid.workspace = true
+winit.workspace = true
 # Resource packs: their `filter` patterns.
 regex = { version = "1.13.2", default-features = false, features = ["std", "perf", "unicode"] }
 # Resource packs' core shaders, compiled at runtime as vanilla does: the
 # system's shaderc library, from the same install `glslc` comes from.
 shaderc = "0.10.1"
-zip = { version = "9.8.1", default-features = false, features = ["deflate-flate2"] }
+zip.workspace = true
 miraculix = "0.7.1"
-# The GPU's vendor and architecture, for vendor paths (see melon-base).
-numerobis = { version = "0.6.0", default-features = false, features = ["vulkan"] }
-# The safe call layer: the device, its frame ring and the swapchain.
-majestix-vk = "0.2.1"
+numerobis.workspace = true
+majestix-vk.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 # SRV records through the system resolver.
-windows-sys = { version = "0.61.2", features = ["Win32_NetworkManagement_Dns"] }
+windows-sys = { workspace = true, features = ["Win32_NetworkManagement_Dns"] }
 
 
 [profile.dev]
@@ -118,6 +142,5 @@ lto = "fat"
 codegen-units = 1
 strip = "symbols"
 
-[lints.clippy]
-# Every `unsafe {}` says why it holds.
-undocumented_unsafe_blocks = "warn"
+[lints]
+workspace = true
