@@ -1,10 +1,10 @@
 //! Screen effects.
 
-use crate::assets::Assets;
 use crate::math::angle::{self, PI};
 use crate::math::argb;
 use crate::renderer::quad::{BlendMode, DrawList};
 use crate::renderer::{Renderer, TextureId};
+use melon_assets::assets::Assets;
 
 /// The field of view the hand and these overlays are drawn with.
 const HUD_FOV_DEGREES: f32 = 70.0;

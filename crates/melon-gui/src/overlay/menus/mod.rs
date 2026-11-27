@@ -18,14 +18,14 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::container_input::MouseButtonKind;
 use super::{OverlayAction, OverlayContext, OverlayDraw};
-use crate::assets::Assets;
-use crate::gui::screen::TextEvent;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::font::Font;
 use crate::math::argb;
 use crate::renderer::{Renderer, TextureId};
+use crate::screen::TextEvent;
 use crate::settings::input::InputBind;
+use crate::sprite::GuiSprite;
+use crate::text::font::Font;
 use crate::world::inventory::{ContainerKind, OpenContainer};
+use melon_assets::assets::Assets;
 
 /// Where the panel is on screen and where the mouse is, for drawing and clicks.
 #[derive(Clone, Copy, Debug, Default)]
@@ -91,7 +91,7 @@ impl MenuDraw<'_, '_> {
     }
 
     /// Styled label, default `color` (`0xAARRGGBB`) for runs without their own.
-    pub fn styled(&mut self, text: &crate::gui::text::StyledText, x: f32, y: f32, color: u32) {
+    pub fn styled(&mut self, text: &crate::text::StyledText, x: f32, y: f32, color: u32) {
         let rgb = [
             ((color >> 16) & 0xFF) as f32 / 255.0,
             ((color >> 8) & 0xFF) as f32 / 255.0,
@@ -99,7 +99,7 @@ impl MenuDraw<'_, '_> {
         ];
         let mut paint = self.ui.painter.paint(rgb);
         paint.shadow = false;
-        crate::gui::text::draw(
+        crate::text::draw(
             self.ui.draw_list,
             &paint,
             text,
@@ -108,9 +108,9 @@ impl MenuDraw<'_, '_> {
         );
     }
 
-    /// [`crate::gui::text::width`] of styled text.
-    pub fn styled_width(&self, text: &crate::gui::text::StyledText) -> f32 {
-        crate::gui::text::width(self.ui.painter.font, text)
+    /// [`crate::text::width`] of styled text.
+    pub fn styled_width(&self, text: &crate::text::StyledText) -> f32 {
+        crate::text::width(self.ui.painter.font, text)
     }
 
     /// A flat grey label like the container screens' (`text(..., false)`).
@@ -155,7 +155,7 @@ impl MenuDraw<'_, '_> {
     }
 
     /// A tooltip of styled `lines` at the mouse.
-    pub fn tooltip_styled(&mut self, lines: &[crate::gui::text::StyledText]) {
+    pub fn tooltip_styled(&mut self, lines: &[crate::text::StyledText]) {
         self.ui
             .painter
             .tooltip_lines(self.ui.draw_list, lines, self.frame.cursor, self.ui.size);
@@ -165,7 +165,7 @@ impl MenuDraw<'_, '_> {
     pub fn tooltip(&mut self, lines: &[String]) {
         let lines: Vec<_> = lines
             .iter()
-            .map(|line| crate::gui::text::StyledText::plain(line))
+            .map(|line| crate::text::StyledText::plain(line))
             .collect();
         self.ui
             .painter
@@ -179,7 +179,7 @@ impl MenuDraw<'_, '_> {
             stack,
             self.frame.left + x,
             self.frame.top + y,
-            Some(crate::gui::text::StyledText::plain("")),
+            Some(crate::text::StyledText::plain("")),
         );
     }
 
@@ -188,12 +188,12 @@ impl MenuDraw<'_, '_> {
         if count == 1 && !always {
             return;
         }
-        let text = crate::gui::text::StyledText::plain(&count.to_string());
+        let text = crate::text::StyledText::plain(&count.to_string());
         let painter = self.ui.painter;
-        let width = crate::gui::text::width(painter.font, &text);
-        crate::gui::text::draw(
+        let width = crate::text::width(painter.font, &text);
+        crate::text::draw(
             self.ui.draw_list,
-            &painter.paint(crate::gui::text::colors::WHITE),
+            &painter.paint(crate::text::colors::WHITE),
             &text,
             self.frame.left + x + 19.0 - 2.0 - width,
             self.frame.top + y + 6.0 + 3.0,
@@ -212,7 +212,7 @@ impl MenuDraw<'_, '_> {
 
     /// A tooltip of `stack` at the mouse.
     pub fn item_tooltip(&mut self, stack: &ItemStack) {
-        let lines = crate::gui::hud::item_slot::tooltip_lines(self.ui.lang, stack);
+        let lines = crate::hud::item_slot::tooltip_lines(self.ui.lang, stack);
         self.ui
             .painter
             .tooltip_lines(self.ui.draw_list, &lines, self.frame.cursor, self.ui.size);

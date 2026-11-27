@@ -1,12 +1,12 @@
 //! `CreakingModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
-use crate::world::entity::animations::creaking as anim;
-use crate::world::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::quadruped::look;
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::animations::creaking as anim;
+use crate::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::quadruped::look;
+use crate::model_part::{Cube, Pose};
 
 /// Animation slots (`PoseInput::anim`).
 pub const ATTACK: usize = 0;

@@ -9,11 +9,11 @@ use std::path::PathBuf;
 
 use crate::component::{Component, Contents};
 
-use crate::gui::text::font::Font;
-use crate::gui::text::{self, StyledText, TextStyle, colors};
 use crate::i18n::Lang;
 use crate::network::play::chat::{BoundChatType, ChatEvent, ChatTypes};
 use crate::settings::options::{ChatSettings, ChatVisibility};
+use crate::text::font::Font;
+use crate::text::{self, StyledText, TextStyle, colors};
 use history::CommandHistory;
 
 /// `ChatComponent.MAX_CHAT_HISTORY`.

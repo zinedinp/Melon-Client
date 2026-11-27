@@ -10,11 +10,11 @@ use pumpkin_data::item_stack::ItemStack;
 
 use crate::component::{ClickEvent, Component};
 use crate::dialog::{Action, Dialog, InputValue};
-use crate::gui::screen::{CursorKind, ScreenContext, TextEvent};
-use crate::gui::text::{self, Hover, StyledText};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::tooltip::MAX_WIDTH as TOOLTIP_WIDTH;
-use crate::gui::widgets::{Rect, Ui, Widget};
+use crate::screen::{CursorKind, ScreenContext, TextEvent};
+use crate::text::{self, Hover, StyledText};
+use crate::widgets::button::Button;
+use crate::widgets::tooltip::MAX_WIDTH as TOOLTIP_WIDTH;
+use crate::widgets::{Rect, Ui, Widget};
 
 /// What a click or key on an element asks of the dialog.
 pub enum Press {
@@ -107,18 +107,13 @@ impl TextElement {
         }
     }
 
-    fn line_x(&self, ui_font: &crate::gui::text::font::Font, line: &StyledText) -> f32 {
+    fn line_x(&self, ui_font: &crate::text::font::Font, line: &StyledText) -> f32 {
         let line_w = text::width(ui_font, line);
         self.rect.x + ((self.rect.w - line_w) / 2.0).floor()
     }
 
     /// The run under `(x, y)`, if any.
-    fn style_at(
-        &self,
-        font: &crate::gui::text::font::Font,
-        x: f32,
-        y: f32,
-    ) -> Option<&text::TextStyle> {
+    fn style_at(&self, font: &crate::text::font::Font, x: f32, y: f32) -> Option<&text::TextStyle> {
         if !self.rect.contains(x, y) {
             return None;
         }
@@ -183,8 +178,8 @@ impl Element for TextElement {
                 count,
                 components,
             } => Some(
-                match crate::gui::hud::item_slot::hover_stack(id, *count, components.as_ref()) {
-                    Some(stack) => crate::gui::hud::item_slot::tooltip_lines(ui.lang, &stack),
+                match crate::hud::item_slot::hover_stack(id, *count, components.as_ref()) {
+                    Some(stack) => crate::hud::item_slot::tooltip_lines(ui.lang, &stack),
                     None => vec![StyledText::plain(id)],
                 },
             ),
@@ -308,7 +303,7 @@ const ITEM_SPACING: f32 = 2.0;
 impl ItemElement {
     pub fn new(body: &crate::dialog::ItemBody, ctx: &ScreenContext) -> Self {
         let stack =
-            crate::gui::hud::item_slot::hover_stack(&body.id, body.count, body.components.as_ref());
+            crate::hud::item_slot::hover_stack(&body.id, body.count, body.components.as_ref());
         Self {
             stack,
             size: (body.width as f32, body.height as f32),
@@ -388,7 +383,7 @@ impl Element for ItemElement {
             && self.item_rect.contains(mouse.0, mouse.1)
             && let Some(stack) = &self.stack
         {
-            return Some(crate::gui::hud::item_slot::tooltip_lines(ui.lang, stack));
+            return Some(crate::hud::item_slot::tooltip_lines(ui.lang, stack));
         }
         self.description.as_ref()?.tooltip(mouse, ui)
     }

@@ -1,9 +1,9 @@
 //! `PhantomModel`: a body with a two-part tail and two two-part wings.
 
 use super::{LayerSpec, ModelId as M};
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, DEG_TO_RAD};
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 pub const TEXTURE: &str = "minecraft:entity/phantom/phantom";
 /// `PhantomEyesLayer`, drawn glowing (`RenderTypes.eyes`).

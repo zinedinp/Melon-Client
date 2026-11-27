@@ -3,7 +3,7 @@
 use super::living::LivingRenderState;
 use super::model::{Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, PI};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `QuadrupedModel.createBodyMesh(legSize, mirrorLeftLeg, mirrorRightLeg, g)`.
 pub fn create_body_mesh(

@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 
 use pumpkin_data::{Block, BlockStateId};
 
-use crate::world::block_models::variants::seed;
+use crate::block_models::variants::seed;
 
 /// How a block is moved.
 #[derive(Clone, Copy, PartialEq, Debug)]

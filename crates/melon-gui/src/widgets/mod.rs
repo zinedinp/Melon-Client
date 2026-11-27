@@ -15,12 +15,12 @@ pub mod tab_bar;
 pub mod text_input;
 pub mod tooltip;
 
-use crate::gui::assets::GuiAssets;
-use crate::gui::screen::CursorKind;
-use crate::gui::text::font::Font;
+use crate::assets::GuiAssets;
 use crate::i18n::Lang;
 use crate::renderer::TextureId;
 use crate::renderer::quad::DrawList;
+use crate::screen::CursorKind;
+use crate::text::font::Font;
 
 /// A widget's area in GUI pixels.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -96,7 +96,7 @@ pub struct Ui<'a> {
     pub height: f32,
     /// What draws items, in a world (whose icons are prepared for the
     /// stacks a screen shows, `Screen::visit_stacks`); `None` in the menus.
-    pub items: Option<crate::gui::hud::item_slot::ItemPainter<'a>>,
+    pub items: Option<crate::hud::item_slot::ItemPainter<'a>>,
 }
 
 impl<'a> Ui<'a> {
@@ -117,7 +117,7 @@ impl<'a> Ui<'a> {
     }
 
     /// With items drawn by `painter`.
-    pub fn with_items(mut self, painter: crate::gui::hud::item_slot::ItemPainter<'a>) -> Self {
+    pub fn with_items(mut self, painter: crate::hud::item_slot::ItemPainter<'a>) -> Self {
         self.items = Some(painter);
         self
     }
@@ -174,22 +174,22 @@ impl<'a> Ui<'a> {
     }
 
     /// The width of styled text: bold glyphs are a pixel wider.
-    pub fn styled_width(&self, text: &crate::gui::text::StyledText) -> f32 {
-        crate::gui::text::width(&self.assets.font, text)
+    pub fn styled_width(&self, text: &crate::text::StyledText) -> f32 {
+        crate::text::width(&self.assets.font, text)
     }
 
     /// A list's section header, as vanilla's `OptionsList.HeaderEntry` draws it.
     pub fn section_header(&mut self, text: &str, y: f32) {
-        let style = crate::gui::text::TextStyle {
+        let style = crate::text::TextStyle {
             bold: true,
             underlined: true,
             ..Default::default()
         };
-        let mut styled = crate::gui::text::StyledText::default();
+        let mut styled = crate::text::StyledText::default();
         styled.push(text, &style);
         let padded = self.styled_width(&styled) + 8.0;
         let x = (self.width / 2.0).floor() - (padded / 2.0).floor() + 4.0;
-        self.styled(&styled, x, y, crate::gui::text::colors::WHITE);
+        self.styled(&styled, x, y, crate::text::colors::WHITE);
     }
 
     /// `GuiGraphics.centeredText`: centred on `center_x`, on whole pixels.
@@ -222,9 +222,9 @@ impl<'a> Ui<'a> {
             .font
             .wrap(text, tooltip::MAX_WIDTH)
             .into_iter()
-            .map(|line| crate::gui::text::StyledText::plain(&line))
+            .map(|line| crate::text::StyledText::plain(&line))
             .collect();
-        let paint = self.paint(crate::gui::text::colors::WHITE);
+        let paint = self.paint(crate::text::colors::WHITE);
         let at = tooltip::by_widget(
             mouse,
             widget,
@@ -240,10 +240,10 @@ impl<'a> Ui<'a> {
         );
     }
 
-    fn paint(&self, color: [f32; 3]) -> crate::gui::text::TextPaint<'a> {
-        crate::gui::text::TextPaint {
+    fn paint(&self, color: [f32; 3]) -> crate::text::TextPaint<'a> {
+        crate::text::TextPaint {
             color,
-            ..crate::gui::text::TextPaint::new(
+            ..crate::text::TextPaint::new(
                 &self.assets.font,
                 &self.assets.font_textures,
                 self.assets.white,
@@ -254,27 +254,27 @@ impl<'a> Ui<'a> {
     /// Styled text, the runs without their own colour in `color`.
     pub fn styled(
         &mut self,
-        text: &crate::gui::text::StyledText,
+        text: &crate::text::StyledText,
         x: f32,
         y: f32,
         color: [f32; 3],
     ) -> f32 {
         let paint = self.paint(color);
-        crate::gui::text::draw(self.draw_list, &paint, text, x, y)
+        crate::text::draw(self.draw_list, &paint, text, x, y)
     }
 
     /// `Font.split`: styled text broken into lines at most `max_width` wide.
     pub fn wrap_styled(
         &self,
-        text: &crate::gui::text::StyledText,
+        text: &crate::text::StyledText,
         max_width: f32,
-    ) -> Vec<crate::gui::text::StyledText> {
-        crate::gui::text::wrap(&self.assets.font, text, max_width)
+    ) -> Vec<crate::text::StyledText> {
+        crate::text::wrap(&self.assets.font, text, max_width)
     }
 
     /// `GuiGraphics.setTooltipForNextFrame` with lines.
-    pub fn mouse_tooltip(&mut self, lines: &[crate::gui::text::StyledText], mouse: (f32, f32)) {
-        let paint = self.paint(crate::gui::text::colors::WHITE);
+    pub fn mouse_tooltip(&mut self, lines: &[crate::text::StyledText], mouse: (f32, f32)) {
+        let paint = self.paint(crate::text::colors::WHITE);
         let at = tooltip::beside_mouse(
             mouse,
             tooltip::size(&paint, lines),
@@ -290,7 +290,7 @@ impl<'a> Ui<'a> {
     }
 
     /// A sprite over a rectangle, scaled as its `.mcmeta` says.
-    pub fn sprite(&mut self, sprite: impl Into<crate::gui::sprite::GuiSprite>, rect: Rect) {
+    pub fn sprite(&mut self, sprite: impl Into<crate::sprite::GuiSprite>, rect: Rect) {
         sprite
             .into()
             .draw(self.draw_list, rect.x, rect.y, rect.w, rect.h);
@@ -298,7 +298,7 @@ impl<'a> Ui<'a> {
 
     /// `Screen.extractBackground`: the dimmed menu background.
     pub fn menu_background(&mut self) {
-        crate::gui::background::push_menu_overlay(
+        crate::background::push_menu_overlay(
             self.draw_list,
             self.assets.white,
             self.width,
@@ -308,7 +308,7 @@ impl<'a> Ui<'a> {
 
     /// `AbstractScrollArea.extractListBackground`/`extractListSeparators`
     pub fn list_background(&mut self, top: f32, bottom: f32) {
-        crate::gui::background::push_list_background(
+        crate::background::push_list_background(
             self.draw_list,
             self.assets,
             top,

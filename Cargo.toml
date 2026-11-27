@@ -1,17 +1,27 @@
 [package]
 name = "melon"
-version = "0.11.0+mc26.3"
-authors = ["Zinedin Polic"]
-edition = "2024"
-rust-version = "1.100.0"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 description = "Minecraft Client in Rust with Vulkan"
 readme = "README.md"
-repository = "https://github.com/zinedinp/Melon-Client"
-license = "GPL-3.0"
+repository.workspace = true
+license.workspace = true
 default-run = "melon"
 
 [workspace]
 members = ["crates/*"]
+
+# The client's crates are versioned with it: `CARGO_PKG_VERSION` is the
+# client's in each (the `+mc` part names the game version servers see).
+[workspace.package]
+version = "0.11.0+mc26.3"
+authors = ["Zinedin Polic"]
+edition = "2024"
+rust-version = "1.100.0"
+repository = "https://github.com/zinedinp/Melon-Client"
+license = "GPL-3.0"
 
 [workspace.dependencies]
 # What the client and its crates share, at one version each.
@@ -55,7 +65,6 @@ rustc-hash = "2.1.3"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 sha1 = "0.11.0"
-sha2 = "0.11.2"
 shaderc = "0.10.1"
 socket2 = { version = "0.6.5", features = ["all"] }
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "io-util", "macros", "time"] }
@@ -71,70 +80,36 @@ zip = { version = "9.8.2", default-features = false, features = ["deflate-flate2
 undocumented_unsafe_blocks = "warn"
 
 [dependencies]
+melon-assets = { path = "crates/melon-assets" }
+melon-audio = { path = "crates/melon-audio" }
 melon-base = { path = "crates/melon-base" }
 melon-core = { path = "crates/melon-core" }
+melon-gui = { path = "crates/melon-gui" }
+melon-net = { path = "crates/melon-net" }
 melon-protocol = { path = "crates/melon-protocol" }
-aes.workspace = true
+melon-render = { path = "crates/melon-render" }
+melon-settings = { path = "crates/melon-settings" }
+melon-world = { path = "crates/melon-world" }
 anyhow.workspace = true
-# Pumpkin's game profile holds its properties in one.
-arc-swap.workspace = true
 chrono.workspace = true
-arboard.workspace = true
-ash.workspace = true
-ash-window.workspace = true
-cfb8.workspace = true
 crossbeam-channel.workspace = true
-flate2.workspace = true
 glam.workspace = true
 # NVML (`libnvidia-ml`) for the benchmark, loaded only if it is there.
 libloading.workspace = true
 rustc-hash.workspace = true
 image.workspace = true
-# Pack PNGs with wrong checksums, which `image` refuses and vanilla reads.
-png.workspace = true
-num-bigint.workspace = true
-open.workspace = true
 # The integrated server: Pumpkin, from the `mod-zip` branch of our fork.
 pumpkin.workspace = true
-pumpkin-config.workspace = true
-pumpkin-mod.workspace = true
 pumpkin-data.workspace = true
-pumpkin-nbt.workspace = true
 pumpkin-protocol.workspace = true
 pumpkin-util.workspace = true
-pumpkin-wasm-host.workspace = true
 pumpkin-world.workspace = true
 rand.workspace = true
-# The integrated server's global pool, built with its threads ranked.
-rayon.workspace = true
-raw-window-handle.workspace = true
-rodio.workspace = true
-rsa.workspace = true
 serde.workspace = true
-# The LAN world list shares its multicast port (`SO_REUSEADDR`/`SO_REUSEPORT`).
-socket2.workspace = true
 serde_json.workspace = true
-sha1.workspace = true
-sha2.workspace = true
-tokio.workspace = true
-tokio-util.workspace = true
-ureq.workspace = true
 uuid.workspace = true
 winit.workspace = true
-# Resource packs: their `filter` patterns.
-regex.workspace = true
-# Resource packs' core shaders, compiled at runtime as vanilla does: the
-# system's shaderc library, from the same install `glslc` comes from.
-shaderc.workspace = true
-zip.workspace = true
-miraculix.workspace = true
 numerobis.workspace = true
-majestix-vk.workspace = true
-
-[target.'cfg(windows)'.dependencies]
-# SRV records through the system resolver.
-windows-sys = { workspace = true, features = ["Win32_NetworkManagement_Dns"] }
-
 
 [profile.dev]
 opt-level = 1

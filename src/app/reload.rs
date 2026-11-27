@@ -117,7 +117,7 @@ fn describe_packs() {
 /// The active packs' replacements for vanilla's GUI shaders, compiled and handed to the
 /// renderer.
 pub(super) fn apply_gui_shaders(renderer: &mut Renderer, assets: &Assets) {
-    let shaders = crate::gui::pack_shaders::compile(assets.root());
+    let shaders = crate::renderer::pack_shaders::compile(assets.root());
     for shader in &shaders {
         crate::info!("GUI shader from a resource pack: {:?}", shader.program);
     }

@@ -2,9 +2,9 @@
 
 use std::path::Path;
 
+use crate::block::direction::Direction;
 use crate::cycle::Cycle;
-use crate::renderer::WorldVertex;
-use crate::world::block::direction::Direction;
+use crate::mesh::WorldVertex;
 
 /// `CloudRenderer.CELL_SIZE_IN_BLOCKS`.
 pub const CELL_SIZE: f32 = 12.0;

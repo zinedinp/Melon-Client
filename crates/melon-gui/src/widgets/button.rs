@@ -1,8 +1,8 @@
-use crate::gui::assets::GuiAssets;
-use crate::gui::screen::CursorKind;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::StyledText;
-use crate::gui::widgets::{Label, Rect, Ui, Widget};
+use crate::assets::GuiAssets;
+use crate::screen::CursorKind;
+use crate::sprite::GuiSprite;
+use crate::text::StyledText;
+use crate::widgets::{Label, Rect, Ui, Widget};
 
 /// The three button states' sprites (vanilla's are 200x20 nine-slices).
 #[derive(Clone, Copy)]

@@ -8,13 +8,13 @@ use glam::{Mat3, Vec2, Vec3};
 use image::RgbaImage;
 use pumpkin_data::{Block, BlockStateId};
 
-use crate::assets::json_model::{Model, Quad, element_quads};
-use crate::renderer::{CornerLight, TerrainQuad, WorldVertex};
-use crate::world::block::direction::Direction;
-use crate::world::block_tint::TintKind;
-use crate::world::geometry::UV_INSET;
-use crate::world::texture_animation::TextureAnimator;
-use crate::world::transparency::{AlphaMap, AlphaRule, Transparency};
+use crate::block::direction::Direction;
+use crate::block_tint::TintKind;
+use crate::geometry::UV_INSET;
+use crate::json_model::{Model, Quad, element_quads};
+use crate::mesh::{CornerLight, TerrainQuad, WorldVertex};
+use crate::texture_animation::TextureAnimator;
+use crate::transparency::{AlphaMap, AlphaRule, Transparency};
 
 pub mod ao_shape;
 mod atlas;
@@ -133,9 +133,9 @@ impl MeshFlags {
 
     fn of(id: u16, model: &StateModel<BakedQuad>) -> Self {
         let has_quads = model.all_quads().next().is_some();
-        let fluid = crate::world::fluid::fluid_of(id).is_some();
+        let fluid = crate::fluid::fluid_of(id).is_some();
         let mut bits = 0;
-        if crate::world::block::state_flags::is_solid(id)
+        if crate::block::state_flags::is_solid(id)
             || BlockStateId::new(id).is_some_and(|s| s.to_state().is_solid_render())
         {
             bits |= Self::SOLID;
@@ -146,7 +146,7 @@ impl MeshFlags {
         if !fluid && model.all_quads().all(|quad| quad.cullface.is_some()) {
             bits |= Self::BURIED_HIDDEN;
         }
-        if crate::world::block::offset::has_offset(id) {
+        if crate::block::offset::has_offset(id) {
             bits |= Self::OFFSET;
         }
         let emission = if !has_quads {
@@ -157,7 +157,7 @@ impl MeshFlags {
         Self(bits | emission << 4)
     }
 
-    /// [`state_flags::is_solid`](crate::world::block::state_flags::is_solid).
+    /// [`state_flags::is_solid`](crate::block::state_flags::is_solid).
     #[inline]
     pub fn solid(self) -> bool {
         self.0 & Self::SOLID != 0
@@ -175,7 +175,7 @@ impl MeshFlags {
         self.0 & Self::BURIED_HIDDEN != 0
     }
 
-    /// Drawn off the block's centre ([`offset`](crate::world::block::offset)).
+    /// Drawn off the block's centre ([`offset`](crate::block::offset)).
     #[inline]
     pub fn offset(self) -> bool {
         self.0 & Self::OFFSET != 0
@@ -303,7 +303,7 @@ impl BlockModels {
         cardinal: &[f32; 6],
     ) -> [WorldVertex; 4] {
         let [x, y, z] = quad.block();
-        let [ox, oy, oz] = crate::world::block::offset::unpack(quad.offset());
+        let [ox, oy, oz] = crate::block::offset::unpack(quad.offset());
         let at = [
             (base[0] + x as i32) as f32 + ox,
             (base[1] + y as i32) as f32 + oy,
@@ -929,9 +929,9 @@ impl<'a> Baker<'a> {
             };
             let direction = quad
                 .shade_override
-                .or_else(|| crate::world::geometry::closest_direction(normal))
+                .or_else(|| crate::geometry::closest_direction(normal))
                 .unwrap_or(Direction::Up);
-            let shade = crate::world::geometry::cardinal_shade(direction);
+            let shade = crate::geometry::cardinal_shade(direction);
             let (tint, tint_kind) = bake_tint(block, quad.tint, props);
             out.push(PendingQuad {
                 corners: corners.map(|c| c / 16.0),

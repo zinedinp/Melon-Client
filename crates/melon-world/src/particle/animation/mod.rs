@@ -139,7 +139,7 @@ mod tests {
 
     #[test]
     fn the_sets_name_their_textures() {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets");
         if crate::assets::json_resource(&root, "particles", "smoke").is_none() {
             return;
         }

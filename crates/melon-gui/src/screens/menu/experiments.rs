@@ -3,15 +3,15 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::text::font::LINE_HEIGHT;
-use crate::gui::text::{StyledText, colors};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
-use crate::gui::widgets::scroll_list::{ListClick, ScrollList};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
-use crate::gui::widgets::{Rect, Ui};
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::singleplayer::data_packs::EXPERIMENTS;
+use crate::text::font::LINE_HEIGHT;
+use crate::text::{StyledText, colors};
+use crate::widgets::button::Button;
+use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
+use crate::widgets::scroll_list::{ListClick, ScrollList};
+use crate::widgets::set::{KeyResult, WidgetSet};
+use crate::widgets::{Rect, Ui};
 
 const LAYOUT: HeaderFooter = HeaderFooter::DEFAULT;
 

@@ -1,0 +1,50 @@
+[package]
+name = "melon-net"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "The Melon client's connections: login, the play session, server dialogs, the integrated Pumpkin server"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+melon-assets = { path = "../melon-assets" }
+melon-audio = { path = "../melon-audio" }
+melon-base = { path = "../melon-base" }
+melon-core = { path = "../melon-core" }
+melon-protocol = { path = "../melon-protocol" }
+melon-settings = { path = "../melon-settings" }
+melon-world = { path = "../melon-world" }
+anyhow.workspace = true
+# Pumpkin's game profile holds its properties in one.
+arc-swap.workspace = true
+chrono.workspace = true
+image.workspace = true
+# The integrated server: Pumpkin, from the `mod-zip` branch of our fork.
+pumpkin.workspace = true
+pumpkin-config.workspace = true
+pumpkin-data.workspace = true
+pumpkin-nbt.workspace = true
+pumpkin-protocol.workspace = true
+pumpkin-util.workspace = true
+pumpkin-wasm-host.workspace = true
+pumpkin-world.workspace = true
+rand.workspace = true
+# The integrated server's global pool, built with its threads ranked.
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# The LAN world list shares its multicast port (`SO_REUSEADDR`/`SO_REUSEPORT`).
+socket2.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+uuid.workspace = true
+zip.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+# SRV records through the system resolver.
+windows-sys = { workspace = true, features = ["Win32_NetworkManagement_Dns"] }
+
+[lints]
+workspace = true

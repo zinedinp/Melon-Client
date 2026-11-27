@@ -3,9 +3,9 @@
 use pumpkin_data::item_stack::ItemStack;
 
 use super::{Frame, Loader, MenuDraw, MenuScreen};
-use crate::gui::overlay::container_input::MouseButtonKind;
-use crate::gui::overlay::{OverlayAction, OverlayContext};
-use crate::gui::sprite::GuiSprite;
+use crate::overlay::container_input::MouseButtonKind;
+use crate::overlay::{OverlayAction, OverlayContext};
+use crate::sprite::GuiSprite;
 use crate::world::inventory::OpenContainer;
 use crate::world::inventory::merchant::{self, Offer};
 
@@ -277,9 +277,7 @@ impl MenuScreen for MerchantScreen {
         }
         let row = Self::row_at(frame, count)?;
         self.selected = row + self.scroll_off;
-        Some(
-            OverlayAction::SelectTrade(self.selected as i32).with_sound(crate::gui::overlay::CLICK),
-        )
+        Some(OverlayAction::SelectTrade(self.selected as i32).with_sound(crate::overlay::CLICK))
     }
 
     fn drag(&mut self, frame: Frame, ctx: &mut OverlayContext) {

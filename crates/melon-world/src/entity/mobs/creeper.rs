@@ -3,11 +3,11 @@
 use glam::Vec3;
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::quadruped::{Legs, look};
 use crate::math::angle::{self, PI};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::quadruped::{Legs, look};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 pub fn layer() -> LayerDefinition {
     body(0.0)

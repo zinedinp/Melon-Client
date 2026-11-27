@@ -1,4 +1,4 @@
 //! The level's packets.
 
 pub mod chunk;
-pub(crate) mod chunk_batch;
+pub mod chunk_batch;

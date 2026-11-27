@@ -1,11 +1,11 @@
-//! [`crate::world::culling::section_cull`]'s column test under AVX: eight
+//! [`crate::culling::section_cull`]'s column test under AVX: eight
 //! section heights a register, every plane a compare, the lanes left
 //! standing as bits (`vmovmskps`).
 
 use miraculix::x86::ops::avx::avx::Avx;
 
+use crate::culling::section_cull::{LANES, SectionCull};
 use crate::math::simd::{self, Tier};
-use crate::world::culling::section_cull::{LANES, SectionCull};
 
 #[derive(Clone, Copy)]
 pub struct CullAvx(Avx);

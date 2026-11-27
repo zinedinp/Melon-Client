@@ -3,8 +3,8 @@
 use glam::{DVec3, IVec3};
 
 use super::super::{Kind, Spawn, World};
-use crate::world::fluid::{self, FluidKind};
-use crate::world::java_random::JavaRandom;
+use crate::fluid::{self, FluidKind};
+use crate::java_random::JavaRandom;
 
 /// The fluid in `state`'s animation.
 pub fn animate(world: &World, state: u16, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
@@ -36,7 +36,7 @@ pub fn animate(world: &World, state: u16, pos: IVec3, rng: &mut JavaRandom, out:
             .level
             .block_state(pos.x, pos.y - 1, pos.z)
             .unwrap_or(0);
-        let sturdy = crate::world::block::state_flags::is_solid(state);
+        let sturdy = crate::block::state_flags::is_solid(state);
         drip_below(world, pos - IVec3::Y, below, here.kind, sturdy, rng, out);
     }
 }
@@ -87,7 +87,7 @@ fn drip_below(
 /// The lowest and highest point of a block's collision shape, `(0, 0)`
 fn shape_span(world: &World, pos: IVec3) -> (f64, f64) {
     let y = f64::from(pos.y);
-    let (lo, hi) = crate::world::physics::block_shapes(world.level, (pos.x, pos.y, pos.z))
+    let (lo, hi) = crate::physics::block_shapes(world.level, (pos.x, pos.y, pos.z))
         .fold((f64::MAX, 0.0f64), |(lo, hi), b| {
             (lo.min(b.min.y - y), hi.max(b.max.y - y))
         });

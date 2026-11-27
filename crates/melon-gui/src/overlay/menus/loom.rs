@@ -6,11 +6,11 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::scroll::Scroller;
 use super::{Frame, Loader, MenuDraw, MenuScreen, MenuSprites};
-use crate::gui::overlay::container_input::MouseButtonKind;
-use crate::gui::overlay::{OverlayAction, OverlayContext};
-use crate::gui::sprite::GuiSprite;
 use crate::math::argb;
+use crate::overlay::container_input::MouseButtonKind;
+use crate::overlay::{OverlayAction, OverlayContext};
 use crate::renderer::TextureId;
+use crate::sprite::GuiSprite;
 use crate::world::inventory::{OpenContainer, loom};
 
 const COLUMNS: usize = 4;

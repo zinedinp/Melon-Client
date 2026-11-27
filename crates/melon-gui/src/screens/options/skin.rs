@@ -1,10 +1,10 @@
 //! Vanilla `SkinCustomizationScreen`.
 
-use crate::gui::screen::{ConfigChange, ScreenContext};
-use crate::gui::screens::options::{on_off_label, value_label};
-use crate::gui::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 use crate::i18n::Lang;
+use crate::screen::{ConfigChange, ScreenContext};
+use crate::screens::options::{on_off_label, value_label};
 use crate::settings::options::Config;
+use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 use crate::world::entity::player::PlayerModelPart;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

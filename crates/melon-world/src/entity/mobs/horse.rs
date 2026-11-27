@@ -2,10 +2,10 @@
 
 use super::rounded;
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, HALF_PI, PI, QUARTER_PI, SIXTH_PI, THIRD_PI};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `AbstractEquineModel.createBodyMesh(g)` at 64x64.
 fn adult_root(g: f32) -> PartDefinition {

@@ -5,16 +5,16 @@ use std::rc::Rc;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::text::font::LINE_HEIGHT;
-use crate::gui::text::{StyledText, TextStyle, colors};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
-use crate::gui::widgets::scroll_list::ScrollList;
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
-use crate::gui::widgets::{Rect, Ui};
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::singleplayer::rules::{self, Category, Changes, Rule, Value};
+use crate::text::font::LINE_HEIGHT;
+use crate::text::{StyledText, TextStyle, colors};
+use crate::widgets::button::Button;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
+use crate::widgets::scroll_list::ScrollList;
+use crate::widgets::set::{KeyResult, WidgetSet};
+use crate::widgets::{Rect, Ui};
 
 /// `RuleList.ITEM_HEIGHT`, and `getRowWidth()`.
 const ROW_H: f32 = 24.0;

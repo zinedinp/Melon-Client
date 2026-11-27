@@ -1,9 +1,9 @@
 //! Drawing and measuring [`StyledText`]: the way `Font.PreparedTextBuilder`
 
 use super::{StyledText, TextStyle};
-use crate::gui::text::font::{self, BASELINE_ASCENT, Font, GlyphKind, shadow_color};
 use crate::renderer::TextureId;
 use crate::renderer::quad::DrawList;
+use crate::text::font::{self, BASELINE_ASCENT, Font, GlyphKind, shadow_color};
 
 /// How styled text is drawn: where, how opaque, with or without shadow.
 #[derive(Clone, Copy)]
@@ -169,7 +169,7 @@ fn draw_glyphs(
                 continue;
             }
             let offset = if is_shadow {
-                crate::gui::text::font::SHADOW_OFFSET
+                crate::text::font::SHADOW_OFFSET
             } else {
                 0.0
             };

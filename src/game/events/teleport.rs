@@ -79,7 +79,10 @@ impl InWorld {
                         format!(
                             "packets of the last 5 s: {}\nwe sent (last 5 s): {}\nour last moves:{}\nmove.log:{}\nblocks around the pin ({x:.2},{y:.2},{z:.2}), y-1..head+1:{cells}",
                             crate::probe::recent_packets(5),
-                            crate::probe::recent_sent(5, crate::network::play::debug::serverbound_name),
+                            crate::probe::recent_sent(
+                                5,
+                                crate::network::play::debug::serverbound_name
+                            ),
                             crate::probe::recent_moves(),
                             crate::probe::recent_io()
                         )

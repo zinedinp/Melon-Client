@@ -5,9 +5,9 @@ use crate::math::angle::{EIGHTH_PI, HALF_PI as FRAC_PI_2, PI, QUARTER_PI as FRAC
 use glam::{Mat4, Vec3};
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, Rotation};
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 pub const MINECART_TEXTURE: &str = "minecraft:entity/minecart/minecart";
 

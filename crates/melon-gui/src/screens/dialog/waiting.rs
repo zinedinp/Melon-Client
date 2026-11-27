@@ -5,9 +5,9 @@
 use std::time::Instant;
 
 use super::DialogLayer;
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::{Ui, Widget};
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::widgets::button::Button;
+use crate::widgets::{Ui, Widget};
 
 /// `BUTTON_VISIBLE_AFTER` / `BUTTON_ACTIVE_AFTER`, in seconds.
 const VISIBLE_AFTER: u64 = 1;

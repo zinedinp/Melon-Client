@@ -1,10 +1,10 @@
 //! `PigModel`, `ColdPigModel` and `BabyPigModel`: quadrupeds with a snout.
 
 use super::{ClientEntity, LayerSpec, ModelId as M, variant_body};
+use crate::entity::model::{LayerDefinition, PartDefinition};
+use crate::entity::quadruped;
 use crate::math::angle::PI;
-use crate::world::entity::model::{LayerDefinition, PartDefinition};
-use crate::world::entity::quadruped;
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 use pumpkin_data::pig_variant::PigVariant;
 
 /// `PigModel.createBasePigModel`.

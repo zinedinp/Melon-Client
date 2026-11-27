@@ -2,14 +2,14 @@
 //! difficulty, and opening it to the LAN, which replaced "Open to LAN".
 //! Melon adds two LAN switches: whether guests are verified, and Bedrock.
 
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::text::{StyledText, TextStyle, colors};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::layout::{BUTTON_H, HeaderFooter};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
-use crate::gui::widgets::{Rect, Ui, Widget};
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::singleplayer::server::Publish;
+use crate::text::{StyledText, TextStyle, colors};
+use crate::widgets::button::Button;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::layout::{BUTTON_H, HeaderFooter};
+use crate::widgets::set::{KeyResult, WidgetSet};
+use crate::widgets::{Rect, Ui, Widget};
 use crate::world::game_mode::GameMode;
 
 /// `Button.builder`'s and `CycleButton`'s default width, and the grids' gap.

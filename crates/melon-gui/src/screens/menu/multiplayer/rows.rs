@@ -52,7 +52,7 @@ pub(super) fn uploaded_sprites() -> &'static Mutex<HashMap<String, Option<Textur
 
 /// A sprite's texture.
 pub(super) fn load_sprite(assets_root: &std::path::Path, id: &str) -> Option<RgbaImage> {
-    let image = crate::assets::texture_image(assets_root, id)?;
+    let image = melon_assets::assets::texture_image(assets_root, id)?;
     let side = image.width();
     Some(if image.height() > side {
         image::imageops::crop_imm(&image, 0, 0, side, side).to_image()

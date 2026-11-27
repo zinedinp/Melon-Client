@@ -1,9 +1,9 @@
 //! `EnderDragonModel`.
 
 use super::{LayerSpec, ModelId as M};
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, DEG_TO_RAD, PI, wrap_degrees};
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 const NECK: usize = 5;
 const TAIL: usize = 12;

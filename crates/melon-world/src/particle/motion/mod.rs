@@ -120,8 +120,8 @@ pub fn vibration(p: &mut Particle, ctx: &TickCtx) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::java_random::JavaRandom;
     use crate::particle::Kind;
-    use crate::world::java_random::JavaRandom;
 
     #[test]
     fn a_trail_arrives_when_its_life_ends() {

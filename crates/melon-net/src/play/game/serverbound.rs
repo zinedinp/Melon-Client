@@ -5,8 +5,8 @@ use pumpkin_data::item_stack::ItemStack;
 use pumpkin_protocol::codec::item_stack_seralizer::ItemStackSerializer;
 use std::io::Write;
 
-use crate::network::protocol::packet;
-use crate::network::protocol::varint::write_var_int;
+use crate::protocol::packet;
+use crate::protocol::varint::write_var_int;
 
 /// `ServerboundSetCreativeModeSlotPacket`.
 pub fn write_creative_slot(buf: &mut Vec<u8>, slot: i16, stack: &ItemStack) -> Result<()> {

@@ -3,7 +3,7 @@
 use anyhow::Result;
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::network::protocol::packet::Reader;
+use melon_protocol::packet::Reader;
 
 /// `EquipmentSlot`, by its network id.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

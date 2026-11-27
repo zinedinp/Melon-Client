@@ -4,7 +4,7 @@ use glam::DVec3;
 
 use super::super::options::{ParticleData, ParticleSpec};
 use super::super::{EntityBox, Kind, Spawn, World};
-use crate::world::java_random::JavaRandom;
+use crate::java_random::JavaRandom;
 
 /// An entity as its tick sees it.
 #[derive(Clone, Copy, Debug)]
@@ -19,8 +19,8 @@ pub struct Ticking {
 pub fn tick(world: &World, entity: &Ticking, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     let body = &entity.body;
     let cell = body.pos.floor().as_ivec3();
-    let fluid = crate::world::physics::fluid_at(world.level, cell.x, cell.y, cell.z);
-    let in_water = fluid == Some(crate::world::fluid::FluidKind::Water);
+    let fluid = crate::physics::fluid_at(world.level, cell.x, cell.y, cell.z);
+    let in_water = fluid == Some(crate::fluid::FluidKind::Water);
     match body.name {
         "tnt" => out.push(Spawn::simple(
             Kind::Smoke,
@@ -94,7 +94,7 @@ pub fn tick(world: &World, entity: &Ticking, rng: &mut JavaRandom, out: &mut Vec
         }
         _ => {}
     }
-    let in_lava = fluid == Some(crate::world::fluid::FluidKind::Lava);
+    let in_lava = fluid == Some(crate::fluid::FluidKind::Lava);
     if entity.sprinting && !entity.crouching && !in_water && !in_lava {
         let on = [
             body.pos.x.floor() as i32,

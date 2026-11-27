@@ -6,8 +6,8 @@ use std::path::Path;
 use image::RgbaImage;
 
 use super::mipmap;
-use crate::world::texture_animation::{self, Frames, SpriteAnimation, TextureAnimator};
-use crate::world::transparency::AlphaMap;
+use crate::texture_animation::{self, Frames, SpriteAnimation, TextureAnimator};
+use crate::transparency::AlphaMap;
 
 /// The packed atlas.
 pub(super) struct PackedAtlas {

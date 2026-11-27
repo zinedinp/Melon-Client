@@ -1,15 +1,15 @@
 //! `IllagerModel`: pillager, vindicator and evoker.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
-use crate::math::angle::{self, PI};
-use crate::world::entity::animation::{
+use crate::entity::animation::{
     animate_crossbow_charge, animate_crossbow_hold, animate_zombie_arms, bob_arms,
 };
-use crate::world::entity::humanoid::HumanoidParts;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::player::Arm;
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::humanoid::HumanoidParts;
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::player::Arm;
+use crate::math::angle::{self, PI};
+use crate::model_part::{Cube, Pose};
 
 /// `IllagerModel.createBodyLayer`; the renderer scales it by 0.9375.
 pub fn layer() -> LayerDefinition {
@@ -154,7 +154,7 @@ pub fn setup_anim(
     if living.riding {
         arm(pose, h.right_arm, -PI / 5.0);
         arm(pose, h.left_arm, -PI / 5.0);
-        crate::world::entity::humanoid::sit(h, pose);
+        crate::entity::humanoid::sit(h, pose);
     }
 
     match illager.arms {

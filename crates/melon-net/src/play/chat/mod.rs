@@ -10,8 +10,8 @@ use serde::Deserialize;
 use std::io::Write;
 
 use crate::component::{self, Component, Style};
-use crate::network::protocol::packet::{self, Reader};
-use crate::network::protocol::varint::write_var_int;
+use crate::protocol::packet::{self, Reader};
+use crate::protocol::varint::write_var_int;
 
 pub mod id {
     use pumpkin_data::packet::{clientbound::play as cb, serverbound::play as sb};
@@ -365,11 +365,11 @@ mod tests {
         });
         let component = component::decode::component(&json);
         let lang = crate::i18n::Lang::from_pairs(&[("multiplayer.player.joined", "%s joined %s")]);
-        let text = crate::gui::text::StyledText::from_component(&component, &lang);
+        let text = crate::text::StyledText::from_component(&component, &lang);
         assert_eq!(text.to_plain(), "Chatter joined 3");
         let list = component::decode::component(&serde_json::json!(["a", {"text": "b"}]));
         assert_eq!(
-            crate::gui::text::StyledText::from_component(&list, &lang).to_plain(),
+            crate::text::StyledText::from_component(&list, &lang).to_plain(),
             "ab"
         );
     }
@@ -393,14 +393,10 @@ mod tests {
         let json =
             pumpkin_protocol::ser::nbt_tag_to_json(&pumpkin_nbt::tag::NbtTag::Compound(line));
         let component = component::decode::component(&json);
-        let text =
-            crate::gui::text::StyledText::from_component(&component, &crate::i18n::Lang::empty());
+        let text = crate::text::StyledText::from_component(&component, &crate::i18n::Lang::empty());
         assert_eq!(text.to_plain(), "Coins: 5");
         assert!(text.spans[0].style.bold);
-        assert_eq!(
-            text.spans[0].style.color,
-            Some(crate::gui::text::colors::GOLD)
-        );
+        assert_eq!(text.spans[0].style.color, Some(crate::text::colors::GOLD));
     }
 
     #[test]

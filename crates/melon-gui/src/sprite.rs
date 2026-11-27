@@ -5,10 +5,10 @@ use std::time::Instant;
 
 use serde_json::Value;
 
-use crate::assets::{Assets, decode_png, packs, split_id};
 use crate::renderer::quad::DrawList;
 use crate::renderer::{Renderer, TextureId};
 use crate::world::texture_animation;
+use melon_assets::assets::{Assets, decode_png, packs, split_id};
 
 /// `GuiSpriteScaling`: how a sprite covers a rectangle of another size.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -1,7 +1,7 @@
 //! `BrewingStandScreen`.
 
 use super::{Loader, MenuDraw, MenuScreen, MenuSprites};
-use crate::gui::sprite::GuiSprite;
+use crate::sprite::GuiSprite;
 use crate::world::inventory::OpenContainer;
 
 /// `BrewingStandMenu`'s `ContainerData` indices.

@@ -7,9 +7,9 @@ use super::super::{
     WATER_SPRINT_DRAG,
 };
 use super::state::{MoveState, Travel, priority};
-use crate::world::fluid::FluidKind;
-use crate::world::level::Level;
-use crate::world::physics;
+use crate::fluid::FluidKind;
+use crate::level::Level;
+use crate::physics;
 
 pub(super) struct Water;
 

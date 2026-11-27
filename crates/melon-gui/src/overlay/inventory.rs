@@ -3,27 +3,25 @@
 use crate::world::item_model::{KeyedStack, StackKey};
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::assets::Assets;
-use crate::gui::entity_preview::EntityPreview;
-use crate::gui::hud::item_slot::{self, ItemPainter};
-use crate::gui::overlay::container::draw_panel;
-use crate::gui::overlay::container_input::{
-    self, ContainerMouse, ContainerView, MouseButtonKind, QuickCraft, SlotClick,
-};
-use crate::gui::overlay::menu_layout::MenuLayout;
-use crate::gui::overlay::recipe_book::{self, Mode, RecipeBookPanel};
-use crate::gui::overlay::{
-    ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind,
-};
-use crate::gui::screen::TextEvent;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::{StyledText, colors};
+use crate::entity_preview::EntityPreview;
+use crate::hud::item_slot::{self, ItemPainter};
 use crate::i18n::Lang;
 use crate::math::argb;
+use crate::overlay::container::draw_panel;
+use crate::overlay::container_input::{
+    self, ContainerMouse, ContainerView, MouseButtonKind, QuickCraft, SlotClick,
+};
+use crate::overlay::menu_layout::MenuLayout;
+use crate::overlay::recipe_book::{self, Mode, RecipeBookPanel};
+use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
 use crate::renderer::quad::DrawList;
 use crate::renderer::{Renderer, TextureId};
+use crate::screen::TextEvent;
 use crate::settings::input::InputBind;
+use crate::sprite::GuiSprite;
+use crate::text::{StyledText, colors};
 use crate::world::inventory::{self, Inventory};
+use melon_assets::assets::Assets;
 
 const IMAGE_WIDTH: f32 = 176.0;
 const IMAGE_HEIGHT: f32 = 166.0;
@@ -40,7 +38,7 @@ pub struct InventoryTextures {
 
 impl InventoryTextures {
     pub fn load(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
-        let background = assets.texture(renderer, "minecraft:gui/container/inventory.png")?;
+        let background = renderer.asset_texture(assets, "minecraft:gui/container/inventory.png")?;
         let mut load = |id: &str| GuiSprite::load(renderer, assets, id);
         Ok(Self {
             background,
@@ -213,12 +211,7 @@ impl InventoryOverlay {
     ) {
         let (width, height) = size;
         let layout = &self.layout;
-        crate::gui::background::push_transparent_background(
-            draw_list,
-            painter.white,
-            width,
-            height,
-        );
+        crate::background::push_transparent_background(draw_list, painter.white, width, height);
         draw_panel(draw_list, textures.background, &layout.menu);
         // Under a book that covers it, only `extractBackground`: panel and player.
         if self.book.covers_menu(width) {
@@ -433,8 +426,8 @@ impl Overlay for InventoryOverlay {
         })
     }
 
-    fn effects_panel(&self) -> Option<crate::gui::hud::effects::EffectsPanel> {
-        Some(crate::gui::hud::effects::EffectsPanel {
+    fn effects_panel(&self) -> Option<crate::hud::effects::EffectsPanel> {
+        Some(crate::hud::effects::EffectsPanel {
             left: self.layout.menu.left(),
             top: self.layout.menu.top(),
             width: IMAGE_WIDTH,

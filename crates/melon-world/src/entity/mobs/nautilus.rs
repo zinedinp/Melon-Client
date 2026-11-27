@@ -2,12 +2,12 @@
 
 use super::rounded;
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
-use crate::network::play::game::EquipmentSlot;
-use crate::world::entity::animations::nautilus::SWIMMING;
-use crate::world::entity::keyframe::{AnimationDefinition, KeyframeAnimation};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::animations::nautilus::SWIMMING;
+use crate::entity::keyframe::{AnimationDefinition, KeyframeAnimation};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::wire::EquipmentSlot;
+use crate::model_part::{Cube, Pose};
 
 /// The swimming animation, driven by the walk.
 pub static WALK_ANIMATION: &AnimationDefinition = &SWIMMING;

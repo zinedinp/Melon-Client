@@ -171,49 +171,6 @@ impl Cycle for SpeakerLayout {
     ];
 }
 
-/// `PrioritizeChunkUpdates`, the "Chunk Builder".
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum ChunkBuilder {
-    /// Threaded: never waited for.
-    #[default]
-    None = 0,
-    /// Semi Blocking: the player's own edits.
-    PlayerAffected = 1,
-    /// Fully Blocking: also every change near the camera.
-    Nearby = 2,
-}
-
-impl ChunkBuilder {
-    /// `LEGACY_CODEC`'s `ByIdMap.continuous(..., WRAP)`.
-    pub fn from_id(id: i64) -> Self {
-        match id.rem_euclid(3) {
-            1 => Self::PlayerAffected,
-            2 => Self::Nearby,
-            _ => Self::None,
-        }
-    }
-
-    pub fn key(self) -> &'static str {
-        match self {
-            Self::None => "options.prioritizeChunkUpdates.none",
-            Self::PlayerAffected => "options.prioritizeChunkUpdates.byPlayer",
-            Self::Nearby => "options.prioritizeChunkUpdates.nearby",
-        }
-    }
-
-    pub fn tooltip(self) -> &'static str {
-        match self {
-            Self::None => "options.prioritizeChunkUpdates.none.tooltip",
-            Self::PlayerAffected => "options.prioritizeChunkUpdates.byPlayer.tooltip",
-            Self::Nearby => "options.prioritizeChunkUpdates.nearby.tooltip",
-        }
-    }
-}
-
-impl Cycle for ChunkBuilder {
-    const ALL: &'static [Self] = &[Self::None, Self::PlayerAffected, Self::Nearby];
-}
-
 /// `GraphicsPreset`: sets the "Quality & Performance" options together;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum GraphicsPreset {
@@ -338,38 +295,6 @@ impl AttackIndicator {
 
 impl Cycle for AttackIndicator {
     const ALL: &'static [Self] = &[Self::Off, Self::Crosshair, Self::Hotbar];
-}
-
-/// `ParticleStatus`: how many particles show, by its `options.txt` id.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum ParticleStatus {
-    #[default]
-    All,
-    Decreased,
-    Minimal,
-}
-
-impl ParticleStatus {
-    /// `BY_ID` with `OutOfBoundsStrategy.WRAP`.
-    pub fn from_id(id: i64) -> Self {
-        Self::ALL[id.rem_euclid(Self::ALL.len() as i64) as usize]
-    }
-
-    pub fn id(self) -> u8 {
-        self as u8
-    }
-
-    pub fn caption_key(self) -> &'static str {
-        match self {
-            Self::All => "options.particles.all",
-            Self::Decreased => "options.particles.decreased",
-            Self::Minimal => "options.particles.minimal",
-        }
-    }
-}
-
-impl Cycle for ParticleStatus {
-    const ALL: &'static [Self] = &[Self::All, Self::Decreased, Self::Minimal];
 }
 
 /// `ChatVisiblity`, by its `options.txt` id.

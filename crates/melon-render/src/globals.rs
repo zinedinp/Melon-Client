@@ -252,7 +252,7 @@ mod tests {
     fn up_is_a_unit_vector_and_the_scales_undo_the_projection() {
         let view = Mat4::rot_x(-0.7) * Mat4::rot_y(2.0);
         assert!((up_in_view(&view).length() - 1.0).abs() < 1e-6);
-        let projection = crate::renderer::world_projection(90.0, 2.0, 100.0);
+        let projection = crate::world_projection(90.0, 2.0, 100.0);
         let [x, y] = inverse_scale(&projection);
         assert!((x - 2.0).abs() < 1e-5, "{x}");
         assert!((y.abs() - 1.0).abs() < 1e-5, "{y}");

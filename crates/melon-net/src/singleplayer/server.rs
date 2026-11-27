@@ -403,7 +403,7 @@ pub struct ClientPipe {
     tx: SyncIoBridge<WriteHalf<SimplexStream>>,
 }
 
-impl crate::network::Stream for ClientPipe {
+impl crate::Stream for ClientPipe {
     fn split(self: Box<Self>) -> io::Result<(Box<dyn Read + Send>, Box<dyn Write + Send>)> {
         Ok((Box::new(self.rx), Box::new(self.tx)))
     }
@@ -756,7 +756,7 @@ mod tests {
 
     #[test]
     fn speaks_the_clients_protocol() {
-        assert_eq!(PROTOCOL, crate::network::PROTOCOL_VERSION);
+        assert_eq!(PROTOCOL, crate::PROTOCOL_VERSION);
     }
 
     #[test]

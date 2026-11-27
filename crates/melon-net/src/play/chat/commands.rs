@@ -2,8 +2,8 @@
 
 use anyhow::{Result, bail};
 
-use crate::network::protocol::packet::Reader;
-use crate::network::protocol::reader::initial_capacity;
+use crate::protocol::packet::Reader;
+use crate::protocol::reader::initial_capacity;
 
 pub const CB_COMMANDS: i32 = pumpkin_data::packet::clientbound::play::COMMANDS.0;
 
@@ -455,7 +455,7 @@ impl CommandTree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::network::protocol::varint::write_var_int;
+    use crate::protocol::varint::write_var_int;
 
     fn node(
         buf: &mut Vec<u8>,
@@ -470,7 +470,7 @@ mod tests {
             write_var_int(buf, c).unwrap();
         }
         if let Some(name) = name {
-            crate::network::protocol::packet::write_string(buf, name).unwrap();
+            crate::protocol::packet::write_string(buf, name).unwrap();
         }
         if let Some(parser) = parser {
             write_var_int(buf, parser).unwrap();
@@ -607,21 +607,21 @@ mod tests {
         buf.extend([2]);
         write_var_int(&mut buf, 1).unwrap();
         write_var_int(&mut buf, 3).unwrap();
-        crate::network::protocol::packet::write_string(&mut buf, "targets").unwrap();
+        crate::protocol::packet::write_string(&mut buf, "targets").unwrap();
         write_var_int(&mut buf, 6).unwrap();
         buf.push(2);
         buf.push(2 | 4);
         write_var_int(&mut buf, 0).unwrap();
-        crate::network::protocol::packet::write_string(&mut buf, "enchantment").unwrap();
+        crate::protocol::packet::write_string(&mut buf, "enchantment").unwrap();
         write_var_int(&mut buf, 46).unwrap();
-        crate::network::protocol::packet::write_string(&mut buf, "minecraft:enchantment").unwrap();
+        crate::protocol::packet::write_string(&mut buf, "minecraft:enchantment").unwrap();
         node(&mut buf, 1, &[5], Some("tp"), None);
         buf.push(2 | 4 | HAS_SUGGESTION_TYPE);
         write_var_int(&mut buf, 0).unwrap();
-        crate::network::protocol::packet::write_string(&mut buf, "target").unwrap();
+        crate::protocol::packet::write_string(&mut buf, "target").unwrap();
         write_var_int(&mut buf, 6).unwrap();
         buf.push(1);
-        crate::network::protocol::packet::write_string(&mut buf, "minecraft:ask_server").unwrap();
+        crate::protocol::packet::write_string(&mut buf, "minecraft:ask_server").unwrap();
         write_var_int(&mut buf, 0).unwrap();
         let tree = CommandTree::decode(&buf).unwrap();
 

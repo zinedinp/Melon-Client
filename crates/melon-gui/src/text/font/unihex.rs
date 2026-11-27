@@ -64,8 +64,9 @@ impl Lazy {
     pub fn get(&self) -> Option<&Unihex> {
         self.loaded
             .get_or_init(|| {
-                let (namespace, path) = crate::assets::split_id(&self.file);
-                let Some(zip) = crate::assets::resource_top(&self.root, namespace, path) else {
+                let (namespace, path) = melon_assets::assets::split_id(&self.file);
+                let Some(zip) = melon_assets::assets::resource_top(&self.root, namespace, path)
+                else {
                     crate::warn!("hex file {} missing (launcher: Prepare)", self.file);
                     return None;
                 };
@@ -405,7 +406,8 @@ mod tests {
 
     #[test]
     fn the_real_unifont_loads_and_knows_chinese_japanese_and_korean() {
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/minecraft/font");
+        let root =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/minecraft/font");
         let Ok(zip) = std::fs::read(root.join("unifont.zip")) else {
             eprintln!("no unifont.zip (Launcher: Prepare): skipped");
             return;

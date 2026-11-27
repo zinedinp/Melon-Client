@@ -262,24 +262,24 @@ impl Entities {
     }
 
     /// Which swimmers are in water.
-    pub fn update_water(&mut self, level: &crate::world::level::Level) {
+    pub fn update_water(&mut self, level: &crate::level::Level) {
         for entity in self.by_id.values_mut() {
             if entity.kind == EntityKind::Boat {
                 let eye = entity.pos + DVec3::new(0.0, f64::from(entity.ty.eye_height), 0.0);
-                entity.in_water = crate::world::physics::fluid_at(
+                entity.in_water = crate::physics::fluid_at(
                     level,
                     eye.x.floor() as i32,
                     eye.y.floor() as i32,
                     eye.z.floor() as i32,
-                ) == Some(crate::world::fluid::FluidKind::Water);
+                ) == Some(crate::fluid::FluidKind::Water);
             } else if entity.kind.is_aquatic()
                 || (matches!(
                     entity.kind,
                     EntityKind::Player | EntityKind::Mannequin | EntityKind::Drowned
                 ) && (entity.swim_amount > 0.0 || entity.appearance.visually_swimming()))
             {
-                entity.in_water = crate::world::physics::touches_fluid(level, &entity.water_box())
-                    == Some(crate::world::fluid::FluidKind::Water);
+                entity.in_water = crate::physics::touches_fluid(level, &entity.water_box())
+                    == Some(crate::fluid::FluidKind::Water);
             } else {
                 entity.in_water = false;
             }

@@ -1,13 +1,13 @@
 //! `PiglinModel` and `ZombifiedPiglinModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
+use crate::entity::animation::{animate_crossbow_charge, animate_crossbow_hold, bob_arms};
+use crate::entity::humanoid::HumanoidParts;
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::player::Arm;
 use crate::math::angle::{self, PI};
-use crate::world::entity::animation::{animate_crossbow_charge, animate_crossbow_hold, bob_arms};
-use crate::world::entity::humanoid::HumanoidParts;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::player::Arm;
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `AdultPiglinModel.getDefaultEarAngleInDegrees` and the baby's.
 const ADULT_EAR_DEGREES: f32 = 30.0;
@@ -39,16 +39,12 @@ fn add_head(root: &mut PartDefinition) {
 
 /// `AdultPiglinModel.createBodyLayer`.
 pub fn armor() -> [LayerDefinition; 4] {
-    crate::world::entity::humanoid::armor_layers(
-        crate::world::entity::humanoid::base_armor_mesh,
-        0.5,
-        1.02,
-    )
+    crate::entity::humanoid::armor_layers(crate::entity::humanoid::base_armor_mesh, 0.5, 1.02)
 }
 
 /// `AbstractPiglinModel.createBabyArmorMeshSet`.
 pub fn baby_armor() -> [LayerDefinition; 4] {
-    crate::world::entity::humanoid::baby_armor_layers(
+    crate::entity::humanoid::baby_armor_layers(
         glam::Vec3::splat(0.7),
         glam::Vec3::splat(0.7),
         glam::Vec3::new(0.5, -0.5, 0.0),

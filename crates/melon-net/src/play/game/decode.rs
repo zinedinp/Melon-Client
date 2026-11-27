@@ -5,8 +5,8 @@ use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use super::id;
-use crate::network::protocol::packet::Reader;
-use crate::network::protocol::reader::initial_capacity;
+use crate::protocol::packet::Reader;
+use crate::protocol::reader::initial_capacity;
 use crate::world::border::BorderUpdate;
 use crate::world::clock::ClockUpdate;
 use crate::world::game_mode::GameMode;
@@ -175,9 +175,9 @@ pub enum GameEvent {
     PlayersRemoved(Vec<uuid::Uuid>),
     /// The scoreboard and the tab list's header and footer.
     Scores(super::scores::ScorePacket),
-    Chat(crate::network::play::chat::ChatEvent),
+    Chat(crate::play::chat::ChatEvent),
     /// `ClientboundCommandsPacket`: the commands this player may run.
-    Commands(crate::network::play::chat::commands::CommandTree),
+    Commands(crate::play::chat::commands::CommandTree),
     /// `ClientboundSetTimePacket`: game time and the 26.3 world clocks.
     Time {
         game_time: i64,
@@ -187,7 +187,7 @@ pub enum GameEvent {
     RainLevel(f32),
     ThunderLevel(f32),
     /// Spawning, moving, data, equipment and animations of any entity.
-    Entity(super::entity::EntityPacket),
+    Entity(crate::world::entity::wire::EntityPacket),
     /// `ClientboundUpdateMobEffectPacket`.
     MobEffect {
         entity_id: i32,
@@ -313,7 +313,7 @@ fn read_player_info(r: &mut Reader) -> Result<Vec<PlayerInfoUpdate>> {
 /// Decodes `pid` if it is one of the packets above.
 pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
     let mut r = Reader::new(body);
-    if let Some(packet) = super::entity::decode(pid, &mut r)? {
+    if let Some(packet) = crate::world::entity::wire::decode(pid, &mut r)? {
         return Ok(Some(GameEvent::Entity(packet)));
     }
     if let Some(event) = super::recipes::decode(pid, &mut r)? {
@@ -453,7 +453,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
         }
         id::CB_UPDATE_MOB_EFFECT => {
             let (entity_id, effect, amplifier, duration, flags) =
-                super::entity::read_update_effect(&mut r)?;
+                crate::world::entity::wire::read_update_effect(&mut r)?;
             GameEvent::MobEffect {
                 entity_id,
                 effect,
@@ -463,7 +463,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
             }
         }
         id::CB_REMOVE_MOB_EFFECT => {
-            let (entity_id, effect) = super::entity::read_remove_effect(&mut r)?;
+            let (entity_id, effect) = crate::world::entity::wire::read_remove_effect(&mut r)?;
             GameEvent::RemoveMobEffect { entity_id, effect }
         }
         id::CB_SET_ENTITY_MOTION => {
@@ -527,7 +527,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
                 pos,
                 head: tag
                     .as_ref()
-                    .and_then(crate::network::play::level::chunk::head_of_tag),
+                    .and_then(crate::play::level::chunk::head_of_tag),
             }
         }
         id::CB_BLOCK_EVENT => GameEvent::BlockEvent {
@@ -545,7 +545,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
             let event = r.u8()?;
             if !(24..=28).contains(&event) {
                 return Ok(Some(GameEvent::Entity(
-                    super::entity::EntityPacket::Event {
+                    crate::world::entity::wire::EntityPacket::Event {
                         id: entity_id,
                         event,
                     },
@@ -563,8 +563,8 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
                 return Ok(None);
             }
         },
-        crate::network::play::chat::commands::CB_COMMANDS => {
-            match crate::network::play::chat::commands::CommandTree::decode(body) {
+        crate::play::chat::commands::CB_COMMANDS => {
+            match crate::play::chat::commands::CommandTree::decode(body) {
                 Ok(tree) => GameEvent::Commands(tree),
                 Err(e) => {
                     crate::warn!("Command tree unreadable: {e:#}");
@@ -606,7 +606,7 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
                     return Ok(None);
                 }
             }
-            return Ok(match crate::network::play::chat::decode(pid, body) {
+            return Ok(match crate::play::chat::decode(pid, body) {
                 Ok(event) => event.map(GameEvent::Chat),
                 Err(e) => {
                     crate::warn!("Chat packet {pid} unreadable: {e:#}");
@@ -775,7 +775,7 @@ mod block_packet_tests {
         use pumpkin_util::math::vector3::Vector3;
         let pos = BlockPos(Vector3::new(-1234, -60, 98765));
         assert_eq!(
-            crate::network::protocol::reader::unpack_block_pos(pos.as_long()),
+            crate::protocol::reader::unpack_block_pos(pos.as_long()),
             [-1234, -60, 98765]
         );
 
@@ -846,7 +846,7 @@ mod block_packet_tests {
 
     #[test]
     fn shared_flags_packet_reads_the_local_fire_bit() {
-        use super::super::entity::{EntityFlags, EntityPacket};
+        use crate::world::entity::wire::{EntityFlags, EntityPacket};
         let mut body = vec![1];
         body.extend_from_slice(&[0, 0, 1, 0xFF]);
         let Some(GameEvent::Entity(EntityPacket::Data { id, values })) =

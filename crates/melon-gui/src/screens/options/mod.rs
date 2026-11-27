@@ -12,25 +12,23 @@ pub mod skin;
 pub mod sounds;
 pub mod video;
 
-use crate::gui::screen::{
-    ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext, TextEvent,
-};
-use crate::gui::screens::menu::placeholder::placeholder_screen;
-use crate::gui::screens::options::accessibility::accessibility_options_screen;
-use crate::gui::screens::options::chat::chat_options_screen;
-use crate::gui::screens::options::controls::controls_screen;
-use crate::gui::screens::options::language::LanguageScreen;
-use crate::gui::screens::options::melon::melon_settings_screen;
-use crate::gui::screens::options::skin::skin_customization_screen;
-use crate::gui::screens::options::sounds::sound_options_screen;
-use crate::gui::screens::options::video::video_settings_screen;
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, WIDE_BUTTON_W};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
-use crate::gui::widgets::slider::Slider;
-use crate::gui::widgets::{Ui, Widget};
 use crate::i18n::Lang;
+use crate::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::screens::menu::placeholder::placeholder_screen;
+use crate::screens::options::accessibility::accessibility_options_screen;
+use crate::screens::options::chat::chat_options_screen;
+use crate::screens::options::controls::controls_screen;
+use crate::screens::options::language::LanguageScreen;
+use crate::screens::options::melon::melon_settings_screen;
+use crate::screens::options::skin::skin_customization_screen;
+use crate::screens::options::sounds::sound_options_screen;
+use crate::screens::options::video::video_settings_screen;
 use crate::settings::options::{self, Config};
+use crate::widgets::button::Button;
+use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, WIDE_BUTTON_W};
+use crate::widgets::set::{KeyResult, WidgetSet};
+use crate::widgets::slider::Slider;
+use crate::widgets::{Ui, Widget};
 
 /// `OptionsScreen`'s `HeaderAndFooterLayout(this, 61, 33)`.
 const LAYOUT: HeaderFooter = HeaderFooter::new(61.0, 33.0);
@@ -214,7 +212,7 @@ impl OptionsScreen {
             SubMenu::Sounds => ScreenAction::open(sound_options_screen(ctx)),
             SubMenu::Melon => ScreenAction::open(melon_settings_screen(ctx)),
             SubMenu::ResourcePacks => {
-                ScreenAction::open(crate::gui::screens::packs::PackSelectionScreen::new(ctx))
+                ScreenAction::open(crate::screens::packs::PackSelectionScreen::new(ctx))
             }
             SubMenu::Placeholder => ScreenAction::open(placeholder_screen(key)),
         }

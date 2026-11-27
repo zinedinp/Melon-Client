@@ -16,6 +16,15 @@ impl Renderer {
         self.textures.white
     }
 
+    /// The texture `identifier` (`namespace:path` under `textures/`) from the active packs, uploaded.
+    pub fn asset_texture(
+        &mut self,
+        assets: &crate::assets::Assets,
+        identifier: &str,
+    ) -> anyhow::Result<TextureId> {
+        self.load_texture(&assets.image(identifier)?)
+    }
+
     pub fn load_texture(&mut self, rgba: &RgbaImage) -> anyhow::Result<TextureId> {
         // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
         let made = unsafe {

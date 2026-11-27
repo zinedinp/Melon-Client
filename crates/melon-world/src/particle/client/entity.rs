@@ -3,7 +3,7 @@
 use glam::DVec3;
 
 use super::super::{Kind, ParticleSpec, Spawn};
-use crate::world::java_random::JavaRandom;
+use crate::java_random::JavaRandom;
 
 /// `spawnSprintParticle`: one crumb of the block underfoot, kicked back.
 pub fn sprint_dust(
@@ -97,13 +97,13 @@ pub fn item_crumbs(
 }
 
 /// `Vec3.xRot`.
-pub(crate) fn x_rot(v: DVec3, angle: f32) -> DVec3 {
+pub fn x_rot(v: DVec3, angle: f32) -> DVec3 {
     let (s, c) = (f64::from(angle.sin()), f64::from(angle.cos()));
     DVec3::new(v.x, v.y * c + v.z * s, v.z * c - v.y * s)
 }
 
 /// `Vec3.yRot`.
-pub(crate) fn y_rot(v: DVec3, angle: f32) -> DVec3 {
+pub fn y_rot(v: DVec3, angle: f32) -> DVec3 {
     let (s, c) = (f64::from(angle.sin()), f64::from(angle.cos()));
     DVec3::new(v.x * c + v.z * s, v.y, v.z * c - v.x * s)
 }

@@ -3,12 +3,12 @@
 use super::PlayerState;
 use super::first_person;
 use super::hands::ItemUse;
+use crate::entity::humanoid::{ArmPose, HumanoidRenderState, SwingPose};
+use crate::entity::living::{Swim, SwimTurn};
+use crate::entity::player::{Arm, AvatarRenderState, ShownParts};
 use crate::math::angle::{self, PI, Rotation};
 use crate::math::euler::{self, Look};
 use crate::math::wrap_degrees;
-use crate::world::entity::humanoid::{ArmPose, HumanoidRenderState, SwingPose};
-use crate::world::entity::living::{Swim, SwimTurn};
-use crate::world::entity::player::{Arm, AvatarRenderState, ShownParts};
 use glam::{DVec3, Mat4, Vec3};
 
 impl PlayerState {
@@ -28,7 +28,7 @@ impl PlayerState {
     /// `Player.getRopeHoldPosition`.
     pub fn rope_hold(&self, main_arm: Arm) -> Vec3 {
         let height = self.box_height() as f32;
-        crate::world::entity::leash::player_hold(
+        crate::entity::leash::player_hold(
             self.pos.as_vec3(),
             self.yaw_degrees + 180.0,
             main_arm == Arm::Right,
@@ -39,7 +39,7 @@ impl PlayerState {
 
     /// Where the fishing line leaves the hand in a view that isn't first person.
     pub fn rod_hand(&self, right: bool) -> Vec3 {
-        crate::world::entity::fishing::hand_third_person(
+        crate::entity::fishing::hand_third_person(
             self.eye().as_vec3(),
             self.yaw_degrees + 180.0,
             right,
@@ -91,7 +91,7 @@ impl PlayerState {
     ) -> AvatarRenderState {
         let (body_yaw, head_turn) = match self.ride_body.filter(|_| self.riding) {
             Some((before, now)) => {
-                let mount = crate::world::entity::living::rot_lerp(self.partial, before, now);
+                let mount = crate::entity::living::rot_lerp(self.partial, before, now);
                 let turn = crate::math::wrap_degrees(self.yaw_degrees - mount).clamp(-85.0, 85.0);
                 let body =
                     self.yaw_degrees - turn + if turn.abs() > 50.0 { turn * 0.2 } else { 0.0 };

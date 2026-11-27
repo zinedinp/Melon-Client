@@ -29,3 +29,4 @@ pub mod ride;
 pub mod skull;
 pub mod tracker;
 pub mod walk;
+pub mod wire;

@@ -131,7 +131,7 @@ fn terrain(
     let mut p = Particle::moving(kind, pos, aux, rng);
     p.gravity = 1.0;
     let mut rgb = look.rgb.map(|c| c * 0.6);
-    if look.tint != crate::world::block_tint::TintKind::None {
+    if look.tint != crate::block_tint::TintKind::None {
         let at = pos.floor().as_ivec3();
         let c = ctx.level.tint_at(look.tint, [at.x, at.y, at.z]);
         for (out, c) in rgb.iter_mut().zip(c) {
@@ -179,7 +179,7 @@ fn dust_color(ctx: &TickCtx, state: u16, at: [i32; 3]) -> [f32; 3] {
     if let Some(look) = ctx.blocks.and_then(|m| m.particle_look(state))
         && look.tint_source
     {
-        if look.tint == crate::world::block_tint::TintKind::None {
+        if look.tint == crate::block_tint::TintKind::None {
             return look.rgb;
         }
         let [r, g, b] = ctx.level.tint_at(look.tint, at);
@@ -187,5 +187,5 @@ fn dust_color(ctx: &TickCtx, state: u16, at: [i32; 3]) -> [f32; 3] {
     }
     let map = pumpkin_data::BlockStateId::new(state)
         .map_or(0, |id| pumpkin_data::Block::from_state_id(id).map_color);
-    rgb_of(crate::world::map_color::rgb(map))
+    rgb_of(crate::map_color::rgb(map))
 }

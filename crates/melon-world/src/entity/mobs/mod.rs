@@ -90,7 +90,7 @@ use super::model::{LayerDefinition, Model, ModelPose, PartId};
 use super::player::Arm;
 use super::quadruped::{self, QuadrupedParts};
 use super::tracker::{ClientEntity, Equipment};
-use crate::network::play::game::EquipmentSlot;
+use crate::entity::wire::EquipmentSlot;
 
 /// Every baked mob model.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -1510,8 +1510,8 @@ impl MobModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::living;
-    use crate::world::entity::magic_name::Magic;
+    use crate::entity::living;
+    use crate::entity::magic_name::Magic;
     use pumpkin_data::entity::EntityType;
     use pumpkin_data::item_stack::ItemStack;
 
@@ -1525,10 +1525,7 @@ mod tests {
         let mut hi = f32::MIN;
         for (i, m) in matrices.iter().enumerate() {
             let Some(m) = m else { continue };
-            for v in mob
-                .model
-                .part_vertices(crate::world::entity::model::PartId(i))
-            {
+            for v in mob.model.part_vertices(crate::entity::model::PartId(i)) {
                 let y = m.transform_point3(Vec3::from_array(v.pos)).y;
                 lo = lo.min(y);
                 hi = hi.max(y);
@@ -1538,7 +1535,7 @@ mod tests {
     }
 
     fn spawned(ty: &EntityType) -> ClientEntity {
-        ClientEntity::spawn(&crate::network::play::game::AddEntity {
+        ClientEntity::spawn(&crate::entity::wire::AddEntity {
             id: 1,
             uuid: uuid::Uuid::nil(),
             kind: i32::from(ty.id),
@@ -1717,7 +1714,7 @@ mod tests {
 
     #[test]
     fn a_llama_wears_its_carpet_and_a_trader_its_blanket_only_without_one() {
-        use crate::network::play::game::EquipmentSlot;
+        use crate::entity::wire::EquipmentSlot;
         use pumpkin_data::item::Item;
 
         let decor = |entity: &ClientEntity| {
@@ -1784,7 +1781,7 @@ mod tests {
 
     #[test]
     fn a_nautilus_wears_armor_and_a_zombie_nautilus_a_saddle() {
-        use crate::network::play::game::EquipmentSlot;
+        use crate::entity::wire::EquipmentSlot;
         use pumpkin_data::item::Item;
 
         let mut nautilus = spawned(&EntityType::ZOMBIE_NAUTILUS);
@@ -1928,7 +1925,7 @@ mod tests {
 
     #[test]
     fn a_saddle_wolf_armor_horse_armor_and_harness_are_equipment_layers() {
-        use crate::network::play::game::EquipmentSlot;
+        use crate::entity::wire::EquipmentSlot;
         use pumpkin_data::item::Item;
 
         let mut pig = spawned(&EntityType::PIG);
@@ -2183,7 +2180,7 @@ mod tests {
             let rest = mob.pose(&PoseInput::default());
             let walking = mob.pose(&input);
             let moved = (0..mob.model.len()).any(|i| {
-                let p = crate::world::entity::model::PartId(i);
+                let p = crate::entity::model::PartId(i);
                 (walking[p].pose.rotation - rest[p].pose.rotation).length() > 0.1
             });
             assert!(moved, "{id:?} doesn't walk");

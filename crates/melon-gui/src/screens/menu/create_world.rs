@@ -1,25 +1,25 @@
 //! Vanilla `CreateWorldScreen`.
 
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::screens::menu::connecting::ConnectingScreen;
-use crate::gui::screens::menu::experiments::ExperimentsScreen;
-use crate::gui::screens::menu::game_rules::GameRulesScreen;
-use crate::gui::screens::options::{on_off_label, value_label};
-use crate::gui::screens::packs::PackSelectionScreen;
-use crate::gui::text::font::LINE_HEIGHT;
-use crate::gui::widgets::Ui;
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
-use crate::gui::widgets::tab_bar::{self, TabBar};
 use crate::i18n::Lang;
 use crate::join::Target;
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::screens::menu::connecting::ConnectingScreen;
+use crate::screens::menu::experiments::ExperimentsScreen;
+use crate::screens::menu::game_rules::GameRulesScreen;
+use crate::screens::options::{on_off_label, value_label};
+use crate::screens::packs::PackSelectionScreen;
 use crate::singleplayer::creation::{CreationState, GAME_MODES};
 use crate::singleplayer::rules::{self, Changes};
 use crate::singleplayer::{
     self, Difficulty, WorldCreationMode, WorldEntry, WorldSettings, WorldType, data_packs,
 };
+use crate::text::font::LINE_HEIGHT;
+use crate::widgets::Ui;
+use crate::widgets::button::Button;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
+use crate::widgets::set::{KeyResult, WidgetSet};
+use crate::widgets::tab_bar::{self, TabBar};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -625,7 +625,7 @@ impl Screen for CreateWorldScreen {
     }
 
     fn draw(&self, ui: &mut Ui, ctx: &ScreenContext) {
-        crate::gui::background::push_menu_overlay_rect(
+        crate::background::push_menu_overlay_rect(
             ui.draw_list,
             ui.assets.white,
             0.0,

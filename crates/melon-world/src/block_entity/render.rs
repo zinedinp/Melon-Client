@@ -6,14 +6,14 @@ use super::{
     Anim, BANNER_BASE, BANNER_SPRITES, BELL_BODY, BOOK, BlockEntities, Book, CONDUIT_SHELL,
     END_PORTAL, Kind, POT_BASE, POT_SIDE, Placement, VIEW_DISTANCE, kind_of, models, wrap_radians,
 };
+use crate::block::direction::Direction;
+use crate::block_models::BlockModels;
+use crate::culling::Culler;
+use crate::entity::skull;
+use crate::level::Level;
 use crate::math::angle::{self, HALF_PI, PI, Rotation, TAU};
-use crate::renderer::WorldVertex as Vertex;
-use crate::world::block::direction::Direction;
-use crate::world::block_models::BlockModels;
-use crate::world::culling::Culler;
-use crate::world::entity::skull;
-use crate::world::level::Level;
-use crate::world::model_part::{Sprite, emit};
+use crate::mesh::WorldVertex as Vertex;
+use crate::model_part::{Sprite, emit};
 use glam::{DVec3, Mat4, Vec2, Vec3};
 
 /// `BuiltInBlockModels`' special models of a block drawn away from its
@@ -444,7 +444,7 @@ pub(super) fn end_cube(min: Vec3, gateway: bool, rect: [f32; 4], out: &mut Vec<V
     let color = [0.35, 0.35, 0.45];
     let mut quad = |corners: [Vec3; 4]| {
         let corners = std::array::from_fn(|i| ((min + corners[i]).to_array(), uv[i]));
-        crate::world::geometry::push_quad(out, corners, color, false);
+        crate::geometry::push_quad(out, corners, color, false);
     };
     let v = Vec3::new;
     quad([

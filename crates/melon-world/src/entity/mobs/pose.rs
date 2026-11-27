@@ -324,7 +324,7 @@ pub fn pose_input(entity: &ClientEntity, partial: f32) -> PoseInput {
 
 /// From model space to the world.
 pub fn root(entity: &ClientEntity, input: &PoseInput, partial: f32) -> glam::Mat4 {
-    use crate::world::entity::living;
+    use crate::entity::living;
     let position = input.living.position;
     match entity.kind {
         EntityKind::Boat => vehicle::boat_root(

@@ -1,6 +1,6 @@
 //! `Interaction` entities.
 
-use crate::network::play::game::DataValue;
+use crate::entity::wire::DataValue;
 
 /// `Interaction.DATA_*`: the entity data indices after `Entity`'s 0-7.
 mod index {

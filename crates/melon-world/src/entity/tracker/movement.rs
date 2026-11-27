@@ -1,7 +1,7 @@
 //! Where a tracked entity is.
 
 use super::*;
-use crate::world::fluid::FluidKind;
+use crate::fluid::FluidKind;
 
 /// How a projectile moves itself each tick, on the client as on the server
 /// (`Projectile.getMoveSimulationType` is `SERVER_AND_CLIENT`).
@@ -253,12 +253,8 @@ impl ClientEntity {
         self.move_by_velocity(level);
         let mut friction = AIR_DRAG;
         if self.on_ground {
-            let block = crate::world::block_motion::block_on(
-                level,
-                self.pos,
-                self.support.block,
-                0.999_999,
-            );
+            let block =
+                crate::block_motion::block_on(level, self.pos, self.support.block, 0.999_999);
             friction = block.slipperiness * 0.98;
         }
         let friction = f64::from(friction);
@@ -297,21 +293,20 @@ impl ClientEntity {
     }
 
     pub(super) fn block_speed_factor(&self, level: &Level) -> f32 {
-        crate::world::block_motion::factor(
+        crate::block_motion::factor(
             level,
             self.pos,
             self.support.block,
             true,
-            crate::world::block_motion::speed_multiplier,
+            crate::block_motion::speed_multiplier,
         )
     }
 
     /// `Entity.restituteMovementAfterCollisions` for a non-living entity.
     pub(super) fn restitute(&mut self, level: &Level, hits: [bool; 3], moved_y: f64) {
-        let landed_on = (hits[2] && self.on_ground).then(|| {
-            crate::world::block_motion::block_underfoot(level, self.pos, self.support.block)
-        });
-        self.velocity = crate::world::block_motion::restituted(
+        let landed_on = (hits[2] && self.on_ground)
+            .then(|| crate::block_motion::block_underfoot(level, self.pos, self.support.block));
+        self.velocity = crate::block_motion::restituted(
             self.velocity,
             moved_y,
             hits,
@@ -401,7 +396,7 @@ impl ClientEntity {
                 self.pitch = lerp_rotation(self.pitch, pitch);
                 self.yaw = lerp_rotation(self.yaw, yaw);
                 let end = self.pos + movement;
-                self.pos = crate::world::pick::clip_colliders(level, self.pos, end).unwrap_or(end);
+                self.pos = crate::pick::clip_colliders(level, self.pos, end).unwrap_or(end);
                 if !in_water {
                     self.velocity *= f64::from(0.99f32);
                 }
@@ -414,7 +409,7 @@ impl ClientEntity {
     /// the velocity, or up to the block in the way.
     fn step_or_stop(&mut self, level: &Level) {
         let end = self.pos + self.velocity;
-        self.pos = crate::world::pick::clip_colliders(level, self.pos, end).unwrap_or(end);
+        self.pos = crate::pick::clip_colliders(level, self.pos, end).unwrap_or(end);
     }
 
     /// `Projectile.updateRotation`: a fifth of the way to facing its

@@ -2,9 +2,9 @@
 
 use glam::Vec3;
 
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, dye_tint};
 use crate::math::angle::QUARTER_PI as Q;

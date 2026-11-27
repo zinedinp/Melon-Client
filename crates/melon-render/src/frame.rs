@@ -4,7 +4,7 @@ use glam::Mat4;
 use numerobis::elem::Pod;
 
 use super::quad::DrawList;
-use super::{CubeMapId, IndexMeshId, MeshId, ParticleMeshId, QuadMeshId, TextureId};
+use super::{CubeMapId, IndexMeshId, MeshId, ParticleMeshId, QuadMeshId, TextureId, WorldVertex};
 
 /// One frame: scene first, then UI on top.
 pub struct Frame<'a> {
@@ -126,7 +126,7 @@ pub struct EntityDraw {
     pub blend: Blending,
     /// The light on this draw (`EntityRenderer.getPackedLightCoords` at the entity).
     pub light: Option<[f32; 3]>,
-    /// Hurt red or creeper white, see [`DrawLight::overlay`](crate::renderer::pipeline::world::DrawLight::overlay).
+    /// Hurt red or creeper white, see [`DrawLight::overlay`](crate::pipeline::world::DrawLight::overlay).
     pub overlay: f32,
     /// Enchantment glint overlay (`ItemStack.hasFoil`).
     pub glint: Glint,
@@ -370,11 +370,11 @@ impl WorldDraw {
     }
 
     /// This frame's light for a world draw, with `ambient` for its sentinel-lit vertices.
-    pub fn light(&self, ambient: [f32; 4]) -> crate::renderer::pipeline::world::DrawLight {
-        crate::renderer::pipeline::world::DrawLight {
+    pub fn light(&self, ambient: [f32; 4]) -> crate::pipeline::world::DrawLight {
+        crate::pipeline::world::DrawLight {
             ambient,
             lightmap: self.lightmap,
-            fog: crate::renderer::pipeline::world::FogInput::None,
+            fog: crate::pipeline::world::FogInput::None,
             overlay: 0.0,
             glint_scale: 0.0,
             scroll: None,
@@ -428,295 +428,6 @@ pub enum TerrainMesh {
         vertices: MeshId,
         indices: IndexMeshId,
     },
-}
-
-/// Light and ambient occlusion at one corner of a [`TerrainQuad`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct CornerLight {
-    pub block: u8,
-    pub sky: u8,
-    pub ao: u8,
-}
-
-impl CornerLight {
-    /// Quarter levels in a whole level.
-    pub const STEPS_PER_LEVEL: u8 = 4;
-    /// AO's unit: `ao / 60`.
-    pub const AO_ONE: u8 = 60;
-
-    /// Whole light levels `0..=15`, no occlusion: flat lighting.
-    pub fn flat(block: u8, sky: u8) -> Self {
-        Self {
-            block: block.min(15) * Self::STEPS_PER_LEVEL,
-            sky: sky.min(15) * Self::STEPS_PER_LEVEL,
-            ao: Self::AO_ONE,
-        }
-    }
-}
-
-/// One block face of a terrain mesh.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct TerrainQuad(pub [u32; 5]);
-
-impl TerrainQuad {
-    /// Quads the 21-bit index reaches.
-    pub const MAX_QUADS: u32 = 1 << 21;
-    /// Block heights the 12-bit y reaches.
-    pub const MAX_HEIGHT: u32 = 1 << 12;
-
-    /// `index` into the quad table; `pos` chunk-local x, z (`0..16`) and y.
-    #[inline]
-    pub fn new(index: u32, [x, y, z]: [u32; 3], corners: [CornerLight; 4], offset: u16) -> Self {
-        debug_assert!(index < Self::MAX_QUADS && x < 16 && z < 16 && y < Self::MAX_HEIGHT);
-        let light = |c: CornerLight| u32::from(c.block.min(60)) | u32::from(c.sky.min(60)) << 6;
-        let ao = corners
-            .iter()
-            .enumerate()
-            .fold(0u32, |ao, (i, c)| ao | u32::from(c.ao.min(60)) << (6 * i));
-        let offset = u32::from(offset);
-        Self([
-            index | (offset >> 12) << 21 | (ao & 0xFF) << 24,
-            x | z << 4 | y << 8 | (offset & 0xFFF) << 20,
-            light(corners[0]) | light(corners[1]) << 12 | (ao >> 8 & 0xFF) << 24,
-            light(corners[2]) | light(corners[3]) << 12 | (ao >> 16) << 24,
-            u32::from_le_bytes([255, 255, 255, 255]),
-        ])
-    }
-
-    /// [`Self::new`] with a biome colour the shader multiplies onto the shade.
-    pub fn tinted(
-        index: u32,
-        pos: [u32; 3],
-        corners: [CornerLight; 4],
-        offset: u16,
-        tint: [u8; 3],
-    ) -> Self {
-        let mut quad = Self::new(index, pos, corners, offset);
-        quad.0[4] = u32::from_le_bytes([tint[0], tint[1], tint[2], 255]);
-        quad
-    }
-
-    /// RGB the shader multiplies onto the baked shade.
-    pub fn tint(self) -> [u8; 3] {
-        let [r, g, b, _] = self.0[4].to_le_bytes();
-        [r, g, b]
-    }
-
-    pub fn index(self) -> u32 {
-        self.0[0] & (Self::MAX_QUADS - 1)
-    }
-
-    /// Light and occlusion at corner `i` (`0..4`).
-    pub fn corner(self, i: usize) -> CornerLight {
-        let light = self.0[2 + i / 2] >> (12 * (i % 2)) & 0xFFF;
-        let ao = (self.0[0] >> 24 | (self.0[2] >> 24) << 8 | (self.0[3] >> 24) << 16) >> (6 * i);
-        CornerLight {
-            block: (light & 63) as u8,
-            sky: (light >> 6 & 63) as u8,
-            ao: (ao & 63) as u8,
-        }
-    }
-
-    /// Chunk-local x, y above the base, z.
-    pub fn block(self) -> [u32; 3] {
-        let w = self.0[1];
-        [w & 15, w >> 8 & 0xFFF, w >> 4 & 15]
-    }
-
-    /// What [`Self::new`] got as `offset`.
-    pub fn offset(self) -> u16 {
-        ((self.0[0] >> 21 & 7) << 12 | self.0[1] >> 20) as u16
-    }
-}
-
-const _: () = assert!(std::mem::size_of::<TerrainQuad>() == 20);
-// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
-unsafe impl Pod for TerrainQuad {}
-
-/// One vertex of a terrain or entity mesh.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct WorldVertex {
-    pub pos: [f32; 3],
-    /// Atlas or wrapping weather UV.
-    pub uv: [f32; 2],
-    /// RGB as unsigned normalized bytes; alpha is 255 for terrain.
-    pub color: [u8; 4],
-    /// Block then sky in vanilla's light-coordinate units (`UV2`).
-    pub light: [u8; 2],
-    /// The direction (`Direction` ordinal, `0..6`) a baked block quad's shade was taken for.
-    pub face: u8,
-    pub _pad: u8,
-}
-
-impl WorldVertex {
-    /// Above any light coordinate (240): the shader takes `pc.ambient`.
-    pub const SENTINEL_LIGHT: [u8; 2] = [255, 255];
-
-    pub fn new(pos: [f32; 3], uv: [f32; 2], color: [f32; 3]) -> Self {
-        let unorm8 = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
-        Self {
-            pos,
-            uv,
-            color: [unorm8(color[0]), unorm8(color[1]), unorm8(color[2]), 255],
-            light: Self::SENTINEL_LIGHT,
-            face: 0,
-            _pad: 0,
-        }
-    }
-
-    /// [`Self::new`] with an alpha other than opaque.
-    pub fn rgba(pos: [f32; 3], uv: [f32; 2], color: [f32; 4]) -> Self {
-        let mut v = Self::new(pos, uv, [color[0], color[1], color[2]]);
-        v.color[3] = (color[3].clamp(0.0, 1.0) * 255.0).round() as u8;
-        v
-    }
-
-    /// [`Self::rgba`] with the colour already as bytes (a GUI [`Vertex`](super::quad::Vertex)'s).
-    pub fn rgba8(pos: [f32; 3], uv: [f32; 2], color: [u8; 4]) -> Self {
-        Self {
-            color,
-            ..Self::new(pos, uv, [1.0; 3])
-        }
-    }
-
-    /// The direction its shade was taken for.
-    pub fn with_face(mut self, face: u8) -> Self {
-        self.face = face;
-        self
-    }
-
-    /// Block and sky light levels `0..=15`.
-    pub fn with_light(mut self, block: u8, sky: u8) -> Self {
-        self.light = [block.min(15) << 4, sky.min(15) << 4];
-        self
-    }
-
-    /// The quad of a line from `a` to `b`, `width` pixels wide on screen,
-    /// for `shaders/lines.vert` (vanilla `RenderPipelines.LINES`): two
-    /// vertices at each end, one per side. They carry the line's direction
-    /// in `uv` (octahedron-encoded), the width in sixteenths of a pixel in
-    /// `light` and the side in `face`. `None` for a line of no length.
-    pub fn line(a: glam::Vec3, b: glam::Vec3, color: [f32; 4], width: f32) -> Option<[Self; 4]> {
-        let dir = (b - a).try_normalize()?;
-        let at = |pos: glam::Vec3, corner: u8| Self::line_corner(pos, dir, color, width, corner);
-        Some([at(a, 0), at(a, 1), at(b, 1), at(b, 0)])
-    }
-
-    /// A square `size` pixels wide on screen around `at`, for
-    /// `shaders/lines.vert` (vanilla `core/debug_point.vsh`'s points).
-    pub fn point(at: glam::Vec3, color: [f32; 4], size: f32) -> [Self; 4] {
-        [2, 3, 4, 5].map(|corner| Self::line_corner(at, glam::Vec3::X, color, size, corner))
-    }
-
-    fn line_corner(
-        pos: glam::Vec3,
-        dir: glam::Vec3,
-        color: [f32; 4],
-        width: f32,
-        corner: u8,
-    ) -> Self {
-        let sixteenths = (width.max(0.0) * 16.0).round().min(f32::from(u16::MAX)) as u16;
-        let mut v = Self::rgba(pos.to_array(), octahedron_encode(dir), color);
-        v.light = sixteenths.to_le_bytes();
-        v.face = corner;
-        v
-    }
-}
-
-/// A unit vector as a point of the octahedron's square, `-1..=1` each;
-/// `shaders/lines.vert` decodes it.
-fn octahedron_encode(v: glam::Vec3) -> [f32; 2] {
-    let v = v / (v.x.abs() + v.y.abs() + v.z.abs());
-    if v.z >= 0.0 {
-        [v.x, v.y]
-    } else {
-        let sign = |x: f32| if x >= 0.0 { 1.0 } else { -1.0 };
-        [(1.0 - v.y.abs()) * sign(v.x), (1.0 - v.x.abs()) * sign(v.y)]
-    }
-}
-
-const _: () = assert!(std::mem::size_of::<WorldVertex>() == 28);
-// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
-unsafe impl Pod for WorldVertex {}
-
-/// One particle quad, read per instance by `shaders/particle.vert`: corners
-/// at `center ± right ± up`. The axes are the quad's own, so F16 is exact enough.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ParticleQuad {
-    /// Relative to the draw's block.
-    pub center: [f32; 3],
-    /// F16 bits: `right` then `up`, half the quad's width and height.
-    pub axes: [u16; 6],
-    /// `[u0, v0, u1, v1]` as UNORM16: `u1, v1` at `-right - up`.
-    pub uv: [u16; 4],
-    pub color: [u8; 4],
-    /// Block then sky in vanilla's light-coordinate units (`UV2`).
-    pub light: [u8; 2],
-    pub _pad: [u8; 2],
-}
-
-const _: () = assert!(std::mem::size_of::<ParticleQuad>() == 40);
-// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
-unsafe impl Pod for ParticleQuad {}
-
-impl ParticleQuad {
-    /// A quad without its axes, which [`Self::encode_axes`] fills in.
-    pub fn new(
-        center: [f32; 3],
-        [u0, v0, u1, v1]: [f32; 4],
-        rgba: [f32; 4],
-        light: [u8; 2],
-    ) -> Self {
-        let (u0, u1) = unorm16_inward(u0, u1);
-        let (v0, v1) = unorm16_inward(v0, v1);
-        // `+ 0.5` and a cast: x86-64 has no inline `round` before SSE4.1.
-        let unorm8 = |v: f32| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
-        Self {
-            center,
-            axes: [0; 6],
-            uv: [u0, v0, u1, v1],
-            color: rgba.map(unorm8),
-            light,
-            _pad: [0; 2],
-        }
-    }
-
-    /// Writes `axes` (six per quad: right, then up) into `quads` as F16.
-    /// `scratch` keeps its memory for the next call.
-    pub fn encode_axes(quads: &mut [Self], axes: &[f32], scratch: &mut Vec<u16>) {
-        use miraculix::formats::{MiniFloat, Overflow};
-        debug_assert_eq!(axes.len(), quads.len() * 6);
-        scratch.clear();
-        scratch.resize(axes.len(), 0);
-        MiniFloat::F16.encode_u16_slice(axes, scratch, Overflow::Special);
-        for (quad, bits) in quads.iter_mut().zip(scratch.as_chunks::<6>().0) {
-            quad.axes = *bits;
-        }
-    }
-}
-
-/// A texture's edge pair `a`, `b` as UNORM16, each rounded toward the
-/// other: a quad never samples past its sprite into the next one.
-fn unorm16_inward(a: f32, b: f32) -> (u16, u16) {
-    let scale = |v: f32| v.clamp(0.0, 1.0) * f32::from(u16::MAX);
-    // Casts truncate, so `floor` and `ceil` stay inline.
-    let floor = |v: f32| v as u16;
-    let ceil = |v: f32| floor(v) + u16::from(f32::from(floor(v)) < v);
-    // Edges within one step of each other meet at its start.
-    let inward = |lo: f32, hi: f32| match (ceil(lo), floor(hi)) {
-        (lo, hi) if lo <= hi => (lo, hi),
-        _ => (floor(lo), floor(lo)),
-    };
-    let (a, b) = (scale(a), scale(b));
-    if a <= b {
-        inward(a, b)
-    } else {
-        let (b, a) = inward(b, a);
-        (a, b)
-    }
 }
 
 /// One texture's particles of a frame (`ParticleEngine.extract`).
@@ -826,19 +537,6 @@ unsafe impl Pod for QuadCorner {}
 //         assert!(!QuadCorner::fits([8.5, 0.0, 0.0]));
 //     }
 
-/// The world camera's near plane, in blocks (vanilla `GameRenderer.PROJECTION_Z_NEAR`).
-pub const WORLD_Z_NEAR: f32 = 0.05;
-
-/// The world camera's projection (Vulkan clip space).
-pub fn world_projection(fov_y_degrees: f32, aspect: f32, far: f32) -> Mat4 {
-    glam::camera::rh::proj::vulkan::perspective(
-        fov_y_degrees.to_radians(),
-        aspect,
-        far,
-        WORLD_Z_NEAR,
-    )
-}
-
 /// What the depth buffer is cleared to: the far plane, with reversed depth.
 pub const DEPTH_CLEAR: f32 = 0.0;
 
@@ -846,72 +544,13 @@ pub const DEPTH_CLEAR: f32 = 0.0;
 mod tests {
     use super::*;
 
-    /// `lines.vert`'s `octahedron_decode`.
-    fn octahedron_decode([x, y]: [f32; 2]) -> glam::Vec3 {
-        let mut v = glam::Vec3::new(x, y, 1.0 - x.abs() - y.abs());
-        if v.z < 0.0 {
-            let sign = |x: f32| if x >= 0.0 { 1.0 } else { -1.0 };
-            let (vx, vy) = (v.x, v.y);
-            v.x = (1.0 - vy.abs()) * sign(vx);
-            v.y = (1.0 - vx.abs()) * sign(vy);
-        }
-        v.normalize()
-    }
-
-    #[test]
-    fn a_line_direction_survives_the_octahedron() {
-        let dirs = [
-            glam::Vec3::X,
-            -glam::Vec3::Y,
-            glam::Vec3::Z,
-            -glam::Vec3::Z,
-            glam::Vec3::new(1.0, -2.0, -3.0).normalize(),
-            glam::Vec3::new(-0.3, 0.1, 0.9).normalize(),
-        ];
-        for dir in dirs {
-            let back = octahedron_decode(octahedron_encode(dir));
-            assert!(back.distance(dir) < 1.0e-6, "{dir} came back as {back}");
-        }
-    }
-
-    #[test]
-    fn a_line_is_one_quad_both_sides_at_both_ends() {
-        let (a, b) = (glam::Vec3::ZERO, glam::Vec3::new(0.0, 2.0, 0.0));
-        let quad = WorldVertex::line(a, b, [1.0, 0.0, 0.0, 0.4], 2.5).unwrap();
-        let ends: Vec<_> = quad.iter().map(|v| v.pos).collect();
-        assert_eq!(
-            ends,
-            [a.to_array(), a.to_array(), b.to_array(), b.to_array()]
-        );
-        assert_eq!(quad.map(|v| v.face), [0, 1, 1, 0]);
-        assert!(quad.iter().all(|v| u16::from_le_bytes(v.light) == 40));
-        assert!(quad.iter().all(|v| v.color == [255, 0, 0, 102]));
-        assert!(WorldVertex::line(a, a, [1.0; 4], 1.0).is_none());
-        assert_eq!(
-            WorldVertex::point(a, [1.0; 4], 2.0).map(|v| v.face),
-            [2, 3, 4, 5]
-        );
-    }
-
-    #[test]
-    fn depth_is_reversed_and_keeps_millimetres_apart_far_out() {
-        let projection = world_projection(70.0, 1.0, 512.0);
-        let depth = |distance: f32| {
-            let clip = projection * glam::Vec4::new(0.0, 0.0, -distance, 1.0);
-            clip.z / clip.w
-        };
-        assert!((depth(WORLD_Z_NEAR) - 1.0).abs() < 1e-5);
-        assert!(depth(512.0).abs() < 1e-5);
-        assert!(depth(100.0) > depth(100.001));
-    }
-
     #[test]
     fn neighbouring_chunks_share_their_corners_exactly() {
         let world = WorldDraw {
             chunks: Vec::new(),
             cutout: Vec::new(),
             translucent: Vec::new(),
-            atlas: crate::renderer::TextureId(0),
+            atlas: crate::TextureId(0),
             view: Mat4::IDENTITY,
             eye: glam::DVec3::new(1234.567, 70.31, -987.654),
             fov_y_degrees: 70.0,
@@ -933,55 +572,5 @@ mod tests {
         }
         let fraction = world.eye_fraction();
         assert!(fraction.min_element() >= 0.0 && fraction.max_element() < 1.0);
-    }
-
-    #[test]
-    fn terrain_quads_keep_every_field() {
-        let corners = [
-            CornerLight {
-                block: 60,
-                sky: 0,
-                ao: 12,
-            },
-            CornerLight {
-                block: 3,
-                sky: 57,
-                ao: 60,
-            },
-            CornerLight {
-                block: 0,
-                sky: 60,
-                ao: 0,
-            },
-            CornerLight {
-                block: 41,
-                sky: 22,
-                ao: 37,
-            },
-        ];
-        let offset = 3 << 12 | 0xABC;
-        let quad = TerrainQuad::new(TerrainQuad::MAX_QUADS - 1, [15, 4095, 9], corners, offset);
-        assert_eq!(quad.index(), TerrainQuad::MAX_QUADS - 1);
-        assert_eq!(quad.block(), [15, 4095, 9]);
-        assert_eq!(quad.offset(), offset);
-        for (i, corner) in corners.into_iter().enumerate() {
-            assert_eq!(quad.corner(i), corner, "corner {i}");
-        }
-    }
-
-    #[test]
-    fn flat_light_is_whole_levels_without_occlusion() {
-        let quad = TerrainQuad::new(7, [1, 2, 3], [CornerLight::flat(5, 15); 4], 0);
-        for i in 0..4 {
-            assert_eq!(
-                quad.corner(i),
-                CornerLight {
-                    block: 20,
-                    sky: 60,
-                    ao: 60
-                }
-            );
-        }
-        assert_eq!(quad.offset(), 0);
     }
 }

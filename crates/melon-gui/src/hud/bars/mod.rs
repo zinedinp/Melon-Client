@@ -6,8 +6,8 @@ pub mod hearts;
 pub mod vehicle;
 
 use super::{ICON, JavaRandom, PlayerStatus};
-use crate::gui::sprite::GuiSprite;
 use crate::renderer::quad::DrawList;
+use crate::sprite::GuiSprite;
 
 /// Where the bars sit and how tall their rows are.
 #[derive(Clone, Copy, Debug, PartialEq)]

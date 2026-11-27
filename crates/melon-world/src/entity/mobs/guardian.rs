@@ -1,10 +1,10 @@
 //! `GuardianModel`: a spiked head with an eye and a three-part tail.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, PI};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `MeshTransformer.scaling(2.35)` of the elder.
 pub const ELDER_SCALE: f32 = 2.35;

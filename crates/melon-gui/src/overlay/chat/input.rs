@@ -2,24 +2,22 @@
 
 use crate::component::ClickEvent;
 
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::overlay::chat::Chat;
-use crate::gui::overlay::container_input::MouseButtonKind;
-use crate::gui::overlay::{
-    ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind,
-};
-use crate::gui::screen::TextEvent;
-use crate::gui::text::font::Font;
-use crate::gui::text::{self, Hover, StyledText, TextStyle, colors};
-use crate::gui::widgets::text_input::{Edit, TextInput};
+use crate::hud::item_slot::ItemPainter;
 use crate::i18n::Lang;
 use crate::math::argb;
 use crate::network::play::chat::Suggestions;
 use crate::network::play::chat::command_suggestions::{self, SELECTOR_LEVEL, Source};
 use crate::network::play::chat::commands::{CommandTree, SpanKind};
+use crate::overlay::chat::Chat;
+use crate::overlay::container_input::MouseButtonKind;
+use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
 use crate::renderer::quad::DrawList;
+use crate::screen::TextEvent;
 use crate::settings::input::InputBind;
 use crate::settings::options::{ChatSettings, ChatVisibility};
+use crate::text::font::Font;
+use crate::text::{self, Hover, StyledText, TextStyle, colors};
+use crate::widgets::text_input::{Edit, TextInput};
 
 /// `ChatScreen.input.setMaxLength(256)`.
 const MAX_LENGTH: usize = 256;

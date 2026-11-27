@@ -1,11 +1,18 @@
 //! Vanilla `LevelLoadingScreen`.
 
-use crate::game::LoadingReason;
-use crate::gui::background;
-use crate::gui::effects::AtlasSprite;
-use crate::gui::screen::{Screen, ScreenAction, ScreenContext};
-use crate::gui::widgets::Ui;
+use crate::background;
+use crate::effects::AtlasSprite;
 use crate::math::argb;
+use crate::screen::{Screen, ScreenAction, ScreenContext};
+use crate::widgets::Ui;
+
+/// `LevelLoadingScreen.Reason`: what the loading screen paints behind it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LoadingReason {
+    NetherPortal,
+    EndPortal,
+    Other,
+}
 
 pub struct LevelLoadingScreen {
     reason: LoadingReason,

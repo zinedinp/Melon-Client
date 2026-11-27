@@ -1,13 +1,13 @@
 //! Vanilla `ControlsScreen`, cut to the options Melon has.
 
-use crate::gui::screen::{ConfigChange, ScreenAction, ScreenContext};
-use crate::gui::screens::options::keybinds::KeyBindsScreen;
-use crate::gui::screens::options::mouse::mouse_settings_screen;
-use crate::gui::screens::options::{on_off_label, value_label};
-use crate::gui::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 use crate::i18n::Lang;
+use crate::screen::{ConfigChange, ScreenAction, ScreenContext};
+use crate::screens::options::keybinds::KeyBindsScreen;
+use crate::screens::options::mouse::mouse_settings_screen;
+use crate::screens::options::{on_off_label, value_label};
 use crate::settings::input;
 use crate::settings::options::Config;
+use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ControlOption {

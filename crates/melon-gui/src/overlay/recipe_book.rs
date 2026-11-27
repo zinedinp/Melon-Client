@@ -3,19 +3,19 @@
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::assets::Assets;
-use crate::gui::hud::item_slot;
-use crate::gui::overlay::container_input::MouseButtonKind;
-use crate::gui::overlay::menu_layout::MenuLayout;
-use crate::gui::overlay::{OverlayAction, OverlayDraw};
-use crate::gui::screen::TextEvent;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::StyledText;
-use crate::gui::widgets::text_input::TextInput;
+use crate::hud::item_slot;
 use crate::math::angle::PI;
 use crate::math::argb;
+use crate::overlay::container_input::MouseButtonKind;
+use crate::overlay::menu_layout::MenuLayout;
+use crate::overlay::{OverlayAction, OverlayDraw};
 use crate::renderer::{Renderer, TextureId};
+use crate::screen::TextEvent;
+use crate::sprite::GuiSprite;
+use crate::text::StyledText;
+use crate::widgets::text_input::TextInput;
 use crate::world::recipes::{BookType, Category, RecipeBook, RecipeDisplay, RecipeId, Stock, Tab};
+use melon_assets::assets::Assets;
 
 const WIDTH: f32 = 147.0;
 const HEIGHT: f32 = 166.0;
@@ -193,7 +193,7 @@ impl RecipeBookSprites {
         };
         let crafting = filter("")?;
         let furnace = filter("furnace_")?;
-        let background = assets.texture(renderer, "minecraft:gui/recipe_book.png")?;
+        let background = renderer.asset_texture(assets, "minecraft:gui/recipe_book.png")?;
         let mut widget = |name: &str| {
             GuiSprite::load(
                 renderer,
@@ -1264,7 +1264,7 @@ mod tests {
             [OverlayAction::Recipe(RecipeAction::Seen(0))]
         ));
         assert!(!book.will_highlight(RecipeId(0)));
-        let mut layout = crate::gui::overlay::container::menu_layout(
+        let mut layout = crate::overlay::container::menu_layout(
             crate::world::inventory::ContainerKind::Crafting,
         );
         layout.place_at(panel.menu_left(427.0, 176.0), 240.0);

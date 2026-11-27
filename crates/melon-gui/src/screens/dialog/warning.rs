@@ -2,9 +2,9 @@
 //! a dialog's title, with a way to leave a server whose screen won't let go.
 
 use super::{DialogLayer, DialogRequest};
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::widgets::Ui;
-use crate::gui::widgets::dialog::DialogScreen as ConfirmScreen;
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::widgets::Ui;
+use crate::widgets::dialog::DialogScreen as ConfirmScreen;
 
 /// `ConfirmScreen`'s buttons.
 const BUTTON_W: f32 = 150.0;

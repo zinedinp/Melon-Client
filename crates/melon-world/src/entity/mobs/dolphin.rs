@@ -3,10 +3,10 @@
 use crate::math::angle::THIRD_PI as THIRD;
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 fn turned(offset: (f32, f32, f32), rotation: (f32, f32, f32)) -> Pose {
     Pose::offset_rotation(offset, rotation)

@@ -2,7 +2,7 @@
 
 use super::DYES;
 use super::models::{ChestHalf, SkullType};
-use crate::world::block_models::ExtraTexture;
+use crate::block_models::ExtraTexture;
 use image::RgbaImage;
 use std::path::Path;
 use std::sync::LazyLock;

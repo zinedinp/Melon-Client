@@ -2,8 +2,8 @@
 //! segments, four times over, each layer wider and fainter, added onto the
 //! world. The shape comes from the bolt's seed.
 
-use crate::renderer::WorldVertex;
-use crate::world::geometry;
+use crate::geometry;
+use crate::mesh::WorldVertex;
 
 /// `java.util.Random`, as `RandomSource.createThreadLocalInstance` makes it
 /// (`SingleThreadedRandomSource`).

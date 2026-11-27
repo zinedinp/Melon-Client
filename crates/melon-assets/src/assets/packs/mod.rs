@@ -484,11 +484,7 @@ mod tests {
         let langs = stack.find_all(&vanilla, "minecraft", "lang/en_us.json");
         assert_eq!(langs.len(), 2);
         let sounds = stack.find_all(&vanilla, "minecraft", "sounds.json");
-        let mut events = crate::audio::library::SoundEvents::default();
-        for json in &sounds {
-            events.merge("minecraft", json).unwrap();
-        }
-        assert_eq!(events.len(), 2, "x merged, y added");
+        assert_eq!(sounds.len(), 2, "both packs' sounds.json");
         assert!(stack.namespaces(&vanilla).contains("minecraft"));
         std::fs::remove_dir_all(&game).ok();
     }

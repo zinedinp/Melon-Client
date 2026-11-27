@@ -3,7 +3,7 @@
 use anyhow::{Result, bail};
 
 use super::spawn::unpack_degrees;
-use crate::network::protocol::packet::Reader;
+use melon_protocol::packet::Reader;
 
 /// `ClientboundMoveEntityPacket.Pos`, `PosRot` and `Rot`.
 #[derive(Clone, Debug, PartialEq)]

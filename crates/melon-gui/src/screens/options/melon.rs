@@ -1,11 +1,11 @@
 //! Melon's own settings, the ones vanilla has no screen for.
 
 use crate::cycle::Cycle;
-use crate::gui::screen::{ConfigChange, ScreenContext};
-use crate::gui::screens::options::value_label;
-use crate::gui::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 use crate::i18n::Lang;
+use crate::screen::{ConfigChange, ScreenContext};
+use crate::screens::options::value_label;
 use crate::settings::options::Config;
+use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MelonOption {

@@ -1,11 +1,11 @@
 //! Vanilla `ConfirmScreen`/`DisconnectedScreen`.
 
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::text::font::LINE_HEIGHT;
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::layout::{BUTTON_H, SPACING};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
-use crate::gui::widgets::{Label, Ui};
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::text::font::LINE_HEIGHT;
+use crate::widgets::button::Button;
+use crate::widgets::layout::{BUTTON_H, SPACING};
+use crate::widgets::set::{KeyResult, WidgetSet};
+use crate::widgets::{Label, Ui};
 
 /// The gap between the buttons of the row.
 const BUTTON_GAP: f32 = 4.0;

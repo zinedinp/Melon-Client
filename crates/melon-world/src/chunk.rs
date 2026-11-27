@@ -2,10 +2,10 @@
 
 use std::sync::Arc;
 
-use crate::world::biome::ChunkBiomes;
-use crate::world::dimension::Height;
+use crate::biome::ChunkBiomes;
+use crate::dimension::Height;
 
-pub use crate::world::section::{BLOCKS_PER_SECTION, Section};
+pub use crate::section::{BLOCKS_PER_SECTION, Section};
 /// `DataLayer.SIZE`: 4096 nibbles packed into 2048 bytes.
 pub const LIGHT_NIBBLES: usize = 2048;
 
@@ -282,7 +282,7 @@ pub struct ChunkScan {
     /// World positions of the blocks a block entity renderer draws.
     pub block_entities: Vec<[i32; 3]>,
     /// The player heads among them that name whose head they are.
-    pub heads: Vec<([i32; 3], crate::world::head_profile::HeadProfile)>,
+    pub heads: Vec<([i32; 3], crate::head_profile::HeadProfile)>,
 }
 
 impl ChunkScan {
@@ -299,7 +299,7 @@ impl ChunkScan {
     /// connection thread). Mark the matching palette indices once and scan
     /// the decoded section (`Section::copy_to`) or its packed indices.
     pub fn add_section(&mut self, x: i32, z: i32, min_y: i32, s: usize, section: &Section) {
-        let kinds = &*crate::world::block_entity::KIND_STATES;
+        let kinds = &*crate::block_entity::KIND_STATES;
         if !section.may_hold(|id| kinds.contains(id)) {
             return;
         }
@@ -315,7 +315,6 @@ impl ChunkScan {
 
 impl Chunk {
     /// An overworld-based column of `sections`, for tests.
-    #[cfg(test)]
     pub fn new(x: i32, z: i32, sections: Vec<Section>) -> Self {
         let height = Height {
             min_y: Height::OVERWORLD.min_y,
@@ -358,7 +357,7 @@ impl Chunk {
     }
 
     #[cfg(test)]
-    pub fn with_biomes(mut self, biomes: crate::world::biome::ChunkBiomes) -> Self {
+    pub fn with_biomes(mut self, biomes: crate::biome::ChunkBiomes) -> Self {
         self.biomes = Arc::new(biomes);
         self
     }

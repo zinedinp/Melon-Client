@@ -1,8 +1,8 @@
 //! Which models wear what is in the head slot (`CustomHeadLayer`).
 
 use super::{MobModel, Rig};
-use crate::world::entity::kind::EntityKind;
-use crate::world::entity::model::PartId;
+use crate::entity::kind::EntityKind;
+use crate::entity::model::PartId;
 
 /// `CustomHeadLayer.Transforms`, in blocks.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -62,7 +62,7 @@ pub fn custom_head(kind: EntityKind, mob: &MobModel) -> Option<(PartId, HeadTran
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::mobs::ModelId;
+    use crate::entity::mobs::ModelId;
 
     #[test]
     fn villagers_and_illagers_wear_heads_and_witches_do_not() {

@@ -5,21 +5,19 @@ use crate::world::item_model::StackKey;
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::assets::Assets;
-use crate::gui::hud::item_slot::{self};
-use crate::gui::overlay::container_input::{self, ContainerMouse, MouseButtonKind, SlotClick};
-use crate::gui::overlay::{
-    ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind,
-};
-use crate::gui::screen::TextEvent;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::widgets::text_input::{Edit, TextInput};
+use crate::hud::item_slot::{self};
 use crate::i18n::Lang;
+use crate::overlay::container_input::{self, ContainerMouse, MouseButtonKind, SlotClick};
+use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
 use crate::renderer::{Renderer, TextureId};
+use crate::screen::TextEvent;
 use crate::settings::input::InputBind;
+use crate::sprite::GuiSprite;
+use crate::widgets::text_input::{Edit, TextInput};
 use crate::world::creative_tabs::{CreativeTab, TabType, tabs};
 use crate::world::hotbars::{HOTBARS, Hotbars};
 use crate::world::inventory::{Inventory, SLOT_COUNT, empty};
+use melon_assets::assets::Assets;
 
 /// `searchBox`: `EditBox(font, leftPos + 82, topPos + 6, 80, 9)`, borderless.
 pub(super) const SEARCH_BOX: (f32, f32, f32, f32) = (82.0, 6.0, 80.0, 9.0);
@@ -68,7 +66,7 @@ impl CreativeTextures {
         };
         let top = [tabs("top", "unselected")?, tabs("top", "selected")?];
         let bottom = [tabs("bottom", "unselected")?, tabs("bottom", "selected")?];
-        let mut load = |id: &str| assets.texture(renderer, id);
+        let mut load = |id: &str| renderer.asset_texture(assets, id);
         let items = load(&format!("{background}/tab_items.png"))?;
         let search = load(&format!("{background}/tab_item_search.png"))?;
         let inventory = load(&format!("{background}/tab_inventory.png"))?;
@@ -399,8 +397,8 @@ impl Overlay for CreativeOverlay {
         self.top = ((height - IMAGE_HEIGHT) / 2.0).floor();
     }
 
-    fn effects_panel(&self) -> Option<crate::gui::hud::effects::EffectsPanel> {
-        Some(crate::gui::hud::effects::EffectsPanel {
+    fn effects_panel(&self) -> Option<crate::hud::effects::EffectsPanel> {
+        Some(crate::hud::effects::EffectsPanel {
             left: self.left,
             top: self.top,
             width: IMAGE_WIDTH,
@@ -517,9 +515,9 @@ impl Overlay for CreativeOverlay {
     }
 
     /// `CreativeModeInventoryScreen.extractBackground`.
-    fn entity_preview(&self) -> Option<crate::gui::entity_preview::EntityPreview> {
+    fn entity_preview(&self) -> Option<crate::entity_preview::EntityPreview> {
         (self.tab_type() == crate::world::creative_tabs::TabType::Inventory).then_some(
-            crate::gui::entity_preview::EntityPreview {
+            crate::entity_preview::EntityPreview {
                 x0: self.left + 73.0,
                 y0: self.top + 6.0,
                 x1: self.left + 105.0,

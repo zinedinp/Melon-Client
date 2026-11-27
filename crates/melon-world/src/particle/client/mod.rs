@@ -4,7 +4,7 @@ use glam::{DVec3, IVec3};
 use pumpkin_data::{Block, BlockStateId};
 
 use super::{Kind, ParticleEngine, Spawn, World};
-use crate::world::java_random::JavaRandom;
+use crate::java_random::JavaRandom;
 
 pub mod ambient;
 pub mod blocks;
@@ -105,9 +105,9 @@ fn animate_block(
 }
 
 /// `isCollisionShapeFullBlock`.
-pub(crate) fn full_block(world: &World, pos: IVec3) -> bool {
-    let mut boxes = crate::world::physics::block_shapes(world.level, (pos.x, pos.y, pos.z));
-    let full = |b: crate::world::physics::Aabb| {
+pub fn full_block(world: &World, pos: IVec3) -> bool {
+    let mut boxes = crate::physics::block_shapes(world.level, (pos.x, pos.y, pos.z));
+    let full = |b: crate::physics::Aabb| {
         let min = b.min - pos.as_dvec3();
         let max = b.max - pos.as_dvec3();
         min.max_element() <= 1.0e-7 && max.min_element() >= 1.0 - 1.0e-7

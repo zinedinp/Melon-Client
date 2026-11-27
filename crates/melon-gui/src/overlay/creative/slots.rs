@@ -105,7 +105,7 @@ pub(super) fn inventory_tab_position(slot: usize) -> (f32, f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gui::overlay::menu_layout::SLOT_SIZE;
+    use crate::overlay::menu_layout::SLOT_SIZE;
 
     #[test]
     fn the_inventory_tab_keeps_every_slot_inside_its_panel() {

@@ -5,7 +5,7 @@ use std::path::Path;
 use image::RgbaImage;
 use serde_json::Value;
 
-use crate::world::block_models::mipmap;
+use crate::block_models::mipmap;
 
 /// An animated texture's frames and schedule (`(frame, ticks)` in play order).
 pub struct Frames {

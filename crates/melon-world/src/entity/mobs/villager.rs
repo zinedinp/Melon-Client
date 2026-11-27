@@ -1,11 +1,11 @@
 //! `VillagerModel` and what is built on it (`WitchModel`, the wandering trader).
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
+use crate::entity::humanoid;
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, HALF_PI, PI, Rotation, THIRD_PI};
-use crate::world::entity::humanoid;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 use glam::{Mat4, Vec3};
 
 /// `VillagerMetadataSection.Hat`.

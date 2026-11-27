@@ -2,11 +2,11 @@
 
 use glam::{Mat3, Mat4, Vec3};
 
+use crate::clock::Environment;
+use crate::geometry;
+use crate::java_random::JavaRandom;
 use crate::math::angle::{self, HALF_PI, PI, Rotation, TAU};
-use crate::renderer::WorldVertex;
-use crate::world::clock::Environment;
-use crate::world::geometry;
-use crate::world::java_random::JavaRandom;
+use crate::mesh::WorldVertex;
 
 /// `SkyRenderer.SUN_HEIGHT` / `MOON_HEIGHT`.
 const BODY_HEIGHT: f32 = 100.0;
@@ -226,7 +226,7 @@ fn rotate_towards(dir: Vec3, up: Vec3) -> Mat3 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::clock::Environment;
+    use crate::clock::Environment;
 
     #[test]
     fn sun_at_noon_is_above() {

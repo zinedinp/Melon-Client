@@ -10,14 +10,14 @@ use crate::dialog::input::{
     BooleanInput, NumberRangeInput, SingleOptionInput, TextInput, value_to_string,
 };
 use crate::dialog::{Input, InputControl, InputValue};
-use crate::gui::screen::{CursorKind, ScreenContext, TextEvent};
-use crate::gui::text::{self, StyledText};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::checkbox::Checkbox;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::multiline_edit::MultiLineEditBox;
-use crate::gui::widgets::slider::Slider;
-use crate::gui::widgets::{Rect, Ui, Widget};
+use crate::screen::{CursorKind, ScreenContext, TextEvent};
+use crate::text::{self, StyledText};
+use crate::widgets::button::Button;
+use crate::widgets::checkbox::Checkbox;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::multiline_edit::MultiLineEditBox;
+use crate::widgets::slider::Slider;
+use crate::widgets::{Rect, Ui, Widget};
 
 /// `InputControlHandlers.createHandler`: the element for `input`.
 pub fn element(input: &Input, ctx: &ScreenContext) -> Box<dyn Element> {

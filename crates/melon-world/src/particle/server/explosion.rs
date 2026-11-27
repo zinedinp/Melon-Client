@@ -4,9 +4,9 @@ use glam::DVec3;
 
 use super::super::Spawn;
 use super::super::options::ParticleSpec;
-use crate::settings::options::ParticleStatus;
-use crate::world::java_random::JavaRandom;
-use crate::world::level::Level;
+use crate::java_random::JavaRandom;
+use crate::level::Level;
+use crate::particle::ParticleStatus;
 
 /// `MAX_PARTICLES_PER_TICK`.
 const MAX_PER_TICK: i32 = 512;

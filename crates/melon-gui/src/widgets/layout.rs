@@ -1,7 +1,7 @@
 //! Shared layout measurements.
 
-use crate::gui::text::font::LINE_HEIGHT;
-use crate::gui::widgets::Widget;
+use crate::text::font::LINE_HEIGHT;
+use crate::widgets::Widget;
 
 /// `Button.DEFAULT_WIDTH`/`DEFAULT_HEIGHT`/`DEFAULT_SPACING`.
 pub const BUTTON_W: f32 = 150.0;
@@ -90,7 +90,7 @@ pub fn centered_row(widgets: &mut [&mut dyn Widget], width: f32, y: f32, gap: f3
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gui::widgets::button::Button;
+    use crate::widgets::button::Button;
 
     #[test]
     fn rows_are_centred_and_spaced() {

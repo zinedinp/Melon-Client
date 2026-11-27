@@ -1,5 +1,5 @@
 use super::*;
-use crate::network::play::game::DataValue;
+use crate::entity::wire::DataValue;
 
 fn add(id: i32, kind: &EntityType, pos: [f64; 3]) -> EntityPacket {
     EntityPacket::Add(AddEntity {
@@ -156,8 +156,8 @@ fn a_mob_named_dinnerbone_hangs_upside_down_with_its_look_inverted() {
 
 #[test]
 fn a_name_that_translates_to_dinnerbone_does_what_dinnerbone_does() {
-    use crate::gui::text::StyledText;
     use crate::i18n::Lang;
+    use crate::text::StyledText;
     let upside_down_in = |lang: &Lang| {
         let mut entities = Entities::default();
         entities.apply(add(5, &EntityType::COW, [0.0; 3]), 1);
@@ -181,8 +181,8 @@ fn a_name_that_translates_to_dinnerbone_does_what_dinnerbone_does() {
 
 #[test]
 fn switching_the_language_looks_at_the_names_again() {
-    use crate::gui::text::StyledText;
     use crate::i18n::Lang;
+    use crate::text::StyledText;
     let mut entities = Entities::default();
     entities.apply(add(5, &EntityType::COW, [0.0; 3]), 1);
     let name = Component::translatable("my.name", Vec::new());
@@ -373,7 +373,7 @@ fn a_rider_follows_its_mount_and_stops_walking() {
     assert!(zombie.living_state(0.5).riding);
     assert_eq!(zombie.living_state(0.5).walk_speed, 0.0);
     entities.apply(
-        EntityPacket::SetPosition(crate::network::play::game::SetPosition {
+        EntityPacket::SetPosition(crate::entity::wire::SetPosition {
             id: 1,
             pos: [12.0, 64.0, 10.0],
             velocity: None,
@@ -496,7 +496,7 @@ fn a_mob_body_follows_its_head_when_it_stands() {
 
 /// A level of air (one chunk) with a stone floor at `floor_y`, if any.
 fn level_with_floor(floor_y: Option<i32>) -> Level {
-    use crate::world::chunk::{Chunk, Section};
+    use crate::chunk::{Chunk, Section};
     let mut level = Level::default();
     level.insert(Chunk::new(
         0,
@@ -687,7 +687,7 @@ fn a_boat_stops_a_player_and_a_grown_ghast_only_one_above_it() {
 
 #[test]
 fn a_steered_boat_is_moved_by_the_client_and_not_by_the_server() {
-    use crate::world::chunk::{Chunk, Section};
+    use crate::chunk::{Chunk, Section};
     let mut level = Level::default();
     level.insert(Chunk::new(
         0,
@@ -785,7 +785,7 @@ fn a_steered_boat_is_moved_by_the_client_and_not_by_the_server() {
 
 #[test]
 fn a_steered_horse_walks_on_the_client() {
-    use crate::world::chunk::{Chunk, Section};
+    use crate::chunk::{Chunk, Section};
     let mut level = Level::default();
     level.insert(Chunk::new(
         0,
@@ -943,7 +943,7 @@ fn a_block_that_lands_is_held_up_by_the_block_under_it() {
 
 #[test]
 fn an_armor_stand_reads_its_flags_and_limb_angles() {
-    use crate::world::entity::appearance::{STAND_ARMS, STAND_MARKER, STAND_SMALL};
+    use crate::entity::appearance::{STAND_ARMS, STAND_MARKER, STAND_SMALL};
     let mut entities = Entities::default();
     entities.apply(add(8, &EntityType::ARMOR_STAND, [0.0, 64.0, 0.0]), 1);
     let stand = entities.get(8).unwrap();

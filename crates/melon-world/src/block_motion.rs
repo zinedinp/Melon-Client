@@ -1,7 +1,7 @@
 //! What blocks do to the motion of what moves over them, shared by the player and the entities.
 
-use crate::world::level::Level;
-use crate::world::physics;
+use crate::level::Level;
+use crate::physics;
 use glam::DVec3;
 use pumpkin_data::tag::{self, Taggable};
 use pumpkin_data::{Block, BlockStateId};

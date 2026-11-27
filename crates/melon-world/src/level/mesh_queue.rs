@@ -5,15 +5,15 @@ use std::sync::Arc;
 
 use glam::{DVec3, IVec3};
 
+use super::ChunkBuilder;
+use crate::block_models::BlockModels;
+use crate::block_tint::TintSettings;
+use crate::chunk::Chunk;
+use crate::culling::occlusion::SectionPos;
+use crate::dimension::Height;
+use crate::fluid::FluidSprites;
 use crate::math::{ChunkMap, SECTION_SIZE, SectionMap, section_coord};
-use crate::settings::options::ChunkBuilder;
-use crate::world::block_models::BlockModels;
-use crate::world::block_tint::TintSettings;
-use crate::world::chunk::Chunk;
-use crate::world::culling::occlusion::SectionPos;
-use crate::world::dimension::Height;
-use crate::world::fluid::FluidSprites;
-use crate::world::terrain::{self, SectionMesh};
+use crate::terrain::{self, SectionMesh};
 
 use super::mesher::{Job, Mesher};
 use super::{AROUND, LoadedChunk, MeshStats};
@@ -464,7 +464,7 @@ fn ready(chunks: &Chunks, key: (i32, i32), center: (i32, i32)) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::Section;
+    use crate::chunk::Section;
 
     fn chunks_around(blocks: u16) -> Chunks {
         let mut chunks = Chunks::default();
@@ -504,10 +504,10 @@ mod tests {
         let chunks = chunks_around(0);
         let mut queue = MeshQueue::default();
         queue.added((0, 0), 4);
-        let Some((models, fluids)) = crate::world::terrain::test_models() else {
+        let Some((models, fluids)) = crate::terrain::test_models() else {
             return;
         };
-        let tints = crate::world::block_tint::TintSettings::plains();
+        let tints = crate::block_tint::TintSettings::plains();
         let built = queue.run(
             &chunks,
             (models, fluids),
@@ -524,14 +524,14 @@ mod tests {
     #[test]
     fn a_players_edit_is_built_for_the_next_frame() {
         let chunks = chunks_around(1);
-        let Some((models, fluids)) = crate::world::terrain::test_models() else {
+        let Some((models, fluids)) = crate::terrain::test_models() else {
             return;
         };
         let mut queue = MeshQueue::default();
         queue.set_chunk_builder(ChunkBuilder::PlayerAffected);
         queue.added((0, 0), 4);
         queue.queue((0, 1, 0), true);
-        let tints = crate::world::block_tint::TintSettings::plains();
+        let tints = crate::block_tint::TintSettings::plains();
         let built = queue.run(
             &chunks,
             (models, fluids),
@@ -551,10 +551,10 @@ mod tests {
     /// every frame's look at the queue, and is built once they came.
     #[test]
     fn a_column_waits_aside_for_its_neighbours() {
-        let Some((models, fluids)) = crate::world::terrain::test_models() else {
+        let Some((models, fluids)) = crate::terrain::test_models() else {
             return;
         };
-        let tints = crate::world::block_tint::TintSettings::plains();
+        let tints = crate::block_tint::TintSettings::plains();
         let column = |x, z| {
             let sections = (0..4).map(|_| Section::empty()).collect();
             LoadedChunk::new(Chunk::new(x, z, sections))

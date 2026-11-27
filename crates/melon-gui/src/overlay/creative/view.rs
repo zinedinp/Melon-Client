@@ -1,7 +1,7 @@
 //! The creative inventory as the shared container input sees it.
 
 use super::{CreativeOverlay, IMAGE_HEIGHT, IMAGE_WIDTH, Slot};
-use crate::gui::overlay::container_input::ContainerView;
+use crate::overlay::container_input::ContainerView;
 use crate::world::inventory::{self, Inventory, can_item_quick_replace};
 use pumpkin_data::item_stack::ItemStack;
 

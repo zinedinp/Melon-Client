@@ -4,7 +4,7 @@
 //! swapchain in the frame's own render pass.
 
 use super::{Frame, Place, Renderer, pipeline, vk_util};
-use crate::renderer::quad::DrawCall;
+use crate::quad::DrawCall;
 use ash::vk;
 use majestix_vk::{
     Attachment, Barriers, Binding, Descriptor, DescriptorSet, DescriptorSetLayout, Graphics,

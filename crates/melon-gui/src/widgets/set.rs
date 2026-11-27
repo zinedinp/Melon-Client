@@ -1,10 +1,10 @@
 //! A screen's buttons and text fields by id, handled in one place.
 
-use crate::gui::screen::{CursorKind, TextEvent};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::layout;
-use crate::gui::widgets::{Rect, Ui, Widget};
+use crate::screen::{CursorKind, TextEvent};
+use crate::widgets::button::Button;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::layout;
+use crate::widgets::{Rect, Ui, Widget};
 
 /// One widget of a [`WidgetSet`].
 pub enum Control {
@@ -197,7 +197,7 @@ impl<Id: Copy + PartialEq + std::fmt::Debug> WidgetSet<Id> {
     /// The mouse is at `(x, y)`; with the button still held since a click, the pressed widget
     /// stays pressed.
     pub fn hover(&mut self, x: f32, y: f32) {
-        if !crate::gui::input_state::left_held() {
+        if !crate::input_state::left_held() {
             self.pressed = None;
         }
         if let Some(i) = self.pressed

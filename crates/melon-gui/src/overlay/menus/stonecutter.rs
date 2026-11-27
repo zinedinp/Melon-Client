@@ -4,9 +4,9 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::scroll::Scroller;
 use super::{Frame, Loader, MenuDraw, MenuScreen};
-use crate::gui::overlay::container_input::MouseButtonKind;
-use crate::gui::overlay::{OverlayAction, OverlayContext};
-use crate::gui::sprite::GuiSprite;
+use crate::overlay::container_input::MouseButtonKind;
+use crate::overlay::{OverlayAction, OverlayContext};
+use crate::sprite::GuiSprite;
 use crate::world::inventory::{OpenContainer, stonecutting};
 
 const COLUMNS: usize = 4;

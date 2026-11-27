@@ -4,7 +4,7 @@
 use anyhow::Result;
 
 use crate::component::{Component, is_trusted_url};
-use crate::network::protocol::reader::{Reader, initial_capacity};
+use crate::protocol::reader::{Reader, initial_capacity};
 
 /// `ServerLinks.KnownLinkType`, by its wire id.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -100,11 +100,10 @@ pub fn read(body: &[u8]) -> Result<Vec<ServerLink>> {
     Ok(links)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::network::protocol::{reader, varint};
+    use crate::protocol::{reader, varint};
 
     #[test]
     fn known_and_named_links_are_read_and_bad_ones_dropped() {

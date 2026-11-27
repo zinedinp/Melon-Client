@@ -4,8 +4,8 @@ use glam::DVec3;
 use pumpkin_data::BlockStateId;
 use pumpkin_data::block_properties::COLLISION_SHAPES;
 
-use crate::world::level::Level;
-use crate::world::physics::Aabb;
+use crate::level::Level;
+use crate::physics::Aabb;
 
 /// `Attributes.BLOCK_INTERACTION_RANGE`.
 pub const SURVIVAL_RANGE: f64 = 4.5;
@@ -151,9 +151,9 @@ pub fn clip_blocks_and_fluids(level: &Level, start: DVec3, end: DVec3) -> Option
 /// `FluidState.getShape`: as high as the fluid, a whole block with the
 /// same fluid above.
 fn fluid_shape(level: &Level, (x, y, z): (i32, i32, i32), id: u16) -> Option<Aabb> {
-    let fluid = crate::world::fluid::fluid_of(id)?;
+    let fluid = crate::fluid::fluid_of(id)?;
     let above = level.block_state(x, y + 1, z).unwrap_or(0);
-    let same_above = crate::world::fluid::fluid_of(above).is_some_and(|f| f.kind == fluid.kind);
+    let same_above = crate::fluid::fluid_of(above).is_some_and(|f| f.kind == fluid.kind);
     let height = if same_above {
         1.0
     } else {
@@ -180,7 +180,7 @@ pub fn clip_colliders(level: &Level, start: DVec3, end: DVec3) -> Option<DVec3> 
         max: start.max(end),
     }
     .deflate(-1.0e-7);
-    crate::world::physics::block_boxes(level, &region)
+    crate::physics::block_boxes(level, &region)
         .iter()
         .filter_map(|aabb| clip_aabb(aabb, start, dir, length).map(|(t, _, _)| t))
         .min_by(f64::total_cmp)
@@ -287,7 +287,7 @@ fn axis_delta(dir: f64) -> f64 {
 pub fn outline_shapes(level: &Level, (x, y, z): (i32, i32, i32)) -> impl Iterator<Item = Aabb> {
     let origin = DVec3::new(f64::from(x), f64::from(y), f64::from(z));
     let id = level.block_state(x, y, z).unwrap_or(0);
-    let origin = origin + crate::world::block::offset::shape_delta(id, x, z);
+    let origin = origin + crate::block::offset::shape_delta(id, x, z);
     BlockStateId::new(id)
         .filter(|id| id.as_u16() != 0)
         .into_iter()
@@ -369,7 +369,7 @@ mod tests {
 
     #[test]
     fn grazing_a_corner_hits_the_block() {
-        use crate::world::chunk::{Chunk, Section};
+        use crate::chunk::{Chunk, Section};
         let mut level = Level::default();
         level.insert(Chunk::new(
             0,
@@ -389,7 +389,7 @@ mod tests {
 
     /// A level with stone at each of `blocks`.
     fn level_with(blocks: &[[i32; 3]]) -> Level {
-        use crate::world::chunk::{Chunk, Section};
+        use crate::chunk::{Chunk, Section};
         let mut level = Level::default();
         level.insert(Chunk::new(
             0,
@@ -415,7 +415,7 @@ mod tests {
 
     #[test]
     fn a_barrier_does_not_hide_a_name_tag() {
-        use crate::world::chunk::{Chunk, Section};
+        use crate::chunk::{Chunk, Section};
         let mut level = Level::default();
         level.insert(Chunk::new(
             0,
@@ -523,7 +523,7 @@ mod tests {
     #[test]
     #[ignore]
     fn pick_cost() {
-        use crate::world::chunk::{Chunk, Section};
+        use crate::chunk::{Chunk, Section};
         use pumpkin_data::Block;
         let mut level = Level::default();
         level.insert(Chunk::new(

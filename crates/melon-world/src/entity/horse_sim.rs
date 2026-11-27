@@ -1,12 +1,12 @@
 //! A saddled horse the local player steers, as the client runs it.
 
-use crate::world::block_motion::block_below;
+use crate::block_motion::block_below;
 use glam::DVec3;
 
+use crate::fluid::FluidKind;
+use crate::level::Level;
 use crate::math::angle::DEG_TO_RAD;
-use crate::world::fluid::FluidKind;
-use crate::world::level::Level;
-use crate::world::physics::{self, Aabb};
+use crate::physics::{self, Aabb};
 
 /// `Attributes.GRAVITY`'s default.
 const GRAVITY: f64 = 0.08;
@@ -259,8 +259,8 @@ fn damped_keys(forward: f32, left: f32) -> (f32, f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::{Chunk, Section};
-    use crate::world::level::Level;
+    use crate::chunk::{Chunk, Section};
+    use crate::level::Level;
 
     fn ground() -> Level {
         let mut level = Level::default();

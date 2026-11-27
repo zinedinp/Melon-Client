@@ -1,12 +1,12 @@
 //! Recording the UI quads over the scene.
 
-use crate::renderer::quad::DrawCall;
-use crate::renderer::{Frame, Renderer, pipeline};
+use crate::quad::DrawCall;
+use crate::{Frame, Renderer, pipeline};
 use ash::vk;
 
 impl Renderer {
     /// UI quads, in GUI coordinates: `calls` of `frame.ui`.
-    pub(in crate::renderer) unsafe fn record_ui(
+    pub(crate) unsafe fn record_ui(
         &self,
         cmd: vk::CommandBuffer,
         frame: &Frame<'_>,

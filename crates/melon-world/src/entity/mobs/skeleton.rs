@@ -1,11 +1,11 @@
 //! `SkeletonModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
+use crate::entity::animation::bob_arms;
+use crate::entity::humanoid::{self, HumanoidParts};
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, PI};
-use crate::world::entity::animation::bob_arms;
-use crate::world::entity::humanoid::{self, HumanoidParts};
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 pub fn layer() -> LayerDefinition {
     let mut root = humanoid::create_mesh(0.0, 0.0);

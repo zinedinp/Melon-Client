@@ -22,14 +22,14 @@ use super::mobs::{
 };
 use super::ride;
 use super::walk::WalkAnimation;
-use crate::math::wrap_degrees;
-use crate::network::play::game::{
+use crate::entity::wire::{
     AddEntity, EVENT_DEATH, EntityPacket, EquipmentSlot, MoveEntity, SetPosition, relative,
 };
-use crate::world::item_model::KeyedStack;
-use crate::world::level::Level;
-use crate::world::physics::{self, Aabb};
-use crate::world::player::hands::{Hand, SwingState};
+use crate::item_model::KeyedStack;
+use crate::level::Level;
+use crate::math::wrap_degrees;
+use crate::physics::{self, Aabb};
+use crate::player::hands::{Hand, SwingState};
 
 mod drive;
 mod entities;
@@ -226,7 +226,7 @@ pub struct ClientEntity {
     axolotl: mobs::axolotl::Animators,
     pub on_ground: bool,
     /// `Entity.mainSupportingBlockPos`, for the block factor.
-    support: crate::world::physics::Support,
+    support: crate::physics::Support,
     pub appearance: Appearance,
     /// `Entity.getCustomName` as plain text, for the name tag.
     pub custom_name: Option<Box<Component>>,
@@ -284,7 +284,7 @@ pub struct ClientEntity {
 #[derive(Clone, Debug)]
 pub struct Mannequin {
     /// `DATA_PROFILE`.
-    pub profile: crate::world::head_profile::AvatarProfile,
+    pub profile: crate::head_profile::AvatarProfile,
     /// `DATA_DESCRIPTION`: the line under its name, the "Mannequin" label
     /// until the server says otherwise; `None` once hidden.
     pub description: Option<Component>,
@@ -413,27 +413,19 @@ impl ClientEntity {
             pickable: pickable(ty),
             vehicle: None,
             passengers: Vec::new(),
-            max_health: type_attr(ty, crate::network::play::game::ATTRIBUTE_MAX_HEALTH, 20.0),
-            movement_speed: type_attr(
-                ty,
-                crate::network::play::game::ATTRIBUTE_MOVEMENT_SPEED,
-                0.7,
-            ),
-            jump_strength: type_attr(
-                ty,
-                crate::network::play::game::ATTRIBUTE_JUMP_STRENGTH,
-                0.42,
-            ),
-            step_height: type_attr(ty, crate::network::play::game::ATTRIBUTE_STEP_HEIGHT, 0.6),
-            scale_attribute: type_attr(ty, crate::network::play::game::ATTRIBUTE_SCALE, 1.0),
+            max_health: type_attr(ty, crate::entity::wire::ATTRIBUTE_MAX_HEALTH, 20.0),
+            movement_speed: type_attr(ty, crate::entity::wire::ATTRIBUTE_MOVEMENT_SPEED, 0.7),
+            jump_strength: type_attr(ty, crate::entity::wire::ATTRIBUTE_JUMP_STRENGTH, 0.42),
+            step_height: type_attr(ty, crate::entity::wire::ATTRIBUTE_STEP_HEIGHT, 0.6),
+            scale_attribute: type_attr(ty, crate::entity::wire::ATTRIBUTE_SCALE, 1.0),
             name_tag_distance: type_attr(
                 ty,
-                crate::network::play::game::ATTRIBUTE_NAME_TAG_DISTANCE,
+                crate::entity::wire::ATTRIBUTE_NAME_TAG_DISTANCE,
                 64.0,
             ),
             below_name_distance: type_attr(
                 ty,
-                crate::network::play::game::ATTRIBUTE_BELOW_NAME_DISTANCE,
+                crate::entity::wire::ATTRIBUTE_BELOW_NAME_DISTANCE,
                 10.0,
             ),
             vehicle_body: None,
@@ -464,19 +456,18 @@ impl ClientEntity {
                         | EntityKind::OminousItemSpawner => *index == 8,
                         _ => false,
                     };
-                    if holds_item && let crate::network::play::game::DataValue::Item(stack) = value
-                    {
+                    if holds_item && let crate::entity::wire::DataValue::Item(stack) = value {
                         self.item.set((**stack).clone());
                     }
                     if let Some(mannequin) = &mut self.mannequin {
                         use pumpkin_data::tracked_data::mannequin as m;
                         match value {
-                            crate::network::play::game::DataValue::Profile(profile)
+                            crate::entity::wire::DataValue::Profile(profile)
                                 if *index == m::DATA_PROFILE.id.0 =>
                             {
                                 mannequin.profile = (**profile).clone();
                             }
-                            crate::network::play::game::DataValue::Name(text)
+                            crate::entity::wire::DataValue::Name(text)
                                 if *index == m::DATA_DESCRIPTION.id.0 =>
                             {
                                 mannequin.description = text.as_deref().cloned();
@@ -486,7 +477,7 @@ impl ClientEntity {
                     }
                     if self.kind.is_item_frame() {
                         match (index, value) {
-                            (9, crate::network::play::game::DataValue::Item(stack)) => {
+                            (9, crate::entity::wire::DataValue::Item(stack)) => {
                                 self.item.set((**stack).clone());
                             }
                             (10, v) => self.frame_turn = v.int().unwrap_or(0),
@@ -555,7 +546,7 @@ impl ClientEntity {
                     && self.ty.resource_name == "tnt_minecart"
                     && event == mobs::vehicle::EVENT_PRIME_TNT
                 {
-                    self.fuse_ticks = crate::world::entity::appearance::DEFAULT_FUSE;
+                    self.fuse_ticks = crate::entity::appearance::DEFAULT_FUSE;
                 }
                 if self.kind == EntityKind::EvokerFangs
                     && event == mobs::projectile::EVENT_FANGS_ATTACK
@@ -581,20 +572,19 @@ impl ClientEntity {
             EntityPacket::Attributes { values, .. } => {
                 for (attribute, value) in values {
                     let value = value as f32;
-                    if attribute == crate::network::play::game::ATTRIBUTE_MAX_HEALTH {
+                    if attribute == crate::entity::wire::ATTRIBUTE_MAX_HEALTH {
                         self.max_health = value;
-                    } else if attribute == crate::network::play::game::ATTRIBUTE_MOVEMENT_SPEED {
+                    } else if attribute == crate::entity::wire::ATTRIBUTE_MOVEMENT_SPEED {
                         self.movement_speed = value;
-                    } else if attribute == crate::network::play::game::ATTRIBUTE_JUMP_STRENGTH {
+                    } else if attribute == crate::entity::wire::ATTRIBUTE_JUMP_STRENGTH {
                         self.jump_strength = value;
-                    } else if attribute == crate::network::play::game::ATTRIBUTE_STEP_HEIGHT {
+                    } else if attribute == crate::entity::wire::ATTRIBUTE_STEP_HEIGHT {
                         self.step_height = value;
-                    } else if attribute == crate::network::play::game::ATTRIBUTE_SCALE {
+                    } else if attribute == crate::entity::wire::ATTRIBUTE_SCALE {
                         self.scale_attribute = value;
-                    } else if attribute == crate::network::play::game::ATTRIBUTE_NAME_TAG_DISTANCE {
+                    } else if attribute == crate::entity::wire::ATTRIBUTE_NAME_TAG_DISTANCE {
                         self.name_tag_distance = value;
-                    } else if attribute == crate::network::play::game::ATTRIBUTE_BELOW_NAME_DISTANCE
-                    {
+                    } else if attribute == crate::entity::wire::ATTRIBUTE_BELOW_NAME_DISTANCE {
                         self.below_name_distance = value;
                     }
                 }

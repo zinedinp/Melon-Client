@@ -13,15 +13,15 @@ pub mod spectator_menu;
 
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::screen::TextEvent;
-use crate::gui::text::font::Font;
+use crate::hud::item_slot::ItemPainter;
 use crate::i18n::Lang;
 use crate::network::play::chat::Suggestions;
 use crate::network::play::chat::commands::CommandTree;
 use crate::renderer::quad::DrawList;
+use crate::screen::TextEvent;
 use crate::settings::input::InputBind;
 use crate::settings::options::{ChatSettings, Config};
+use crate::text::font::Font;
 use crate::world::game_mode::GameMode;
 use crate::world::hotbars::Hotbars;
 use crate::world::inventory::{Inventory, OpenContainer};
@@ -243,12 +243,12 @@ pub trait Overlay {
     fn draw(&mut self, ui: &mut OverlayDraw);
 
     /// Where to show the player turned toward the mouse, if anywhere.
-    fn entity_preview(&self) -> Option<crate::gui::entity_preview::EntityPreview> {
+    fn entity_preview(&self) -> Option<crate::entity_preview::EntityPreview> {
         None
     }
 
     /// Where the panel is, for the list of status effects beside it.
-    fn effects_panel(&self) -> Option<crate::gui::hud::effects::EffectsPanel> {
+    fn effects_panel(&self) -> Option<crate::hud::effects::EffectsPanel> {
         None
     }
 

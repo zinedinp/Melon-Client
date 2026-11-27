@@ -1,10 +1,10 @@
 //! Vanilla `Checkbox`: a 17px box (`widget/checkbox*`) and its label to the
 //! right, wrapped when the width is capped.
 
-use crate::gui::screen::CursorKind;
-use crate::gui::text::font::Font;
-use crate::gui::text::{self, StyledText};
-use crate::gui::widgets::{Rect, Ui, Widget};
+use crate::screen::CursorKind;
+use crate::text::font::Font;
+use crate::text::{self, StyledText};
+use crate::widgets::{Rect, Ui, Widget};
 
 /// `Checkbox.getBoxSize`: a line and 8.
 pub const BOX_SIZE: f32 = 17.0;

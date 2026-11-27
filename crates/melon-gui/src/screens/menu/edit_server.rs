@@ -1,13 +1,13 @@
 //! Vanilla `ManageServerScreen` ("Edit Server Info").
 
-use crate::assets::packs::server::Policy;
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::widgets::Ui;
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_left};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::settings::server_list::{self, ServerEntry};
+use crate::widgets::Ui;
+use crate::widgets::button::Button;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_left};
+use crate::widgets::set::{KeyResult, WidgetSet};
+use melon_assets::assets::packs::server::Policy;
 
 /// `0xA0A0A0`, the labels above the fields.
 const LABEL_COLOR: [f32; 4] = [0.63, 0.63, 0.63, 1.0];

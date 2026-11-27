@@ -3,14 +3,14 @@
 use pumpkin_data::item_stack::ItemStack;
 
 use super::{Frame, Loader, MenuDraw, MenuScreen};
-use crate::gui::hud::item_slot;
-use crate::gui::overlay::container_input::MouseButtonKind;
-use crate::gui::overlay::{OverlayAction, OverlayContext};
-use crate::gui::screen::TextEvent;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::widgets::text_input::{Edit, TextInput};
+use crate::hud::item_slot;
 use crate::math::argb;
+use crate::overlay::container_input::MouseButtonKind;
+use crate::overlay::{OverlayAction, OverlayContext};
+use crate::screen::TextEvent;
 use crate::settings::input::InputBind;
+use crate::sprite::GuiSprite;
+use crate::widgets::text_input::{Edit, TextInput};
 use crate::world::inventory::{empty, stacks_equal};
 
 /// `EditBox.setMaxLength(50)`.

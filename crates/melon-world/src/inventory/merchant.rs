@@ -78,7 +78,7 @@ mod tests {
     fn offer(count: u8, demand: i32, diff: i32, multiplier: f32) -> Offer {
         Offer {
             base_cost_a: ItemStack::new(count, &Item::EMERALD),
-            cost_b: crate::world::inventory::empty(),
+            cost_b: crate::inventory::empty(),
             result: ItemStack::new(1, &Item::BREAD),
             out_of_stock: false,
             uses: 0,

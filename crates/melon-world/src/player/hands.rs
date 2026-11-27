@@ -8,8 +8,8 @@ use pumpkin_data::data_component_impl::{
 };
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::world::entity::humanoid::ArmPose;
-use crate::world::entity::player::Arm;
+use crate::entity::humanoid::ArmPose;
+use crate::entity::player::Arm;
 
 /// `InteractionHand`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -1,13 +1,13 @@
 //! Vanilla `EditWorldScreen`.
 
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::widgets::Ui;
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::dialog::DialogScreen;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::layout::{BUTTON_H, BUTTON_W};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::singleplayer::{self, WorldEntry};
+use crate::widgets::Ui;
+use crate::widgets::button::Button;
+use crate::widgets::dialog::DialogScreen;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::layout::{BUTTON_H, BUTTON_W};
+use crate::widgets::set::{KeyResult, WidgetSet};
 
 /// `EditWorldScreen.DEFAULT_WIDTH`, `HALF_WIDTH` and the layout's spacing.
 const WIDE: f32 = 200.0;

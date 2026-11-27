@@ -4,10 +4,10 @@ use anyhow::Result;
 use pumpkin_data::sound::Sound;
 
 use crate::audio::source::SoundSource;
-use crate::network::protocol::packet::Reader;
-use crate::network::protocol::reader::initial_capacity;
 use crate::particle::ParticleSpec;
 use crate::particle::server::explosion::Debris;
+use crate::protocol::packet::Reader;
+use crate::protocol::reader::initial_capacity;
 
 /// Where a server sound is heard from.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -163,11 +163,9 @@ pub(super) fn read_level_event(r: &mut Reader) -> Result<LevelEvent> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::network::protocol::packet::Reader;
-    use crate::network::protocol::reader::{
-        pack_block_pos, write_bool, write_f32_be, write_string,
-    };
-    use crate::network::protocol::varint::write_var_int;
+    use crate::protocol::packet::Reader;
+    use crate::protocol::reader::{pack_block_pos, write_bool, write_f32_be, write_string};
+    use crate::protocol::varint::write_var_int;
 
     #[test]
     fn a_sound_packet_with_a_registry_id_is_read() {

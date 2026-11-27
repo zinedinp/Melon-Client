@@ -1,0 +1,36 @@
+[package]
+name = "melon-gui"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "The Melon client's UI: widgets, screens, the HUD and in-game overlays, fonts and text layout"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+melon-assets = { path = "../melon-assets" }
+melon-audio = { path = "../melon-audio" }
+melon-base = { path = "../melon-base" }
+melon-core = { path = "../melon-core" }
+melon-net = { path = "../melon-net" }
+melon-protocol = { path = "../melon-protocol" }
+melon-render = { path = "../melon-render" }
+melon-settings = { path = "../melon-settings" }
+melon-world = { path = "../melon-world" }
+anyhow.workspace = true
+flate2.workspace = true
+glam.workspace = true
+image.workspace = true
+open.workspace = true
+pumpkin-data.workspace = true
+pumpkin-nbt.workspace = true
+pumpkin-protocol.workspace = true
+rand.workspace = true
+rustc-hash.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+zip.workspace = true
+
+[lints]
+workspace = true

@@ -4,7 +4,7 @@ use crate::component::Component;
 use anyhow::{Result, bail};
 use uuid::Uuid;
 
-use crate::network::protocol::packet::Reader;
+use crate::protocol::packet::Reader;
 
 /// `BossEvent.BossBarColor`, in ordinal order.
 pub const COLORS: usize = 7;

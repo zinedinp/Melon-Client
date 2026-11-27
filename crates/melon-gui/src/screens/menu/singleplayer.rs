@@ -1,22 +1,22 @@
 //! Vanilla `SelectWorldScreen`.
 
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::screens::menu::confirm_delete::confirm_delete_world;
-use crate::gui::screens::menu::connecting::ConnectingScreen;
-use crate::gui::screens::menu::create_world::CreateWorldScreen;
-use crate::gui::screens::menu::edit_world::EditWorldScreen;
-use crate::gui::text::font::LINE_HEIGHT;
-use crate::gui::text::{StyledText, TextStyle};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING, wide_column_left};
-use crate::gui::widgets::row_icon::{self, Layout, Moves};
-use crate::gui::widgets::scroll_list::{ListClick, ScrollList};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
-use crate::gui::widgets::{Rect, Ui};
 use crate::join::Target;
 use crate::renderer::TextureId;
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::screens::menu::confirm_delete::confirm_delete_world;
+use crate::screens::menu::connecting::ConnectingScreen;
+use crate::screens::menu::create_world::CreateWorldScreen;
+use crate::screens::menu::edit_world::EditWorldScreen;
 use crate::singleplayer::{self, WorldCreationMode, WorldEntry};
+use crate::text::font::LINE_HEIGHT;
+use crate::text::{StyledText, TextStyle};
+use crate::widgets::button::Button;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING, wide_column_left};
+use crate::widgets::row_icon::{self, Layout, Moves};
+use crate::widgets::scroll_list::{ListClick, ScrollList};
+use crate::widgets::set::{KeyResult, WidgetSet};
+use crate::widgets::{Rect, Ui};
 use image::RgbaImage;
 use std::collections::HashMap;
 

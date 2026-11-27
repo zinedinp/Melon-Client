@@ -5,10 +5,10 @@ use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use super::{Frame, Loader, MenuDraw, MenuScreen};
-use crate::gui::overlay::CLICK;
-use crate::gui::overlay::container_input::MouseButtonKind;
-use crate::gui::overlay::{ChatExit, OverlayAction, OverlayContext};
-use crate::gui::sprite::GuiSprite;
+use crate::overlay::CLICK;
+use crate::overlay::container_input::MouseButtonKind;
+use crate::overlay::{ChatExit, OverlayAction, OverlayContext};
+use crate::sprite::GuiSprite;
 use crate::world::inventory::OpenContainer;
 
 /// `BeaconMenu`'s `ContainerData` indices.

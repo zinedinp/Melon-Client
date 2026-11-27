@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 
-use crate::network::protocol::packet::Reader;
+use melon_protocol::packet::Reader;
 
 /// `ClientboundAddEntityPacket`. Angles are vanilla's, in degrees.
 #[derive(Clone, Debug, PartialEq)]

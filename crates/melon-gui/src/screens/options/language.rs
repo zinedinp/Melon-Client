@@ -1,17 +1,17 @@
 //! Vanilla `LanguageSelectScreen` / `LanguageSelectionList` (`ObjectSelectionList`).
 
-use crate::assets::Assets;
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::screens::menu::placeholder::placeholder_screen;
-use crate::gui::text::font::LINE_HEIGHT;
-use crate::gui::widgets::Ui;
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING, wide_column_left};
-use crate::gui::widgets::scroll_list::{ListClick, ScrollList};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
 use crate::i18n::available_languages;
 use crate::i18n::languages::Language;
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::screens::menu::placeholder::placeholder_screen;
+use crate::text::font::LINE_HEIGHT;
+use crate::widgets::Ui;
+use crate::widgets::button::Button;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING, wide_column_left};
+use crate::widgets::scroll_list::{ListClick, ScrollList};
+use crate::widgets::set::{KeyResult, WidgetSet};
+use melon_assets::assets::Assets;
 
 /// `AbstractSelectionList`'s default row width (`220`), `+50` as `LanguageSelectionList`
 /// overrides it.

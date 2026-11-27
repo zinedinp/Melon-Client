@@ -8,7 +8,7 @@ use std::sync::Arc;
 use glam::Vec2;
 use image::RgbaImage;
 
-use crate::world::texture_animation::Frames;
+use crate::texture_animation::Frames;
 
 /// Whether some texel is fully clear and whether some is partly
 /// see-through (vanilla `Transparency`).

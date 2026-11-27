@@ -1,7 +1,7 @@
 //! `GrindstoneScreen`.
 
 use super::{Loader, MenuDraw, MenuScreen};
-use crate::gui::sprite::GuiSprite;
+use crate::sprite::GuiSprite;
 
 #[derive(Clone, Copy)]
 pub struct Sprites {

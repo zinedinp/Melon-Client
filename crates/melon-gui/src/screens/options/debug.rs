@@ -2,19 +2,17 @@
 //! each off, in the F3 overlay or always on; the two profiles; the debug
 //! overlay's own GUI scale.
 
-use crate::gui::hud::debug::SharedEntries;
-use crate::gui::hud::debug_entries::{Category, Entry, Profile, Status};
-use crate::gui::screen::{
-    ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext, TextEvent,
-};
-use crate::gui::text::{StyledText, TextStyle};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::layout::{BUTTON_H, HeaderFooter};
-use crate::gui::widgets::scroll_list::{ListClick, ScrollList};
-use crate::gui::widgets::slider::Slider;
-use crate::gui::widgets::{Rect, Ui, Widget};
+use crate::hud::debug::SharedEntries;
+use crate::hud::debug_entries::{Category, Entry, Profile, Status};
 use crate::math::argb;
+use crate::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::text::{StyledText, TextStyle};
+use crate::widgets::button::Button;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::layout::{BUTTON_H, HeaderFooter};
+use crate::widgets::scroll_list::{ListClick, ScrollList};
+use crate::widgets::slider::Slider;
+use crate::widgets::{Rect, Ui, Widget};
 
 /// `new HeaderAndFooterLayout(this, 61, 33)`.
 const LAYOUT: HeaderFooter = HeaderFooter::new(61.0, 33.0);

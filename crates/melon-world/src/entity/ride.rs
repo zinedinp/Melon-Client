@@ -6,7 +6,7 @@ use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use super::kind::EntityKind;
-use crate::world::player::MoveInput;
+use crate::player::MoveInput;
 
 /// How a vehicle takes what its rider does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

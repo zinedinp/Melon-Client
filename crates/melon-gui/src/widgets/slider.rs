@@ -1,8 +1,8 @@
 //! Vanilla `AbstractSliderButton` as `OptionInstance` builds it.
 
-use crate::gui::screen::CursorKind;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::widgets::{Label, Rect, Ui, Widget};
+use crate::screen::CursorKind;
+use crate::sprite::GuiSprite;
+use crate::widgets::{Label, Rect, Ui, Widget};
 
 /// `AbstractSliderButton.HANDLE_WIDTH`.
 const HANDLE_W: f32 = 8.0;

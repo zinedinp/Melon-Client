@@ -9,16 +9,16 @@ use glam::{Mat3, Vec2, Vec3};
 use image::RgbaImage;
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::assets::json_model::{Display, TextureCache};
-use crate::gui::hud::icon_atlas::{IconAtlas, Slot};
-use crate::gui::sprite::GuiSprite;
+use crate::hud::icon_atlas::{IconAtlas, Slot};
 use crate::math::angle::Rotation;
 use crate::renderer::quad::DrawList;
 use crate::renderer::{Renderer, TextureId};
+use crate::sprite::GuiSprite;
 use crate::world::block_entity::models::SkullType;
 use crate::world::glint::GlintUv;
 use crate::world::head_profile::HeadProfile;
 use crate::world::item_model::{self, Count, ItemKey, ItemModel, ItemQuad};
+use crate::world::json_model::{Display, TextureCache};
 use crate::world::texture_animation;
 
 /// Edge length of a baked block icon.
@@ -419,7 +419,7 @@ fn bake_frame(
                 continue;
             };
             let mut img = img.clone();
-            crate::assets::tint(&mut img, tint);
+            melon_assets::assets::tint(&mut img, tint);
             match &mut out {
                 None => out = Some(img),
                 Some(base) => image::imageops::overlay(base, &img, 0, 0),
@@ -506,7 +506,7 @@ fn gui_light(normal: Vec3, front: bool) -> f32 {
 
 /// What a triangle is painted with: a texture, tinted, maybe with a glint.
 #[derive(Clone, Copy)]
-pub(crate) struct Surface<'a> {
+pub struct Surface<'a> {
     pub texture: &'a RgbaImage,
     pub tint: [u8; 3],
     pub glint: Option<&'a RgbaImage>,
@@ -518,7 +518,7 @@ pub(crate) struct Surface<'a> {
 ///
 /// Each barycentric weight is a linear function of the pixel, worked out
 /// once per triangle; pixels are read and written in the buffers directly.
-pub(crate) fn draw_triangle(
+pub fn draw_triangle(
     out: &mut RgbaImage,
     depth: &mut [f32],
     p: [Vec3; 3],
@@ -684,7 +684,7 @@ mod tests {
     use super::*;
 
     fn assets() -> Option<PathBuf> {
-        let root = crate::assets::default_root();
+        let root = melon_assets::assets::default_root();
         root.join("minecraft/items/stone.json")
             .is_file()
             .then_some(root)

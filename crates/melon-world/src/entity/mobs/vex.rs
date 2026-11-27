@@ -1,10 +1,10 @@
 //! `VexModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, DEG_TO_RAD, PI};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `Vex.FLAG_IS_CHARGING`.
 pub const FLAG_CHARGING: u8 = 1;

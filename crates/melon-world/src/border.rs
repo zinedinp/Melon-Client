@@ -2,8 +2,8 @@
 
 use glam::DVec3;
 
-use crate::renderer::WorldVertex;
-use crate::world::physics::Aabb;
+use crate::mesh::WorldVertex;
+use crate::physics::Aabb;
 
 /// `WorldBorder.MAX_SIZE`: a border this wide is no border.
 const DEFAULT_SIZE: f64 = 5.999_996_8E7;

@@ -1,11 +1,11 @@
 //! `RavagerModel`.
 
 use super::{LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::quadruped::look;
 use crate::math::angle::{self, HALF_PI, PI};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::quadruped::look;
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `RavagerRenderer`'s texture.
 pub const TEXTURE: &str = "minecraft:entity/illager/ravager";

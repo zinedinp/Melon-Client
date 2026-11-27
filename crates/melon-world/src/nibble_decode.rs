@@ -1,16 +1,16 @@
 //! A 16³ light layer's packed nibbles, unpacked many at a time: each byte
 //! holds two 4-bit levels (even index low, odd high), the same order
-//! [`crate::world::chunk::LightSection::get`] reads. Written once against
+//! [`crate::chunk::LightSection::get`] reads. Written once against
 //! [`Bytes`].
 
+use crate::chunk::{LIGHT_NIBBLES, nibble};
 #[cfg(any(
     target_arch = "x86_64",
     all(target_arch = "aarch64", target_endian = "little")
 ))]
 use crate::math::bytes::Bytes;
 use crate::math::simd::{self, ByteTier};
-use crate::world::chunk::{LIGHT_NIBBLES, nibble};
-use crate::world::section::BLOCKS_PER_SECTION;
+use crate::section::BLOCKS_PER_SECTION;
 
 /// Packed nibbles (`LIGHT_NIBBLES` bytes) to one level per block.
 pub fn unpack(packed: &[u8; LIGHT_NIBBLES], out: &mut [u8; BLOCKS_PER_SECTION]) {

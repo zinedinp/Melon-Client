@@ -1,0 +1,35 @@
+[package]
+name = "melon-assets"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "The Melon client's assets: the vanilla tree, resource packs, their shaders and the languages"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+melon-base = { path = "../melon-base" }
+melon-core = { path = "../melon-core" }
+melon-protocol = { path = "../melon-protocol" }
+anyhow.workspace = true
+flate2.workspace = true
+image.workspace = true
+# Pack PNGs with wrong checksums, which `image` refuses and vanilla reads.
+png.workspace = true
+pumpkin-mod.workspace = true
+# Resource packs: their `filter` patterns.
+regex.workspace = true
+rustc-hash.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha1.workspace = true
+# Resource packs' core shaders, compiled at runtime as vanilla does: the
+# system's shaderc library, from the same install `glslc` comes from.
+shaderc.workspace = true
+ureq.workspace = true
+uuid.workspace = true
+zip.workspace = true
+
+[lints]
+workspace = true

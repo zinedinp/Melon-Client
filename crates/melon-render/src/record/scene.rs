@@ -3,9 +3,9 @@
 
 mod terrain;
 
-use crate::renderer::Blending;
-use crate::renderer::pipeline::world::{DrawLight, FogInput, Mode};
-use crate::renderer::{
+use crate::Blending;
+use crate::pipeline::world::{DrawLight, FogInput, Mode};
+use crate::{
     LineStyle, MeshId, ParticleQuad, RenderLayer, Renderer, SceneFrame, Sky, SkyKind, TextureId,
     WeatherDraw, WorldDraw, WorldVertex, globals, mesh_arena, pipeline, world_projection,
 };
@@ -14,7 +14,7 @@ use glam::{Mat4, Vec3};
 
 /// Which layers of the scene a pass draws.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(in crate::renderer) enum ScenePart {
+pub(crate) enum ScenePart {
     All,
     World,
     Hand,
@@ -48,7 +48,7 @@ impl ScenePart {
 
 impl Renderer {
     /// Pass 1.
-    pub(in crate::renderer) unsafe fn record_scene(
+    pub(crate) unsafe fn record_scene(
         &self,
         cmd: vk::CommandBuffer,
         scene: &SceneFrame,
@@ -140,7 +140,7 @@ impl Renderer {
                     // `TranslucentFeatureRenderPhase` sorts its submits, so
                     // a nearer one blends over what lies behind it.
                     let eye = world.eye_fraction();
-                    let mut entities: Vec<(f32, &crate::renderer::EntityDraw)> = scene
+                    let mut entities: Vec<(f32, &crate::EntityDraw)> = scene
                         .entities
                         .iter()
                         .filter(|e| e.layer == layer)
@@ -363,11 +363,7 @@ impl Renderer {
     }
 
     /// The world camera's `projection * rotation` for `layer`.
-    pub(in crate::renderer) fn world_view_projection(
-        &self,
-        world: &WorldDraw,
-        layer: RenderLayer,
-    ) -> Mat4 {
+    pub(crate) fn world_view_projection(&self, world: &WorldDraw, layer: RenderLayer) -> Mat4 {
         let fov = world.fov_for(layer);
         let mut rotation = world.view;
         rotation.w_axis = glam::Vec4::W;
@@ -384,13 +380,13 @@ impl Renderer {
     }
 
     /// Resets the depth buffer inside the render pass, for a layer drawn on top.
-    pub(in crate::renderer) unsafe fn clear_depth(&self, cmd: vk::CommandBuffer) {
+    pub(crate) unsafe fn clear_depth(&self, cmd: vk::CommandBuffer) {
         let clear = vk::ClearAttachment {
             aspect_mask: vk::ImageAspectFlags::DEPTH,
             color_attachment: 0,
             clear_value: vk::ClearValue {
                 depth_stencil: vk::ClearDepthStencilValue {
-                    depth: crate::renderer::frame::DEPTH_CLEAR,
+                    depth: crate::frame::DEPTH_CLEAR,
                     stencil: 0,
                 },
             },
@@ -407,7 +403,7 @@ impl Renderer {
         unsafe { self.device.cmd_clear_attachments(cmd, &[clear], &[rect]) };
     }
 
-    pub(in crate::renderer) unsafe fn record_sky(
+    pub(crate) unsafe fn record_sky(
         &self,
         cmd: vk::CommandBuffer,
         sky: &Sky,
@@ -490,7 +486,7 @@ impl Renderer {
         }
     }
 
-    /// The [`LineDraw`](crate::renderer::LineDraw)s of `style`, through
+    /// The [`LineDraw`](crate::LineDraw)s of `style`, through
     /// `shaders/lines.vert`. Each one's offset is the eye in its mesh's
     /// space: the point the shader pulls its lines toward.
     unsafe fn draw_lines(
@@ -540,7 +536,7 @@ impl Renderer {
         }
     }
 
-    /// The [`ParticleDraw`](crate::renderer::ParticleDraw)s, cut out then
+    /// The [`ParticleDraw`](crate::ParticleDraw)s, cut out then
     /// blended, through `shaders/particle.vert`.
     unsafe fn draw_particles(
         &self,
@@ -580,7 +576,7 @@ impl Renderer {
     }
 
     /// Binds the world pipeline with `atlas`. `false` if the texture is gone.
-    pub(in crate::renderer) unsafe fn bind_world_pass(
+    pub(crate) unsafe fn bind_world_pass(
         &self,
         cmd: vk::CommandBuffer,
         atlas: TextureId,
@@ -657,7 +653,7 @@ impl Renderer {
     }
 
     /// Glint overlay.
-    pub(in crate::renderer) unsafe fn bind_glint_pass(
+    pub(crate) unsafe fn bind_glint_pass(
         &self,
         cmd: vk::CommandBuffer,
         item: TextureId,
@@ -717,7 +713,7 @@ impl Renderer {
     }
 
     /// Binds the terrain quad pipeline for `mode` (solid, cutout or translucent).
-    pub(in crate::renderer) unsafe fn bind_terrain_pass(
+    pub(crate) unsafe fn bind_terrain_pass(
         &self,
         cmd: vk::CommandBuffer,
         atlas: TextureId,
@@ -784,7 +780,7 @@ impl Renderer {
     }
 
     /// Binds the pipeline of a sky mesh of `kind` with `atlas`.
-    pub(in crate::renderer) unsafe fn bind_sky_pass(
+    pub(crate) unsafe fn bind_sky_pass(
         &self,
         cmd: vk::CommandBuffer,
         atlas: TextureId,
@@ -830,7 +826,7 @@ impl Renderer {
     }
 
     /// Draws `vertices` of a mesh (all of it for `None`) with the bound pipeline.
-    pub(in crate::renderer) unsafe fn draw_world_mesh(
+    pub(crate) unsafe fn draw_world_mesh(
         &self,
         cmd: vk::CommandBuffer,
         layout: vk::PipelineLayout,
@@ -907,11 +903,7 @@ impl Renderer {
     }
 
     /// Binds `buffer` as the vertex buffer unless it already is.
-    pub(in crate::renderer) unsafe fn bind_vertices(
-        &self,
-        cmd: vk::CommandBuffer,
-        buffer: vk::Buffer,
-    ) {
+    pub(crate) unsafe fn bind_vertices(&self, cmd: vk::CommandBuffer, buffer: vk::Buffer) {
         if self.recording.vertex_buffer.replace(buffer) != buffer {
             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
             unsafe { self.device.cmd_bind_vertex_buffers(cmd, 0, &[buffer], &[0]) };

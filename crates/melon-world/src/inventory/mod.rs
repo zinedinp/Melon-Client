@@ -13,7 +13,7 @@ pub use container::{
 
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::world::item_model::KeyedStack;
+use crate::item_model::KeyedStack;
 use rules::{shrink, split_slot};
 
 pub use rules::{

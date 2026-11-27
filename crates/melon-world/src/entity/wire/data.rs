@@ -5,8 +5,8 @@ use anyhow::{Result, bail};
 use pumpkin_data::item_stack::ItemStack;
 use pumpkin_data::meta_data_type::MetaDataType as T;
 
-use crate::network::protocol::packet::Reader;
-use crate::network::protocol::reader::initial_capacity;
+use melon_protocol::packet::Reader;
+use melon_protocol::reader::initial_capacity;
 
 /// A value Melon keeps.
 #[derive(Clone)]
@@ -34,7 +34,7 @@ pub enum DataValue {
     /// `OPTIONAL_BLOCK_POS`: an end crystal's beam target.
     BlockPos(Option<[i32; 3]>),
     /// `RESOLVABLE_PROFILE`: a mannequin's skin.
-    Profile(Box<crate::world::head_profile::AvatarProfile>),
+    Profile(Box<crate::head_profile::AvatarProfile>),
 }
 
 impl std::fmt::Debug for DataValue {
@@ -269,12 +269,12 @@ fn read_value(r: &mut Reader<'_>, ty: i32) -> Result<Option<DataValue>> {
             }
             DataValue::Int(id - 1)
         }
-        PARTICLE => DataValue::Particles(vec![super::super::particle::particle(r)?]),
+        PARTICLE => DataValue::Particles(vec![crate::particle::wire::particle(r)?]),
         PARTICLES => {
             let count = r.list_count()?;
             let mut list = Vec::with_capacity(initial_capacity(count));
             for _ in 0..count {
-                list.push(super::super::particle::particle(r)?);
+                list.push(crate::particle::wire::particle(r)?);
             }
             DataValue::Particles(list)
         }
@@ -286,8 +286,8 @@ fn read_value(r: &mut Reader<'_>, ty: i32) -> Result<Option<DataValue>> {
 
 /// `ResolvableProfile.STREAM_CODEC`: a whole `GameProfile` or a partial
 /// one (either), then the `PlayerSkin.Patch`.
-fn read_profile(r: &mut Reader<'_>) -> Result<crate::world::head_profile::AvatarProfile> {
-    use crate::world::head_profile::{AvatarProfile, HeadProfile, SkinPatch};
+fn read_profile(r: &mut Reader<'_>) -> Result<crate::head_profile::AvatarProfile> {
+    use crate::head_profile::{AvatarProfile, HeadProfile, SkinPatch};
     let (id, name) = if r.bool()? {
         (Some(r.uuid()?), Some(r.string_max(16)?))
     } else {

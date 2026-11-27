@@ -1,7 +1,7 @@
 //! `CreativeModeInventoryScreen.slotClicked`.
 
 use super::{CreativeChanges, CreativeOverlay, IMAGE_HEIGHT, IMAGE_WIDTH, Slot};
-use crate::gui::overlay::container_input::SlotClick;
+use crate::overlay::container_input::SlotClick;
 use crate::world::creative_tabs::TabType;
 use crate::world::inventory::ClickType;
 use crate::world::inventory::{

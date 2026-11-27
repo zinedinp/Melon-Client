@@ -1,10 +1,10 @@
 //! Vanilla's delete `ConfirmScreen`s, for a world and for a saved server.
 
-use crate::gui::screen::{ScreenAction, ScreenContext};
-use crate::gui::widgets::dialog::DialogScreen;
-use crate::gui::widgets::layout::BUTTON_W;
+use crate::screen::{ScreenAction, ScreenContext};
 use crate::settings::server_list;
 use crate::singleplayer;
+use crate::widgets::dialog::DialogScreen;
+use crate::widgets::layout::BUTTON_W;
 
 /// The question, in red as Melon has always shown it.
 const QUESTION_COLOR: [f32; 4] = [1.0, 0.5, 0.5, 1.0];

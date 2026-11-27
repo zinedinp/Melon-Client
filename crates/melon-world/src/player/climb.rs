@@ -1,8 +1,8 @@
 //! Climbing: ladders, vines, scaffolding and ladder-backed trapdoors.
 
 use super::PlayerState;
-use crate::world::level::Level;
-use crate::world::physics;
+use crate::level::Level;
+use crate::physics;
 use glam::DVec3;
 use pumpkin_data::tag::{self, Taggable};
 use pumpkin_data::{Block, BlockStateId};

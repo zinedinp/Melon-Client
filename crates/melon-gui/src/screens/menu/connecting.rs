@@ -5,13 +5,13 @@ use std::thread;
 
 use anyhow::Result;
 
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::dialog::DialogScreen;
-use crate::gui::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_left};
-use crate::gui::widgets::{Ui, Widget};
 use crate::join::{self, Joined, Target};
 use crate::network::{ClientInfo, Identity};
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::widgets::button::Button;
+use crate::widgets::dialog::DialogScreen;
+use crate::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_left};
+use crate::widgets::{Ui, Widget};
 
 /// `DisconnectedScreen`'s title colour (`-6250336`, `0xA0A0A0`).
 const FAILURE_TITLE_COLOR: [f32; 4] = [0.63, 0.63, 0.63, 1.0];
@@ -46,13 +46,13 @@ impl ConnectingScreen {
             Target::Server(address) => crate::settings::server_list::find(ctx.game_dir, address),
             Target::World { .. } => None,
         };
-        crate::assets::packs::server::begin(
+        melon_assets::assets::packs::server::begin(
             ctx.game_dir,
             saved.as_ref().map(|s| s.ip.clone()),
-            crate::assets::packs::server::Policy::from_accept(
+            melon_assets::assets::packs::server::Policy::from_accept(
                 saved.as_ref().and_then(|s| s.accept_textures),
             ),
-            crate::assets::packs::server::User {
+            melon_assets::assets::packs::server::User {
                 name: identity.username().to_owned(),
                 uuid: identity.uuid(),
             },
@@ -104,11 +104,11 @@ impl Screen for ConnectingScreen {
         match self.result.try_recv() {
             Ok(Ok(joined)) => ScreenAction::EnterWorld(Box::new(joined)),
             Ok(Err(error)) => {
-                crate::assets::packs::server::end();
+                melon_assets::assets::packs::server::end();
                 Self::failed(format!("{error:#}"))
             }
             Err(TryRecvError::Disconnected) => {
-                crate::assets::packs::server::end();
+                melon_assets::assets::packs::server::end();
                 Self::failed("the join thread stopped".to_owned())
             }
             Err(TryRecvError::Empty) => ScreenAction::None,
@@ -118,7 +118,7 @@ impl Screen for ConnectingScreen {
     fn on_click(&mut self, x: f32, y: f32, ctx: &ScreenContext) -> ScreenAction {
         if self.cancel.clicked(x, y) {
             ctx.click();
-            crate::assets::packs::server::end();
+            melon_assets::assets::packs::server::end();
             ScreenAction::Back
         } else {
             ScreenAction::None
@@ -127,7 +127,7 @@ impl Screen for ConnectingScreen {
 
     /// Escape cancels like the button: the server's packs are dropped.
     fn on_escape(&mut self, _ctx: &ScreenContext) -> Option<ScreenAction> {
-        crate::assets::packs::server::end();
+        melon_assets::assets::packs::server::end();
         None
     }
 

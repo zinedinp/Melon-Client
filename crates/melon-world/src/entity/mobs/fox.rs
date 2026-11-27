@@ -1,13 +1,13 @@
 //! `AdultFoxModel` and `BabyFoxModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::animations::fox_baby::FOX_BABY_WALK;
+use crate::entity::keyframe::AnimationDefinition;
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::quadruped::Legs;
 use crate::math::angle::{self, PI};
-use crate::world::entity::animations::fox_baby::FOX_BABY_WALK;
-use crate::world::entity::keyframe::AnimationDefinition;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::quadruped::Legs;
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `Fox.DATA_FLAGS_ID` bits.
 pub const FLAG_SITTING: u8 = 1;
@@ -171,7 +171,7 @@ pub fn setup_anim(
     pose: &mut ModelPose,
     living: &LivingRenderState,
     fox: FoxPose,
-    walk: Option<&crate::world::entity::keyframe::KeyframeAnimation>,
+    walk: Option<&crate::entity::keyframe::KeyframeAnimation>,
 ) {
     pose[parts.head].pose.rotation.z = fox.head_roll;
     for leg in [
@@ -328,7 +328,7 @@ pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::keyframe::KeyframeAnimation;
+    use crate::entity::keyframe::KeyframeAnimation;
 
     #[test]
     fn the_kit_walk_bakes_and_the_adult_stands_on_the_ground() {

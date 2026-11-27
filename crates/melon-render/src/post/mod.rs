@@ -1,7 +1,7 @@
 //! Post effect chains (`assets/minecraft/post_effect/<id>.json`).
 
 pub mod config;
-pub(in crate::renderer) mod gpu;
+pub(crate) mod gpu;
 pub mod load;
 pub(super) mod record;
 pub use gpu::ChainSource;

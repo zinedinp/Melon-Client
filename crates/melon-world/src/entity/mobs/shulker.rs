@@ -1,10 +1,10 @@
 //! `ShulkerModel`: a lid and a base that hide a head.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, PI};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 const COLORS: [&str; 16] = [
     "minecraft:entity/shulker/shulker_white",

@@ -15,6 +15,7 @@ use numerobis::elem::{Pod, as_bytes};
 use super::create_buffer;
 use super::staging::Staging;
 use super::vk_util::{self, create_buffer_placed};
+use crate::world::mesh::QUAD_INDICES;
 
 /// Bytes per arena block.
 const BLOCK_BYTES: u64 = 64 << 20;
@@ -22,50 +23,6 @@ const BLOCK_BYTES: u64 = 64 << 20;
 const STAGING_KEPT: u64 = 4 << 20;
 /// Quads one indexed draw can reach with `u16` indices.
 pub const QUADS_PER_DRAW: u32 = 1 << 14;
-/// `0, 1, 2, 0, 2, 3` per quad: both triangles counter-clockwise.
-const QUAD_INDICES: [u16; 6] = [0, 1, 2, 0, 2, 3];
-
-/// Whether a sorted mesh of `vertices` takes `u32` indices, not `u16`s.
-pub fn wide_indices(vertices: u32) -> bool {
-    vertices > 1 << 16
-}
-
-/// `MeshData.SortState.buildSortedIndexBuffer`: the index list that draws
-/// `quads` (by index, in order) of a mesh of `vertices`, [`QUAD_INDICES`]
-/// each. `u16`s two to a word while they reach every vertex
-/// (`IndexType.least`), else `u32`s.
-pub fn quad_index_list(
-    quads: impl ExactSizeIterator<Item = u32>,
-    vertices: u32,
-    out: &mut Vec<u32>,
-) {
-    out.clear();
-    let corners = |quad: u32| QUAD_INDICES.map(|i| quad * 4 + u32::from(i));
-    if wide_indices(vertices) {
-        out.reserve(quads.len() * 6);
-        out.extend(quads.flat_map(corners));
-    } else {
-        out.reserve(quads.len() * 3);
-        out.extend(quads.flat_map(|quad| {
-            let [a, b, c, d, e, f] = corners(quad);
-            [a | b << 16, c | d << 16, e | f << 16]
-        }));
-    }
-}
-
-/// The quads [`quad_index_list`] put in `list`, in its order.
-#[cfg(test)]
-pub fn quads_of_index_list(list: &[u32], vertices: u32) -> Vec<u32> {
-    let (step, mask) = if wide_indices(vertices) {
-        (6, u32::MAX)
-    } else {
-        (3, 0xFFFF)
-    };
-    list.iter()
-        .step_by(step)
-        .map(|&word| (word & mask) / 4)
-        .collect()
-}
 
 /// First-fit free list over a block's vertex range, coalescing on free.
 struct FreeList {
@@ -649,34 +606,5 @@ mod tests {
         list.release(c, 30);
         assert_eq!(list.free, vec![(0, 100)]);
         assert_eq!(list.alloc(101), None);
-    }
-
-    /// The `u16`s read back as the shared quad indices would draw those
-    /// quads; past 65536 vertices the list holds `u32`s.
-    #[test]
-    fn index_lists_draw_quads_in_the_order_given() {
-        let mut list = Vec::new();
-        quad_index_list([2, 0].into_iter(), 12, &mut list);
-        let narrow: Vec<u16> = as_bytes(&list)
-            .chunks(2)
-            .map(|b| u16::from_le_bytes([b[0], b[1]]))
-            .collect();
-        assert_eq!(narrow, [8, 9, 10, 8, 10, 11, 0, 1, 2, 0, 2, 3]);
-        assert_eq!(quads_of_index_list(&list, 12), [2, 0]);
-        let last = (1 << 16) / 4;
-        quad_index_list([last].into_iter(), (1 << 16) + 4, &mut list);
-        let corner = last * 4;
-        assert_eq!(
-            list,
-            [
-                corner,
-                corner + 1,
-                corner + 2,
-                corner,
-                corner + 2,
-                corner + 3
-            ]
-        );
-        assert_eq!(quads_of_index_list(&list, (1 << 16) + 4), [last]);
     }
 }

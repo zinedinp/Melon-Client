@@ -4,9 +4,9 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-use crate::network::{self, ClientInfo, Identity, Session};
 use crate::singleplayer::WorldSettings;
 use crate::singleplayer::server::{self, IntegratedServer};
+use crate::{ClientInfo, Identity, Session};
 
 /// A world joined and ready to play.
 pub struct Joined {
@@ -52,7 +52,7 @@ pub fn join(
 ) -> Result<Joined> {
     match target {
         Target::Server(address) => {
-            let session = network::join_server(&address, identity, client)?;
+            let session = crate::join_server(&address, identity, client)?;
             if crate::probe::enabled() {
                 let info = &session.info;
                 crate::probe::section(
@@ -91,7 +91,7 @@ pub fn join(
                     online: matches!(identity, Identity::Online { .. }),
                 },
             })?;
-            let session = network::join_stream(pipe, identity, client, Box::new(|| {}))?;
+            let session = crate::join_stream(pipe, identity, client, Box::new(|| {}))?;
             Ok(Joined {
                 session,
                 server: Some(server),

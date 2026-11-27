@@ -2,10 +2,10 @@
 
 use glam::Mat4;
 
+use crate::block_entity::models::{self, SkullType};
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, PI};
-use crate::world::block_entity::models::{self, SkullType};
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Part, Pose};
+use crate::model_part::{Part, Pose};
 
 /// Names for a head's child parts, in [`models::skull`]'s order.
 const CHILDREN: [&str; 4] = ["child0", "child1", "child2", "child3"];

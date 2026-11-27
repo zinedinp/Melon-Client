@@ -6,7 +6,7 @@ use pumpkin_data::item_stack::ItemStack;
 use pumpkin_nbt::compound::NbtCompound;
 use pumpkin_nbt::tag::NbtTag;
 
-use crate::world::inventory::empty;
+use crate::inventory::empty;
 
 pub const HOTBARS: usize = 9;
 const SLOTS: usize = 9;

@@ -1,6 +1,6 @@
 //! Vanilla `VisGraph` / `VisibilitySet`.
 
-use crate::world::block::direction::{Direction, Directions};
+use crate::block::direction::{Direction, Directions};
 
 const SIZE: usize = 16;
 const CELLS: usize = SIZE * SIZE * SIZE;
@@ -286,7 +286,7 @@ mod tests {
     }
 
     fn index(x: usize, y: usize, z: usize) -> usize {
-        crate::world::chunk::Section::index(x, y, z)
+        crate::chunk::Section::index(x, y, z)
     }
 
     #[test]

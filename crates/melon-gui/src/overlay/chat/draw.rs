@@ -1,10 +1,10 @@
 //! `ChatComponent.extractRenderState` and its hit tests.
 
 use super::{BOTTOM_MARGIN, Chat, Line, Tag};
-use crate::gui::text::font::{Font, Glyphs};
-use crate::gui::text::{self, StyledText, TextPaint, TextStyle};
 use crate::i18n::Lang;
 use crate::renderer::quad::DrawList;
+use crate::text::font::{Font, Glyphs};
+use crate::text::{self, StyledText, TextPaint, TextStyle};
 
 impl Chat {
     /// The lines on screen, newest first, with their alpha.

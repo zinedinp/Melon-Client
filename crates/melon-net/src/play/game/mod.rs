@@ -2,8 +2,7 @@
 
 pub mod boss;
 mod decode;
-mod entity;
-pub mod particle;
+pub use crate::particle::wire as particle;
 pub mod recipes;
 pub mod scores;
 mod serverbound;
@@ -15,7 +14,7 @@ pub use decode::{GameEvent, PlayerInfoUpdate, decode};
 pub const KEEP_ATTRIBUTE_MODIFIERS: u8 = 1;
 /// `ClientboundRespawnPacket.KEEP_ENTITY_DATA`.
 pub const KEEP_ENTITY_DATA: u8 = 2;
-pub use entity::{
+pub use crate::world::entity::wire::{
     ATTRIBUTE_ARMOR, ATTRIBUTE_BELOW_NAME_DISTANCE, ATTRIBUTE_JUMP_STRENGTH, ATTRIBUTE_MAX_HEALTH,
     ATTRIBUTE_MOVEMENT_SPEED, ATTRIBUTE_NAME_TAG_DISTANCE, ATTRIBUTE_SCALE, ATTRIBUTE_STEP_HEIGHT,
     AddEntity, AttributeSnapshot, DataValue, EVENT_DEATH, EntityFlags, EntityPacket, EquipmentSlot,

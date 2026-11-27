@@ -2632,57 +2632,70 @@ checksum = "7ebb8d8732c6a6df3d8f032a82911cfc747e00efb95cc46e8d0acd5b5b88570c"
 name = "melon"
 version = "0.11.0+mc26.3"
 dependencies = [
- "aes 0.9.4",
  "anyhow",
- "arboard",
- "arc-swap",
- "ash",
- "ash-window",
- "cfb8",
  "chrono",
  "crossbeam-channel",
- "flate2",
  "glam",
  "image",
  "libloading 0.9.1",
- "majestix-vk",
+ "melon-assets",
+ "melon-audio",
+ "melon-base",
+ "melon-core",
+ "melon-gui",
+ "melon-net",
+ "melon-protocol",
+ "melon-render",
+ "melon-settings",
+ "melon-world",
+ "numerobis",
+ "pumpkin-core",
+ "pumpkin-data",
+ "pumpkin-protocol",
+ "pumpkin-util",
+ "pumpkin-world",
+ "rand 0.10.4",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "uuid",
+ "winit",
+]
+
+[[package]]
+name = "melon-assets"
+version = "0.11.0+mc26.3"
+dependencies = [
+ "anyhow",
+ "flate2",
+ "image",
  "melon-base",
  "melon-core",
  "melon-protocol",
- "miraculix",
- "num-bigint 0.5.1",
- "numerobis",
- "open",
  "png",
- "pumpkin-config",
- "pumpkin-core",
- "pumpkin-data",
  "pumpkin-mod",
- "pumpkin-nbt",
- "pumpkin-protocol",
- "pumpkin-util",
- "pumpkin-wasm-host",
- "pumpkin-world",
- "rand 0.10.4",
- "raw-window-handle",
- "rayon",
  "regex",
- "rodio",
- "rsa",
  "rustc-hash",
  "serde",
  "serde_json",
  "sha1 0.11.0",
- "sha2 0.11.2",
  "shaderc",
- "socket2",
- "tokio",
- "tokio-util",
  "ureq",
  "uuid",
- "windows-sys 0.61.2",
- "winit",
  "zip",
+]
+
+[[package]]
+name = "melon-audio"
+version = "0.11.0+mc26.3"
+dependencies = [
+ "crossbeam-channel",
+ "melon-assets",
+ "melon-base",
+ "melon-core",
+ "rand 0.10.4",
+ "rodio",
+ "serde_json",
 ]
 
 [[package]]
@@ -2711,7 +2724,7 @@ dependencies = [
 
 [[package]]
 name = "melon-core"
-version = "0.1.0"
+version = "0.11.0+mc26.3"
 dependencies = [
  "glam",
  "melon-base",
@@ -2722,8 +2735,71 @@ dependencies = [
 ]
 
 [[package]]
+name = "melon-gui"
+version = "0.11.0+mc26.3"
+dependencies = [
+ "anyhow",
+ "flate2",
+ "glam",
+ "image",
+ "melon-assets",
+ "melon-audio",
+ "melon-base",
+ "melon-core",
+ "melon-net",
+ "melon-protocol",
+ "melon-render",
+ "melon-settings",
+ "melon-world",
+ "open",
+ "pumpkin-data",
+ "pumpkin-nbt",
+ "pumpkin-protocol",
+ "rand 0.10.4",
+ "rustc-hash",
+ "serde_json",
+ "uuid",
+ "zip",
+]
+
+[[package]]
+name = "melon-net"
+version = "0.11.0+mc26.3"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "chrono",
+ "image",
+ "melon-assets",
+ "melon-audio",
+ "melon-base",
+ "melon-core",
+ "melon-protocol",
+ "melon-settings",
+ "melon-world",
+ "pumpkin-config",
+ "pumpkin-core",
+ "pumpkin-data",
+ "pumpkin-nbt",
+ "pumpkin-protocol",
+ "pumpkin-util",
+ "pumpkin-wasm-host",
+ "pumpkin-world",
+ "rand 0.10.4",
+ "rayon",
+ "serde",
+ "serde_json",
+ "socket2",
+ "tokio",
+ "tokio-util",
+ "uuid",
+ "windows-sys 0.61.2",
+ "zip",
+]
+
+[[package]]
 name = "melon-protocol"
-version = "0.1.0"
+version = "0.11.0+mc26.3"
 dependencies = [
  "aes 0.9.4",
  "anyhow",
@@ -2737,6 +2813,65 @@ dependencies = [
  "rsa",
  "serde_json",
  "sha1 0.11.0",
+ "uuid",
+]
+
+[[package]]
+name = "melon-render"
+version = "0.11.0+mc26.3"
+dependencies = [
+ "anyhow",
+ "ash",
+ "glam",
+ "image",
+ "majestix-vk",
+ "melon-assets",
+ "melon-base",
+ "melon-core",
+ "melon-world",
+ "numerobis",
+ "raw-window-handle",
+ "rustc-hash",
+ "serde_json",
+ "winit",
+]
+
+[[package]]
+name = "melon-settings"
+version = "0.11.0+mc26.3"
+dependencies = [
+ "melon-assets",
+ "melon-audio",
+ "melon-base",
+ "melon-core",
+ "melon-world",
+ "serde",
+ "serde_json",
+ "winit",
+]
+
+[[package]]
+name = "melon-world"
+version = "0.11.0+mc26.3"
+dependencies = [
+ "anyhow",
+ "crossbeam-channel",
+ "glam",
+ "image",
+ "melon-assets",
+ "melon-base",
+ "melon-core",
+ "melon-protocol",
+ "miraculix",
+ "numerobis",
+ "pumpkin-data",
+ "pumpkin-mod",
+ "pumpkin-nbt",
+ "pumpkin-protocol",
+ "pumpkin-util",
+ "rustc-hash",
+ "serde",
+ "serde_json",
  "uuid",
 ]
 

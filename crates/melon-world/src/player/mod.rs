@@ -1,7 +1,7 @@
 //! The local player.
 
-use crate::world::game_mode::Abilities;
-use crate::world::physics::Aabb;
+use crate::game_mode::Abilities;
+use crate::physics::Aabb;
 use glam::DVec3;
 
 mod attributes;
@@ -84,7 +84,7 @@ pub struct MoveInput {
 
 pub struct PlayerState {
     /// The boxes of the entities that stop it near it (boats, ...).
-    colliders: Vec<crate::world::physics::Aabb>,
+    colliders: Vec<crate::physics::Aabb>,
     /// Feet position after the last tick.
     feet: DVec3,
     /// Feet position after the tick before, for interpolation.
@@ -124,9 +124,9 @@ pub struct PlayerState {
     camera_eye: f32,
     camera_eye_old: f32,
     /// `Entity.mainSupportingBlockPos`: the block the player stands on.
-    support: crate::world::physics::Support,
+    support: crate::physics::Support,
     /// `LivingEntity.walkAnimation`: the limbs' swing, advanced each tick.
-    walk: crate::world::entity::walk::WalkAnimation,
+    walk: crate::entity::walk::WalkAnimation,
     /// `LocalPlayer.yBob`/`xBob`: a lagging copy of the look angles.
     yaw_bob: f32,
     pitch_bob: f32,
@@ -198,17 +198,17 @@ pub struct PlayerState {
 
 impl PlayerState {
     /// The boxes of the entities near the player that stop it, for this tick.
-    pub fn set_colliders(&mut self, colliders: Vec<crate::world::physics::Aabb>) {
+    pub fn set_colliders(&mut self, colliders: Vec<crate::physics::Aabb>) {
         self.colliders = colliders;
     }
 
     /// The collider list, to refill each tick without a new allocation.
-    pub fn colliders_buffer(&mut self) -> &mut Vec<crate::world::physics::Aabb> {
+    pub fn colliders_buffer(&mut self) -> &mut Vec<crate::physics::Aabb> {
         &mut self.colliders
     }
 
     /// The player's box, for finding what is near it.
-    pub fn collision_box(&self) -> crate::world::physics::Aabb {
+    pub fn collision_box(&self) -> crate::physics::Aabb {
         self.bounding_box()
     }
 
@@ -414,7 +414,7 @@ impl PlayerState {
     }
 
     /// `GameType.updatePlayerAbilities` and `LocalPlayer.onGameModeChanged`.
-    pub fn set_game_mode(&mut self, mode: crate::world::game_mode::GameMode) {
+    pub fn set_game_mode(&mut self, mode: crate::game_mode::GameMode) {
         self.abilities = mode.abilities(self.abilities);
         self.set_spectator(mode.is_spectator());
     }
@@ -521,13 +521,13 @@ impl PlayerState {
     }
 
     /// After a warp or setback: if a block is under the feet, stand on it.
-    pub fn settle_after_teleport(&mut self, level: &crate::world::level::Level) {
+    pub fn settle_after_teleport(&mut self, level: &crate::level::Level) {
         let aabb = self.bounding_box();
-        let under = crate::world::physics::Aabb {
+        let under = crate::physics::Aabb {
             min: DVec3::new(aabb.min.x, aabb.min.y - 1.0e-6, aabb.min.z),
             max: DVec3::new(aabb.max.x, aabb.min.y, aabb.max.z),
         };
-        if crate::world::physics::find_supporting_block(level, &under, self.feet).is_none() {
+        if crate::physics::find_supporting_block(level, &under, self.feet).is_none() {
             return;
         }
         self.on_ground = true;
@@ -538,13 +538,9 @@ impl PlayerState {
     }
 
     /// `Player.isColliding(pos, state)`.
-    pub fn is_colliding_with_block(
-        &self,
-        level: &crate::world::level::Level,
-        pos: [i32; 3],
-    ) -> bool {
+    pub fn is_colliding_with_block(&self, level: &crate::level::Level, pos: [i32; 3]) -> bool {
         let b = self.bounding_box();
-        crate::world::physics::block_shapes(level, (pos[0], pos[1], pos[2]))
+        crate::physics::block_shapes(level, (pos[0], pos[1], pos[2]))
             .any(|shape| shape.intersects(&b))
     }
 
@@ -713,8 +709,8 @@ impl PlayerState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::{Chunk, Section};
-    use crate::world::level::Level;
+    use crate::chunk::{Chunk, Section};
+    use crate::level::Level;
 
     #[test]
     fn the_field_of_view_widens_with_speed_and_flight() {
@@ -1356,7 +1352,7 @@ mod tests {
     fn creative_players_double_tap_jump_to_fly_and_land_to_stop() {
         let level = flat_world(false);
         let mut player = standing(&level, 0.0);
-        player.abilities = crate::world::game_mode::GameMode::Creative.abilities(player.abilities);
+        player.abilities = crate::game_mode::GameMode::Creative.abilities(player.abilities);
         let jump = MoveInput {
             jump: true,
             ..MoveInput::default()
@@ -1392,7 +1388,7 @@ mod tests {
         let level = flat_world(true);
         let mut player = standing(&level, 90.0);
         player.feet.x = 19.0;
-        player.abilities = crate::world::game_mode::GameMode::Spectator.abilities(player.abilities);
+        player.abilities = crate::game_mode::GameMode::Spectator.abilities(player.abilities);
         player.set_spectator(true);
         for _ in 0..40 {
             player.tick(forward(false), &level, 20, SPRINT_WINDOW_DEFAULT);

@@ -1,9 +1,9 @@
 //! `Hud.extractFood`.
 
 use super::{Layout, fill};
-use crate::gui::hud::{ICON, JavaRandom, PlayerStatus};
-use crate::gui::sprite::GuiSprite;
+use crate::hud::{ICON, JavaRandom, PlayerStatus};
 use crate::renderer::quad::DrawList;
+use crate::sprite::GuiSprite;
 
 /// Empty, half and full, plain and with hunger.
 pub struct Sprites {

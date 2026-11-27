@@ -1,12 +1,12 @@
 [package]
 name = "melon-core"
-version = "0.1.0"
-authors = ["Zinedin Polic"]
-edition = "2024"
-rust-version = "1.100.0"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 description = "The bottom of the Melon client: vanilla's math, small utilities, the instance folders and the tester's report"
-repository = "https://github.com/zinedinp/Melon-Client"
-license = "GPL-3.0"
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
 melon-base = { path = "../melon-base" }

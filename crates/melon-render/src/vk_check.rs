@@ -30,7 +30,7 @@ fn messages() -> std::sync::MutexGuard<'static, Vec<String>> {
 }
 
 fn local_layer_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".vulkan/validation")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.vulkan/validation")
 }
 
 fn ensure_layer_search_path() {
@@ -263,9 +263,9 @@ fn every_pipeline_passes_validation(version: Option<ApiVersion>) {
                 .expect("ui"),
             );
         }
-        let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
+        let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets");
         if assets.join("minecraft/shaders/core/text.vsh").is_file() {
-            let shaders = crate::gui::pack_shaders::compile_all(&assets).expect("GUI shaders");
+            let shaders = super::pack_shaders::compile_all(&assets).expect("GUI shaders");
             for shader in &shaders {
                 let bytes = |words: &[u32]| -> Vec<u8> {
                     words.iter().flat_map(|w| w.to_le_bytes()).collect()

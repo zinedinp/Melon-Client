@@ -7,7 +7,7 @@ use crate::audio::music::{MusicFrequency, MusicToast};
 use crate::audio::source::{SoundSource, Volumes};
 use crate::cycle::Cycle;
 use crate::i18n::languages::Language;
-use crate::settings::input::{self, Action, InputBind, InputSettings};
+use crate::input::{self, Action, InputBind, InputSettings};
 use crate::world::clouds::CloudStatus;
 use crate::world::culling::CullSettings;
 use crate::world::entity::player::{Arm, PlayerModelPart, ShownParts};
@@ -18,6 +18,8 @@ mod keys;
 #[cfg(test)]
 mod tests;
 
+pub use crate::particle::ParticleStatus;
+pub use crate::world::level::ChunkBuilder;
 pub use chat::*;
 pub use choices::*;
 use keys::*;
@@ -41,7 +43,7 @@ pub const MAX_FPS_DEFAULT: u32 = 120;
 pub const GAMMA_DEFAULT: f64 = 0.5;
 /// `Options.biomeBlendRadius`: `0` is off, `7` blends 15x15 blocks.
 pub const BIOME_BLEND_RANGE: (u8, u8) = (0, 7);
-pub const BIOME_BLEND_DEFAULT: u8 = 2;
+pub use crate::world::block_tint::BIOME_BLEND_DEFAULT;
 /// `Options.cloudRange` in chunks.
 pub const CLOUD_RANGE_RANGE: (u8, u8) = (2, 128);
 pub const CLOUD_RANGE_DEFAULT: u8 = 128;

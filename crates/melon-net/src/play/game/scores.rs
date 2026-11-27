@@ -1,7 +1,7 @@
 //! The packets of the scoreboard and the tab list.
 
 use crate::component::Component;
-use crate::network::protocol::packet::Reader;
+use crate::protocol::packet::Reader;
 use crate::world::scoreboard::{
     CollisionRule, DisplaySlot, NumberFormat, Objective, RenderType, Score, ScoreUpdate,
     TeamAction, TeamColor, TeamLook, Visibility,
@@ -132,8 +132,8 @@ fn players(r: &mut Reader) -> Result<Vec<Box<str>>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::network::protocol::reader::write_string;
-    use crate::network::protocol::varint::write_var_int;
+    use crate::protocol::reader::write_string;
+    use crate::protocol::varint::write_var_int;
 
     #[test]
     fn reads_a_team_with_its_members() {

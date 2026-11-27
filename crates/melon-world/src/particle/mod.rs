@@ -4,10 +4,10 @@ use std::sync::Arc;
 
 use glam::DVec3;
 
-use crate::settings::options::ParticleStatus;
-use crate::world::block_models::BlockModels;
-use crate::world::java_random::JavaRandom;
-use crate::world::level::Level;
+use crate::block_models::BlockModels;
+use crate::cycle::Cycle;
+use crate::java_random::JavaRandom;
+use crate::level::Level;
 
 pub mod animation;
 pub mod base;
@@ -19,6 +19,7 @@ pub mod motion;
 pub mod options;
 pub mod provider;
 pub mod server;
+pub mod wire;
 
 pub use base::Particle;
 pub use kind::Kind;
@@ -68,8 +69,7 @@ impl EntityBox {
 }
 
 /// The item an entity has in a slot, by registry id.
-pub type EquipmentAt<'a> =
-    &'a dyn Fn(i32, crate::network::play::game::EquipmentSlot) -> Option<u16>;
+pub type EquipmentAt<'a> = &'a dyn Fn(i32, crate::entity::wire::EquipmentSlot) -> Option<u16>;
 
 /// What a tick or a spawn reads of the world.
 pub struct TickCtx<'a> {
@@ -143,7 +143,7 @@ impl<'a> World<'a> {
             .max((i32::from(sky) - darken).clamp(0, 15) as u8)
     }
 
-    pub(crate) fn ctx<'b>(&'b self, looks: &'b Looks) -> TickCtx<'b> {
+    pub fn ctx<'b>(&'b self, looks: &'b Looks) -> TickCtx<'b> {
         TickCtx {
             level: self.level,
             sprites: &looks.sprites,
@@ -428,6 +428,38 @@ fn admit_to_group(size: usize, rng: &mut JavaRandom) -> bool {
     }
     let room = (MAX_PER_GROUP - size) as f32 / (MAX_PER_GROUP - RESERVOIR_START) as f32;
     rng.next_float() < room * room
+}
+
+/// `ParticleStatus`: how many particles show, by its `options.txt` id.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ParticleStatus {
+    #[default]
+    All,
+    Decreased,
+    Minimal,
+}
+
+impl ParticleStatus {
+    /// `BY_ID` with `OutOfBoundsStrategy.WRAP`.
+    pub fn from_id(id: i64) -> Self {
+        Self::ALL[id.rem_euclid(Self::ALL.len() as i64) as usize]
+    }
+
+    pub fn id(self) -> u8 {
+        self as u8
+    }
+
+    pub fn caption_key(self) -> &'static str {
+        match self {
+            Self::All => "options.particles.all",
+            Self::Decreased => "options.particles.decreased",
+            Self::Minimal => "options.particles.minimal",
+        }
+    }
+}
+
+impl Cycle for ParticleStatus {
+    const ALL: &'static [Self] = &[Self::All, Self::Decreased, Self::Minimal];
 }
 
 #[cfg(test)]

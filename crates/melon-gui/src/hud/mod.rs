@@ -14,18 +14,18 @@ pub mod subtitles;
 
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::assets::Assets;
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::{self, StyledText, TextPaint, colors};
+use crate::hud::item_slot::ItemPainter;
 use crate::math::argb;
 use crate::renderer::Renderer;
 use crate::renderer::quad::{BlendMode, DrawList};
 use crate::settings::options::AttackIndicator;
+use crate::sprite::GuiSprite;
+use crate::text::{self, StyledText, TextPaint, colors};
 use crate::world::entity::player::Arm;
 use crate::world::game_mode::GameMode;
 use crate::world::inventory::{Inventory, OFFHAND_SLOT};
 pub use crate::world::java_random::JavaRandom;
+use melon_assets::assets::Assets;
 
 /// `Hud.setOverlayMessage`: 3 seconds.
 const OVERLAY_TICKS: u32 = 60;

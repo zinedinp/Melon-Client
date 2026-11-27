@@ -3,19 +3,18 @@
 use glam::DVec3;
 
 use super::super::{Kind, ParticleEngine, ParticleSpec, World, provider};
-use crate::world::block::direction::Direction;
-use crate::world::physics::Aabb;
+use crate::block::direction::Direction;
+use crate::physics::Aabb;
 
 /// `getShape`'s boxes of `state` at `pos`, block-relative.
 fn shape_boxes(world: &World, pos: [i32; 3]) -> Vec<Aabb> {
     let origin = DVec3::new(f64::from(pos[0]), f64::from(pos[1]), f64::from(pos[2]));
-    let boxes: Vec<Aabb> =
-        crate::world::pick::outline_shapes(world.level, (pos[0], pos[1], pos[2]))
-            .map(|b| Aabb {
-                min: b.min - origin,
-                max: b.max - origin,
-            })
-            .collect();
+    let boxes: Vec<Aabb> = crate::pick::outline_shapes(world.level, (pos[0], pos[1], pos[2]))
+        .map(|b| Aabb {
+            min: b.min - origin,
+            max: b.max - origin,
+        })
+        .collect();
     if boxes.is_empty() {
         vec![Aabb {
             min: DVec3::ZERO,

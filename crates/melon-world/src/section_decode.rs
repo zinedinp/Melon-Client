@@ -13,7 +13,7 @@
 ))]
 use crate::math::bytes::Bytes;
 use crate::math::simd::{self, ByteTier};
-use crate::world::section::BLOCKS_PER_SECTION;
+use crate::section::BLOCKS_PER_SECTION;
 
 /// Rows of 16 blocks along x in a section, index `y * 16 + z`.
 pub const ROWS: usize = 256;

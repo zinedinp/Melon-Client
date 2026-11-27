@@ -443,7 +443,7 @@ fn result_key(entry: &Entry) -> (Category, Vec<u16>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::recipes::display::SlotDisplay;
+    use crate::recipes::display::SlotDisplay;
     use pumpkin_data::item::Item;
 
     fn entry(id: i32, category: Category, group: Option<i32>, result: &'static Item) -> Entry {

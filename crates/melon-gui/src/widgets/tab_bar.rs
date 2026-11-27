@@ -1,7 +1,7 @@
 //! Vanilla `MenuTabBar` / `TabNavigationBar`.
 
-use crate::gui::text::font::LINE_HEIGHT;
-use crate::gui::widgets::{Rect, Ui};
+use crate::text::font::LINE_HEIGHT;
+use crate::widgets::{Rect, Ui};
 
 /// `MenuTabBar.HEIGHT`.
 pub const HEIGHT: f32 = 24.0;
@@ -117,7 +117,7 @@ impl TabBar {
             .draw(ui.draw_list, x, self.y, w, HEIGHT);
 
         if selected {
-            crate::gui::background::push_menu_overlay_rect(
+            crate::background::push_menu_overlay_rect(
                 ui.draw_list,
                 assets.white,
                 x + 2.0,

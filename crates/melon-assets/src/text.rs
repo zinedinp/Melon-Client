@@ -1,16 +1,34 @@
-//! Styled text.
-
-pub mod font;
-mod layout;
-pub mod objects;
-pub mod splash;
-
-pub use layout::{TextPaint, draw, is_active, style_at, width, wrap};
+//! Styled text: components resolved against a language into runs of one
+//! style each. The fonts that draw them and their layout are the GUI's.
 
 use std::sync::Arc;
 
 use crate::component::{ClickEvent, Component, Contents, HoverEvent, ObjectInfo, Style};
 use crate::i18n::Lang;
+
+/// The font a run without one of its own is drawn in.
+pub const DEFAULT_FONT: &str = "minecraft:default";
+
+/// Text that holds an inline sprite (a `sprite` object component) carries it as a private-use
+/// character.
+pub const SPRITE_FIRST: char = '\u{E000}';
+pub const SPRITE_COUNT: usize = 256;
+
+/// Which sprite a placeholder character stands for.
+pub fn sprite_index(c: char) -> Option<usize> {
+    let offset = (c as usize).checked_sub(SPRITE_FIRST as usize)?;
+    (offset < SPRITE_COUNT).then_some(offset)
+}
+
+/// The placeholder character for sprite `index`.
+pub fn sprite_char(index: usize) -> Option<char> {
+    char::from_u32(
+        SPRITE_FIRST as u32
+            + u32::try_from(index)
+                .ok()
+                .filter(|i| *i < SPRITE_COUNT as u32)?,
+    )
+}
 
 /// `ChatFormatting`'s sixteen colours, by `§` code.
 pub const FORMATTING_COLORS: [[u8; 3]; 16] = [
@@ -33,7 +51,7 @@ pub const FORMATTING_COLORS: [[u8; 3]; 16] = [
 ];
 
 /// `Style.applyLegacyFormat` for the `§` code `code`, `§r` going back to `base`.
-pub(crate) fn apply_code(style: &mut TextStyle, code: char, base: &TextStyle) {
+pub fn apply_code(style: &mut TextStyle, code: char, base: &TextStyle) {
     match code.to_ascii_lowercase() {
         digit @ ('0'..='9' | 'a'..='f') => {
             let index = digit.to_digit(16).unwrap_or(15) as usize;
@@ -140,8 +158,8 @@ impl TextStyle {
             out.shadow_color = Some(c.map(|v| f32::from(v) / 255.0));
         }
         if let Some(font) = &style.font {
-            out.font = (font.0 != font::DEFAULT_FONT && font.0 != "default")
-                .then(|| font.0.as_str().into());
+            out.font =
+                (font.0 != DEFAULT_FONT && font.0 != "default").then(|| font.0.as_str().into());
         }
         if let Some(click) = &style.click_event {
             out.click = Some(Arc::new(click.clone()));

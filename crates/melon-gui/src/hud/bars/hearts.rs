@@ -1,9 +1,9 @@
 //! `Hud.extractHearts`.
 
 use super::Layout;
-use crate::gui::hud::{ICON, JavaRandom, PlayerStatus};
-use crate::gui::sprite::GuiSprite;
+use crate::hud::{ICON, JavaRandom, PlayerStatus};
 use crate::renderer::quad::DrawList;
+use crate::sprite::GuiSprite;
 
 /// `Hud.HeartType`: how the hearts look.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

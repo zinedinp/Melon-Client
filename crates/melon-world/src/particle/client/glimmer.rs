@@ -5,10 +5,10 @@ use glam::{DVec3, IVec3};
 use super::super::options::{ParticleData, ParticleSpec};
 use super::super::{Kind, Spawn, World};
 use super::{block_name, lit, prop};
-use crate::world::block::direction::Direction;
-use crate::world::block::state_flags;
-use crate::world::block_tint::TintKind;
-use crate::world::java_random::JavaRandom;
+use crate::block::direction::Direction;
+use crate::block::state_flags;
+use crate::block_tint::TintKind;
+use crate::java_random::JavaRandom;
 
 /// The block's animation, if it has one here.
 pub fn animate(world: &World, state: u16, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
@@ -541,11 +541,8 @@ fn hangs(state: u16) -> bool {
 }
 
 /// `getFluidAboveStalactite`.
-fn fluid_above_stalactite(
-    world: &World,
-    pos: IVec3,
-) -> Option<Option<crate::world::fluid::FluidKind>> {
-    use crate::world::fluid::FluidKind;
+fn fluid_above_stalactite(world: &World, pos: IVec3) -> Option<Option<crate::fluid::FluidKind>> {
+    use crate::fluid::FluidKind;
     let at = |y: i32| world.level.block_state(pos.x, y, pos.z).unwrap_or(0);
     let mut root = None;
     for step in 1..11 {
@@ -563,18 +560,18 @@ fn fluid_above_stalactite(
     Some(if block_name(at(root + 1)) == "mud" {
         Some(FluidKind::Water)
     } else {
-        crate::world::physics::fluid_at(world.level, pos.x, root + 1, pos.z)
+        crate::physics::fluid_at(world.level, pos.x, root + 1, pos.z)
     })
 }
 
 /// The drip from a tip: lava's, else water's.
-fn drip_of(state: u16, pos: IVec3, fluid: Option<crate::world::fluid::FluidKind>) -> Spawn {
-    let kind = if fluid == Some(crate::world::fluid::FluidKind::Lava) {
+fn drip_of(state: u16, pos: IVec3, fluid: Option<crate::fluid::FluidKind>) -> Spawn {
+    let kind = if fluid == Some(crate::fluid::FluidKind::Lava) {
         Kind::DrippingDripstoneLava
     } else {
         Kind::DrippingDripstoneWater
     };
-    let [ox, _, oz] = crate::world::block::offset::offset(state, pos.x, pos.z).map(f64::from);
+    let [ox, _, oz] = crate::block::offset::offset(state, pos.x, pos.z).map(f64::from);
     let drip = pos.as_dvec3() + DVec3::new(0.5 + ox, 0.3125 - 0.0625, 0.5 + oz);
     Spawn::simple(kind, drip, DVec3::ZERO)
 }
@@ -589,7 +586,7 @@ fn honey_drip(world: &World, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spa
         .level
         .block_state(below.x, below.y, below.z)
         .unwrap_or(0);
-    let below_wet = crate::world::fluid::fluid_of(below_state).is_some();
+    let below_wet = crate::fluid::fluid_of(below_state).is_some();
     if super::full_block(world, below) || below_wet {
         return;
     }
@@ -632,7 +629,7 @@ fn falling_dust(world: &World, state: u16, pos: IVec3, rng: &mut JavaRandom, out
             s.is_air() || s.replaceable()
         })
         || matches!(block_name(below_state), "fire" | "soul_fire")
-        || crate::world::fluid::fluid_of(below_state).is_some();
+        || crate::fluid::fluid_of(below_state).is_some();
     if free {
         let spec = ParticleSpec {
             kind: Kind::FallingDust,

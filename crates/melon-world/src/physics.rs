@@ -3,9 +3,9 @@
 use glam::DVec3;
 use pumpkin_data::BlockStateId;
 
-use crate::world::block::state_flags;
-use crate::world::fluid::{self, FluidKind};
-use crate::world::level::Level;
+use crate::block::state_flags;
+use crate::fluid::{self, FluidKind};
+use crate::level::Level;
 
 /// `Shapes.EPSILON`, below which movement counts as none.
 const EPSILON: f64 = 1.0e-7;
@@ -90,11 +90,7 @@ pub fn block_at(level: &Level, x: i32, y: i32, z: i32) -> u16 {
 }
 
 /// The block cells `region` reaches into, grown by `grow` on every side.
-pub(crate) fn cells(
-    region: &Aabb,
-    grow: f64,
-    extra_below: i32,
-) -> impl Iterator<Item = (i32, i32, i32)> {
+pub fn cells(region: &Aabb, grow: f64, extra_below: i32) -> impl Iterator<Item = (i32, i32, i32)> {
     let lo = |v: f64| (v - grow).floor() as i32;
     let hi = |v: f64| (v + grow).floor() as i32;
     let (x0, x1) = (lo(region.min.x), hi(region.max.x));
@@ -108,7 +104,7 @@ pub fn block_shapes(level: &Level, (x, y, z): (i32, i32, i32)) -> impl Iterator<
     let id = block_at(level, x, y, z);
     let state = BlockStateId::new(id).filter(|id| id.as_u16() != 0);
     let origin = DVec3::new(f64::from(x), f64::from(y), f64::from(z))
-        + crate::world::block::offset::shape_delta(id, x, z);
+        + crate::block::offset::shape_delta(id, x, z);
     state
         .into_iter()
         .flat_map(|state| state.to_state().get_block_collision_shapes())
@@ -527,7 +523,7 @@ pub fn fluid_at(level: &Level, x: i32, y: i32, z: i32) -> Option<FluidKind> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::{Chunk, Section};
+    use crate::chunk::{Chunk, Section};
     use pumpkin_data::Block;
 
     #[test]
@@ -795,8 +791,7 @@ mod tests {
         let feet = DVec3::new(0.5, 64.0 + f64::from(layers - 1) * 2.0 / 16.0, 0.5);
         let b = Aabb::at_feet(feet, 0.6_f32.into(), 1.8_f32.into());
         let support = update_support(&level, &b, feet, true, DVec3::ZERO, Support::default());
-        let on =
-            |offset: f64| crate::world::block_motion::on_pos(&level, feet, support.block, offset);
+        let on = |offset: f64| crate::block_motion::on_pos(&level, feet, support.block, offset);
         (on(f64::from(1.0e-5_f32)), on(f64::from(0.2_f32)))
     }
 
@@ -821,8 +816,7 @@ mod tests {
         let b = Aabb::at_feet(feet, 0.6_f32.into(), 1.8_f32.into());
         let support = update_support(&level, &b, feet, true, DVec3::ZERO, Support::default());
         assert_eq!(support.block, Some((0, 63, 0)));
-        let on =
-            crate::world::block_motion::on_pos(&level, feet, support.block, f64::from(0.2_f32));
+        let on = crate::block_motion::on_pos(&level, feet, support.block, f64::from(0.2_f32));
         assert_eq!(on, (0, 63, 0));
     }
 

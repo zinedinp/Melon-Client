@@ -3,7 +3,7 @@
 use super::super::humanoid::{self, HumanoidParts};
 use super::super::model::{LayerDefinition, ModelPose};
 use super::{LayerSpec, ModelId as M};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// Where `createMesh(NONE, -14)` stands the body.
 const Y_OFFSET: f32 = -14.0;
@@ -132,7 +132,7 @@ mod tests {
         assert!((at.y - 0.6875).abs() < 0.5 && at.z < -0.4, "{at}");
     }
 
-    use crate::world::entity::model::Model;
+    use crate::entity::model::Model;
 
     #[test]
     fn a_carried_block_lifts_the_arms_and_a_creepy_head_drops() {

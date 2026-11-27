@@ -4,18 +4,16 @@ use crate::world::item_model::StackKey;
 use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::assets::Assets;
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::overlay::{
-    ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind,
-};
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::{self, StyledText, TextStyle, colors};
+use crate::hud::item_slot::ItemPainter;
 use crate::i18n::Lang;
+use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
 use crate::renderer::quad::DrawList;
 use crate::renderer::{Renderer, TextureId};
+use crate::sprite::GuiSprite;
+use crate::text::{self, StyledText, TextStyle, colors};
 use crate::world::game_mode::{GameMode, LocalGameMode};
 use crate::world::inventory::Inventory;
+use melon_assets::assets::Assets;
 
 /// `GameModeIcon.values().length * 31 - 5`.
 const ALL_SLOTS_WIDTH: f32 = 119.0;
@@ -39,8 +37,8 @@ pub struct SwitcherTextures {
 impl SwitcherTextures {
     pub fn load(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
         Ok(Self {
-            background: assets
-                .texture(renderer, "minecraft:gui/container/gamemode_switcher.png")?,
+            background: renderer
+                .asset_texture(assets, "minecraft:gui/container/gamemode_switcher.png")?,
             slot: GuiSprite::load(
                 renderer,
                 assets,

@@ -2,7 +2,7 @@
 
 use super::element::{Element, ItemElement, TextElement};
 use crate::dialog::DialogBody;
-use crate::gui::screen::ScreenContext;
+use crate::screen::ScreenContext;
 
 /// `DialogBodyHandlers.createBodyElement`.
 pub fn element(body: &DialogBody, ctx: &ScreenContext) -> Box<dyn Element> {

@@ -4,10 +4,10 @@ use super::level::chunk;
 use super::level::chunk_batch::ChunkBatchSizeCalculator;
 use super::stats::NetStats;
 use super::{chat, game};
-use crate::network::login::{self, ClientInfo, JoinInfo, write_client_information};
-use crate::network::protocol::connection::{ReadHalf, WriteHalf};
-use crate::network::protocol::packet::{self, Reader, write_packet};
-use crate::network::protocol::{id, varint};
+use crate::login::{self, ClientInfo, JoinInfo, write_client_information};
+use crate::protocol::connection::{ReadHalf, WriteHalf};
+use crate::protocol::packet::{self, Reader, write_packet};
+use crate::protocol::{id, varint};
 use crate::world::dimension::{DimensionTypes, Height};
 use crate::world::player::hands::Hand;
 use anyhow::{Context, Result};
@@ -86,17 +86,17 @@ pub struct Session {
     pub info: JoinInfo,
     /// What arrived while joining, handed out by the first [`Session::poll`].
     joining: Vec<WorldEvent>,
-    pub(crate) events: Receiver<Result<WorldEvent, String>>,
-    pub(crate) writer: Arc<Mutex<WriteHalf>>,
-    pub(crate) end_reason: Option<String>,
-    pub(crate) close: Option<Box<dyn FnOnce() + Send>>,
+    pub events: Receiver<Result<WorldEvent, String>>,
+    pub writer: Arc<Mutex<WriteHalf>>,
+    pub end_reason: Option<String>,
+    pub close: Option<Box<dyn FnOnce() + Send>>,
     /// Why a [`send`](Self::send) cut the stream off, for [`poll`](Self::poll) to end on.
     send_failed: std::sync::OnceLock<String>,
     stats: Arc<NetStats>,
 }
 
 impl Session {
-    pub(crate) fn start(
+    pub fn start(
         mut reader: ReadHalf,
         writer: Arc<Mutex<WriteHalf>>,
         mut listener: PlayListener,
@@ -318,7 +318,7 @@ impl Session {
 
     /// `ServerboundPlaceRecipePacket`.
     pub fn send_place_recipe(&self, container: i32, recipe: i32, use_max: bool) {
-        self.send(crate::network::play::game::id::SB_PLACE_RECIPE, |buf| {
+        self.send(crate::play::game::id::SB_PLACE_RECIPE, |buf| {
             varint::write_var_int(buf, container)?;
             varint::write_var_int(buf, recipe)?;
             packet::write_bool(buf, use_max)
@@ -328,7 +328,7 @@ impl Session {
     /// `ServerboundRecipeBookChangeSettingsPacket`.
     pub fn send_recipe_book_settings(&self, book: i32, open: bool, filtering: bool) {
         self.send(
-            crate::network::play::game::id::SB_RECIPE_BOOK_CHANGE_SETTINGS,
+            crate::play::game::id::SB_RECIPE_BOOK_CHANGE_SETTINGS,
             |buf| {
                 varint::write_var_int(buf, book)?;
                 packet::write_bool(buf, open)?;
@@ -339,10 +339,9 @@ impl Session {
 
     /// `ServerboundRecipeBookSeenRecipePacket`: the new-recipe mark was seen.
     pub fn send_recipe_seen(&self, recipe: i32) {
-        self.send(
-            crate::network::play::game::id::SB_RECIPE_BOOK_SEEN_RECIPE,
-            |buf| Ok(varint::write_var_int(buf, recipe)?),
-        );
+        self.send(crate::play::game::id::SB_RECIPE_BOOK_SEEN_RECIPE, |buf| {
+            Ok(varint::write_var_int(buf, recipe)?)
+        });
     }
 
     /// `ServerboundRenameItemPacket`: the anvil's name field.
@@ -666,7 +665,7 @@ impl Session {
     }
 
     /// Writes one packet; a write that fails or times out ends the session.
-    pub(crate) fn send(&self, id: i32, body: impl FnOnce(&mut Vec<u8>) -> Result<()>) {
+    pub fn send(&self, id: i32, body: impl FnOnce(&mut Vec<u8>) -> Result<()>) {
         let mut writer = self
             .writer
             .lock()
@@ -699,13 +698,13 @@ impl Drop for Session {
 }
 
 /// An answer the client owes the server: packet ID and body.
-pub(crate) struct Reply {
-    pub(crate) id: i32,
-    pub(crate) body: Vec<u8>,
+pub struct Reply {
+    pub id: i32,
+    pub body: Vec<u8>,
 }
 
 impl Reply {
-    pub(crate) fn send(self, stream: &mut impl Write, compression: Option<i32>) -> Result<()> {
+    pub fn send(self, stream: &mut impl Write, compression: Option<i32>) -> Result<()> {
         write_packet(stream, compression, self.id, |buf| {
             buf.extend_from_slice(&self.body);
             Ok(())
@@ -714,14 +713,14 @@ impl Reply {
 }
 
 /// What a Play packet means for the game.
-pub(crate) enum Play {
+pub enum Play {
     Event(WorldEvent),
     Disconnected(String),
     Nothing,
 }
 
 /// `ClientPacketListener`'s part Melon implements, shared by the join and the session.
-pub(crate) struct PlayListener {
+pub struct PlayListener {
     batches: ChunkBatchSizeCalculator,
     /// The dimension types the server registered.
     dimensions: DimensionTypes,
@@ -740,7 +739,7 @@ impl Default for PlayListener {
 }
 
 impl PlayListener {
-    pub(crate) fn new(dimensions: DimensionTypes) -> Self {
+    pub fn new(dimensions: DimensionTypes) -> Self {
         Self {
             batches: ChunkBatchSizeCalculator::default(),
             height: Height::OVERWORLD,
@@ -751,16 +750,16 @@ impl PlayListener {
     }
 
     /// The level the login put the player in: dimension type `id`.
-    pub(crate) fn enter(&mut self, id: i32) {
+    pub fn enter(&mut self, id: i32) {
         self.height = self.dimensions.get(id).height;
     }
 
     /// Replaces the packet debugger (a replay sets its own).
-    pub(crate) fn set_debug(&mut self, debug: super::debug::PacketDebug) {
+    pub fn set_debug(&mut self, debug: super::debug::PacketDebug) {
         self.debug = debug;
     }
 
-    pub(crate) fn handle(&mut self, pid: i32, body: &[u8]) -> Result<(Option<Reply>, Play)> {
+    pub fn handle(&mut self, pid: i32, body: &[u8]) -> Result<(Option<Reply>, Play)> {
         self.debug.received(pid, body);
         handle_play_packet(pid, body, self)
     }
@@ -971,7 +970,7 @@ fn handle_play_packet(
 }
 
 /// The session's packet loop.
-pub(crate) fn read_loop(
+pub fn read_loop(
     reader: &mut ReadHalf,
     listener: &mut PlayListener,
     writer: &login::SharedWriter,
@@ -1066,7 +1065,7 @@ fn timed_out(e: anyhow::Error) -> anyhow::Error {
 pub const TIMEOUT_REASON: &str = "disconnect.timeout";
 
 /// `ClientboundPlayerPositionPacket`.
-pub(crate) fn read_player_position(r: &mut Reader) -> Result<Teleport> {
+pub fn read_player_position(r: &mut Reader) -> Result<Teleport> {
     let id = r.var_int()?;
     let [x, y, z] = r.vec3_f64()?;
     let delta = r.vec3_f64()?;
@@ -1085,7 +1084,7 @@ pub(crate) fn read_player_position(r: &mut Reader) -> Result<Teleport> {
 }
 
 /// 26.3 `ServerboundAcceptTeleportationPacket`.
-pub(crate) fn confirm_teleport(
+pub fn confirm_teleport(
     teleport_id: i32,
     pos: (f64, f64, f64),
     yaw: f32,

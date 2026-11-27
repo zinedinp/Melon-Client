@@ -3,11 +3,11 @@
 //! out of view, fading from white to grey over three seconds.
 
 use crate::audio::Heard;
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::text::{self, StyledText};
+use crate::hud::item_slot::ItemPainter;
 use crate::i18n::Lang;
 use crate::math::argb;
 use crate::renderer::quad::DrawList;
+use crate::text::{self, StyledText};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

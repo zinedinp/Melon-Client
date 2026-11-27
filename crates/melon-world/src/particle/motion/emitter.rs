@@ -5,7 +5,7 @@ use glam::DVec3;
 use super::super::base::Particle;
 use super::super::options::{ParticleData, ParticleSpec};
 use super::super::{Kind, Spawn, TickCtx};
-use crate::world::java_random::JavaRandom;
+use crate::java_random::JavaRandom;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Emitter {
@@ -143,11 +143,11 @@ pub fn tick(
 /// `PotentSulfurBlockEntity.canBeReachedByNoxiousGas`.
 fn gas_reaches(ctx: &TickCtx, source: glam::IVec3, at: DVec3) -> bool {
     let cell = at.floor().as_ivec3();
-    let state = crate::world::physics::block_at(ctx.level, cell.x, cell.y, cell.z);
+    let state = crate::physics::block_at(ctx.level, cell.x, cell.y, cell.z);
     let name = super::super::client::block_name(state);
     let passable = name.ends_with("air")
         || name == "water"
-        || crate::world::physics::block_shapes(ctx.level, (cell.x, cell.y, cell.z))
+        || crate::physics::block_shapes(ctx.level, (cell.x, cell.y, cell.z))
             .next()
             .is_none();
     let centre = source.as_dvec3() + DVec3::splat(0.5);
@@ -156,5 +156,5 @@ fn gas_reaches(ctx: &TickCtx, source: glam::IVec3, at: DVec3) -> bool {
     passable
         && at.distance_squared(centre) <= 9.0
         && super::super::behavior::water_source(ctx, below.floor().as_ivec3())
-        && crate::world::pick::clip_blocks(ctx.level, below_source, below).is_none()
+        && crate::pick::clip_blocks(ctx.level, below_source, below).is_none()
 }

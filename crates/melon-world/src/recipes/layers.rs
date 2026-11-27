@@ -328,7 +328,7 @@ fn result(json: &Value) -> Option<SlotDisplay> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::recipes::book::RecipeBook;
+    use crate::recipes::book::RecipeBook;
     use serde_json::json;
 
     #[test]
@@ -395,8 +395,7 @@ mod tests {
             requirements: None,
         });
         book.rebuild();
-        let tab =
-            crate::world::recipes::book::Tab::Search(crate::world::recipes::BookType::Crafting);
+        let tab = crate::recipes::book::Tab::Search(crate::recipes::BookType::Crafting);
         assert_eq!(
             book.collections(tab).count(),
             1,

@@ -1,8 +1,8 @@
 //! Vanilla `EditBox`.
 
-use crate::gui::screen::{CursorKind, TextEvent};
-use crate::gui::widgets::text_input::{Edit, TextInput};
-use crate::gui::widgets::{Label, Rect, Ui, Widget};
+use crate::screen::{CursorKind, TextEvent};
+use crate::widgets::text_input::{Edit, TextInput};
+use crate::widgets::{Label, Rect, Ui, Widget};
 
 /// `EditBox.DEFAULT_TEXT_COLOR` (`-2039584` = `0xFFE0E0E0`).
 const TEXT_COLOR: [f32; 4] = [
@@ -92,7 +92,7 @@ impl EditBox {
         let hit = self.contains(x, y);
         self.set_focused(hit);
         if hit {
-            let shift = crate::gui::input_state::shift_down();
+            let shift = crate::input_state::shift_down();
             self.input.click(x - self.text_x(), shift);
         }
         hit

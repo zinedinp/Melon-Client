@@ -1,12 +1,12 @@
 //! `AdultArmadilloModel` and `BabyArmadilloModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::animations::{armadillo as adult_anim, baby_armadillo as baby_anim};
+use crate::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{EIGHTH_PI, THIRD_PI};
-use crate::world::entity::animations::{armadillo as adult_anim, baby_armadillo as baby_anim};
-use crate::world::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// Animation slots (`PoseInput::anim`).
 pub const ROLL_OUT: usize = 0;

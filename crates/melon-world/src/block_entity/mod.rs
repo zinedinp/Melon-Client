@@ -47,7 +47,7 @@ impl BlockEntities {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::model_part::{Sprite, emit};
+    use crate::model_part::{Sprite, emit};
     use anim::Lid;
     use glam::Mat4;
     use models::{ChestHalf, SkullType};
@@ -106,8 +106,8 @@ mod tests {
 
     #[test]
     fn an_opening_chest_moves_until_its_lid_is_up() {
-        use crate::world::chunk::{Chunk, Section};
-        use crate::world::level::Level;
+        use crate::chunk::{Chunk, Section};
+        use crate::level::Level;
         use glam::Vec3;
 
         let mut level = Level::default();

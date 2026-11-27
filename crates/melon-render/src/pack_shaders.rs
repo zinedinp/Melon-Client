@@ -2,9 +2,9 @@
 
 use std::path::Path;
 
+use crate::GuiShader;
 use crate::assets::shaders::{self, Interface, Stage};
-use crate::renderer::GuiShader;
-use crate::renderer::quad::Program;
+use crate::quad::Program;
 
 /// One GUI pipeline as vanilla declares it.
 struct Pipeline {
@@ -81,7 +81,7 @@ pub fn compile(assets_root: &Path) -> Vec<GuiShader> {
 
 /// Every GUI pipeline's shaders, replaced or not.
 #[cfg(test)]
-pub(crate) fn compile_all(assets_root: &Path) -> anyhow::Result<Vec<GuiShader>> {
+pub fn compile_all(assets_root: &Path) -> anyhow::Result<Vec<GuiShader>> {
     PIPELINES
         .iter()
         .map(|pipeline| {

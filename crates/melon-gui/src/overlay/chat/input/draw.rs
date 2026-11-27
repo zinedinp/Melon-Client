@@ -188,9 +188,8 @@ impl ChatInput {
                     id,
                     count,
                     components,
-                } => match crate::gui::hud::item_slot::hover_stack(id, *count, components.as_ref())
-                {
-                    Some(stack) => crate::gui::hud::item_slot::tooltip_lines(lang, &stack),
+                } => match crate::hud::item_slot::hover_stack(id, *count, components.as_ref()) {
+                    Some(stack) => crate::hud::item_slot::tooltip_lines(lang, &stack),
                     None => vec![StyledText::plain(id)],
                 },
             };

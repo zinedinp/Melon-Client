@@ -13,9 +13,9 @@ use super::{
     FLUID_JUMP, HEIGHT, INPUT_DAMPING, JUMP_DELAY_TICKS, MoveInput, PlayerState, SPRINT_FOOD_LEVEL,
     SPRINT_JUMP_BOOST, VERTICAL_DRAG,
 };
-use crate::world::fluid::FluidKind;
-use crate::world::level::Level;
-use crate::world::physics::{self, Aabb};
+use crate::fluid::FluidKind;
+use crate::level::Level;
+use crate::physics::{self, Aabb};
 use glam::DVec3;
 
 impl PlayerState {
@@ -192,8 +192,7 @@ impl PlayerState {
             && !fits_crouched;
         self.swim_pose = self.swimming || crawling;
         self.swim_amount_old = self.swim_amount;
-        self.swim_amount =
-            crate::world::entity::living::Swim::step(self.swim_amount, self.swim_pose);
+        self.swim_amount = crate::entity::living::Swim::step(self.swim_amount, self.swim_pose);
     }
 
     /// `LocalPlayer.modifyInput`: the key vector, normalised, damped, slowed
@@ -231,11 +230,7 @@ impl PlayerState {
     pub(super) fn jump_from_ground(&mut self, env: &Travel) {
         let power = f64::from(
             self.attributes.jump_strength()
-                * self.block_factor(
-                    env.level,
-                    false,
-                    crate::world::block_motion::jump_multiplier,
-                )
+                * self.block_factor(env.level, false, crate::block_motion::jump_multiplier)
                 + 0.1 * self.jump_boost as f32,
         );
         if power <= 1.0e-5 {
@@ -336,13 +331,13 @@ impl PlayerState {
         let vertical_hit = moved.y != delta.y;
         if vertical_hit || collided_x || collided_z {
             let landed_on = (vertical_hit && self.on_ground).then(|| {
-                crate::world::block_motion::block_underfoot(level, self.feet, self.support.block)
+                crate::block_motion::block_underfoot(level, self.feet, self.support.block)
             });
             let air_drag = super::attributes::modified_friction(
                 VERTICAL_DRAG as f32,
                 self.attributes.air_drag_modifier(),
             );
-            self.velocity = crate::world::block_motion::restituted(
+            self.velocity = crate::block_motion::restituted(
                 self.velocity,
                 moved.y,
                 [collided_x, collided_z, vertical_hit],
@@ -356,8 +351,7 @@ impl PlayerState {
         let speed_factor = if self.abilities.flying {
             1.0
         } else {
-            let factor =
-                self.block_factor(level, true, crate::world::block_motion::speed_multiplier);
+            let factor = self.block_factor(level, true, crate::block_motion::speed_multiplier);
             let efficiency = self.attributes.movement_efficiency();
             f64::from(factor + (1.0 - factor) * efficiency)
         };
@@ -401,11 +395,11 @@ impl PlayerState {
 
     /// `Entity.getBlockPosBelowThatAffectsMyMovement`.
     pub(super) fn block_below(&self, level: &Level) -> &'static pumpkin_data::Block {
-        crate::world::block_motion::block_below_supported(level, self.feet, self.support.block)
+        crate::block_motion::block_below_supported(level, self.feet, self.support.block)
     }
 
     pub(super) fn block_at_offset(&self, level: &Level, dy: f64) -> &'static pumpkin_data::Block {
-        crate::world::block_motion::block_at(level, self.feet + DVec3::new(0.0, dy, 0.0))
+        crate::block_motion::block_at(level, self.feet + DVec3::new(0.0, dy, 0.0))
     }
 
     /// `Entity.getBlockSpeedFactor` (`speed`) or `getBlockJumpFactor`.
@@ -415,7 +409,7 @@ impl PlayerState {
         speed: bool,
         pick: fn(&pumpkin_data::Block) -> f32,
     ) -> f32 {
-        crate::world::block_motion::factor(level, self.feet, self.support.block, speed, pick)
+        crate::block_motion::factor(level, self.feet, self.support.block, speed, pick)
     }
 }
 

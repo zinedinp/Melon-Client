@@ -1,0 +1,22 @@
+[package]
+name = "melon-settings"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "What the Melon client keeps between runs: options.txt, key binds, the server list"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+melon-assets = { path = "../melon-assets" }
+melon-audio = { path = "../melon-audio" }
+melon-base = { path = "../melon-base" }
+melon-core = { path = "../melon-core" }
+melon-world = { path = "../melon-world" }
+serde.workspace = true
+serde_json.workspace = true
+winit.workspace = true
+
+[lints]
+workspace = true

@@ -2,11 +2,11 @@
 
 use ash::vk;
 
-use crate::renderer::pipeline::world::{Geometry, Layouts, Mode};
-use crate::renderer::{PassStart, Pipelines, create_render_pass, pipeline};
+use crate::pipeline::world::{Geometry, Layouts, Mode};
+use crate::{PassStart, Pipelines, create_render_pass, pipeline};
 
 /// The main pass in each way a frame starts it.
-pub(in crate::renderer) struct RenderPasses {
+pub(crate) struct RenderPasses {
     /// [`PassStart::Clear`]: the usual one, and what pipelines are built in.
     pub clear: vk::RenderPass,
     /// [`PassStart::Overwrite`]: the pass that follows the menu blur.
@@ -58,7 +58,7 @@ pub(super) struct SetLayouts {
     pub world: Layouts,
 }
 
-/// The set layouts; the globals' comes from [`GlobalBuffers`](crate::renderer::globals::GlobalBuffers).
+/// The set layouts; the globals' comes from [`GlobalBuffers`](crate::globals::GlobalBuffers).
 pub(super) unsafe fn create_set_layouts(
     device: &ash::Device,
     globals: vk::DescriptorSetLayout,
@@ -67,12 +67,12 @@ pub(super) unsafe fn create_set_layouts(
         // SAFETY: `device` is live, and the infos name only its own live handles.
         texture: unsafe { pipeline::create_descriptor_set_layout(device) }?,
         // SAFETY: `device` is live, and the infos name only its own live handles.
-        gui: unsafe { crate::renderer::gui_uniforms::create_layout(device) }?,
+        gui: unsafe { crate::gui_uniforms::create_layout(device) }?,
         world: Layouts {
             // SAFETY: `device` is live, and the infos name only its own live handles.
-            table: unsafe { crate::renderer::quad_table::create_layout(device) }?,
+            table: unsafe { crate::quad_table::create_layout(device) }?,
             // SAFETY: `device` is live, and the infos name only its own live handles.
-            draws: unsafe { crate::renderer::indirect::create_layout(device) }?,
+            draws: unsafe { crate::indirect::create_layout(device) }?,
             globals,
         },
     })
@@ -122,7 +122,7 @@ pub(super) unsafe fn create(
                     render_pass,
                     texture,
                     layouts.gui,
-                    crate::renderer::quad::BlendMode::Alpha,
+                    crate::quad::BlendMode::Alpha,
                     pipeline::ui::GLINT,
                 )
             }?,

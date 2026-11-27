@@ -2,7 +2,7 @@
 
 use glam::Vec3;
 
-use crate::world::java_random::JavaRandom;
+use crate::java_random::JavaRandom;
 
 /// A model flatter than this is stacked along Z (`submitMultipleFromCount`).
 pub const FLAT_DEPTH: f32 = 0.0625;

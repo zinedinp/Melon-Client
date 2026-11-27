@@ -7,12 +7,12 @@ use std::thread::JoinHandle;
 use crossbeam_channel::{Receiver, Sender};
 use glam::DVec3;
 
-use crate::world::block_models::BlockModels;
-use crate::world::block_tint::TintSettings;
-use crate::world::chunk::Chunk;
-use crate::world::culling::occlusion::SectionPos;
-use crate::world::fluid::FluidSprites;
-use crate::world::terrain::{self, MeshContext, Neighborhood, SectionMesh};
+use crate::block_models::BlockModels;
+use crate::block_tint::TintSettings;
+use crate::chunk::Chunk;
+use crate::culling::occlusion::SectionPos;
+use crate::fluid::FluidSprites;
+use crate::terrain::{self, MeshContext, Neighborhood, SectionMesh};
 
 /// A section to mesh, as of `version`.
 pub(super) struct Job {

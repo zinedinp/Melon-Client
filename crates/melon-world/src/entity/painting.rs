@@ -4,8 +4,8 @@
 use glam::{DVec3, IVec3, Vec3};
 use pumpkin_data::painting_variant::PaintingVariant;
 
-use crate::renderer::WorldVertex;
-use crate::world::geometry;
+use crate::geometry;
+use crate::mesh::WorldVertex;
 
 /// `PaintingRenderer.BACK_SPRITE_LOCATION`, on the paintings atlas.
 pub const BACK_TEXTURE: &str = "minecraft:painting/back";

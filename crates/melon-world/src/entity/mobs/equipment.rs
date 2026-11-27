@@ -1,7 +1,7 @@
 //! What a mob wears and holds.
 
 use super::*;
-use crate::world::entity::equipment_asset;
+use crate::entity::equipment_asset;
 
 /// Whether the item in hand is drawn.
 pub fn shows_held_item(entity: &ClientEntity) -> bool {
@@ -41,7 +41,7 @@ pub fn push_humanoid_armor(
         // first layer (the leather overlay above it shows none); with a
         // trim, vanilla glints the whole model after it, here the first
         // layer and the trim each where their texels are.
-        let foil = crate::world::glint::has_foil(stack);
+        let foil = crate::glint::has_foil(stack);
         let model = armor_model(kind, slot, baby);
         let mut first = true;
         let folder = armor_folder(slot, baby && kind != EntityKind::ArmorStand);
@@ -113,7 +113,7 @@ pub(super) fn push_equipment_textures(
     folder: &str,
     out: &mut Vec<LayerSpec>,
 ) {
-    let foil = crate::world::glint::has_foil(stack);
+    let foil = crate::glint::has_foil(stack);
     let mut first = true;
     equipment_asset::each_texture(stack, folder, |texture, tint| {
         out.push(LayerSpec::pooled(model, texture, tint).with_foil(foil && first));

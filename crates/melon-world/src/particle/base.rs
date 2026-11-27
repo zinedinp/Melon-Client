@@ -6,8 +6,8 @@ use super::animation::Rect;
 use super::animation::fade::{Glow, LifetimeAlpha, SizeCurve};
 use super::behavior::Behavior;
 use super::{Kind, TickCtx};
-use crate::world::java_random::JavaRandom;
-use crate::world::physics::{self, Aabb};
+use crate::java_random::JavaRandom;
+use crate::physics::{self, Aabb};
 
 /// `Particle.MAXIMUM_COLLISION_VELOCITY_SQUARED`.
 const MAX_COLLISION_SPEED_SQ: f64 = 100.0 * 100.0;

@@ -3,8 +3,8 @@
 use glam::DVec3;
 
 use super::visgraph::VisibilitySet;
+use crate::block::direction::{Direction, Directions};
 use crate::math::{SECTION_SIZE, section_coord};
-use crate::world::block::direction::{Direction, Directions};
 
 /// A section position.
 pub type SectionPos = (i32, i32, i32);

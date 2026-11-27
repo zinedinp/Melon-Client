@@ -12,6 +12,11 @@ pub mod source;
 pub mod spatial;
 pub mod stats;
 
+// The lower crates' modules, under the paths the moved code names them by.
+use melon_assets::assets;
+use melon_base::warn;
+use melon_core::{cycle, math, probe};
+
 use crate::assets::Assets;
 use library::{Sound, SoundEvents};
 use pcm::PcmBuffer;

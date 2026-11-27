@@ -1,10 +1,10 @@
 //! `AdultFelineModel` and `BabyFelineModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, dye_tint};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, PI};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `Mth.rotLerp` on angles in radians.
 fn mix(t: f32, from: f32, to: f32) -> f32 {

@@ -4,8 +4,8 @@ use glam::{DVec3, IVec3};
 
 use super::super::{Kind, ParticleSpec, Spawn, World};
 use super::{block_name, lit, prop};
-use crate::world::block::direction::Direction;
-use crate::world::java_random::JavaRandom;
+use crate::block::direction::Direction;
+use crate::java_random::JavaRandom;
 
 /// The block's animation, if it has one here.
 pub fn animate(world: &World, state: u16, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
@@ -131,7 +131,7 @@ fn fire(world: &World, pos: IVec3, rng: &mut JavaRandom, out: &mut Vec<Spawn>) {
     let below = state_at(pos - IVec3::Y);
     let base = pos.as_dvec3();
     let smoke = |at: DVec3| Spawn::simple(Kind::LargeSmoke, at, DVec3::ZERO);
-    if burns(below) || crate::world::block::state_flags::is_solid(below) {
+    if burns(below) || crate::block::state_flags::is_solid(below) {
         for _ in 0..3 {
             let at = base
                 + DVec3::new(

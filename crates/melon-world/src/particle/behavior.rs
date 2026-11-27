@@ -6,9 +6,9 @@ use super::base::Particle;
 use super::motion::{self, emitter::Emitter};
 use super::options::{ParticleSpec, PositionSource};
 use super::{Kind, Spawn, TickCtx};
-use crate::world::fluid::FluidKind;
-use crate::world::java_random::JavaRandom;
-use crate::world::physics;
+use crate::fluid::FluidKind;
+use crate::java_random::JavaRandom;
+use crate::physics;
 
 /// Where a drip is in its fall (`DripParticle`'s inner classes).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -471,7 +471,7 @@ fn srgb_lerp(t: f32, from: u32, to: u32) -> [f32; 4] {
 /// Whether `cell` holds a water source (`isSourceOfType(WATER)`).
 pub fn water_source(ctx: &TickCtx, cell: glam::IVec3) -> bool {
     let state = physics::block_at(ctx.level, cell.x, cell.y, cell.z);
-    crate::world::fluid::fluid_of(state)
+    crate::fluid::fluid_of(state)
         .is_some_and(|f| f.kind == FluidKind::Water && f.amount == 8 && !f.falling)
 }
 
@@ -644,10 +644,10 @@ fn tick_drip(p: &mut Particle, drip: Drip, ctx: &TickCtx, out: &mut Vec<Spawn>) 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::level::Level;
     use crate::particle::animation::SpriteSets;
     use crate::particle::options::ParticleData;
     use crate::particle::provider;
-    use crate::world::level::Level;
 
     fn with_ctx(f: impl FnOnce(&TickCtx)) {
         let level = Level::default();

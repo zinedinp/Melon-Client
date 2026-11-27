@@ -2,17 +2,17 @@
 
 use std::collections::HashMap;
 
-use crate::assets::Assets;
 use crate::component::Component;
-use crate::gui::face::draw_face;
-use crate::gui::hud::bars::hearts::{HeartKind, Sprites as HeartSprites};
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::{self, StyledText, colors};
+use crate::face::draw_face;
+use crate::hud::bars::hearts::{HeartKind, Sprites as HeartSprites};
+use crate::hud::item_slot::ItemPainter;
 use crate::i18n::Lang;
 use crate::renderer::quad::DrawList;
 use crate::renderer::{Renderer, TextureId};
+use crate::sprite::GuiSprite;
+use crate::text::{self, StyledText, colors};
 use crate::world::scoreboard::{NumberFormat, Objective, RenderType, Score};
+use melon_assets::assets::Assets;
 
 /// `PlayerTabOverlay.MAX_ROWS_PER_COL`.
 pub const MAX_ROWS_PER_COL: usize = 20;

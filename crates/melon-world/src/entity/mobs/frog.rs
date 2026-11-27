@@ -1,11 +1,11 @@
 //! `FrogModel`: a keyframe-driven hopper.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
-use crate::world::entity::animations::frog as anim;
-use crate::world::entity::keyframe::{AnimationDefinition, KeyframeAnimation};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::animations::frog as anim;
+use crate::entity::keyframe::{AnimationDefinition, KeyframeAnimation};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::model_part::{Cube, Pose};
 
 /// Animation slots (`PoseInput::anim`).
 pub const JUMP: usize = 0;

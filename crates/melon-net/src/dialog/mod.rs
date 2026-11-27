@@ -1,7 +1,7 @@
 //! Screens a server describes (vanilla `server/dialog`): a title, a body of
 //! text and items, inputs, and buttons whose actions are click events, command
 //! templates or custom payloads sent back. This is the data; the screens that
-//! show it are in [`crate::gui::screens::dialog`], and what the connection
+//! show it are the GUI's (`gui::screens::dialog`), and what the connection
 //! said about dialogs (the registry, the server's links, the requests to show
 //! one) is in [`connection`].
 //!

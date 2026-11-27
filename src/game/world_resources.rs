@@ -191,12 +191,12 @@ impl SkyResources {
         let mut moon = [TextureId(0); 8];
         for (texture, phase) in moon.iter_mut().zip(MOON_PHASES) {
             let id = format!("minecraft:environment/celestial/moon/{phase}.png");
-            *texture = assets.texture(renderer, &id)?;
+            *texture = renderer.asset_texture(assets, &id)?;
         }
         Ok(Self {
-            sun: assets.texture(renderer, "minecraft:environment/celestial/sun.png")?,
+            sun: renderer.asset_texture(assets, "minecraft:environment/celestial/sun.png")?,
             moon,
-            end_sky: assets.texture(renderer, "minecraft:environment/end_sky.png")?,
+            end_sky: renderer.asset_texture(assets, "minecraft:environment/end_sky.png")?,
             sun_mesh: renderer.upload_mesh(&sky::sun_quad())?,
             moon_mesh: renderer.upload_mesh(&sky::moon_quad())?,
             star_mesh: renderer.upload_mesh(&sky::star_quads())?,
@@ -387,14 +387,14 @@ impl WorldResources {
             sky: SkyResources::load(renderer, assets)?,
             weather: WeatherResources::load(renderer, assets)?,
             glint: GlintTextures::load(renderer, assets)?,
-            shadow: assets.texture(renderer, "minecraft:misc/shadow.png")?,
+            shadow: renderer.asset_texture(assets, "minecraft:misc/shadow.png")?,
             forcefield: renderer
                 .load_texture_tiled(&assets.image("minecraft:misc/forcefield.png")?)?,
             destroy_stages: {
                 let mut stages = [TextureId(0); 10];
                 for (i, stage) in stages.iter_mut().enumerate() {
                     let id = format!("minecraft:block/destroy_stage_{i}.png");
-                    *stage = assets.texture(renderer, &id)?;
+                    *stage = renderer.asset_texture(assets, &id)?;
                 }
                 stages
             },

@@ -14,7 +14,8 @@ mod gpu_timer;
 mod indirect;
 mod mesh_arena;
 mod occlusion;
-pub(crate) mod pack_outline;
+pub mod pack_outline;
+pub mod pack_shaders;
 mod picture;
 mod pipeline;
 mod pipeline_cache;
@@ -27,14 +28,18 @@ mod swapchain;
 #[cfg(test)]
 mod vk_check;
 
+// The lower crates' modules, under the paths the moved code names them by.
+use melon_assets::assets;
+use melon_base::{home, info, warn};
+#[cfg(test)]
+use melon_core::math;
+use melon_world::{self as world, particle};
+
 pub use gpu_timer::PassStats;
 pub use melon_base::gfx::quad;
 use melon_base::gfx::residency::Residency;
 pub use melon_base::gfx::{DeviceInfo, TextureId};
 use melon_base::gfx::{descriptor_pools, gui_uniforms, staging, texture, texture_update, vk_util};
-pub use mesh_arena::quad_index_list;
-#[cfg(test)]
-pub use mesh_arena::quads_of_index_list;
 pub use picture::{PictureDraw, pixel_projection};
 use vk_util::{
     PassStart, Place, choose_surface_format, create_buffer, create_depth_image, create_render_pass,
@@ -42,11 +47,16 @@ use vk_util::{
 };
 
 pub use frame::{
-    Blending, Blur, CelestialDraw, ChunkDraw, CloudDraw, CornerLight, EntityDraw, Frame, Glint,
-    LineDraw, LineStyle, ParticleDraw, ParticleQuad, QuadCorner, RenderLayer, SceneFrame,
-    SectionCull, Sky, SkyKind, TerrainMesh, TerrainQuad, WORLD_Z_NEAR, WeatherDraw, WorldDraw,
-    WorldVertex, world_projection,
+    Blending, Blur, CelestialDraw, ChunkDraw, CloudDraw, EntityDraw, Frame, Glint, LineDraw,
+    LineStyle, ParticleDraw, QuadCorner, RenderLayer, SceneFrame, SectionCull, Sky, SkyKind,
+    TerrainMesh, WeatherDraw, WorldDraw,
 };
+// The formats the world builds its meshes in, and its camera.
+pub use crate::particle::mesh::ParticleQuad;
+#[cfg(test)]
+pub use crate::world::mesh::quads_of_index_list;
+pub use crate::world::mesh::{CornerLight, TerrainQuad, WorldVertex, quad_index_list};
+pub use crate::world::projection::{WORLD_Z_NEAR, world_projection};
 
 use ash::vk;
 use melon_base::gfx::suballoc;

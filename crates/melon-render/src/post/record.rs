@@ -3,8 +3,8 @@
 use ash::vk;
 
 use super::gpu::{ChainSource, Dest, Source};
-use crate::renderer::blur::COLOR;
-use crate::renderer::{Renderer, SceneFrame, free_effect_texture};
+use crate::blur::COLOR;
+use crate::{Renderer, SceneFrame, free_effect_texture};
 
 /// The chain glowing entities feed (`entity_outline.json`).
 pub const OUTLINE_CHAIN: &str = "minecraft:entity_outline";
@@ -71,7 +71,7 @@ impl Renderer {
     }
 
     /// Makes what the chains size with the screen, again.
-    pub(in crate::renderer) unsafe fn resize_post(&mut self) -> anyhow::Result<()> {
+    pub(crate) unsafe fn resize_post(&mut self) -> anyhow::Result<()> {
         let depth = self
             .swapchain
             .depth_sampled
@@ -92,11 +92,11 @@ impl Renderer {
     unsafe fn upload_effect_textures(
         &self,
         source: &ChainSource,
-    ) -> anyhow::Result<Vec<(crate::renderer::texture::Texture, u32, u32)>> {
-        use crate::renderer::post::config::Input;
-        let mut out: Vec<(crate::renderer::texture::Texture, u32, u32)> = Vec::new();
+    ) -> anyhow::Result<Vec<(crate::texture::Texture, u32, u32)>> {
+        use crate::post::config::Input;
+        let mut out: Vec<(crate::texture::Texture, u32, u32)> = Vec::new();
         let mut inits = Vec::new();
-        let fail = |out: &mut Vec<(crate::renderer::texture::Texture, u32, u32)>, e| {
+        let fail = |out: &mut Vec<(crate::texture::Texture, u32, u32)>, e| {
             let (device, pools) = (self.device.clone(), &self.textures.descriptor_pools);
             for (texture, _, _) in out.drain(..) {
                 // SAFETY: made by this device, and no frame in flight uses it any more.
@@ -138,7 +138,7 @@ impl Renderer {
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         if let Err(e) = unsafe {
             self.layer.queue.with_raw(|queue| {
-                crate::renderer::texture_update::submit_now(
+                crate::texture_update::submit_now(
                     &self.device,
                     &self.mem_props,
                     self.frames.command_pool,
@@ -153,7 +153,7 @@ impl Renderer {
     }
 
     /// The chains this frame runs, in order.
-    pub(in crate::renderer) fn post_chains(&self, scene: &SceneFrame) -> Vec<String> {
+    pub(crate) fn post_chains(&self, scene: &SceneFrame) -> Vec<String> {
         let mut out = Vec::new();
         let outline_every_frame = scene.world.is_some()
             && self
@@ -177,7 +177,7 @@ impl Renderer {
     }
 
     /// Everything between the scene's pass and the one after it.
-    pub(in crate::renderer) unsafe fn record_post(
+    pub(crate) unsafe fn record_post(
         &self,
         cmd: vk::CommandBuffer,
         image_index: usize,
@@ -197,11 +197,7 @@ impl Renderer {
     }
 
     /// `blitEntityOutline`.
-    pub(in crate::renderer) unsafe fn record_outline_blit(
-        &self,
-        cmd: vk::CommandBuffer,
-        chains: &[String],
-    ) {
+    pub(crate) unsafe fn record_outline_blit(&self, cmd: vk::CommandBuffer, chains: &[String]) {
         if !chains.iter().any(|c| c == OUTLINE_CHAIN) {
             return;
         }
@@ -229,12 +225,12 @@ impl Renderer {
     }
 
     /// Whether the chain `id` is loaded.
-    pub(in crate::renderer) fn has_post_chain(&self, id: &str) -> bool {
+    pub(crate) fn has_post_chain(&self, id: &str) -> bool {
         self.post.chains.contains_key(id)
     }
 
     /// Before the chains of a frame.
-    pub(in crate::renderer) unsafe fn begin_post(&self, cmd: vk::CommandBuffer) {
+    pub(crate) unsafe fn begin_post(&self, cmd: vk::CommandBuffer) {
         let device = &self.device;
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe {
@@ -334,7 +330,7 @@ impl Renderer {
     }
 
     /// Runs the chain `id`.
-    pub(in crate::renderer) unsafe fn record_post_chain(
+    pub(crate) unsafe fn record_post_chain(
         &self,
         cmd: vk::CommandBuffer,
         image_index: usize,
@@ -545,13 +541,9 @@ impl Renderer {
 
 impl Renderer {
     /// Draws the glowing entities flat into the outline target.
-    pub(in crate::renderer) unsafe fn record_outline_pass(
-        &self,
-        cmd: vk::CommandBuffer,
-        scene: &SceneFrame,
-    ) {
-        use crate::renderer::RenderLayer;
-        use crate::renderer::pipeline::world::{DrawLight, Mode};
+    pub(crate) unsafe fn record_outline_pass(&self, cmd: vk::CommandBuffer, scene: &SceneFrame) {
+        use crate::RenderLayer;
+        use crate::pipeline::world::{DrawLight, Mode};
         let Some(world) = &scene.world else {
             return;
         };
@@ -641,10 +633,10 @@ impl Renderer {
         &self,
         cmd: vk::CommandBuffer,
         scene: &SceneFrame,
-        world: &crate::renderer::WorldDraw,
+        world: &crate::WorldDraw,
     ) {
-        use crate::renderer::RenderLayer;
-        use crate::renderer::{mesh_arena, world_projection};
+        use crate::RenderLayer;
+        use crate::{mesh_arena, world_projection};
         use glam::{Mat4, Vec4};
         let Some(pack) = self.pack_outline.as_ref() else {
             return;
@@ -678,7 +670,7 @@ impl Renderer {
         for (slot, &(index, [r, g, b])) in scene
             .glowing
             .iter()
-            .take(crate::renderer::pack_outline::PackOutline::slots())
+            .take(crate::pack_outline::PackOutline::slots())
             .enumerate()
         {
             let Some(entity) = scene.entities.get(index) else {

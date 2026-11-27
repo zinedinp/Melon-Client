@@ -1,11 +1,11 @@
 //! `WitherBossModel`: three heads on a ribcage and a short tail.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::quadruped::look;
 use crate::math::angle::{self, PI};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::quadruped::look;
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 const RIBCAGE_X_ROT: f32 = 0.204_203_52;
 const RIBCAGE_X_ROT_OFFSET: f32 = 0.065;

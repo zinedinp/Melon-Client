@@ -12,8 +12,8 @@ use glam::DVec3;
 use super::super::block_effects::FluidHeights;
 use super::super::{MoveInput, MoveMode, PlayerState};
 use super::rotate_input;
-use crate::world::fluid::FluidKind;
-use crate::world::level::Level;
+use crate::fluid::FluidKind;
+use crate::level::Level;
 
 /// Where the built-ins sit; a custom state picks a number between them.
 pub mod priority {
@@ -163,8 +163,8 @@ impl MoveStates {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::{Chunk, Section};
-    use crate::world::player::SPRINT_WINDOW_DEFAULT;
+    use crate::chunk::{Chunk, Section};
+    use crate::player::SPRINT_WINDOW_DEFAULT;
 
     fn floor() -> Level {
         let mut level = Level::default();

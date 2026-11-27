@@ -3,9 +3,9 @@
 use super::mode::glide;
 use super::movement::{MoveState, Travel, priority};
 use super::{MoveMode, PlayerState};
+use crate::level::Level;
 use crate::math::angle;
-use crate::world::level::Level;
-use crate::world::physics::Aabb;
+use crate::physics::Aabb;
 use glam::DVec3;
 
 /// `LivingEntity.updateFallFlyingMovement`.
@@ -137,7 +137,7 @@ impl PlayerState {
         self.spin_ticks = super::mode::impulse::RIPTIDE_SPIN_TICKS;
         if self.on_ground {
             let up = DVec3::new(0.0, f64::from(1.199_999_9_f32), 0.0);
-            let moved = crate::world::physics::collide(
+            let moved = crate::physics::collide(
                 level,
                 &self.colliders,
                 self.bounding_box(),
@@ -181,7 +181,7 @@ mod tests {
     use super::*;
 
     fn look(yaw: f32, pitch: f32) -> DVec3 {
-        let v = crate::world::player::forward_vector_for(yaw, pitch);
+        let v = crate::player::forward_vector_for(yaw, pitch);
         DVec3::new(v.x.into(), v.y.into(), v.z.into())
     }
 

@@ -18,7 +18,7 @@ use pumpkin_util::version::JavaMinecraftVersion;
 
 use super::links::ServerLink;
 use super::{Dialog, DialogRef, DialogSet};
-use crate::network::protocol::reader::{Reader, initial_capacity};
+use crate::protocol::reader::{Reader, initial_capacity};
 
 const VERSION: JavaMinecraftVersion = JavaMinecraftVersion::V_26_3;
 const REGISTRY: &str = "minecraft:dialog";
@@ -283,7 +283,7 @@ pub fn send_custom(id: &str, payload: Option<&NbtTag>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::network::protocol::{reader, varint};
+    use crate::protocol::{reader, varint};
 
     /// The state is shared; the tests that touch it take turns.
     static SERIAL: Mutex<()> = Mutex::new(());
@@ -294,7 +294,7 @@ mod tests {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         start(Arc::new(|_, _| {}));
-        let body = crate::network::login::world_registries::tests::registry_packet(REGISTRY);
+        let body = crate::login::world_registries::tests::registry_packet(REGISTRY);
         read_registry(&body).unwrap();
         let links = resolve(&DialogRef::Named("minecraft:server_links".into())).unwrap();
         assert!(matches!(

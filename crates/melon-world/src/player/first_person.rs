@@ -2,8 +2,8 @@
 
 use glam::{Mat4, Vec3};
 
+use crate::entity::player::Arm;
 use crate::math::angle::{self, PI, Rotation};
-use crate::world::entity::player::Arm;
 
 fn invert(arm: Arm) -> f32 {
     match arm {

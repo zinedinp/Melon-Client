@@ -8,10 +8,10 @@ use pumpkin_data::Block;
 
 use super::tnt;
 use super::{LayerSpec, ModelId as M};
-use crate::network::play::game::EquipmentSlot;
-use crate::world::entity::model::{LayerDefinition, PartDefinition};
-use crate::world::entity::tracker::ClientEntity;
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::model::{LayerDefinition, PartDefinition};
+use crate::entity::tracker::ClientEntity;
+use crate::entity::wire::EquipmentSlot;
+use crate::model_part::{Cube, Pose};
 
 pub const OUTER: &str = "minecraft:entity/sulfur_cube/sulfur_cube_outer";
 pub const OUTER_SMALL: &str = "minecraft:entity/sulfur_cube/sulfur_cube_outer_small";

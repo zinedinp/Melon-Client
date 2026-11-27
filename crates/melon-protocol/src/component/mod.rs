@@ -3,8 +3,8 @@
 mod contents;
 pub mod decode;
 pub mod pumpkin;
-mod wire;
 mod style;
+mod wire;
 
 pub use contents::{AtlasSprite, Contents, NbtSource, ObjectInfo, PlayerSprite, Profile};
 pub use style::{ClickEvent, FontDescription, HoverEvent, Style, TextColor};

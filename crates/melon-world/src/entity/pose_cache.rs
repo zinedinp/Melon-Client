@@ -75,8 +75,8 @@ impl PoseCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::living::LivingRenderState;
-    use crate::world::entity::mobs::{MobModel, PoseInput};
+    use crate::entity::living::LivingRenderState;
+    use crate::entity::mobs::{MobModel, PoseInput};
 
     fn input(head: f32) -> PoseInput {
         PoseInput {

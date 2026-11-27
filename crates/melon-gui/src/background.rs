@@ -1,6 +1,6 @@
 //! Fallback menu background when the panorama cubemap is missing.
 
-use crate::gui::assets::GuiAssets;
+use crate::assets::GuiAssets;
 use crate::math::argb;
 use crate::renderer::TextureId;
 use crate::renderer::quad::DrawList;

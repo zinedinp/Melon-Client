@@ -2,7 +2,7 @@
 
 use std::cmp::Ordering;
 
-use crate::world::section_decode::{self, ROWS};
+use crate::section_decode::{self, ROWS};
 
 /// Blocks in one section.
 pub const BLOCKS_PER_SECTION: usize = 16 * 16 * 16;

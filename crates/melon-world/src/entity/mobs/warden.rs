@@ -1,12 +1,12 @@
 //! `WardenModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::animations::warden as anim;
+use crate::entity::keyframe::{AnimationDefinition, AnimationState};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, HALF_PI, PI};
-use crate::world::entity::animations::warden as anim;
-use crate::world::entity::keyframe::{AnimationDefinition, AnimationState};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// Animation slots (`PoseInput::anim`).
 pub const EMERGE: usize = 0;
@@ -347,7 +347,7 @@ fn spots_alpha(age_in_ticks: f32, phase: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::keyframe::KeyframeAnimation;
+    use crate::entity::keyframe::KeyframeAnimation;
 
     #[test]
     fn the_heart_beats_faster_with_anger() {

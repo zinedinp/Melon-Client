@@ -1,7 +1,7 @@
 //! `AbstractFurnaceScreen`.
 
 use super::{Loader, MenuDraw, MenuScreen};
-use crate::gui::sprite::GuiSprite;
+use crate::sprite::GuiSprite;
 use crate::world::inventory::{ContainerKind, OpenContainer};
 
 /// `AbstractFurnaceMenu`'s `ContainerData` indices.

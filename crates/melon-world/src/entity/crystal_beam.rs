@@ -5,8 +5,8 @@
 
 use glam::{Mat4, Vec3};
 
-use crate::renderer::WorldVertex;
-use crate::world::geometry;
+use crate::geometry;
+use crate::mesh::WorldVertex;
 
 /// `EnderDragonRenderer.CRYSTAL_BEAM_LOCATION`.
 pub const TEXTURE: &str = "minecraft:entity/end_crystal/end_crystal_beam";

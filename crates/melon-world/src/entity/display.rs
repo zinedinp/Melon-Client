@@ -7,8 +7,8 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::kind::EntityKind;
 use crate::component::Component;
-use crate::network::play::game::DataValue;
-use crate::world::item_model::KeyedStack;
+use crate::entity::wire::DataValue;
+use crate::item_model::KeyedStack;
 
 /// `Display.DATA_*`: the entity data indices after `Entity`'s 0-7.
 mod index {

@@ -1,9 +1,9 @@
 //! Vanilla `Hud.displayScoreboardSidebar`.
 
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::text::{self, StyledText, colors};
+use crate::hud::item_slot::ItemPainter;
 use crate::math::argb;
 use crate::renderer::quad::DrawList;
+use crate::text::{self, StyledText, colors};
 
 /// `Options.getBackgroundColor(0.3F)` and `(0.4F)`.
 const ROWS_BACKGROUND: u32 = 0x4C00_0000;

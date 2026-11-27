@@ -12,27 +12,27 @@
 //! the translucent sections each through their own index list, sorted far
 //! to near (vanilla's sorted index buffers), so a sort uploads only that.
 
-use crate::renderer::pipeline::world::{DrawLight, FogInput, Mode};
-use crate::renderer::{
+use crate::pipeline::world::{DrawLight, FogInput, Mode};
+use crate::{
     ChunkDraw, IndexMeshId, MeshId, QuadMeshId, RenderLayer, Renderer, TerrainMesh, WorldDraw,
 };
 use ash::vk;
 use glam::{Mat4, Vec3};
 
 use super::super::super::indirect::{Pass, Phase, Run, corner_offset, quad_draws};
-use super::super::super::mesh_arena::wide_indices;
-use crate::renderer::pipeline;
+use crate::pipeline;
+use crate::world::mesh::wide_indices;
 
 /// How the terrain's quad meshes are drawn, fixed when the renderer is made.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::renderer) enum TerrainPath {
+pub(crate) enum TerrainPath {
     PerDraw,
     MultiDraw,
     Counted,
 }
 
 impl TerrainPath {
-    pub(in crate::renderer) fn name(self) -> &'static str {
+    pub(crate) fn name(self) -> &'static str {
         match self {
             Self::PerDraw => "per draw",
             Self::MultiDraw => "multi-draw",
@@ -43,7 +43,7 @@ impl TerrainPath {
 
 impl Renderer {
     /// The path [`Self::record_terrain`] takes.
-    pub(in crate::renderer) fn terrain_path(&self) -> TerrainPath {
+    pub(crate) fn terrain_path(&self) -> TerrainPath {
         match (&self.indirect, &self.occlusion) {
             (Some(_), Some(_)) => TerrainPath::Counted,
             (Some(_), None) => TerrainPath::MultiDraw,
@@ -344,7 +344,7 @@ impl Renderer {
     }
 
     /// Draws `quads` of a terrain quad mesh with the bound terrain pass.
-    pub(in crate::renderer) unsafe fn draw_terrain_quads(
+    pub(crate) unsafe fn draw_terrain_quads(
         &self,
         cmd: vk::CommandBuffer,
         mesh: QuadMeshId,

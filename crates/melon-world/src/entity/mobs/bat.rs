@@ -1,11 +1,11 @@
 //! `BatModel`: a body, a head with ears, wings of two parts and feet.
 
 use super::{LayerSpec, ModelId as M};
-use crate::world::entity::animations::bat::{BAT_FLYING, BAT_RESTING};
-use crate::world::entity::keyframe::AnimationDefinition;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::animations::bat::{BAT_FLYING, BAT_RESTING};
+use crate::entity::keyframe::AnimationDefinition;
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::model_part::{Cube, Pose};
 
 /// `Bat.FLAG_RESTING`.
 pub const FLAG_RESTING: u8 = 1;
@@ -102,7 +102,7 @@ pub(super) fn push_layers(out: &mut Vec<LayerSpec>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::keyframe::KeyframeAnimation;
+    use crate::entity::keyframe::KeyframeAnimation;
 
     #[test]
     fn both_animations_bake_for_the_model() {

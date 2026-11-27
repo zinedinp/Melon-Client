@@ -58,7 +58,7 @@ pub fn layers(banner: &ItemStack) -> Vec<(BannerPattern, DyeColor)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::inventory::empty;
+    use crate::inventory::empty;
     use pumpkin_data::item::Item;
 
     #[test]

@@ -7,7 +7,7 @@ use super::living::{self, LivingRenderState, Placement, Swim};
 use super::magic_name::Magic;
 use super::model::{LayerDefinition, Model, ModelPose, PartId};
 use crate::math::angle::Rotation;
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `PlayerModelType`: the arms' width.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

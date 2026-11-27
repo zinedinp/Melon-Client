@@ -427,7 +427,7 @@ impl ClientEntity {
             EntityKind::Bee | EntityKind::Parrot => true,
             EntityKind::SulfurCube => !self
                 .equipment
-                .get(crate::network::play::game::EquipmentSlot::Body)
+                .get(crate::entity::wire::EquipmentSlot::Body)
                 .is_empty(),
             _ => false,
         }

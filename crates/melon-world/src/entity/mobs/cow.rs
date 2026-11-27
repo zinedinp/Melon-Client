@@ -2,9 +2,9 @@
 
 use super::rounded;
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, variant_body};
+use crate::entity::model::{LayerDefinition, PartDefinition};
 use crate::math::angle::PI;
-use crate::world::entity::model::{LayerDefinition, PartDefinition};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 use pumpkin_data::cow_variant::CowVariant;
 
 const BODY_POSE: ((f32, f32, f32), (f32, f32, f32)) = ((0.0, 5.0, 2.0), (PI / 2.0, 0.0, 0.0));

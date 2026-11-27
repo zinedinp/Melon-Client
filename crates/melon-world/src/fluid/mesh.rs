@@ -4,13 +4,11 @@ use std::sync::LazyLock;
 
 use pumpkin_data::BlockStateId;
 
-use crate::renderer::WorldVertex as Vertex;
-use crate::world::block::direction::Direction;
-use crate::world::block::{ao_flags, skip_rendering, state_flags};
-use crate::world::geometry::{
-    self, SHADE_DOWN, SHADE_EAST_WEST, SHADE_NORTH_SOUTH, SHADE_UP, atlas_uv,
-};
-use crate::world::terrain::Neighborhood;
+use crate::block::direction::Direction;
+use crate::block::{ao_flags, skip_rendering, state_flags};
+use crate::geometry::{self, SHADE_DOWN, SHADE_EAST_WEST, SHADE_NORTH_SOUTH, SHADE_UP, atlas_uv};
+use crate::mesh::WorldVertex as Vertex;
+use crate::terrain::Neighborhood;
 
 use super::state::{FluidKind, FluidState, fluid_of};
 use super::{FluidSprites, MAX_FLUID_HEIGHT, OFFSET};
@@ -396,7 +394,7 @@ pub fn mesh(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::{Chunk, Section};
+    use crate::chunk::{Chunk, Section};
     use pumpkin_data::Block;
 
     fn sprites() -> FluidSprites {
@@ -437,7 +435,7 @@ mod tests {
             [4.0, 4.0, 4.0],
             water,
             (&sprites(), &[1.0; 6]),
-            crate::world::fluid::WATER_TINT,
+            crate::fluid::WATER_TINT,
             &mut solid,
             &mut translucent,
         );
@@ -486,7 +484,7 @@ mod tests {
     #[test]
     fn the_water_surface_stays_inside_its_sprite() {
         let vertices = mesh_water(&[(4, 4, 4, Block::WATER.default_state.id.as_u16())]);
-        let inset = crate::world::geometry::UV_INSET;
+        let inset = crate::geometry::UV_INSET;
         for v in &vertices {
             assert!(
                 v.uv[0] >= inset
@@ -534,7 +532,7 @@ mod tests {
                 [4.0, 4.0, 4.0],
                 water,
                 (&sprites(), cardinal),
-                crate::world::fluid::WATER_TINT,
+                crate::fluid::WATER_TINT,
                 &mut solid,
                 &mut translucent,
             );
@@ -545,7 +543,7 @@ mod tests {
                 .unwrap_or_default()
         };
         let default = top_shade(&[1.0; 6]);
-        let nether = top_shade(&crate::world::dimension::CardinalLight::Nether.relative());
+        let nether = top_shade(&crate::dimension::CardinalLight::Nether.relative());
         assert!(nether < default);
     }
 }

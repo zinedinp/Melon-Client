@@ -1,13 +1,13 @@
 //! Vanilla `KeyBindsScreen` / `KeyBindsList`.
 
-use crate::gui::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext};
-use crate::gui::text::{StyledText, TextStyle, colors};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::layout::{BUTTON_H, HeaderFooter, SPACING, WIDE_BUTTON_W};
-use crate::gui::widgets::scroll_list::{ListClick, ScrollList};
-use crate::gui::widgets::{Rect, Ui, Widget};
+use crate::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext};
 use crate::settings::input::{self, Action, InputBind};
 use crate::settings::options::Config;
+use crate::text::{StyledText, TextStyle, colors};
+use crate::widgets::button::Button;
+use crate::widgets::layout::{BUTTON_H, HeaderFooter, SPACING, WIDE_BUTTON_W};
+use crate::widgets::scroll_list::{ListClick, ScrollList};
+use crate::widgets::{Rect, Ui, Widget};
 
 /// `KeyBindsList.ITEM_HEIGHT`.
 const ROW_H: f32 = 20.0;

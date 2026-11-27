@@ -182,7 +182,7 @@ fn tab_from_entry(entry: TabEntry) -> CreativeTab {
         }
     }
     CreativeTab {
-        icon: stack(&entry.icon).unwrap_or_else(crate::world::inventory::empty),
+        icon: stack(&entry.icon).unwrap_or_else(crate::inventory::empty),
         id: entry.id,
         row: entry.row,
         column: entry.column,
@@ -287,7 +287,7 @@ fn stack(name: &str) -> Option<ItemStack> {
 }
 
 /// Vanilla [`Item::from_registry_key`], else a leaked runtime item for a mod's name.
-pub(crate) fn intern_item(name: &str) -> Option<&'static Item> {
+pub fn intern_item(name: &str) -> Option<&'static Item> {
     if name.is_empty() {
         return None;
     }

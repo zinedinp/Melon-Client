@@ -487,7 +487,7 @@ fn fitting(calls: &[quad::DrawCall], vertices: usize) -> &[quad::DrawCall] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::renderer::TextureId;
+    use crate::TextureId;
 
     fn call(first: u32, count: u32) -> quad::DrawCall {
         quad::DrawCall {

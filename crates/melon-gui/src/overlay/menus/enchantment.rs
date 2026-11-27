@@ -1,11 +1,11 @@
 //! `EnchantmentScreen`.
 
 use super::{Frame, Galactic, Loader, MenuDraw, MenuScreen, MenuSprites};
-use crate::gui::hud::item_slot;
-use crate::gui::overlay::container_input::MouseButtonKind;
-use crate::gui::overlay::{OverlayAction, OverlayContext};
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::{StyledText, colors};
+use crate::hud::item_slot;
+use crate::overlay::container_input::MouseButtonKind;
+use crate::overlay::{OverlayAction, OverlayContext};
+use crate::sprite::GuiSprite;
+use crate::text::{StyledText, colors};
 use crate::world::inventory::OpenContainer;
 use crate::world::java_random::JavaRandom;
 

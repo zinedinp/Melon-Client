@@ -6,7 +6,7 @@ use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
 #[cfg(not(windows))]
 use std::time::Duration;
 
-use crate::network::status::CannotResolve;
+use crate::status::CannotResolve;
 
 const DEFAULT_PORT: u16 = 25565;
 #[cfg(not(windows))]

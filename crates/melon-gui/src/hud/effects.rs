@@ -2,14 +2,14 @@
 
 use std::collections::HashMap;
 
-use crate::assets::Assets;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::StyledText;
 use crate::i18n::Lang;
 use crate::math::argb;
 use crate::renderer::Renderer;
 use crate::renderer::quad::DrawList;
+use crate::sprite::GuiSprite;
+use crate::text::StyledText;
 use crate::world::player::status_effects::{ActiveEffect, ActiveEffects, format_duration};
+use melon_assets::assets::Assets;
 
 use super::item_slot::ItemPainter;
 
@@ -261,7 +261,7 @@ pub fn effect_duration(lang: &Lang, effect: &ActiveEffect) -> String {
 }
 
 /// `ComponentRenderUtils.clipText`: as much of `text` as fits in `width`
-fn clip(font: &crate::gui::text::font::Font, text: &str, width: f32) -> String {
+fn clip(font: &crate::text::font::Font, text: &str, width: f32) -> String {
     let ellipsis = "...";
     let room = width - font.text_width(ellipsis);
     let mut out = String::new();

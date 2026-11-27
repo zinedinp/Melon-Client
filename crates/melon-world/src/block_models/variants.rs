@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::world::java_random::JavaRandom;
+use crate::java_random::JavaRandom;
 
 /// A state's models.
 pub enum StateModel<Q> {

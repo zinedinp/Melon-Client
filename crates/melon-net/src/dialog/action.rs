@@ -250,7 +250,7 @@ pub fn write_payload(out: &mut Vec<u8>, payload: Option<&NbtTag>) -> Option<()> 
     if tag.len() > 65536 {
         return None;
     }
-    crate::network::protocol::varint::write_var_int(out, tag.len() as i32).ok()?;
+    crate::protocol::varint::write_var_int(out, tag.len() as i32).ok()?;
     out.extend_from_slice(&tag);
     Some(())
 }

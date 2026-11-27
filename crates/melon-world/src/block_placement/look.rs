@@ -19,7 +19,7 @@ pub enum Dir {
 impl Dir {
     pub const HORIZONTAL: [Dir; 4] = [Dir::North, Dir::East, Dir::South, Dir::West];
 
-    /// The face of a [`crate::world::pick::BlockHit`].
+    /// The face of a [`crate::pick::BlockHit`].
     pub fn from_face(face: u8) -> Option<Dir> {
         Some(match face {
             0 => Dir::Down,

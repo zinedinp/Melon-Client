@@ -2,11 +2,11 @@
 
 use crate::audio::source::SoundSource;
 use crate::cycle::Cycle;
-use crate::gui::screen::{ConfigChange, ScreenContext};
-use crate::gui::screens::options::{on_off_label, value_label};
-use crate::gui::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 use crate::i18n::Lang;
+use crate::screen::{ConfigChange, ScreenContext};
+use crate::screens::options::{on_off_label, value_label};
 use crate::settings::options::Config;
+use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 
 /// One step per percent.
 const STEPS: u32 = 100;

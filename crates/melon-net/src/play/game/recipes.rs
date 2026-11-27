@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 use anyhow::{Result, bail};
 
-use crate::network::protocol::packet::Reader;
-use crate::network::protocol::reader::initial_capacity;
+use crate::protocol::packet::Reader;
+use crate::protocol::reader::initial_capacity;
 use crate::world::recipes::book::{BookSettings, Category, Entry, RecipeId, TypeSettings};
 use crate::world::recipes::display::Shown;
 use crate::world::recipes::sets::{PropertySet, StonecutterOption};
@@ -272,8 +272,11 @@ pub fn recipe_sets(r: &mut Reader<'_>) -> Result<RecipeSets> {
 
 #[cfg(test)]
 mod tests {
+    use pumpkin_data::item::Item;
+    use pumpkin_data::item_stack::ItemStack;
+
     use super::*;
-    use crate::network::protocol::varint::write_var_int as var;
+    use crate::protocol::varint::write_var_int as var;
 
     fn bytes(f: impl FnOnce(&mut Vec<u8>)) -> Vec<u8> {
         let mut out = Vec::new();
@@ -292,7 +295,7 @@ mod tests {
             var(b, 2).unwrap();
             var(b, 6).unwrap();
             var(b, 0).unwrap();
-            crate::network::protocol::reader::write_string(b, planks).unwrap();
+            crate::protocol::reader::write_string(b, planks).unwrap();
             var(b, 4).unwrap();
             var(b, i32::from(Item::STICK.id)).unwrap();
             var(b, 4).unwrap();
@@ -350,7 +353,7 @@ mod tests {
     fn an_update_reads_its_sets_and_stonecutter_options() {
         let body = bytes(|b| {
             var(b, 1).unwrap();
-            crate::network::protocol::reader::write_string(b, "minecraft:furnace_input").unwrap();
+            crate::protocol::reader::write_string(b, "minecraft:furnace_input").unwrap();
             var(b, 2).unwrap();
             var(b, i32::from(Item::BEEF.id)).unwrap();
             var(b, i32::from(Item::IRON_ORE.id)).unwrap();

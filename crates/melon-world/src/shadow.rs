@@ -3,11 +3,11 @@
 use glam::Vec3;
 use pumpkin_data::BlockStateId;
 
-use crate::renderer::WorldVertex;
-use crate::world::geometry;
-use crate::world::level::Level;
-use crate::world::lightmap;
-use crate::world::physics::block_at;
+use crate::geometry;
+use crate::level::Level;
+use crate::lightmap;
+use crate::mesh::WorldVertex;
+use crate::physics::block_at;
 
 /// `AvatarRenderer` / `LivingEntityRenderer` player shadow.
 pub const PLAYER_RADIUS: f32 = 0.5;
@@ -142,7 +142,7 @@ fn piece(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::{Chunk, ChunkLight, Section};
+    use crate::chunk::{Chunk, ChunkLight, Section};
 
     fn flat_world(sky: u8) -> Level {
         let mut level = Level::default();

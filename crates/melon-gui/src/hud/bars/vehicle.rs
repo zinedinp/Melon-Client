@@ -1,9 +1,9 @@
 //! `Hud.extractVehicleHealth`.
 
 use super::{Layout, fill};
-use crate::gui::hud::{ICON, PlayerStatus};
-use crate::gui::sprite::GuiSprite;
+use crate::hud::{ICON, PlayerStatus};
 use crate::renderer::quad::DrawList;
+use crate::sprite::GuiSprite;
 
 pub struct Sprites {
     sprites: [GuiSprite; 3],

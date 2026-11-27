@@ -1,8 +1,8 @@
 //! Shared not-implemented stub: heading, a note, and Back.
 
-use crate::gui::screen::ScreenAction;
-use crate::gui::widgets::dialog::DialogScreen;
-use crate::gui::widgets::layout::WIDE_BUTTON_W;
+use crate::screen::ScreenAction;
+use crate::widgets::dialog::DialogScreen;
+use crate::widgets::layout::WIDE_BUTTON_W;
 
 pub fn placeholder_screen(title_key: &'static str) -> DialogScreen {
     DialogScreen::new()

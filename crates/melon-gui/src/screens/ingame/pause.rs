@@ -3,15 +3,15 @@
 use std::sync::Arc;
 
 use crate::dialog::Dialog;
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::screens::dialog::DialogRequest;
-use crate::gui::screens::options::OptionsScreen;
-use crate::gui::text::StyledText;
-use crate::gui::widgets::Ui;
-use crate::gui::widgets::Widget;
-use crate::gui::widgets::button::{Button, IconSprite};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
 use crate::i18n::Lang;
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::screens::dialog::DialogRequest;
+use crate::screens::options::OptionsScreen;
+use crate::text::StyledText;
+use crate::widgets::Ui;
+use crate::widgets::Widget;
+use crate::widgets::button::{Button, IconSprite};
+use crate::widgets::set::{KeyResult, WidgetSet};
 
 /// `PauseScreen.BUTTON_WIDTH_FULL` / `BUTTON_WIDTH_HALF`, and the 20px button height.
 const BUTTON_W: f32 = 204.0;

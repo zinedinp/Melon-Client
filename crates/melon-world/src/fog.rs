@@ -2,9 +2,9 @@
 
 use glam::Vec3;
 
+use crate::atmosphere::Atmosphere;
+use crate::dimension::Rgb;
 use crate::math::angle;
-use crate::world::atmosphere::Atmosphere;
-use crate::world::dimension::Rgb;
 
 /// `FogType`, without `NONE`: what the camera is in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -229,8 +229,8 @@ fn blindness(fog: &mut FogData, effects: &FogEffects, render_distance: f32) {
 /// `FogRenderer.computeFogColor`.
 fn color(atmosphere: &Atmosphere, context: &FogContext) -> Rgb {
     let base = match context.fog_type {
-        FogType::Lava => crate::world::dimension::rgb(0x991900),
-        FogType::PowderSnow => crate::world::dimension::rgb(0x9fbbcc),
+        FogType::Lava => crate::dimension::rgb(0x991900),
+        FogType::PowderSnow => crate::dimension::rgb(0x9fbbcc),
         FogType::Water => atmosphere.water_fog_color,
         FogType::Atmospheric => air_color(atmosphere, context),
     };
@@ -337,10 +337,10 @@ fn mix(t: f32, a: Rgb, b: Rgb) -> Rgb {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::atmosphere::BiomeMix;
-    use crate::world::biome::{Biome, Biomes, Visuals};
-    use crate::world::clock::Environment as Day;
-    use crate::world::dimension::{DimensionType, rgb};
+    use crate::atmosphere::BiomeMix;
+    use crate::biome::{Biome, Biomes, Visuals};
+    use crate::clock::Environment as Day;
+    use crate::dimension::{DimensionType, rgb};
 
     fn overworld(time: f64) -> Atmosphere {
         Atmosphere::resolve(

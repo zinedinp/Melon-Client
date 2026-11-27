@@ -127,7 +127,7 @@ impl MultiplayerScreen {
             } else {
                 StyledText::colored(version_label(ui, &answer.status), colors::RED)
             };
-            let width = crate::gui::text::width(ui.font(), &text);
+            let width = crate::text::width(ui.font(), &text);
             ui.styled(&text, status_x - width - SPACING_X, content.y + 1.0, GREY);
         }
 
@@ -177,7 +177,7 @@ impl MultiplayerScreen {
             return;
         };
         let text_width = if answer.compatible {
-            crate::gui::text::width(ui.font(), &answer.players)
+            crate::text::width(ui.font(), &answer.players)
         } else {
             ui.text_width(version_label(ui, &answer.status))
         };

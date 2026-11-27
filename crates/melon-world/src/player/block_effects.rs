@@ -1,9 +1,9 @@
 //! What the blocks and fluids around the player do to its motion after a move.
 
 use super::PlayerState;
-use crate::world::fluid::FluidKind;
-use crate::world::level::Level;
-use crate::world::physics::{self, Aabb};
+use crate::fluid::FluidKind;
+use crate::level::Level;
+use crate::physics::{self, Aabb};
 use glam::DVec3;
 use pumpkin_data::{Block, BlockStateId};
 

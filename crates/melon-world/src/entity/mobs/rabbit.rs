@@ -1,12 +1,12 @@
 //! `AdultRabbitModel` and `BabyRabbitModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
-use crate::world::entity::animations::{baby_rabbit, rabbit};
-use crate::world::entity::keyframe::{AnimationDefinition, AnimationState};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::magic_name::Magic;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::animations::{baby_rabbit, rabbit};
+use crate::entity::keyframe::{AnimationDefinition, AnimationState};
+use crate::entity::living::LivingRenderState;
+use crate::entity::magic_name::Magic;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::model_part::{Cube, Pose};
 
 /// `EntityEvent.RABBIT_JUMP_ANIMATION`.
 pub const EVENT_JUMP: u8 = 1;
@@ -329,7 +329,7 @@ pub(super) fn push_layers(entity: &ClientEntity, out: &mut Vec<LayerSpec>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::keyframe::KeyframeAnimation;
+    use crate::entity::keyframe::KeyframeAnimation;
 
     #[test]
     fn the_animations_bake_for_both_models() {

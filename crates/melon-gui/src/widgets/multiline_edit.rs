@@ -3,10 +3,10 @@
 
 use std::time::Instant;
 
-use crate::gui::screen::{CursorKind, TextEvent};
-use crate::gui::text::font::Font;
-use crate::gui::widgets::text_input::cursor_visible;
-use crate::gui::widgets::{Rect, Ui, Widget};
+use crate::screen::{CursorKind, TextEvent};
+use crate::text::font::Font;
+use crate::widgets::text_input::cursor_visible;
+use crate::widgets::{Rect, Ui, Widget};
 
 /// `AbstractTextAreaWidget.INNER_PADDING`.
 const PADDING: f32 = 4.0;

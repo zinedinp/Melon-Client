@@ -1,18 +1,18 @@
 //! Vanilla `TitleScreen.init()` / `extractRenderState`.
 
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::screens::menu::create_world::CreateWorldScreen;
-use crate::gui::screens::menu::multiplayer::MultiplayerScreen;
-use crate::gui::screens::menu::placeholder::placeholder_screen;
-use crate::gui::screens::menu::singleplayer::SingleplayerScreen;
-use crate::gui::screens::options::OptionsScreen;
-use crate::gui::screens::options::language::LanguageScreen;
-use crate::gui::text::splash;
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
-use crate::gui::widgets::{Ui, Widget};
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::screens::menu::create_world::CreateWorldScreen;
+use crate::screens::menu::multiplayer::MultiplayerScreen;
+use crate::screens::menu::placeholder::placeholder_screen;
+use crate::screens::menu::singleplayer::SingleplayerScreen;
+use crate::screens::options::OptionsScreen;
+use crate::screens::options::language::LanguageScreen;
 use crate::singleplayer;
+use crate::text::splash;
+use crate::widgets::button::Button;
+use crate::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter};
+use crate::widgets::set::{KeyResult, WidgetSet};
+use crate::widgets::{Ui, Widget};
 use std::time::Instant;
 
 const HALF_BUTTON_W: f32 = 98.0;

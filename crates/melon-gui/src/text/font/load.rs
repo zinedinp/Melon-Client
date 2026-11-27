@@ -32,13 +32,16 @@ fn load_font_stack(
         depth <= MAX_REFERENCE_DEPTH,
         "Font-Verweise zu tief verschachtelt: {id}"
     );
-    let (namespace, path) = crate::assets::split_id(id);
-    let copies =
-        crate::assets::resource_stack(assets.root(), namespace, &format!("font/{path}.json"));
+    let (namespace, path) = melon_assets::assets::split_id(id);
+    let copies = melon_assets::assets::resource_stack(
+        assets.root(),
+        namespace,
+        &format!("font/{path}.json"),
+    );
     anyhow::ensure!(!copies.is_empty(), "could not read font definition: {id}");
     for bytes in copies.iter().rev() {
         let Ok(value) = serde_json::from_slice::<serde_json::Value>(
-            crate::assets::packs::meta::strip_bom(bytes),
+            melon_assets::assets::packs::meta::strip_bom(bytes),
         ) else {
             crate::warn!("{id} is not valid JSON, skipped");
             continue;

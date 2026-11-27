@@ -5,18 +5,18 @@ use std::ops::Range;
 use crate::math::{radix, section_to_block};
 use glam::{DVec3, Vec3};
 
-use crate::renderer::{TerrainQuad, WorldVertex as Vertex, quad_index_list};
-use crate::world::block::direction::Direction;
-use crate::world::block::offset;
-use crate::world::block::skip_rendering;
-use crate::world::block::state_flags;
-use crate::world::block_models::{BlockModels, ChunkLayer};
-use crate::world::block_tint::{TintKind, TintSettings};
-use crate::world::chunk::{BLOCKS_PER_SECTION, Chunk, Section};
-use crate::world::culling::occlusion::SectionPos;
-use crate::world::culling::visgraph::{self, VisibilitySet};
-use crate::world::fluid::{self, FluidSprites};
-use crate::world::smooth_light::{LightCache, flat_corners, smooth_corners};
+use crate::block::direction::Direction;
+use crate::block::offset;
+use crate::block::skip_rendering;
+use crate::block::state_flags;
+use crate::block_models::{BlockModels, ChunkLayer};
+use crate::block_tint::{TintKind, TintSettings};
+use crate::chunk::{BLOCKS_PER_SECTION, Chunk, Section};
+use crate::culling::occlusion::SectionPos;
+use crate::culling::visgraph::{self, VisibilitySet};
+use crate::fluid::{self, FluidSprites};
+use crate::mesh::{TerrainQuad, WorldVertex as Vertex, quad_index_list};
+use crate::smooth_light::{LightCache, flat_corners, smooth_corners};
 
 /// A chunk and the eight around it.
 pub struct Neighborhood<'a> {
@@ -170,10 +170,9 @@ impl TranslucentMesh {
     }
 
     /// The quads in drawing order, as [`Self::indices`] puts them.
-    #[cfg(test)]
     pub fn sorted_quads(&self) -> Vec<[Vertex; 4]> {
         let (quads, _) = self.vertices.as_chunks::<4>();
-        crate::renderer::quads_of_index_list(&self.indices, self.vertices.len() as u32)
+        crate::mesh::quads_of_index_list(&self.indices, self.vertices.len() as u32)
             .into_iter()
             .map(|quad| quads[quad as usize])
             .collect()
@@ -696,7 +695,7 @@ impl SolidCache {
 
 /// The baked models and fluid sprites from `assets/`, once for every test.
 #[cfg(test)]
-pub(crate) fn test_models() -> Option<(&'static std::sync::Arc<BlockModels>, FluidSprites)> {
+pub fn test_models() -> Option<(&'static std::sync::Arc<BlockModels>, FluidSprites)> {
     use std::sync::{Arc, OnceLock};
     static MODELS: OnceLock<Option<(Arc<BlockModels>, FluidSprites)>> = OnceLock::new();
     MODELS
@@ -723,7 +722,7 @@ pub(crate) fn test_models() -> Option<(&'static std::sync::Arc<BlockModels>, Flu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::renderer::CornerLight;
+    use crate::mesh::CornerLight;
 
     const STONE: u16 = 1;
 
@@ -776,12 +775,12 @@ mod tests {
     }
 
     fn chunk_with(blocks: &[(usize, usize, usize, u16)]) -> Chunk {
-        chunk_with_light(blocks, crate::world::chunk::ChunkLight::default())
+        chunk_with_light(blocks, crate::chunk::ChunkLight::default())
     }
 
     fn chunk_with_light(
         blocks: &[(usize, usize, usize, u16)],
-        light: crate::world::chunk::ChunkLight,
+        light: crate::chunk::ChunkLight,
     ) -> Chunk {
         let mut sections: Vec<Section> = (0..2).map(|_| Section::empty()).collect();
         for &(x, y, z, id) in blocks {
@@ -927,8 +926,8 @@ mod tests {
     #[test]
     fn fluids_take_the_brighter_light_above_or_below() {
         let water = pumpkin_data::Block::WATER.default_state.id.as_u16();
-        let mut light = crate::world::chunk::ChunkLight::default();
-        let world_y = |y: i32| crate::world::dimension::Height::OVERWORLD.light_min_y() + 16 + y;
+        let mut light = crate::chunk::ChunkLight::default();
+        let world_y = |y: i32| crate::dimension::Height::OVERWORLD.light_min_y() + 16 + y;
         light.set_layer(false, 4, world_y(5), 4, 12);
         light.set_layer(false, 4, world_y(3), 4, 9);
         let pool = chunk_with_light(&[(4, 4, 4, water)], light);
@@ -979,7 +978,7 @@ mod tests {
 
     #[test]
     fn smooth_lighting_darkens_corners_like_vanilla() {
-        let lit = crate::world::chunk::ChunkLight::filled_sky;
+        let lit = crate::chunk::ChunkLight::filled_sky;
         let chunk = chunk_with_light(
             &[(4, 4, 4, STONE), (5, 5, 4, STONE), (4, 5, 3, STONE)],
             lit(15),
@@ -1016,7 +1015,7 @@ mod tests {
                 }
             }
         }
-        let chunk = chunk_with_light(&blocks, crate::world::chunk::ChunkLight::filled_sky(15));
+        let chunk = chunk_with_light(&blocks, crate::chunk::ChunkLight::filled_sky(15));
         let Some(mesh) = build(&Neighborhood::alone(&chunk)) else {
             return;
         };
@@ -1025,7 +1024,7 @@ mod tests {
 
     #[test]
     fn glowing_and_open_blocks_stay_flat() {
-        let lit = crate::world::chunk::ChunkLight::filled_sky;
+        let lit = crate::chunk::ChunkLight::filled_sky;
         let glowstone = pumpkin_data::Block::GLOWSTONE.default_state.id.as_u16();
         let chunk = chunk_with_light(&[(4, 4, 4, glowstone), (5, 5, 4, STONE)], lit(15));
         let Some(mesh) = build(&Neighborhood::alone(&chunk)) else {
@@ -1041,7 +1040,7 @@ mod tests {
     fn culled_faces_sample_neighbour_sky_light() {
         let stone = chunk_with_light(
             &[(4, 4, 4, STONE)],
-            crate::world::chunk::ChunkLight::filled_sky(15),
+            crate::chunk::ChunkLight::filled_sky(15),
         );
         let Some(mesh) = build(&Neighborhood::alone(&stone)) else {
             return;
@@ -1132,28 +1131,20 @@ mod tests {
             return;
         };
         let grass = pumpkin_data::Block::GRASS_BLOCK.default_state.id.as_u16();
-        let biomes = std::sync::Arc::new(crate::world::biome::Biomes::new(vec![
-            (
-                "minecraft:plains".into(),
-                crate::world::biome::Biome::default(),
-            ),
+        let biomes = std::sync::Arc::new(crate::biome::Biomes::new(vec![
+            ("minecraft:plains".into(), crate::biome::Biome::default()),
             (
                 "minecraft:desert".into(),
-                crate::world::biome::Biome {
+                crate::biome::Biome {
                     temperature: 2.0,
                     downfall: 0.0,
-                    ..crate::world::biome::Biome::default()
+                    ..crate::biome::Biome::default()
                 },
             ),
         ]));
-        let tints = TintSettings::new(
-            &biomes,
-            crate::world::colormap::ColorMaps::cached(),
-            0,
-            None,
-        );
-        let chunk = chunk_with(&[(4, 4, 4, grass)])
-            .with_biomes(crate::world::biome::ChunkBiomes::uniform(1, 2));
+        let tints = TintSettings::new(&biomes, crate::colormap::ColorMaps::cached(), 0, None);
+        let chunk =
+            chunk_with(&[(4, 4, 4, grass)]).with_biomes(crate::biome::ChunkBiomes::uniform(1, 2));
         let context = MeshContext {
             smooth_lighting: true,
             cutout_leaves: true,
@@ -1164,16 +1155,10 @@ mod tests {
             tints: &tints,
         };
         let mesh = mesh_section(&Neighborhood::alone(&chunk), 0, &context);
-        let desert = crate::world::colormap::unpack(
-            crate::world::colormap::ColorMaps::cached()
-                .grass
-                .get(2.0, 0.0),
-        );
-        let plains = crate::world::colormap::unpack(
-            crate::world::colormap::ColorMaps::cached()
-                .grass
-                .get(0.8, 0.4),
-        );
+        let desert =
+            crate::colormap::unpack(crate::colormap::ColorMaps::cached().grass.get(2.0, 0.0));
+        let plains =
+            crate::colormap::unpack(crate::colormap::ColorMaps::cached().grass.get(0.8, 0.4));
         assert_ne!(desert, plains);
         assert!(
             mesh.solid.items.iter().any(|q| q.tint() == desert),

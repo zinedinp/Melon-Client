@@ -2,9 +2,9 @@
 
 use glam::{Mat4, Vec2, Vec3};
 
-use crate::renderer::WorldVertex as Vertex;
-use crate::world::geometry;
-use crate::world::model_part::{self, Cube, Part, Pose};
+use crate::geometry;
+use crate::mesh::WorldVertex as Vertex;
+use crate::model_part::{self, Cube, Part, Pose};
 
 /// A `PartDefinition`: a named part's pose, boxes and children.
 #[derive(Clone, Debug)]
@@ -480,9 +480,9 @@ mod tests {
     /// part at a time gives, to the bit.
     #[test]
     fn batched_turns_place_every_mob_as_one_by_one() {
-        use crate::world::entity::humanoid::HumanoidRenderState;
-        use crate::world::entity::living::LivingRenderState;
-        use crate::world::entity::mobs::{MobModel, ModelId, PoseInput};
+        use crate::entity::humanoid::HumanoidRenderState;
+        use crate::entity::living::LivingRenderState;
+        use crate::entity::mobs::{MobModel, ModelId, PoseInput};
         let root = Mat4::from_translation(Vec3::new(0.3, 1.5, -0.2));
         for (k, id) in ModelId::ALL.into_iter().enumerate() {
             let living = LivingRenderState {

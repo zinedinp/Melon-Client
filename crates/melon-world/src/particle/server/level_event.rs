@@ -4,8 +4,8 @@ use glam::DVec3;
 
 use super::super::client::{faces, terrain};
 use super::super::{Kind, ParticleEngine, ParticleSpec, Spawn, World};
-use crate::world::block::direction::Direction;
-use crate::world::java_random::JavaRandom;
+use crate::block::direction::Direction;
+use crate::java_random::JavaRandom;
 
 /// `LevelEvent` ids that spawn particles.
 pub mod id {
@@ -518,7 +518,7 @@ pub fn in_block(
     let height = if state == 0 {
         1.0
     } else {
-        crate::world::pick::outline_shapes(world.level, (pos[0], pos[1], pos[2]))
+        crate::pick::outline_shapes(world.level, (pos[0], pos[1], pos[2]))
             .map(|b| b.max.y - f64::from(pos[1]))
             .fold(0.0, f64::max)
     };

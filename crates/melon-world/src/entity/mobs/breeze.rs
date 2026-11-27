@@ -1,12 +1,12 @@
 //! `BreezeModel`.
 
 use super::{LayerSpec, ModelId as M};
+use crate::entity::animations::breeze as anim;
+use crate::entity::keyframe::{AnimationDefinition, AnimationState};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition};
 use crate::math::angle::{EIGHTH_PI, PI, THIRD_PI};
-use crate::world::entity::animations::breeze as anim;
-use crate::world::entity::keyframe::{AnimationDefinition, AnimationState};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// Animation slots (`PoseInput::anim`).
 pub const IDLE: usize = 0;
@@ -186,7 +186,7 @@ pub(super) fn push_layers(age_in_ticks: f32, out: &mut Vec<LayerSpec>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::keyframe::KeyframeAnimation;
+    use crate::entity::keyframe::KeyframeAnimation;
 
     #[test]
     fn both_meshes_bake_every_animation() {

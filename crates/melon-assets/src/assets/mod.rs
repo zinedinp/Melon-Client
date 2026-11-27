@@ -1,7 +1,6 @@
 //! The vanilla `assets/` tree.
 
 pub mod atlas_sources;
-pub mod json_model;
 pub mod packs;
 pub mod palette;
 pub mod shaders;
@@ -194,14 +193,13 @@ pub fn launcher_root() -> Option<PathBuf> {
 /// The assets for tests and tools.
 pub fn default_root() -> PathBuf {
     Assets::discover().map_or_else(
-        |_| Path::new(env!("CARGO_MANIFEST_DIR")).join("assets"),
+        |_| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets"),
         |assets| assets.root,
     )
 }
 
 /// Tests' assets: `MELON_ASSETS`, else the prepared ones [`Assets::discover`]
 /// finds; `None` without either.
-#[cfg(test)]
 pub fn test_root() -> Option<PathBuf> {
     std::env::var_os("MELON_ASSETS")
         .map(PathBuf::from)
@@ -211,7 +209,6 @@ pub fn test_root() -> Option<PathBuf> {
 
 /// The post chains tests check: the one in `MELON_PACK_JSON`, else every
 /// vanilla `post_effect/*.json` under `root`.
-#[cfg(test)]
 pub fn test_post_chains(root: Option<&Path>) -> Vec<(String, serde_json::Value)> {
     let read = |path: &Path| {
         let bytes = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
@@ -287,15 +284,6 @@ impl Assets {
             .map(|(bytes, _)| bytes)
             .ok_or_else(|| anyhow::anyhow!("texture missing: {identifier}"))?;
         decode_png(&bytes).ok_or_else(|| anyhow::anyhow!("Textur kaputt: {identifier}"))
-    }
-
-    /// [`Self::image`], uploaded.
-    pub fn texture(
-        &self,
-        renderer: &mut crate::renderer::Renderer,
-        identifier: &str,
-    ) -> anyhow::Result<crate::renderer::TextureId> {
-        renderer.load_texture(&self.image(identifier)?)
     }
 
     pub fn root(&self) -> &Path {

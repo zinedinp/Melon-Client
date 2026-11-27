@@ -35,8 +35,8 @@ fn with_hints(quad: &BakedQuad, hints: RenderHints) -> BakedQuad {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::block::direction::Direction;
-    use crate::world::block_tint::TintKind;
+    use crate::block::direction::Direction;
+    use crate::block_tint::TintKind;
 
     fn quad(layer: ChunkLayer) -> BakedQuad {
         BakedQuad {

@@ -1,13 +1,13 @@
 //! `LlamaModel` and `BabyLlamaModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, push_equipment_textures};
+use crate::entity::equipment_asset;
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::quadruped::{self, QuadrupedParts};
+use crate::entity::wire::EquipmentSlot;
 use crate::math::angle::HALF_PI;
-use crate::network::play::game::EquipmentSlot;
-use crate::world::entity::equipment_asset;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::quadruped::{self, QuadrupedParts};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `Llama.Variant` ids: creamy, white, brown, gray.
 pub fn texture(variant: i32, baby: bool) -> &'static str {

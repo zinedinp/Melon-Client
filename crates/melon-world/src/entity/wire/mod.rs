@@ -14,8 +14,8 @@ pub use equipment::EquipmentSlot;
 pub use movement::{MoveEntity, SetPosition, relative};
 pub use spawn::AddEntity;
 
-use crate::network::protocol::packet::Reader;
-use crate::world::player::hands::{Hand, Swing};
+use crate::player::hands::{Hand, Swing};
+use melon_protocol::packet::Reader;
 
 /// `Entity.FLAG_ON_FIRE`.
 pub const FLAG_ON_FIRE: u8 = 0;

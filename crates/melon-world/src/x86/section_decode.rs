@@ -1,4 +1,4 @@
-//! [`crate::world::section_decode`]'s loops under SSE2, SSSE3, AVX2 and
+//! [`crate::section_decode`]'s loops under SSE2, SSSE3, AVX2 and
 //! AVX-512 VBMI: one body each, the whole loop inside, so every byte op
 //! inlines to vector instructions.
 
@@ -7,8 +7,8 @@ use miraculix::x86::ops::avx::avx2::Avx2;
 use miraculix::x86::ops::sse::ssse3::Ssse3;
 
 use crate::math::x86::bytes::{Avx2Bytes, Sse2Bytes, Ssse3Bytes, VbmiBytes};
-use crate::world::section::BLOCKS_PER_SECTION;
-use crate::world::section_decode::{ROWS, decode_with, flag_rows_with};
+use crate::section::BLOCKS_PER_SECTION;
+use crate::section_decode::{ROWS, decode_with, flag_rows_with};
 
 // SSE2 is every x86_64's baseline, so its bodies need no `target_feature`.
 // Out of line like the others: inlined, the loop made the dispatch around

@@ -110,7 +110,8 @@ fn folders(atlas: &str) -> &'static [&'static str] {
 pub fn sprite_image(root: &std::path::Path, sprite: &AtlasSprite) -> Option<image::RgbaImage> {
     let (namespace, path) = sprite.sprite.split_once(':')?;
     folders(&sprite.atlas).iter().find_map(|folder| {
-        let image = crate::assets::texture_image(root, &format!("{namespace}:{folder}{path}"))?;
+        let image =
+            melon_assets::assets::texture_image(root, &format!("{namespace}:{folder}{path}"))?;
         let side = image.width();
         Some(if image.height() > side {
             image::imageops::crop_imm(&image, 0, 0, side, side).to_image()

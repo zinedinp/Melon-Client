@@ -2,9 +2,12 @@
 
 use std::sync::Arc;
 
-use crate::world::biome::{Biome, Biomes, GrassModifier};
-use crate::world::biome_zoom;
-use crate::world::colormap::{self, ColorMaps};
+use crate::biome::{Biome, Biomes, GrassModifier};
+use crate::biome_zoom;
+use crate::colormap::{self, ColorMaps};
+
+/// `Options.biomeBlendRadius`'s default.
+pub const BIOME_BLEND_DEFAULT: u8 = 2;
 
 /// Which colour map a tinted face reads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -110,7 +113,7 @@ impl TintSettings {
         Self::new(
             &Biomes::default(),
             ColorMaps::cached(),
-            crate::settings::options::BIOME_BLEND_DEFAULT,
+            BIOME_BLEND_DEFAULT,
             None,
         )
     }

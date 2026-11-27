@@ -22,7 +22,7 @@ use pumpkin_data::{Block, BlockStateId, Property};
 
 pub use look::Dir;
 
-use crate::world::fluid::{FluidKind, fluid_of};
+use crate::fluid::{FluidKind, fluid_of};
 
 /// A click with a block item.
 pub struct PlaceInput<'a> {
@@ -49,7 +49,7 @@ pub struct Placement {
 }
 
 /// `BlockPlaceContext` with the position settled.
-pub(crate) struct Ctx<'a> {
+pub struct Ctx<'a> {
     input: &'a PlaceInput<'a>,
     pub pos: [i32; 3],
     /// `replacingClickedOnBlock`.
@@ -128,7 +128,7 @@ impl Ctx<'_> {
 
 /// A block state as an editable property list.
 #[derive(Clone, Debug)]
-pub(crate) struct Edit {
+pub struct Edit {
     pub block: &'static Block,
     props: Vec<Property>,
 }
@@ -310,7 +310,7 @@ fn is_double_plant(edit: &Edit) -> bool {
 }
 
 /// `getStateForPlacement` of `block`'s class at `ctx.pos`.
-pub(crate) fn state_for(ctx: &Ctx, block: &'static Block) -> Option<Edit> {
+pub fn state_for(ctx: &Ctx, block: &'static Block) -> Option<Edit> {
     let here = ctx.get(ctx.pos);
     if Block::from_state_id(BlockStateId::new_or_air(here)) == block
         && let Some(edit) = merge_into(here)
@@ -579,7 +579,7 @@ fn door_hinge(ctx: &Ctx) -> DoorHinge {
 }
 
 /// The direction an `AttachFace` points (`getConnectedDirection`).
-pub(crate) fn attach_face_dir(face: AttachFace, facing: Dir) -> Dir {
+pub fn attach_face_dir(face: AttachFace, facing: Dir) -> Dir {
     match face {
         AttachFace::Ceiling => Dir::Down,
         AttachFace::Floor => Dir::Up,

@@ -8,16 +8,38 @@ Melon is on majestix-vk 0.2.1 and numerobis 0.6.0.
 
 ## melon (the client)
 
+### The crate split
+
+The client is ten crates in `crates/` (the layering is in `src/lib.rs`);
+the bin keeps `game` and `app`. What the cut left behind:
+
+- **Alias blocks.** Each crate root has `use melon_core::{math, probe};`
+  and the like, so moved code still says `crate::math::…`. Rewrite those
+  paths to the crates' names (`melon_core::math::…`) crate by crate, then
+  drop the blocks. The bin's `pub use melon_world as world;` and its
+  siblings likewise, for `game`, `app`, the examples and `tests/`.
+- **Widened visibility.** What was `pub(crate)` in a moved module is `pub`
+  now, so the crates above still reach it. `unreachable_pub` finds what no
+  other crate uses, to go back to `pub(crate)`.
+- **Test helpers outside tests.** Other crates' tests use
+  `util::xorshift`, `Lang::empty`/`from_pairs`, `assets::test_root` and
+  `test_post_chains`, `Chunk::new`, `TranslucentMesh::sorted_quads` and
+  `mesh::quads_of_index_list`, so they are compiled always; a
+  `test-support` feature in dev-dependencies would hide them again.
+- **`game` (22k lines) and `app`** stay one crate. `game`'s meshing and
+  scene code (`level_meshes`, `block_meshes`, `entities`, `scene`) against
+  its loop and input would be the next cut.
+
 ### The renderer onto majestix-vk
 
 Both renderers adopt melon-base's device with `Device::adopt` and take
 their frame ring (`Frames`) and swapchain (`Presenter`) from majestix-vk:
 the game's and the launcher's `Renderer2d`. Through majestix-vk besides:
-`renderer/blur.rs`, the world's per-frame globals (`renderer/globals.rs`),
+melon-render's `blur.rs`, the world's per-frame globals (`globals.rs`),
 the UI's vertices and indices (melon-base's `gfx/ui_vertices.rs`, shared by
-both), and the pipeline cache (`renderer/pipeline_cache.rs`,
+both), and the pipeline cache (melon-render's `pipeline_cache.rs`,
 `cache/pipelines.bin`). About 775 `unsafe` blocks are left: ~545 in
-`src/renderer`, ~230 in melon-base's `gfx`.
+melon-render, ~230 in melon-base's `gfx`.
 
 A fixed-size per-frame buffer moves as the globals and the UI vertices did:
 a `Mapped` ring, each slot's set or offset fixed up front from
@@ -39,11 +61,11 @@ majestix-vk (see its section):
 4. **Residency.** `gfx/residency.rs` puts meshes in the BAR when the CPU maps
    all of VRAM (`MemoryUse::DeviceMapped`) and keeps new buffers within the
    budget.
-5. **Mesh blocks in the BAR** (`renderer/mesh_arena.rs`). Melon writes VRAM
+5. **Mesh blocks in the BAR** (melon-render's `mesh_arena.rs`). Melon writes VRAM
    it maps where its free list says, while the GPU reads other ranges of
    the same block.
 
-Then the rest, `gfx` before `renderer`, on generated wrappers once
+Then the rest, `gfx` before melon-render, on generated wrappers once
 numerobis writes them (see its section).
 
 ### Features
@@ -74,7 +96,7 @@ path beside the 1.0 one:
   warnings (313 in melon-base): ~2000 `must_use`, ~2400 casts (mostly game
   math), the rest docs and style. Fixed in code, not allowed: melon-base
   first, then the client module by module.
-- **CI.** There is none. The GPU checks (`renderer/vk_check.rs`) are unit
+- **CI.** There is none. The GPU checks (melon-render's `vk_check.rs`) are unit
   tests that need a device; with lavapipe or SwiftShader they could run on
   a runner, as majestix-vk's could.
 
@@ -101,7 +123,7 @@ What Melon's renderer needs from it, most important first.
 
 ### Queries
 
-- **Pipeline statistics.** `renderer/gpu_timer.rs` begins and ends a
+- **Pipeline statistics.** melon-render's `gpu_timer.rs` begins and ends a
   `PIPELINE_STATISTICS` query around the frame and reads it on the host;
   `create_query_pool` refuses that type (no statistics flags), and there is
   no `begin_query` / `end_query`. Occlusion queries come with them.

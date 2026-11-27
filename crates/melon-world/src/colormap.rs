@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
 
-use crate::world::java_random::JavaRandom;
+use crate::java_random::JavaRandom;
 
 /// 256×256 colour map, row-major, packed `0xAARRGGBB`.
 #[derive(Clone, Debug)]

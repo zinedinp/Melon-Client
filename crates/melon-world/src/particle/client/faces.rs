@@ -3,8 +3,8 @@
 use glam::DVec3;
 
 use super::super::{Kind, ParticleSpec, Spawn};
-use crate::world::block::direction::Direction;
-use crate::world::java_random::JavaRandom;
+use crate::block::direction::Direction;
+use crate::java_random::JavaRandom;
 
 /// `spawnParticlesOnBlockFaces`.
 pub fn on_faces(

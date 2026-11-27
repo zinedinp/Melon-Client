@@ -1,11 +1,11 @@
 //! `AdultCamelModel` and `BabyCamelModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
-use crate::world::entity::animations::{camel as adult_anim, camel_baby as baby_anim};
-use crate::world::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::animations::{camel as adult_anim, camel_baby as baby_anim};
+use crate::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::model_part::{Cube, Pose};
 
 /// Animation slots (`PoseInput::anim`).
 pub const SIT: usize = 0;

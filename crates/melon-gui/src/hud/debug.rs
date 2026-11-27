@@ -4,10 +4,10 @@
 //! overlay lays them out in two columns as vanilla does.
 
 use super::debug_entries::{DebugEntries, Entry};
-use crate::gui::text::font::Font;
 use crate::math::{section_coord, section_relative, wrap_degrees};
 use crate::renderer::quad::DrawList;
 use crate::renderer::{DeviceInfo, TextureId};
+use crate::text::font::Font;
 
 /// `DebugScreenOverlay.extractLines`: `int height = 9`.
 const LINE_HEIGHT: f32 = 9.0;
@@ -53,7 +53,7 @@ pub struct DebugContext<'a> {
     pub mesh: crate::world::level::MeshStats,
     /// Bytes of GPU mesh memory allocated and in use.
     pub mesh_memory: (u64, u64),
-    /// [`crate::game::profiler::FrameProfiler::lines`].
+    /// the game's `FrameProfiler::lines`.
     pub profile: Vec<String>,
     /// The GPU's time per pass ([`crate::renderer::Renderer::gpu_profile`]).
     pub gpu_profile: Vec<String>,

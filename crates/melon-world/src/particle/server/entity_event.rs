@@ -5,8 +5,8 @@ use glam::DVec3;
 use super::super::base::Particle;
 use super::super::motion::emitter::Emitter;
 use super::super::{EntityBox, Kind, ParticleEngine, ParticleSpec, Spawn, World};
+use crate::java_random::JavaRandom;
 use crate::particle::client::entity as own;
-use crate::world::java_random::JavaRandom;
 
 /// `EntityEvent` ids that spawn particles.
 pub mod id {
@@ -136,7 +136,7 @@ pub fn spawn(engine: &mut ParticleEngine, world: &World, entity: i32, event: u8)
         | id::FEET_BREAK
         | id::BODY_BREAK
         | id::SADDLE_BREAK => {
-            use crate::network::play::game::EquipmentSlot as Slot;
+            use crate::entity::wire::EquipmentSlot as Slot;
             let slot = match event {
                 id::MAINHAND_BREAK => Slot::MainHand,
                 id::OFFHAND_BREAK => Slot::OffHand,
@@ -156,7 +156,7 @@ pub fn spawn(engine: &mut ParticleEngine, world: &World, entity: i32, event: u8)
         }
         id::FOX_EAT => {
             let Some(item) =
-                (world.equipment)(entity, crate::network::play::game::EquipmentSlot::MainHand)
+                (world.equipment)(entity, crate::entity::wire::EquipmentSlot::MainHand)
             else {
                 return;
             };

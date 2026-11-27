@@ -24,7 +24,6 @@ impl Reader<'_> {
         }
     }
 
-
     /// `ItemStackTemplate.STREAM_CODEC`.
     pub fn item_template(&mut self) -> Result<ItemStack> {
         let item = self.var_int()?;

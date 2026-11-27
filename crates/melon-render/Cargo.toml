@@ -1,0 +1,30 @@
+[package]
+name = "melon-render"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "The Melon client's Vulkan renderer: device, swapchain, textures, meshes, the world and post-effect pipelines"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+melon-assets = { path = "../melon-assets" }
+melon-base = { path = "../melon-base" }
+melon-world = { path = "../melon-world" }
+anyhow.workspace = true
+ash.workspace = true
+glam.workspace = true
+image.workspace = true
+majestix-vk.workspace = true
+numerobis.workspace = true
+raw-window-handle.workspace = true
+rustc-hash.workspace = true
+serde_json.workspace = true
+winit.workspace = true
+
+[dev-dependencies]
+melon-core = { path = "../melon-core" }
+
+[lints]
+workspace = true

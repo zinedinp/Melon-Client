@@ -62,7 +62,7 @@ fn reads_back_what_it_writes() {
             auto_jump: true,
             sprint_window: 3,
             binds: {
-                let mut binds = crate::settings::input::KeyBinds::default();
+                let mut binds = crate::input::KeyBinds::default();
                 binds.set(Action::Forward, InputBind::parse("key.keyboard.up"));
                 binds
             },

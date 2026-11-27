@@ -3,25 +3,23 @@
 use crate::world::item_model::StackKey;
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::assets::Assets;
-use crate::gui::entity_preview::EntityPreview;
-use crate::gui::hud::item_slot::{self};
-use crate::gui::overlay::container_input::{
+use crate::entity_preview::EntityPreview;
+use crate::hud::item_slot::{self};
+use crate::overlay::container_input::{
     self, ContainerMouse, ContainerView, MouseButtonKind, SlotClick,
 };
-use crate::gui::overlay::inventory::{SlotDrag, draw_carried, draw_slots, push_entity_preview};
-use crate::gui::overlay::menu_layout::{MenuLayout, SLOT_PITCH, Strip};
-use crate::gui::overlay::menus::{self, Frame, MenuDraw, MenuScreen, MenuSprites};
-use crate::gui::overlay::recipe_book::{self, Mode, RecipeBookPanel, RecipeBookSprites};
-use crate::gui::overlay::{
-    ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind,
-};
-use crate::gui::screen::TextEvent;
-use crate::gui::text::{self, StyledText};
+use crate::overlay::inventory::{SlotDrag, draw_carried, draw_slots, push_entity_preview};
+use crate::overlay::menu_layout::{MenuLayout, SLOT_PITCH, Strip};
+use crate::overlay::menus::{self, Frame, MenuDraw, MenuScreen, MenuSprites};
+use crate::overlay::recipe_book::{self, Mode, RecipeBookPanel, RecipeBookSprites};
+use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
 use crate::renderer::quad::DrawList;
 use crate::renderer::{Renderer, TextureId};
+use crate::screen::TextEvent;
 use crate::settings::input::InputBind;
+use crate::text::{self, StyledText};
 use crate::world::inventory::{self, ContainerKind, OpenContainer};
+use melon_assets::assets::Assets;
 
 const IMAGE_WIDTH: f32 = 176.0;
 
@@ -54,26 +52,30 @@ pub struct ContainerTextures {
 impl ContainerTextures {
     pub fn load(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<Self> {
         Ok(Self {
-            generic_54: assets.texture(renderer, "minecraft:gui/container/generic_54.png")?,
-            hopper: assets.texture(renderer, "minecraft:gui/container/hopper.png")?,
-            dispenser: assets.texture(renderer, "minecraft:gui/container/dispenser.png")?,
-            crafting: assets.texture(renderer, "minecraft:gui/container/crafting_table.png")?,
-            furnace: assets.texture(renderer, "minecraft:gui/container/furnace.png")?,
-            blast_furnace: assets.texture(renderer, "minecraft:gui/container/blast_furnace.png")?,
-            smoker: assets.texture(renderer, "minecraft:gui/container/smoker.png")?,
-            anvil: assets.texture(renderer, "minecraft:gui/container/anvil.png")?,
-            grindstone: assets.texture(renderer, "minecraft:gui/container/grindstone.png")?,
-            smithing: assets.texture(renderer, "minecraft:gui/container/smithing.png")?,
-            cartography: assets
-                .texture(renderer, "minecraft:gui/container/cartography_table.png")?,
-            loom: assets.texture(renderer, "minecraft:gui/container/loom.png")?,
-            stonecutter: assets.texture(renderer, "minecraft:gui/container/stonecutter.png")?,
-            brewing: assets.texture(renderer, "minecraft:gui/container/brewing_stand.png")?,
-            beacon: assets.texture(renderer, "minecraft:gui/container/beacon.png")?,
-            enchanting: assets.texture(renderer, "minecraft:gui/container/enchanting_table.png")?,
-            villager: assets.texture(renderer, "minecraft:gui/container/villager.png")?,
-            horse: assets.texture(renderer, "minecraft:gui/container/horse.png")?,
-            nautilus: assets.texture(renderer, "minecraft:gui/container/nautilus.png")?,
+            generic_54: renderer.asset_texture(assets, "minecraft:gui/container/generic_54.png")?,
+            hopper: renderer.asset_texture(assets, "minecraft:gui/container/hopper.png")?,
+            dispenser: renderer.asset_texture(assets, "minecraft:gui/container/dispenser.png")?,
+            crafting: renderer
+                .asset_texture(assets, "minecraft:gui/container/crafting_table.png")?,
+            furnace: renderer.asset_texture(assets, "minecraft:gui/container/furnace.png")?,
+            blast_furnace: renderer
+                .asset_texture(assets, "minecraft:gui/container/blast_furnace.png")?,
+            smoker: renderer.asset_texture(assets, "minecraft:gui/container/smoker.png")?,
+            anvil: renderer.asset_texture(assets, "minecraft:gui/container/anvil.png")?,
+            grindstone: renderer.asset_texture(assets, "minecraft:gui/container/grindstone.png")?,
+            smithing: renderer.asset_texture(assets, "minecraft:gui/container/smithing.png")?,
+            cartography: renderer
+                .asset_texture(assets, "minecraft:gui/container/cartography_table.png")?,
+            loom: renderer.asset_texture(assets, "minecraft:gui/container/loom.png")?,
+            stonecutter: renderer
+                .asset_texture(assets, "minecraft:gui/container/stonecutter.png")?,
+            brewing: renderer.asset_texture(assets, "minecraft:gui/container/brewing_stand.png")?,
+            beacon: renderer.asset_texture(assets, "minecraft:gui/container/beacon.png")?,
+            enchanting: renderer
+                .asset_texture(assets, "minecraft:gui/container/enchanting_table.png")?,
+            villager: renderer.asset_texture(assets, "minecraft:gui/container/villager.png")?,
+            horse: renderer.asset_texture(assets, "minecraft:gui/container/horse.png")?,
+            nautilus: renderer.asset_texture(assets, "minecraft:gui/container/nautilus.png")?,
             menus: MenuSprites::load(renderer, assets)?,
             recipe_book: RecipeBookSprites::load(renderer, assets)
                 .map_err(|e| crate::warn!("Recipe book: {e:#}"))
@@ -553,12 +555,7 @@ fn draw_container<'a>(
     menu: &'a OpenContainer,
 ) {
     let (width, height) = ui.size;
-    crate::gui::background::push_transparent_background(
-        ui.draw_list,
-        ui.painter.white,
-        width,
-        height,
-    );
+    crate::background::push_transparent_background(ui.draw_list, ui.painter.white, width, height);
     if let Some(texture) = sheet(ui.textures.container, menu.kind) {
         draw_panel(ui.draw_list, texture, &overlay.layout);
     }

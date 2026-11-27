@@ -240,7 +240,7 @@ mod tests {
     use glam::Mat4;
 
     fn culler(occlusion: Option<&OcclusionMask>, settings: CullSettings) -> Culler<'_> {
-        let projection = crate::renderer::world_projection(70.0, 1.0, 512.0);
+        let projection = crate::projection::world_projection(70.0, 1.0, 512.0);
         Culler::new(
             Frustum::from_view_projection(projection * Mat4::IDENTITY),
             occlusion,

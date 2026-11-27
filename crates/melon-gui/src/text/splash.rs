@@ -1,9 +1,9 @@
 //! Vanilla `SplashManager` / `SplashRenderer` (rotated yellow text by the logo).
 
-use crate::assets::Assets;
 use crate::math::angle::{self, PI, TAU};
 use crate::renderer::quad::Transform2D;
 use crate::world::java_random::java_string_hash;
+use melon_assets::assets::Assets;
 use rand::RngExt;
 
 const FILTERED_HASH: i32 = 125780783;
@@ -12,7 +12,8 @@ const HEIGHT_OFFSET: f32 = 69.0;
 const TEXT_ANGLE: f32 = -PI / 9.0;
 
 pub fn load_splashes(assets: &Assets) -> Vec<String> {
-    let Some(bytes) = crate::assets::resource(assets.root(), "texts", "splashes", "txt") else {
+    let Some(bytes) = melon_assets::assets::resource(assets.root(), "texts", "splashes", "txt")
+    else {
         return Vec::new();
     };
     let text = String::from_utf8_lossy(&bytes);

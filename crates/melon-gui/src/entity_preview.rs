@@ -170,12 +170,12 @@ fn draw_layer(out: &mut RgbaImage, depth: &mut [f32], layer: &PreviewLayer) {
             let shade = inventory_light(normal);
             let screen = face.corners.map(|c| matrix.transform_point3(c));
             for [a, b, c] in [[0, 1, 2], [0, 2, 3]] {
-                crate::gui::hud::item_icon::draw_triangle(
+                crate::hud::item_icon::draw_triangle(
                     out,
                     depth,
                     [screen[a], screen[b], screen[c]],
                     [face.uvs[a], face.uvs[b], face.uvs[c]],
-                    crate::gui::hud::item_icon::Surface {
+                    crate::hud::item_icon::Surface {
                         texture: layer.texture,
                         tint: layer.tint,
                         glint: layer.glint,

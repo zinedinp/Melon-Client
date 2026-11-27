@@ -1,12 +1,12 @@
 [package]
 name = "melon-protocol"
-version = "0.1.0"
-authors = ["Zinedin Polic"]
-edition = "2024"
-rust-version = "1.100.0"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 description = "The Minecraft wire for the Melon client: framing, compression, encryption, its types, text components"
-repository = "https://github.com/zinedinp/Melon-Client"
-license = "GPL-3.0"
+repository.workspace = true
+license.workspace = true
 
 [dependencies]
 aes.workspace = true

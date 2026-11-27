@@ -3,7 +3,7 @@
 
 use ash::vk;
 
-use crate::renderer::{
+use crate::{
     DepthImage, FrameWaits, Frames, MAX_FRAMES_IN_FLIGHT, SkyCube, Swapchain, TextureId, Textures,
     create_sampler, descriptor_pools::DescriptorPools, pipeline, staging::Staging,
 };

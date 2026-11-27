@@ -2,7 +2,7 @@
 
 use super::chest_texture;
 use super::models::{ChestHalf, SkullType};
-use crate::world::block::direction::Direction;
+use crate::block::direction::Direction;
 use pumpkin_data::{Block, BlockStateId};
 use std::sync::LazyLock;
 

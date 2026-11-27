@@ -8,21 +8,21 @@ use std::sync::{Mutex, OnceLock};
 
 use image::RgbaImage;
 
-use crate::assets::packs::server::PromptRequest;
-use crate::assets::packs::{Compatibility, repository};
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::text::font::LINE_HEIGHT;
-use crate::gui::text::{StyledText, colors};
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::dialog::DialogScreen;
-use crate::gui::widgets::edit_box::EditBox;
-use crate::gui::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
-use crate::gui::widgets::row_icon::{self, Moves};
-use crate::gui::widgets::scroll_list::{ListClick, ScrollList};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
-use crate::gui::widgets::{Rect, Ui};
 use crate::i18n::Lang;
 use crate::renderer::TextureId;
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::text::font::LINE_HEIGHT;
+use crate::text::{StyledText, colors};
+use crate::widgets::button::Button;
+use crate::widgets::dialog::DialogScreen;
+use crate::widgets::edit_box::EditBox;
+use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
+use crate::widgets::row_icon::{self, Moves};
+use crate::widgets::scroll_list::{ListClick, ScrollList};
+use crate::widgets::set::{KeyResult, WidgetSet};
+use crate::widgets::{Rect, Ui};
+use melon_assets::assets::packs::server::PromptRequest;
+use melon_assets::assets::packs::{Compatibility, repository};
 
 /// `LIST_WIDTH`.
 const LIST_W: f32 = 200.0;
@@ -130,7 +130,7 @@ impl PackSelectionScreen {
             mouse: (-1.0, -1.0),
             fingerprint: Vec::new(),
             ticks: 0,
-            unknown_icon: crate::assets::texture_image(ctx.assets_root, "misc/unknown_pack"),
+            unknown_icon: melon_assets::assets::texture_image(ctx.assets_root, "misc/unknown_pack"),
             unknown_texture: None,
             width: 0.0,
         };
@@ -174,7 +174,10 @@ impl PackSelectionScreen {
                     required: false,
                     icon_image: cached
                         .is_none()
-                        .then(|| pack.icon.and_then(|png| crate::assets::decode_png(&png)))
+                        .then(|| {
+                            pack.icon
+                                .and_then(|png| melon_assets::assets::decode_png(&png))
+                        })
                         .flatten(),
                     icon: cached,
                 };
@@ -224,7 +227,10 @@ impl PackSelectionScreen {
                     required: false,
                     icon_image: cached_icon(&pack.id)
                         .is_none()
-                        .then(|| pack.icon().and_then(|png| crate::assets::decode_png(&png)))
+                        .then(|| {
+                            pack.icon()
+                                .and_then(|png| melon_assets::assets::decode_png(&png))
+                        })
                         .flatten(),
                     icon: cached_icon(&pack.id),
                 };
@@ -664,7 +670,7 @@ impl Screen for PackSelectionScreen {
                 Side::Available => "pack.available.title",
                 Side::Selected => "pack.selected.title",
             };
-            let style = crate::gui::text::TextStyle {
+            let style = crate::text::TextStyle {
                 bold: true,
                 underlined: true,
                 ..Default::default()

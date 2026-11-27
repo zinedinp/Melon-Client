@@ -4,16 +4,16 @@
 //! section and a two-block shell, filled once a section slab by slab (the
 //! 27 sections it overlaps, each looked up once), so the quad loop only
 //! indexes. The centre's layers go through the byte kernels
-//! ([`crate::world::nibble_decode`]); the shell reads its few nibbles.
+//! ([`crate::nibble_decode`]); the shell reads its few nibbles.
 
-use crate::renderer::CornerLight;
-use crate::world::block::ao_flags::{self, AoFlags};
-use crate::world::block::direction::Direction;
-use crate::world::block_models::ao_shape::AoShape;
-use crate::world::chunk::{LIGHT_NIBBLES, LightSection, nibble};
-use crate::world::nibble_decode;
-use crate::world::section::{BLOCKS_PER_SECTION, Section};
-use crate::world::terrain::Neighborhood;
+use crate::block::ao_flags::{self, AoFlags};
+use crate::block::direction::Direction;
+use crate::block_models::ao_shape::AoShape;
+use crate::chunk::{LIGHT_NIBBLES, LightSection, nibble};
+use crate::mesh::CornerLight;
+use crate::nibble_decode;
+use crate::section::{BLOCKS_PER_SECTION, Section};
+use crate::terrain::Neighborhood;
 
 /// `LightCoordsUtil.pack`.
 fn pack(block: u32, sky: u32) -> u32 {
@@ -521,8 +521,8 @@ fn compute_cell(neighborhood: &Neighborhood, s: usize, [x, y, z]: [i32; 3]) -> (
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::{Chunk, ChunkLight};
-    use crate::world::section::Section;
+    use crate::chunk::{Chunk, ChunkLight};
+    use crate::section::Section;
 
     #[test]
     fn blending_follows_vanilla() {
@@ -585,8 +585,8 @@ mod tests {
         }
         sections[0].set(Section::index(14, 15, 3), 1);
         sections[2].set(Section::index(1, 0, 8), 1);
-        let mut light = ChunkLight::new(crate::world::dimension::Height {
-            min_y: crate::world::dimension::Height::OVERWORLD.min_y,
+        let mut light = ChunkLight::new(crate::dimension::Height {
+            min_y: crate::dimension::Height::OVERWORLD.min_y,
             height: sections.len() as i32 * 16,
         });
         for y in -80i32..-80 + 3 * 16 + 32 {
@@ -735,8 +735,8 @@ mod tests {
                         }
                     }
                 }
-                let mut light = ChunkLight::new(crate::world::dimension::Height {
-                    min_y: crate::world::dimension::Height::OVERWORLD.min_y,
+                let mut light = ChunkLight::new(crate::dimension::Height {
+                    min_y: crate::dimension::Height::OVERWORLD.min_y,
                     height: 3 * 16,
                 });
                 for y in -80i32..0 {

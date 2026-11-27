@@ -2,10 +2,10 @@
 
 use super::rounded;
 use super::{ClientEntity, LayerSpec, ModelId as M, dye_tint};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, PI};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `AdultWolfModel.createBodyLayer(NONE)` at 64x32.
 pub fn adult() -> LayerDefinition {

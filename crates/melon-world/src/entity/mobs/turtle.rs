@@ -3,11 +3,11 @@
 use crate::math::angle::HALF_PI as FRAC_PI_2;
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::quadruped::{self, QuadrupedParts};
 use crate::math::angle;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::quadruped::{self, QuadrupedParts};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 pub fn adult() -> LayerDefinition {
     let mut r = PartDefinition::root();
@@ -157,7 +157,7 @@ pub fn setup_anim(
     if let Some(egg) = parts.egg_belly {
         pose[egg].visible = turtle.has_egg;
         if turtle.has_egg {
-            let root = pose.get_mut(crate::world::entity::model::PartId(0));
+            let root = pose.get_mut(crate::entity::model::PartId(0));
             root.pose.offset.y -= 1.0;
         }
     }

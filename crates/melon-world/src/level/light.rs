@@ -154,8 +154,8 @@ fn add([x, y, z]: [i32; 3], [dx, dy, dz]: [i32; 3]) -> [i32; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::{Chunk, ChunkLight, Section};
-    use crate::world::dimension::Height;
+    use crate::chunk::{Chunk, ChunkLight, Section};
+    use crate::dimension::Height;
 
     const STONE: u16 = 1;
 

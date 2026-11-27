@@ -93,7 +93,7 @@ pub type Rgb = [f32; 3];
 /// The environment attributes a dimension type sets.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Attributes {
-    pub ambient_sounds: Option<crate::world::biome::AmbientSounds>,
+    pub ambient_sounds: Option<crate::biome::AmbientSounds>,
     pub fog_color: Option<Rgb>,
     pub sky_color: Option<Rgb>,
     pub fog_start_distance: Option<f32>,
@@ -154,7 +154,7 @@ impl DimensionType {
                 sky_color: Some(rgb(0x78a7ff)),
                 cloud_color: Some(argb(0xccffffff)),
                 cloud_height: Some(192.33),
-                ambient_sounds: Some(crate::world::biome::AmbientSounds::cave()),
+                ambient_sounds: Some(crate::biome::AmbientSounds::cave()),
                 ..Attributes::default()
             },
         }
@@ -201,7 +201,7 @@ impl DimensionType {
                 sky_color: Some(rgb(0x000000)),
                 sky_light_color: Some(rgb(0xac60cd)),
                 sky_light_factor: Some(0.0),
-                ambient_sounds: Some(crate::world::biome::AmbientSounds::cave()),
+                ambient_sounds: Some(crate::biome::AmbientSounds::cave()),
                 ..Attributes::default()
             },
         }
@@ -267,7 +267,7 @@ impl Attributes {
         Self {
             ambient_sounds: json
                 .get("minecraft:audio/ambient_sounds")
-                .and_then(crate::world::biome::AmbientSounds::from_json),
+                .and_then(crate::biome::AmbientSounds::from_json),
             fog_color: color("minecraft:visual/fog_color"),
             sky_color: color("minecraft:visual/sky_color"),
             fog_start_distance: float("minecraft:visual/fog_start_distance"),

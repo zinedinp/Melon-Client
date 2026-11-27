@@ -3,12 +3,12 @@
 use glam::Vec3;
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
-use crate::world::entity::appearance::{
+use crate::entity::appearance::{
     Appearance, DEFAULT_STAND_POSE, STAND_ARMS, STAND_NO_BASE_PLATE, StandPose,
 };
-use crate::world::entity::humanoid::{self, HumanoidParts};
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::humanoid::{self, HumanoidParts};
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::model_part::{Cube, Pose};
 
 pub const TEXTURE: &str = "minecraft:entity/armorstand/armorstand";
 
@@ -91,7 +91,7 @@ fn base_armor_mesh(grow: f32) -> PartDefinition {
     root
 }
 
-/// The armor of a full-size stand, by [`ArmorSlot::ALL`](crate::world::entity::humanoid::ArmorSlot::ALL).
+/// The armor of a full-size stand, by [`ArmorSlot::ALL`](crate::entity::humanoid::ArmorSlot::ALL).
 pub fn armor() -> [LayerDefinition; 4] {
     humanoid::armor_layers(base_armor_mesh, 0.5, 1.0)
 }
@@ -115,7 +115,7 @@ pub fn small_body() -> LayerDefinition {
     small(body())
 }
 
-/// `ARMOR_STAND_SMALL_ARMOR`, by [`ArmorSlot::ALL`](crate::world::entity::humanoid::ArmorSlot::ALL).
+/// `ARMOR_STAND_SMALL_ARMOR`, by [`ArmorSlot::ALL`](crate::entity::humanoid::ArmorSlot::ALL).
 pub fn small_armor() -> [LayerDefinition; 4] {
     armor().map(small)
 }

@@ -10,14 +10,14 @@ use pumpkin_data::data_component_impl::{
 use pumpkin_data::effect::MobEffectCategory;
 use pumpkin_data::item_stack::ItemStack;
 
-use crate::gui::hud::item_icon::ItemIcons;
-use crate::gui::text::font::{Font, Glyphs};
-use crate::gui::text::{self, StyledText, TextPaint, TextStyle, colors};
-use crate::gui::widgets::tooltip;
+use crate::hud::item_icon::ItemIcons;
 use crate::i18n::Lang;
 use crate::math::argb;
 use crate::renderer::TextureId;
 use crate::renderer::quad::{DrawList, Program};
+use crate::text::font::{Font, Glyphs};
+use crate::text::{self, StyledText, TextPaint, TextStyle, colors};
+use crate::widgets::tooltip;
 use crate::world::item_model::StackKey;
 
 /// Everything drawing an item needs, bundled so the HUD and the screens pass one value.
@@ -27,7 +27,7 @@ pub struct ItemPainter<'a> {
     pub font: &'a Font,
     pub font_textures: &'a [TextureId],
     pub white: TextureId,
-    pub tooltip: Option<crate::gui::assets::TooltipSprites>,
+    pub tooltip: Option<crate::assets::TooltipSprites>,
 }
 
 impl<'a> ItemPainter<'a> {

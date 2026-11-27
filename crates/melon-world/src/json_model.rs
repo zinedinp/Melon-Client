@@ -37,7 +37,7 @@ pub struct Model {
 impl Model {
     pub fn resolve(assets_root: &Path, id: &str) -> Option<Self> {
         Self::resolve_with(id, &|id| {
-            super::json_resource(assets_root, "models", id).map(Arc::new)
+            crate::assets::json_resource(assets_root, "models", id).map(Arc::new)
         })
     }
 
@@ -159,13 +159,13 @@ pub struct TextureCache<'a> {
     assets_root: &'a Path,
     images: HashMap<String, Option<RgbaImage>>,
     /// The animated textures loaded so far, by ID.
-    animations: HashMap<String, crate::world::texture_animation::Frames>,
+    animations: HashMap<String, crate::texture_animation::Frames>,
     tick: u64,
     /// The IDs given an image by [`Self::insert`] (a skin, a composed
     /// banner): not the file an atlas holds under that name.
     inserted: std::collections::HashSet<String>,
     /// [`Self::alpha`] so far.
-    alphas: HashMap<String, Option<crate::world::transparency::AlphaMap>>,
+    alphas: HashMap<String, Option<crate::transparency::AlphaMap>>,
 }
 
 impl<'a> TextureCache<'a> {
@@ -210,7 +210,7 @@ impl<'a> TextureCache<'a> {
         if let Some(frames) = meta
             .as_ref()
             .and_then(|meta| meta.get("animation"))
-            .and_then(|animation| crate::world::texture_animation::frames_of(&img, animation))
+            .and_then(|animation| crate::texture_animation::frames_of(&img, animation))
         {
             let frame = frames.at(self.tick).clone();
             self.animations.insert(id.to_owned(), frames);
@@ -226,8 +226,8 @@ impl<'a> TextureCache<'a> {
 
     /// The texels' transparency of texture `id`: an animated one's over
     /// all its frames, not just the one showing.
-    pub fn alpha(&mut self, id: &str) -> Option<crate::world::transparency::AlphaMap> {
-        use crate::world::transparency::AlphaMap;
+    pub fn alpha(&mut self, id: &str) -> Option<crate::transparency::AlphaMap> {
+        use crate::transparency::AlphaMap;
         if !self.alphas.contains_key(id) {
             // Loads it, an animation's frames too.
             let still = self.get(id).map(AlphaMap::of);
@@ -250,7 +250,7 @@ impl<'a> TextureCache<'a> {
     }
 
     /// The animated textures loaded so far.
-    pub fn animations(&self) -> impl Iterator<Item = &crate::world::texture_animation::Frames> {
+    pub fn animations(&self) -> impl Iterator<Item = &crate::texture_animation::Frames> {
         self.animations.values()
     }
 }
@@ -268,7 +268,7 @@ pub struct Quad {
     /// `cullface`: hidden when the neighbour on that side is solid.
     pub cullface: Option<String>,
     /// The element's `shade_direction_override`.
-    pub shade_override: Option<crate::world::block::direction::Direction>,
+    pub shade_override: Option<crate::block::direction::Direction>,
     /// The element's `light_emission` (`0..=15`).
     pub light_emission: u8,
 }
@@ -315,7 +315,7 @@ pub fn element_quads(element: &Value) -> Vec<Quad> {
             cullface: face["cullface"].as_str().map(str::to_owned),
             shade_override: element["shade_direction_override"]
                 .as_str()
-                .and_then(crate::world::block::direction::Direction::from_name),
+                .and_then(crate::block::direction::Direction::from_name),
             light_emission: element["light_emission"].as_u64().unwrap_or(0).min(15) as u8,
         });
     }

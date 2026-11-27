@@ -5,7 +5,7 @@ use pumpkin_data::item_stack::ItemStack;
 use pumpkin_data::recipes::RECIPES_STONECUTTING;
 
 /// What `input` cuts into.
-pub fn options_from(sets: &crate::world::recipes::RecipeSets, input: &ItemStack) -> Vec<ItemStack> {
+pub fn options_from(sets: &crate::recipes::RecipeSets, input: &ItemStack) -> Vec<ItemStack> {
     if !sets.received() {
         return options(input);
     }
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn an_empty_input_and_an_item_without_recipes_cut_into_nothing() {
-        assert!(options(&crate::world::inventory::empty()).is_empty());
+        assert!(options(&crate::inventory::empty()).is_empty());
         assert!(options(&ItemStack::new(1, &Item::DIAMOND)).is_empty());
     }
 }

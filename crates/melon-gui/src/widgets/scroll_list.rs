@@ -2,8 +2,8 @@
 
 use std::time::{Duration, Instant};
 
-use crate::gui::screen::CursorKind;
-use crate::gui::widgets::{Rect, Ui};
+use crate::screen::CursorKind;
+use crate::widgets::{Rect, Ui};
 
 /// `AbstractScrollArea.SCROLLBAR_WIDTH`.
 const SCROLLBAR_W: f32 = 6.0;

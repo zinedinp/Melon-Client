@@ -1,16 +1,16 @@
-//! Drawing the particles.
+//! The particles as quads: their GPU format, and building them.
 
 use std::collections::HashMap;
-use std::path::Path;
 
 use glam::{DVec3, IVec3, Quat, Vec3};
+
+use numerobis::elem::Pod;
 
 use super::Particle;
 use super::base::{Atlas, Facing};
 use super::behavior::Behavior;
-use crate::renderer::{ParticleDraw, ParticleMeshId, ParticleQuad, Renderer, TextureId};
-use crate::world::culling::frustum::Frustum;
-use crate::world::level::Level;
+use crate::culling::frustum::Frustum;
+use crate::level::Level;
 
 /// The quads of one texture and blend mode.
 #[derive(Default)]
@@ -21,7 +21,7 @@ pub struct Batch {
 }
 
 impl Batch {
-    fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.quads.clear();
         self.axes.clear();
     }
@@ -181,97 +181,82 @@ fn quad(
         .extend_from_slice(&[right.x, right.y, right.z, up.x, up.y, up.z]);
 }
 
-/// The particles' GPU side.
-#[derive(Default)]
-pub struct ParticleMeshes {
-    meshes: Vec<ParticleMeshId>,
-    /// By item id; `None` for one without a texture.
-    items: HashMap<u16, Option<TextureId>>,
-    batches: HashMap<(Atlas, bool), Batch>,
-    /// The axes' F16 bits on their way into the quads.
-    bits: Vec<u16>,
-    /// Quads drawn last frame.
-    pub drawn: usize,
+/// One particle quad, read per instance by `shaders/particle.vert`: corners
+/// at `center ± right ± up`. The axes are the quad's own, so F16 is exact enough.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ParticleQuad {
+    /// Relative to the draw's block.
+    pub center: [f32; 3],
+    /// F16 bits: `right` then `up`, half the quad's width and height.
+    pub axes: [u16; 6],
+    /// `[u0, v0, u1, v1]` as UNORM16: `u1, v1` at `-right - up`.
+    pub uv: [u16; 4],
+    pub color: [u8; 4],
+    /// Block then sky in vanilla's light-coordinate units (`UV2`).
+    pub light: [u8; 2],
+    pub _pad: [u8; 2],
 }
 
-impl ParticleMeshes {
-    /// Uploads this frame's quads and adds their draws to `out`. Item textures
-    /// load from `assets_root`; block particles use the `blocks` atlas.
-    pub fn draws(
-        &mut self,
-        renderer: &mut Renderer,
-        (assets_root, blocks): (&Path, TextureId),
-        particles: &[Particle],
-        level: &Level,
-        view: &View,
-        out: &mut Vec<ParticleDraw>,
-    ) {
-        for mesh in self.meshes.drain(..) {
-            renderer.free_particles(mesh);
+const _: () = assert!(std::mem::size_of::<ParticleQuad>() == 40);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl Pod for ParticleQuad {}
+
+impl ParticleQuad {
+    /// A quad without its axes, which [`Self::encode_axes`] fills in.
+    pub fn new(
+        center: [f32; 3],
+        [u0, v0, u1, v1]: [f32; 4],
+        rgba: [f32; 4],
+        light: [u8; 2],
+    ) -> Self {
+        let (u0, u1) = unorm16_inward(u0, u1);
+        let (v0, v1) = unorm16_inward(v0, v1);
+        // `+ 0.5` and a cast: x86-64 has no inline `round` before SSE4.1.
+        let unorm8 = |v: f32| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+        Self {
+            center,
+            axes: [0; 6],
+            uv: [u0, v0, u1, v1],
+            color: rgba.map(unorm8),
+            light,
+            _pad: [0; 2],
         }
-        for batch in self.batches.values_mut() {
-            batch.clear();
-        }
-        build(particles, level, view, &mut self.batches);
-        self.drawn = 0;
-        for (&(atlas, translucent), batch) in &mut self.batches {
-            if batch.quads.is_empty() {
-                continue;
-            }
-            let texture = match atlas {
-                Atlas::Blocks => Some(blocks),
-                Atlas::Item(item) => *self
-                    .items
-                    .entry(item)
-                    .or_insert_with(|| item_texture(renderer, assets_root, item)),
-            };
-            let Some(texture) = texture else {
-                continue;
-            };
-            ParticleQuad::encode_axes(&mut batch.quads, &batch.axes, &mut self.bits);
-            match renderer.upload_particles(&batch.quads) {
-                Ok(mesh) => {
-                    self.meshes.push(mesh);
-                    self.drawn += batch.quads.len();
-                    out.push(ParticleDraw {
-                        mesh,
-                        atlas: texture,
-                        origin: view.origin,
-                        translucent,
-                    });
-                }
-                Err(e) => crate::warn!("Particle mesh failed: {e:#}"),
-            }
-        }
-        self.batches.retain(|_, batch| !batch.quads.is_empty());
     }
 
-    /// Frees everything, for new resources or a new level.
-    pub fn clear(&mut self, renderer: &mut Renderer) {
-        for mesh in self.meshes.drain(..) {
-            renderer.free_particles(mesh);
+    /// Writes `axes` (six per quad: right, then up) into `quads` as F16.
+    /// `scratch` keeps its memory for the next call.
+    pub fn encode_axes(quads: &mut [Self], axes: &[f32], scratch: &mut Vec<u16>) {
+        use miraculix::formats::{MiniFloat, Overflow};
+        debug_assert_eq!(axes.len(), quads.len() * 6);
+        scratch.clear();
+        scratch.resize(axes.len(), 0);
+        MiniFloat::F16.encode_u16_slice(axes, scratch, Overflow::Special);
+        for (quad, bits) in quads.iter_mut().zip(scratch.as_chunks::<6>().0) {
+            quad.axes = *bits;
         }
-        for texture in self.items.drain().filter_map(|(_, t)| t) {
-            renderer.free_texture(texture);
-        }
-        self.batches.clear();
     }
 }
 
-/// An item's particle texture (its model's `particle`, else `layer0`).
-fn item_texture(renderer: &mut Renderer, assets_root: &Path, item: u16) -> Option<TextureId> {
-    let key = pumpkin_data::item::Item::from_id(item)?.registry_key;
-    let model = crate::world::item_model::ItemModel::resolve(assets_root, key, None)?;
-    let id = model
-        .model
-        .texture("particle")
-        .or_else(|| model.model.texture("layer0"))?;
-    let mut image = crate::assets::texture_image(assets_root, &id)?;
-    if image.height() > image.width() {
-        let side = image.width();
-        image = image::imageops::crop_imm(&image, 0, 0, side, side).to_image();
+/// A texture's edge pair `a`, `b` as UNORM16, each rounded toward the
+/// other: a quad never samples past its sprite into the next one.
+fn unorm16_inward(a: f32, b: f32) -> (u16, u16) {
+    let scale = |v: f32| v.clamp(0.0, 1.0) * f32::from(u16::MAX);
+    // Casts truncate, so `floor` and `ceil` stay inline.
+    let floor = |v: f32| v as u16;
+    let ceil = |v: f32| floor(v) + u16::from(f32::from(floor(v)) < v);
+    // Edges within one step of each other meet at its start.
+    let inward = |lo: f32, hi: f32| match (ceil(lo), floor(hi)) {
+        (lo, hi) if lo <= hi => (lo, hi),
+        _ => (floor(lo), floor(lo)),
+    };
+    let (a, b) = (scale(a), scale(b));
+    if a <= b {
+        inward(a, b)
+    } else {
+        let (b, a) = inward(b, a);
+        (a, b)
     }
-    renderer.load_texture(&image).ok()
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@
 use glam::Vec3;
 
 use crate::math::angle;
-use crate::renderer::WorldVertex;
+use crate::mesh::WorldVertex;
 
 /// `LeashFeatureRenderer.LEASH_RENDER_STEPS`.
 const STEPS: usize = 24;

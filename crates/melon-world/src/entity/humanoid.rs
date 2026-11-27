@@ -6,7 +6,7 @@ use super::animation::{animate_zombie_arms, bob_model_part, out_quart, rot_lerp_
 use super::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use super::player::Arm;
 use crate::math::angle::{self, PI};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `HumanoidModel.OVERLAY_SCALE`: how far the outer layer stands off.
 pub const OVERLAY_SCALE: f32 = 0.25;
@@ -615,7 +615,7 @@ pub fn baby_armor_layers(inner: Vec3, outer: Vec3, arm_offset: Vec3) -> [LayerDe
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::model::LayerDefinition;
+    use crate::entity::model::LayerDefinition;
 
     fn model() -> (Model, HumanoidParts) {
         let model = Model::bake(&LayerDefinition {

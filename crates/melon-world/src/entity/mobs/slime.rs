@@ -1,8 +1,8 @@
 //! `SlimeModel` and `MagmaCubeModel`: the cube mobs.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::model_part::{Cube, Pose};
 
 /// `SlimeModel.createInnerBodyLayer`: the core, eyes and mouth.
 pub fn inner() -> LayerDefinition {

@@ -5,9 +5,9 @@ use image::RgbaImage;
 use std::collections::HashMap;
 
 use super::{StyledText, TextPaint};
-use crate::assets::Assets;
 use crate::renderer::TextureId;
 use crate::renderer::quad::{DrawList, Program, Transform2D};
+use melon_assets::assets::Assets;
 
 mod load;
 pub mod unihex;
@@ -21,13 +21,13 @@ use unihex::Lazy;
 pub const LINE_HEIGHT: f32 = 9.0;
 
 /// Baseline ascent of the `ascii`/`accented` pages.
-pub(crate) const BASELINE_ASCENT: f32 = 7.0;
+pub const BASELINE_ASCENT: f32 = 7.0;
 
 /// Vanilla `GlyphInfo.getShadowOffset()` default.
-pub(crate) const SHADOW_OFFSET: f32 = 1.0;
+pub const SHADOW_OFFSET: f32 = 1.0;
 
 /// `ARGB.scaleRGB(textColor, 0.25F)` (`Font.PreparedTextBuilder.getShadowColor`).
-pub(crate) fn shadow_color(color: [f32; 4]) -> [f32; 4] {
+pub fn shadow_color(color: [f32; 4]) -> [f32; 4] {
     [color[0] * 0.25, color[1] * 0.25, color[2] * 0.25, color[3]]
 }
 
@@ -67,27 +67,7 @@ impl Glyph {
     }
 }
 
-/// Text that holds an inline sprite (a `sprite` object component) carries it as a private-use
-/// character.
-pub const SPRITE_FIRST: char = '\u{E000}';
-pub const SPRITE_COUNT: usize = 256;
 const SPRITE_ADVANCE: f32 = 8.0;
-
-/// Which sprite a placeholder character stands for.
-pub fn sprite_index(c: char) -> Option<usize> {
-    let offset = (c as usize).checked_sub(SPRITE_FIRST as usize)?;
-    (offset < SPRITE_COUNT).then_some(offset)
-}
-
-/// The placeholder character for sprite `index`.
-pub fn sprite_char(index: usize) -> Option<char> {
-    char::from_u32(
-        SPRITE_FIRST as u32
-            + u32::try_from(index)
-                .ok()
-                .filter(|i| *i < SPRITE_COUNT as u32)?,
-    )
-}
 
 /// How big a texture of Unifont glyphs is (`FontTexture`'s 256).
 pub const DYNAMIC_PAGE: u32 = 256;
@@ -160,8 +140,7 @@ impl std::hash::Hasher for CharHasher {
     }
 }
 
-/// The font a run without one of its own is drawn in.
-pub const DEFAULT_FONT: &str = "minecraft:default";
+pub use super::{DEFAULT_FONT, SPRITE_COUNT, SPRITE_FIRST, sprite_char, sprite_index};
 
 pub struct Font {
     glyphs: GlyphMap,
@@ -730,8 +709,8 @@ impl Font {
 fn other_font_ids(assets: &Assets) -> Vec<String> {
     let mut ids = Vec::new();
     let root = assets.root();
-    for namespace in crate::assets::namespaces(root) {
-        for path in crate::assets::packs::active().list(root, &namespace, "font") {
+    for namespace in melon_assets::assets::namespaces(root) {
+        for path in melon_assets::assets::packs::active().list(root, &namespace, "font") {
             let Some(name) = path
                 .strip_prefix("font/")
                 .and_then(|p| p.strip_suffix(".json"))
@@ -929,7 +908,7 @@ mod unifont_tests {
 
     #[test]
     fn a_run_in_the_alt_font_draws_its_own_glyphs() {
-        let root = crate::assets::default_root();
+        let root = melon_assets::assets::default_root();
         if !root.join("minecraft/font/alt.json").is_file() {
             eprintln!("no extracted assets, skipping");
             return;
@@ -1003,7 +982,7 @@ mod unifont_tests {
 
     #[test]
     fn the_default_font_has_the_private_use_glyphs_of_unifont_pua() {
-        let root = crate::assets::default_root();
+        let root = melon_assets::assets::default_root();
         if !root.join("minecraft/font/unifont_pua.zip").exists() {
             eprintln!("no unifont_pua.zip (Launcher: Prepare): skipped");
             return;
@@ -1016,7 +995,7 @@ mod unifont_tests {
 
     #[test]
     fn the_default_font_draws_latin_cyrillic_greek_and_chinese_japanese_korean() {
-        let root = crate::assets::default_root();
+        let root = melon_assets::assets::default_root();
         if !root.join("minecraft/font/unifont.zip").exists() {
             eprintln!("no unifont.zip (Launcher: Prepare): skipped");
             return;

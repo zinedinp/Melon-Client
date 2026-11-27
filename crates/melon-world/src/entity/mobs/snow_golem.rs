@@ -1,11 +1,11 @@
 //! `SnowGolemModel`.
 
 use super::{LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::quadruped::look;
 use crate::math::angle;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::quadruped::look;
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `CubeDeformation(-0.5)`: every ball is a pixel smaller than its box.
 const SHRINK: f32 = -0.5;

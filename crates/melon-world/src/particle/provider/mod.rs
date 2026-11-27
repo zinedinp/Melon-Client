@@ -20,8 +20,8 @@ use super::behavior::{Behavior, Drip, DripStage, Leaf, Plume};
 use super::motion::{self, emitter::Emitter};
 use super::options::{ParticleData, ParticleSpec};
 use super::{Kind, TickCtx};
-use crate::world::fluid::FluidKind;
-use crate::world::java_random::JavaRandom;
+use crate::fluid::FluidKind;
+use crate::java_random::JavaRandom;
 use glam::DVec3;
 
 /// What `ParticleProvider.createParticle` is handed: the options, where,

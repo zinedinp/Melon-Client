@@ -20,6 +20,7 @@ mod events;
 mod gizmos;
 mod hand_render;
 mod heads;
+pub use crate::gui::screens::ingame::loading::LoadingReason;
 pub use heads::sync_head_objects;
 mod crystal_beams;
 mod entity_sprites;
@@ -35,6 +36,7 @@ mod nametags;
 mod outline;
 mod overlay;
 mod paintings;
+mod particle_meshes;
 mod particles;
 mod players;
 mod position_report;
@@ -283,14 +285,6 @@ pub struct Received {
         Box<crate::network::JoinInfo>,
         Vec<crate::network::WorldEvent>,
     )>,
-}
-
-/// `LevelLoadingScreen.Reason`: what the loading screen paints behind it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum LoadingReason {
-    NetherPortal,
-    EndPortal,
-    Other,
 }
 
 /// What vanilla's `Camera` and `Hud` carry from one world into the next,

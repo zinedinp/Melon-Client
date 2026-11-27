@@ -2,7 +2,7 @@
 
 use glam::Vec3;
 
-use crate::renderer::WorldVertex;
+use crate::mesh::WorldVertex;
 
 /// Steps the line is drawn in (`FishingHookRenderer.submit`).
 pub const STEPS: usize = 16;

@@ -465,8 +465,8 @@ impl KeyframeSet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::entity::model::{LayerDefinition, PartDefinition};
-    use crate::world::model_part::{Cube, Pose};
+    use crate::entity::model::{LayerDefinition, PartDefinition};
+    use crate::model_part::{Cube, Pose};
 
     fn model() -> Model {
         let mut root = PartDefinition::root();
@@ -682,7 +682,7 @@ mod tests {
 
     #[test]
     fn the_data_stays_small() {
-        use crate::world::entity::animations::ALL;
+        use crate::entity::animations::ALL;
         assert!(size_of::<Keyframe>() <= 32, "{}", size_of::<Keyframe>());
         let keyframes: usize = ALL
             .iter()
@@ -695,7 +695,7 @@ mod tests {
 
     #[test]
     fn every_vanilla_definition_is_well_formed() {
-        use crate::world::entity::animations::ALL;
+        use crate::entity::animations::ALL;
         assert!(ALL.len() >= 70, "{}", ALL.len());
         for (name, def) in ALL {
             assert!(def.length_in_seconds >= 0.0, "{name}");

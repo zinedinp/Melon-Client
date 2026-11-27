@@ -2,8 +2,8 @@
 
 use serde_json::Value;
 
-use crate::world::colormap::{self, ColorMaps};
-use crate::world::dimension::{Rgb, rgb};
+use crate::colormap::{self, ColorMaps};
+use crate::dimension::{Rgb, rgb};
 
 /// `Biome.TemperatureModifier`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -241,8 +241,8 @@ impl Biome {
     }
 
     /// `Biome.getPrecipitationAt` without the height curve.
-    pub fn precipitation(&self) -> crate::world::weather::Precipitation {
-        use crate::world::weather::Precipitation;
+    pub fn precipitation(&self) -> crate::weather::Precipitation {
+        use crate::weather::Precipitation;
         if !self.has_precipitation {
             Precipitation::None
         } else if self.temperature < 0.15 {

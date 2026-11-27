@@ -378,7 +378,7 @@ impl Renderer {
 }
 
 /// From a picture's pixels (x right, y down, z toward the viewer, as
-/// [`crate::gui::entity_preview::EntityPreview::view`] places an entity)
+/// the GUI's `EntityPreview::view` places an entity)
 /// to clip space. `depth` is how far from z = 0 the picture reaches.
 pub fn pixel_projection(width: u32, height: u32, depth: f32) -> Mat4 {
     let (w, h) = (width.max(1) as f32, height.max(1) as f32);

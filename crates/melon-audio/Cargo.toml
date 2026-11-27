@@ -1,0 +1,21 @@
+[package]
+name = "melon-audio"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "The Melon client's sound: sound events, music, positional playback with HRTF"
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+melon-assets = { path = "../melon-assets" }
+melon-base = { path = "../melon-base" }
+melon-core = { path = "../melon-core" }
+crossbeam-channel.workspace = true
+rand.workspace = true
+rodio.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

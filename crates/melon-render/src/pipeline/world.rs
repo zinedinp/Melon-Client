@@ -3,8 +3,8 @@
 use ash::vk;
 
 use super::{Pass, PipelineDesc};
-use crate::renderer::{ParticleQuad, TerrainQuad, WorldVertex as Vertex};
 use crate::world::lightmap::LightmapParams;
+use crate::{ParticleQuad, TerrainQuad, WorldVertex as Vertex};
 
 const VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/world.vert.spv"));
 const WEATHER_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/weather.vert.spv"));

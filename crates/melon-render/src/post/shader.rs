@@ -59,7 +59,7 @@ pub fn compile(assets_root: &Path, pass: &Pass) -> anyhow::Result<Compiled> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::renderer::post::config::{Config, ENTITY_OUTLINE, MAIN};
+    use crate::post::config::{Config, ENTITY_OUTLINE, MAIN};
 
     #[test]
     fn a_pass_offers_its_samplers_then_its_blocks() {

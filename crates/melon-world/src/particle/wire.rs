@@ -2,10 +2,10 @@
 
 use anyhow::{Result, anyhow};
 
-use crate::network::protocol::packet::Reader;
 use crate::particle::Kind;
 use crate::particle::options::{Codec, ParticleData, ParticleSpec, PositionSource, codec};
 use crate::particle::server::{LevelParticles, Randomization};
+use melon_protocol::packet::Reader;
 
 /// `ParticleTypes.STREAM_CODEC`: the type id, then its data.
 pub fn particle(r: &mut Reader<'_>) -> Result<ParticleSpec> {
@@ -77,7 +77,7 @@ fn state_id(id: i32) -> u16 {
 }
 
 /// `ClientboundLevelParticlesPacket.STREAM_CODEC`.
-pub(super) fn read_level_particles(r: &mut Reader) -> Result<LevelParticles> {
+pub fn read_level_particles(r: &mut Reader) -> Result<LevelParticles> {
     let spec = particle(r)?;
     let override_limiter = r.bool()?;
     let always_show = r.bool()?;
@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn pumpkins_particle_packet_is_read() {
         let mut data = Vec::new();
-        crate::network::protocol::varint::write_var_int(&mut data, 1).unwrap();
+        melon_protocol::varint::write_var_int(&mut data, 1).unwrap();
         let packet = CParticle::new(
             true,
             false,
@@ -148,8 +148,8 @@ mod tests {
 #[cfg(test)]
 mod codec_tests {
     use super::*;
-    use crate::network::protocol::reader::{pack_block_pos, write_f32_be};
-    use crate::network::protocol::varint::write_var_int;
+    use melon_protocol::reader::{pack_block_pos, write_f32_be};
+    use melon_protocol::varint::write_var_int;
 
     fn read(body: &[u8]) -> ParticleSpec {
         let mut r = Reader::new(body);

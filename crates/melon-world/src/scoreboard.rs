@@ -652,8 +652,8 @@ mod tests {
 
     #[test]
     fn a_team_name_keeps_everything_a_prefix_and_suffix_can_carry() {
-        use crate::gui::text::StyledText;
         use crate::i18n::Lang;
+        use crate::text::StyledText;
         use serde_json::json;
         let prefix = crate::component::decode::component(&json!([
             {"text": "A", "color": "#12ab34", "bold": true, "font": "minecraft:alt"},

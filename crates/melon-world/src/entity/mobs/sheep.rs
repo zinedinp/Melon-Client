@@ -3,11 +3,11 @@
 use pumpkin_data::dye_color::DyeColor;
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::magic_name::Magic;
+use crate::entity::model::{LayerDefinition, PartDefinition};
+use crate::entity::quadruped;
 use crate::math::angle::PI;
-use crate::world::entity::magic_name::Magic;
-use crate::world::entity::model::{LayerDefinition, PartDefinition};
-use crate::world::entity::quadruped;
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 pub fn adult() -> LayerDefinition {
     let mut root = quadruped::create_body_mesh(12.0, false, true, 0.0);

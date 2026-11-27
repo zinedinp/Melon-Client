@@ -2,13 +2,13 @@
 
 use std::path::Path;
 
+use crate::assets::GuiAssets;
 use crate::audio::AudioEngine;
-use crate::gui::assets::GuiAssets;
-use crate::gui::widgets::Ui;
 use crate::i18n::Lang;
 use crate::i18n::languages::Language;
 use crate::renderer::TextureId;
 use crate::settings::options::Config;
+use crate::widgets::Ui;
 
 /// A change to the options, applied and saved at once, as vanilla's options screens do.
 pub type ConfigChange = Box<dyn FnOnce(&mut Config)>;
@@ -46,11 +46,11 @@ pub enum ScreenAction {
     /// F3 + T: the resource packs read again.
     ReloadResources,
     /// A server dialog's button, link or Escape, or a dialog to open.
-    Dialog(crate::gui::screens::dialog::DialogRequest),
+    Dialog(crate::screens::dialog::DialogRequest),
     /// The pause menu's World Options: opened by the app, which knows the world.
     OpenWorldOptions,
     /// World Options' Apply Changes, then back.
-    WorldOptions(Box<crate::gui::screens::ingame::world_options::WorldOptionsChange>),
+    WorldOptions(Box<crate::screens::ingame::world_options::WorldOptionsChange>),
 }
 
 impl ScreenAction {
@@ -244,11 +244,11 @@ pub trait Screen {
     }
     /// What a server's dialog showing up makes of this screen: a dialog or
     /// the wait for one is replaced, the warning keeps it behind.
-    fn dialog_layer(&self) -> Option<crate::gui::screens::dialog::DialogLayer> {
+    fn dialog_layer(&self) -> Option<crate::screens::dialog::DialogLayer> {
         None
     }
     /// The item stacks this screen draws, so their icons are made before the
-    /// frame (in a world; see [`crate::gui::widgets::Ui::items`]).
+    /// frame (in a world; see [`crate::widgets::Ui::items`]).
     fn visit_stacks(
         &self,
         _visit: &mut dyn FnMut(&dyn crate::world::item_model::StackKey) -> bool,

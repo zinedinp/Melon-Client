@@ -1,6 +1,6 @@
 //! The colours tinted faces get (vanilla `BlockColors`).
 
-use crate::world::block_tint::TintKind;
+use crate::block_tint::TintKind;
 
 pub(super) const fn rgb(hex: u32) -> [f32; 3] {
     [

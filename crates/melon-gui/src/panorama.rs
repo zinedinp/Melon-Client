@@ -5,9 +5,9 @@ use std::time::Duration;
 use glam::Mat4;
 use image::RgbaImage;
 
-use crate::assets::Assets;
 use crate::math::angle::{PI, Rotation};
 use crate::renderer::{CubeMapId, Renderer, SceneFrame, Sky};
+use melon_assets::assets::Assets;
 
 /// `CubeMap.PROJECTION_FOV`.
 const FOV_Y_DEGREES: f32 = 85.0;

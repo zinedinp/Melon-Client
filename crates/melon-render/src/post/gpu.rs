@@ -9,10 +9,10 @@ use image::RgbaImage;
 use super::config::{Config, ENTITY_OUTLINE, Input, MAIN};
 use super::shader::Compiled;
 use super::uniform::Std140;
-use crate::renderer::blur::{Image, create_image};
-use crate::renderer::texture::Texture;
-use crate::renderer::vk_util::{self, Place};
-use crate::renderer::{pipeline, post::config::Pass};
+use crate::blur::{Image, create_image};
+use crate::texture::Texture;
+use crate::vk_util::{self, Place};
+use crate::{pipeline, post::config::Pass};
 use melon_base::gfx::mapped::MappedBuffer;
 
 /// Most inputs a pass may have, and uniform blocks.
@@ -24,11 +24,11 @@ const BLOCK_STRIDE: u64 = 256;
 const POOL_SETS: u32 = 512;
 
 /// A chain's texture with the size its JSON gives it.
-pub(in crate::renderer) type SizedTexture = (Texture, u32, u32);
+pub(crate) type SizedTexture = (Texture, u32, u32);
 
 /// What a pass samples.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::renderer) enum Source {
+pub(crate) enum Source {
     /// A copy of the swapchain image.
     MainColor,
     /// The shared depth buffer.
@@ -43,13 +43,13 @@ pub(in crate::renderer) enum Source {
 
 /// What a pass draws into.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::renderer) enum Dest {
+pub(crate) enum Dest {
     Main,
     Outline,
     Internal(usize),
 }
 
-pub(in crate::renderer) struct GpuPass {
+pub(crate) struct GpuPass {
     pub pipeline: pipeline::Pass,
     pub sampler_set: vk::DescriptorSet,
     pub block_set: vk::DescriptorSet,
@@ -75,7 +75,7 @@ struct EffectTexture {
     height: u32,
 }
 
-pub(in crate::renderer) struct Chain {
+pub(crate) struct Chain {
     pub config: Config,
     pub passes: Vec<GpuPass>,
     internal: Vec<Internal>,
@@ -92,7 +92,7 @@ pub struct ChainSource {
 }
 
 /// What the chains and the entity outline share.
-pub(in crate::renderer) struct Post {
+pub(crate) struct Post {
     pub format: vk::Format,
     /// Colour only, cleared on begin and left readable.
     pub color_pass: vk::RenderPass,
@@ -941,7 +941,7 @@ enum PassKind {
     Main,
 }
 
-/// One colour attachment, the way [`Blur`](crate::renderer::blur) has it.
+/// One colour attachment, the way [`Blur`](crate::blur) has it.
 unsafe fn create_pass(
     device: &ash::Device,
     format: vk::Format,

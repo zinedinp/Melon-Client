@@ -3,12 +3,12 @@
 use crate::math::angle::{HALF_PI as FRAC_PI_2, PI, QUARTER_PI as FRAC_PI_4};
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::animations::baby_axolotl as baby_anim;
+use crate::entity::keyframe::AnimationDefinition;
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle;
-use crate::world::entity::animations::baby_axolotl as baby_anim;
-use crate::world::entity::keyframe::AnimationDefinition;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `Axolotl.Variant` names by id: lucy, wild, gold, cyan, blue.
 pub fn texture(variant: i32, baby: bool) -> &'static str {
@@ -560,10 +560,10 @@ mod tests {
 
     #[test]
     fn a_baby_bakes_with_its_animations() {
-        use crate::world::entity::keyframe::KeyframeSet;
+        use crate::entity::keyframe::KeyframeSet;
         let model = Model::bake(&baby());
         KeyframeSet::bake(&model, &BABY_ANIMATIONS).unwrap();
-        crate::world::entity::keyframe::KeyframeAnimation::bake(&model, WALK_FLOOR).unwrap();
+        crate::entity::keyframe::KeyframeAnimation::bake(&model, WALK_FLOOR).unwrap();
         assert!(texture(4, true).ends_with("blue_baby"));
         assert!(texture(99, false).ends_with("lucy"));
     }

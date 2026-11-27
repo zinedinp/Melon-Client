@@ -1,7 +1,7 @@
 //! Recording a frame's draws into its command buffer: the 3D scene, then
 //! the UI.
 
-pub(in crate::renderer) mod scene;
+pub(crate) mod scene;
 mod ui;
 
 use std::cell::Cell;
@@ -13,7 +13,7 @@ use super::pipeline::world::PushBlock;
 
 /// What the command buffer being recorded has bound and pushed, so draws
 /// skip what is already there. Forgetting too much only costs a rebind.
-pub(in crate::renderer) struct Recording {
+pub(crate) struct Recording {
     /// The vertex buffer at binding 0.
     pub vertex_buffer: Cell<vk::Buffer>,
     /// The terrain shader's quad buffer (set 4).

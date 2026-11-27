@@ -2,8 +2,8 @@
 
 use glam::Vec3;
 
-use crate::world::block::direction::Direction;
-use crate::world::geometry::closest_direction;
+use crate::block::direction::Direction;
+use crate::geometry::closest_direction;
 
 /// The facts above for one quad.
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -5,12 +5,12 @@ use std::time::Instant;
 use uuid::Uuid;
 
 use super::item_slot::ItemPainter;
-use crate::assets::Assets;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::{self, StyledText, TextPaint, colors};
 use crate::network::play::game::boss::{BossEvent, COLORS, OVERLAYS};
 use crate::renderer::Renderer;
 use crate::renderer::quad::DrawList;
+use crate::sprite::GuiSprite;
+use crate::text::{self, StyledText, TextPaint, colors};
+use melon_assets::assets::Assets;
 
 const BAR_WIDTH: f32 = 182.0;
 const BAR_HEIGHT: f32 = 5.0;

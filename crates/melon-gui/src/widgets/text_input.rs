@@ -3,9 +3,9 @@
 use std::cell::{Cell, RefCell};
 use std::time::{Duration, Instant};
 
-use crate::gui::screen::TextEvent;
-use crate::gui::text::font::{Font, Glyphs};
 use crate::renderer::quad::{BlendMode, DrawList};
+use crate::screen::TextEvent;
+use crate::text::font::{Font, Glyphs};
 
 /// `TextCursorUtils.isCursorVisible`.
 pub fn cursor_visible(since: Instant) -> bool {
@@ -182,7 +182,7 @@ impl TextInput {
         let Glyphs { font, pages, white } = glyphs;
         let before = self.slice(start, self.cursor.max(start));
         let cursor_x = (x + font.text_width(&before)).round();
-        crate::gui::ime::note_cursor(cursor_x, y, 9.0);
+        crate::ime::note_cursor(cursor_x, y, 9.0);
         if !self.preedit.is_empty() {
             self.draw_preedit(draw_list, glyphs, (cursor_x, y), color);
             return;

@@ -1,12 +1,12 @@
 //! Every GUI sprite plus the font, uploaded once at startup.
 
-use crate::assets::Assets;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::font::{DYNAMIC_PAGE, Font, Glyphs};
-use crate::gui::widgets::button::{ButtonTextures, TabTextures};
-use crate::gui::widgets::row_icon::{Arrow, RowIconSprites};
-use crate::gui::widgets::slider::SliderTextures;
 use crate::renderer::{Renderer, TextureId};
+use crate::sprite::GuiSprite;
+use crate::text::font::{DYNAMIC_PAGE, Font, Glyphs};
+use crate::widgets::button::{ButtonTextures, TabTextures};
+use crate::widgets::row_icon::{Arrow, RowIconSprites};
+use crate::widgets::slider::SliderTextures;
+use melon_assets::assets::Assets;
 
 /// `ServerSelectionList`'s sprites: the status bars and the icon overlays.
 pub struct ServerListSprites {
@@ -128,7 +128,7 @@ impl GuiAssets {
     /// The atlas sprites `object` components in the last frame's text asked for.
     fn sync_objects(&mut self, renderer: &mut Renderer) {
         use crate::component::ObjectInfo;
-        use crate::gui::text::objects::{ObjectQuads, sprite_image};
+        use crate::text::objects::{ObjectQuads, sprite_image};
         for info in self.font.take_wanted_objects() {
             let ObjectInfo::Atlas(sprite) = &info else {
                 continue;
@@ -137,7 +137,7 @@ impl GuiAssets {
                 .assets_root
                 .as_deref()
                 .and_then(|root| sprite_image(root, sprite))
-                .unwrap_or_else(crate::assets::missing_texture);
+                .unwrap_or_else(melon_assets::assets::missing_texture);
             let quads = renderer.load_texture(&image).ok().map(ObjectQuads::whole);
             self.font.set_object(info, quads);
         }
@@ -280,8 +280,8 @@ fn load(renderer: &mut Renderer, assets: &Assets, id: &str) -> anyhow::Result<Gu
 /// A texture of its own rather than a sprite (`gui/title/*`).
 fn standalone(renderer: &mut Renderer, assets: &Assets, id: &str) -> anyhow::Result<TextureId> {
     let image = assets.image(id)?;
-    let (namespace, path) = crate::assets::split_id(id);
-    let blur = crate::assets::texture_with_meta(
+    let (namespace, path) = melon_assets::assets::split_id(id);
+    let blur = melon_assets::assets::texture_with_meta(
         assets.root(),
         &format!("{namespace}:{}", path.trim_end_matches(".png")),
     )
@@ -401,6 +401,6 @@ fn load_server_list(renderer: &mut Renderer, assets: &Assets) -> anyhow::Result<
         incompatible: sprite(renderer, "incompatible")?,
         unreachable: sprite(renderer, "unreachable")?,
         row: load_row_icons(renderer, assets, "server_list", "join", true)?,
-        unknown_server: assets.texture(renderer, "minecraft:misc/unknown_server.png")?,
+        unknown_server: renderer.asset_texture(assets, "minecraft:misc/unknown_server.png")?,
     })
 }

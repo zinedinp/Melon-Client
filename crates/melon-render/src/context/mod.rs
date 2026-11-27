@@ -260,7 +260,7 @@ impl Renderer {
             occlusion,
             quad_sets,
             globals,
-            recording: crate::renderer::record::Recording::new(),
+            recording: crate::record::Recording::new(),
             max_texture_side: gpu.limits.max_image_dimension2_d,
             tracked_meshes: None,
             textures: resources::textures(descriptor_pools, samplers),

@@ -84,7 +84,7 @@ mod tests {
     use super::*;
 
     fn looking_down_minus_z() -> Frustum {
-        let projection = crate::renderer::world_projection(70.0, 16.0 / 9.0, 512.0);
+        let projection = crate::projection::world_projection(70.0, 16.0 / 9.0, 512.0);
         Frustum::from_view_projection(projection * Mat4::IDENTITY)
     }
 

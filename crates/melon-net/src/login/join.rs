@@ -3,15 +3,15 @@
 use super::client_info::write_client_information;
 use super::world_registries::WorldRegistries;
 use super::{ClientInfo, Identity};
-use crate::network::play::chat::{self, command_suggestions};
-use crate::network::play::{Play, PlayListener};
-use crate::network::protocol::connection::{Connection, ReadHalf, WriteHalf};
-use crate::network::protocol::packet::Reader;
-use crate::network::protocol::{crypto, id, packet, varint};
-use crate::network::{PROTOCOL_VERSION, Session, Stream, WorldEvent};
+use crate::play::chat::{self, command_suggestions};
+use crate::play::{Play, PlayListener};
+use crate::protocol::connection::{Connection, ReadHalf, WriteHalf};
+use crate::protocol::packet::Reader;
+use crate::protocol::{crypto, id, packet, varint};
 use crate::world::biome::Biomes;
 use crate::world::dimension::DimensionTypes;
 use crate::world::game_mode::GameMode;
+use crate::{PROTOCOL_VERSION, Session, Stream, WorldEvent};
 use anyhow::{Context, Result, bail};
 use pumpkin_data::packet::clientbound::{config, login as login_cb};
 use pumpkin_data::packet::serverbound::{config as config_sb, login as login_sb};
@@ -21,7 +21,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 /// The send side of a joined connection, shared with whatever answers the server.
-pub(crate) type SharedWriter = Arc<Mutex<WriteHalf>>;
+pub type SharedWriter = Arc<Mutex<WriteHalf>>;
 
 fn lock(writer: &Mutex<WriteHalf>) -> std::sync::MutexGuard<'_, WriteHalf> {
     writer
@@ -112,9 +112,8 @@ pub fn join_server(addr: &str, identity: &Identity, client: &ClientInfo) -> Resu
 const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// `host:port` ([`parse_address`](super::resolver::parse_address)), resolved and connected.
-pub(crate) fn connect_tcp(addr: &str) -> Result<(TcpStream, String, u16)> {
-    let (host, port) =
-        super::resolver::parse_address(addr).ok_or(crate::network::status::CannotResolve)?;
+pub fn connect_tcp(addr: &str) -> Result<(TcpStream, String, u16)> {
+    let (host, port) = super::resolver::parse_address(addr).ok_or(crate::status::CannotResolve)?;
     let resolved = super::resolver::resolve(host, port)?;
     let stream = resolved
         .addrs
@@ -144,7 +143,7 @@ pub fn join_stream(
     Session::start(reader, writer, listener, info, events, close)
 }
 
-pub(crate) fn join_over(
+pub fn join_over(
     mut conn: Connection,
     host: &str,
     port: u16,
@@ -216,7 +215,7 @@ fn custom_action_sender(writer: &SharedWriter) -> crate::dialog::connection::Sen
 }
 
 /// `ClientboundResourcePackPushPacket`, handed to the pack manager.
-pub(crate) fn read_pack_push(body: &[u8]) -> Result<()> {
+pub fn read_pack_push(body: &[u8]) -> Result<()> {
     let mut r = Reader::new(body);
     let pack = r.uuid()?;
     let url = r.string()?;
@@ -232,14 +231,14 @@ pub(crate) fn read_pack_push(body: &[u8]) -> Result<()> {
 }
 
 /// `ClientboundResourcePackPopPacket`: one pack, or all.
-pub(crate) fn read_pack_pop(body: &[u8]) -> Result<()> {
+pub fn read_pack_pop(body: &[u8]) -> Result<()> {
     let mut r = Reader::new(body);
     let pack = if r.bool()? { Some(r.uuid()?) } else { None };
     crate::assets::packs::server::pop(pack);
     Ok(())
 }
 
-pub(crate) fn handshake(conn: &mut Connection, host: &str, port: u16) -> Result<()> {
+pub fn handshake(conn: &mut Connection, host: &str, port: u16) -> Result<()> {
     conn.write_packet(id::HANDSHAKE_INTENTION, |buf| {
         varint::write_var_int(buf, PROTOCOL_VERSION)?;
         packet::write_string(buf, host)?;
@@ -248,7 +247,7 @@ pub(crate) fn handshake(conn: &mut Connection, host: &str, port: u16) -> Result<
     })
 }
 
-pub(crate) fn login(conn: &mut Connection, identity: &Identity) -> Result<()> {
+pub fn login(conn: &mut Connection, identity: &Identity) -> Result<()> {
     let uuid = identity.uuid();
     conn.write_packet(id::SB_LOGIN_HELLO, |buf| {
         packet::write_string(buf, identity.username())?;
@@ -296,7 +295,7 @@ pub(crate) fn login(conn: &mut Connection, identity: &Identity) -> Result<()> {
 }
 
 /// `ClientHandshakePacketListenerImpl.handleHello`.
-pub(crate) fn handle_encryption_request(
+pub fn handle_encryption_request(
     conn: &mut Connection,
     r: &mut Reader<'_>,
     identity: &Identity,
@@ -347,7 +346,7 @@ pub(crate) fn handle_encryption_request(
 }
 
 /// The configuration phase; returns the chat types the server registered.
-pub(crate) fn configure(
+pub fn configure(
     reader: &mut ReadHalf,
     writer: &SharedWriter,
     client: &ClientInfo,
@@ -367,7 +366,7 @@ pub(crate) fn configure(
 }
 
 /// The configuration phase's packets up to `FinishConfiguration`.
-pub(crate) fn configure_loop(
+pub fn configure_loop(
     reader: &mut ReadHalf,
     writer: &SharedWriter,
 ) -> Result<(
@@ -453,7 +452,7 @@ const JOIN_WAIT: Duration = Duration::from_secs(30);
 
 /// Reads Play packets until the `Login` packet and the first position sync, or until
 /// [`JOIN_WAIT`] after the `Login` (vanilla lets the player in anyway then).
-pub(crate) fn play(
+pub fn play(
     reader: &mut ReadHalf,
     writer: &SharedWriter,
     listener: &mut PlayListener,
@@ -506,7 +505,7 @@ pub(crate) fn play(
 }
 
 /// Field order and presence are the 26.3 branch of `CLogin::write_packet_data`.
-pub(crate) fn read_login(r: &mut Reader) -> Result<JoinInfo> {
+pub fn read_login(r: &mut Reader) -> Result<JoinInfo> {
     let entity_id = r.i32_be()?;
     let hardcore = r.bool()?;
     let dimension_count = r.var_int()?;
@@ -543,16 +542,16 @@ pub(crate) fn read_login(r: &mut Reader) -> Result<JoinInfo> {
 }
 
 /// `CommonPlayerSpawnInfo`, shared by the login and respawn packets.
-pub(crate) struct SpawnInfo {
-    pub(crate) dimension_id: i32,
-    pub(crate) dimension_name: String,
-    pub(crate) hashed_seed: i64,
-    pub(crate) game_mode: GameMode,
-    pub(crate) previous_game_mode: Option<GameMode>,
-    pub(crate) is_flat: bool,
+pub struct SpawnInfo {
+    pub dimension_id: i32,
+    pub dimension_name: String,
+    pub hashed_seed: i64,
+    pub game_mode: GameMode,
+    pub previous_game_mode: Option<GameMode>,
+    pub is_flat: bool,
 }
 
-pub(crate) fn read_spawn_info(r: &mut Reader) -> Result<SpawnInfo> {
+pub fn read_spawn_info(r: &mut Reader) -> Result<SpawnInfo> {
     let dimension_id = r.var_int()?;
     let dimension_name = r.string()?;
     let hashed_seed = r.i64_be()?;

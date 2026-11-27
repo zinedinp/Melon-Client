@@ -8,20 +8,19 @@ use std::sync::Arc;
 
 use glam::DVec3;
 
-use crate::math::{ChunkMap, SectionSet, section_coord, section_relative};
-use crate::settings::options::ChunkBuilder;
-use crate::world::block_entity;
-use crate::world::block_models::BlockModels;
-use crate::world::block_tint::TintSettings;
-use crate::world::chunk::{Chunk, LightUpdate, Section};
-use crate::world::culling::occlusion::{
+use crate::block_entity;
+use crate::block_models::BlockModels;
+use crate::block_tint::TintSettings;
+use crate::chunk::{Chunk, LightUpdate, Section};
+use crate::culling::occlusion::{
     self, Column, OcclusionMask, SectionGrid, SectionPos, SectionState,
 };
-use crate::world::culling::visgraph::VisibilitySet;
-use crate::world::dimension::{DimensionType, Height};
-use crate::world::fluid::FluidSprites;
-use crate::world::head_profile::{HeadProfile, is_player_head};
-use crate::world::terrain::SectionMesh;
+use crate::culling::visgraph::VisibilitySet;
+use crate::dimension::{DimensionType, Height};
+use crate::fluid::FluidSprites;
+use crate::head_profile::{HeadProfile, is_player_head};
+use crate::math::{ChunkMap, SectionSet, section_coord, section_relative};
+use crate::terrain::SectionMesh;
 use mesh_queue::MeshQueue;
 
 struct LoadedChunk {
@@ -36,7 +35,7 @@ struct LoadedChunk {
 }
 
 impl LoadedChunk {
-    /// Takes the chunk's [`ChunkScan`](crate::world::chunk::ChunkScan).
+    /// Takes the chunk's [`ChunkScan`](crate::chunk::ChunkScan).
     fn new(mut chunk: Chunk) -> Self {
         let scan = std::mem::take(&mut chunk.scan);
         Self {
@@ -209,12 +208,7 @@ impl Level {
     }
 
     /// `ClientChunkCache.replaceBiomes`.
-    pub fn replace_biomes(
-        &mut self,
-        x: i32,
-        z: i32,
-        biomes: crate::world::biome::ChunkBiomes,
-    ) -> bool {
+    pub fn replace_biomes(&mut self, x: i32, z: i32, biomes: crate::biome::ChunkBiomes) -> bool {
         let Some(loaded) = self.chunks.get_mut(&(x, z)) else {
             return false;
         };
@@ -252,7 +246,7 @@ impl Level {
     }
 
     /// The biome colour `kind` faces get at a block, as the terrain's mesher picks it.
-    pub fn tint_at(&self, kind: crate::world::block_tint::TintKind, pos: [i32; 3]) -> [u8; 3] {
+    pub fn tint_at(&self, kind: crate::block_tint::TintKind, pos: [i32; 3]) -> [u8; 3] {
         self.tints
             .sampler(|qx, qy, qz| self.biome_at(qx * 4, qy * 4, qz * 4).unwrap_or(0))
             .color(kind, pos)
@@ -470,7 +464,7 @@ impl Level {
         };
         let noise =
             |qx: i32, qy: i32, qz: i32| self.biome_at(qx * 4, qy * 4, qz * 4).unwrap_or(own);
-        Some(crate::world::biome_zoom::biome(seed, x, y, z, &noise))
+        Some(crate::biome_zoom::biome(seed, x, y, z, &noise))
     }
 
     /// The registry index of the biome stored for a world position's 4×4×4 cell.
@@ -496,7 +490,7 @@ impl Level {
             let base = min_y + s as i32 * 16;
             for y in (base..base + 16).rev() {
                 let id = section.get(Section::index_of_block(x, y, z));
-                if crate::world::block::state_flags::is_drawn(id) {
+                if crate::block::state_flags::is_drawn(id) {
                     return y + 1;
                 }
             }
@@ -520,7 +514,7 @@ impl Level {
         let has_light = usize::try_from(slot)
             .ok()
             .and_then(|i| layer.get(i))
-            .is_some_and(|l| matches!(l, crate::world::chunk::LightSection::Data(_)));
+            .is_some_and(|l| matches!(l, crate::chunk::LightSection::Data(_)));
         if !has_light {
             return "2";
         }
@@ -557,10 +551,53 @@ pub(super) fn sections_around([x, y, z]: [i32; 3], min_y: i32, out: &mut Section
     }
 }
 
+/// `PrioritizeChunkUpdates`, the "Chunk Builder".
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ChunkBuilder {
+    /// Threaded: never waited for.
+    #[default]
+    None = 0,
+    /// Semi Blocking: the player's own edits.
+    PlayerAffected = 1,
+    /// Fully Blocking: also every change near the camera.
+    Nearby = 2,
+}
+
+impl ChunkBuilder {
+    /// `LEGACY_CODEC`'s `ByIdMap.continuous(..., WRAP)`.
+    pub fn from_id(id: i64) -> Self {
+        match id.rem_euclid(3) {
+            1 => Self::PlayerAffected,
+            2 => Self::Nearby,
+            _ => Self::None,
+        }
+    }
+
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::None => "options.prioritizeChunkUpdates.none",
+            Self::PlayerAffected => "options.prioritizeChunkUpdates.byPlayer",
+            Self::Nearby => "options.prioritizeChunkUpdates.nearby",
+        }
+    }
+
+    pub fn tooltip(self) -> &'static str {
+        match self {
+            Self::None => "options.prioritizeChunkUpdates.none.tooltip",
+            Self::PlayerAffected => "options.prioritizeChunkUpdates.byPlayer.tooltip",
+            Self::Nearby => "options.prioritizeChunkUpdates.nearby.tooltip",
+        }
+    }
+}
+
+impl crate::cycle::Cycle for ChunkBuilder {
+    const ALL: &'static [Self] = &[Self::None, Self::PlayerAffected, Self::Nearby];
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::Section;
+    use crate::chunk::Section;
 
     #[test]
     fn set_block_changes_the_block_and_reports_the_old_one() {
@@ -608,7 +645,7 @@ mod tests {
         let mut level = Level::default();
         level.insert(
             Chunk::new(0, 0, (0..24).map(|_| Section::empty()).collect())
-                .with_light(crate::world::chunk::ChunkLight::filled_sky(15)),
+                .with_light(crate::chunk::ChunkLight::filled_sky(15)),
         );
         assert_eq!(level.set_block([3, 70, 5], 1, false), Some(0));
         assert_eq!(level.light_at(3, 70, 5), (0, 0));
@@ -625,22 +662,22 @@ mod tests {
             (0..24).map(|_| Section::empty()).collect(),
         ));
         assert_eq!(level.light_at(3, 70, 5), (0, 0));
-        let mut sky = vec![0u8; crate::world::chunk::LIGHT_NIBBLES];
+        let mut sky = vec![0u8; crate::chunk::LIGHT_NIBBLES];
         sky.fill(0xFF);
         assert!(level.apply_light(
             0,
             0,
-            &crate::world::chunk::LightUpdate {
+            &crate::chunk::LightUpdate {
                 sky_mask: vec![1 << 9],
                 block_mask: vec![],
                 empty_sky_mask: vec![],
                 empty_block_mask: vec![],
-                sky: vec![crate::world::chunk::LightSection::from_bytes(&sky)],
+                sky: vec![crate::chunk::LightSection::from_bytes(&sky)],
                 block: vec![],
             },
         ));
         assert_eq!(level.light_at(3, 70, 5), (0, 15));
-        assert!(!level.apply_light(1, 0, &crate::world::chunk::LightUpdate::default()));
+        assert!(!level.apply_light(1, 0, &crate::chunk::LightUpdate::default()));
     }
 
     /// A nether column: 16 sections from Y 0, lit by block light only.
@@ -654,8 +691,8 @@ mod tests {
             z,
             height,
             sections,
-            crate::world::biome::ChunkBiomes::uniform(0, height.sections()),
-            crate::world::chunk::ChunkScan::default(),
+            crate::biome::ChunkBiomes::uniform(0, height.sections()),
+            crate::chunk::ChunkScan::default(),
         )
     }
 
@@ -692,15 +729,15 @@ mod tests {
         let mut level = Level::default();
         level.set_dimension(&DimensionType::nether());
         let height = Height::NETHER;
-        let chunk = nether_chunk(0, 0)
-            .with_light(crate::world::chunk::ChunkLight::filled_sky_in(height, 15));
+        let chunk =
+            nether_chunk(0, 0).with_light(crate::chunk::ChunkLight::filled_sky_in(height, 15));
         assert_eq!(chunk.light.at(3, 70, 5), (0, 15));
         level.insert(chunk);
         assert_eq!(level.light_at(3, 70, 5), (0, 0));
         let mut level = Level::default();
         level.insert(
             Chunk::new(0, 0, (0..24).map(|_| Section::empty()).collect())
-                .with_light(crate::world::chunk::ChunkLight::filled_sky(15)),
+                .with_light(crate::chunk::ChunkLight::filled_sky(15)),
         );
         assert_eq!(level.light_at(3, 70, 5), (0, 15));
     }

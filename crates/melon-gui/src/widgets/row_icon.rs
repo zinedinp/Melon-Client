@@ -6,9 +6,9 @@ use std::sync::{Mutex, OnceLock};
 use image::RgbaImage;
 use rustc_hash::FxHashMap;
 
-use crate::gui::sprite::GuiSprite;
-use crate::gui::widgets::{Rect, Ui};
 use crate::renderer::TextureId;
+use crate::sprite::GuiSprite;
+use crate::widgets::{Rect, Ui};
 
 /// `SelectableEntry`'s `size`.
 pub const SIZE: f32 = 32.0;

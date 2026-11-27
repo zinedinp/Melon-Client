@@ -24,9 +24,9 @@ use crate::component::ClickEvent;
 use crate::dialog::{
     ActionButton, AfterAction, Dialog, DialogClick, DialogKind, InputValue, connection,
 };
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::text::{self, StyledText};
-use crate::gui::widgets::{Rect, Ui};
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::text::{self, StyledText};
+use crate::widgets::{Rect, Ui};
 
 /// What a dialog asks the app to do.
 #[derive(Clone, Debug)]
@@ -480,7 +480,7 @@ impl Screen for DialogScreen {
     fn on_mouse_move(&mut self, x: f32, y: f32) {
         self.mouse = (x, y);
         if let Some((grab, scroll)) = self.scrollbar_drag {
-            if crate::gui::input_state::left_held() {
+            if crate::input_state::left_held() {
                 if let Some((track, thumb)) = self.scrollbar() {
                     let room = (track.h - thumb.h).max(1.0);
                     self.scroll = (scroll + (y - grab) / room * self.max_scroll())
@@ -492,7 +492,7 @@ impl Screen for DialogScreen {
             self.scrollbar_drag = None;
         }
         if let Some(index) = self.pressed {
-            if crate::gui::input_state::left_held() {
+            if crate::input_state::left_held() {
                 self.elements[index].drag(x, y);
             } else {
                 self.elements[index].release();

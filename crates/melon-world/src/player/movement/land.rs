@@ -6,7 +6,7 @@ use super::super::{
     SPRINT_AIR_ACCELERATION, VERTICAL_DRAG, attributes,
 };
 use super::state::{MoveState, Travel, priority};
-use crate::world::level::Level;
+use crate::level::Level;
 
 pub(super) struct Land;
 

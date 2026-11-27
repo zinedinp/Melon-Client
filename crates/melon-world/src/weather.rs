@@ -2,8 +2,8 @@
 
 use std::sync::OnceLock;
 
-use crate::renderer::WorldVertex;
-use crate::world::java_random::JavaRandom;
+use crate::java_random::JavaRandom;
+use crate::mesh::WorldVertex;
 
 const TABLE: usize = 32;
 const HALF: i32 = 16;
@@ -300,7 +300,7 @@ pub fn pieces(
     camera: glam::DVec3,
     radius: i32,
     intensity: f32,
-    lightmap: &crate::world::lightmap::LightmapParams,
+    lightmap: &crate::lightmap::LightmapParams,
     sees: impl Fn(glam::Vec3, glam::Vec3) -> bool,
 ) -> (Pieces, Pieces) {
     let mut rain = Pieces::default();
@@ -335,7 +335,7 @@ pub fn pieces(
         let v1 = column.top_y as f32 * 0.25 + column.v_offset;
         let pair = usize::from(column.block_light & 15) | usize::from(column.sky_light & 15) << 4;
         let [lr, lg, lb] = *lit[pair].get_or_insert_with(|| {
-            crate::world::lightmap::sample(column.block_light, column.sky_light, lightmap)
+            crate::lightmap::sample(column.block_light, column.sky_light, lightmap)
         });
         let place = WorldVertex::rgba(
             [relative_x, relative_z, half_x],
@@ -455,7 +455,7 @@ mod tests {
             sky_light: 0,
             snow: false,
         };
-        let params = crate::world::lightmap::LightmapParams::overworld([1.0; 3], 0.0);
+        let params = crate::lightmap::LightmapParams::overworld([1.0; 3], 0.0);
         let camera = glam::DVec3::new(8.2, 70.0, 8.4);
         let dark = pieces(&[column], camera, 8, 1.0, &params, |_, _| true)
             .0
@@ -518,7 +518,7 @@ mod tests {
         let streaks = streaks(&image);
         assert_eq!(streaks.len(), 6);
         let template = template(&streaks, 8, 16);
-        let params = crate::world::lightmap::LightmapParams::overworld([1.0; 3], 0.0);
+        let params = crate::lightmap::LightmapParams::overworld([1.0; 3], 0.0);
         let camera = glam::DVec3::new(3.3, 70.6, -2.2);
         for (u_offset, v_offset) in [(0.0, 0.0), (0.37, -5.81), (0.9, 12.3)] {
             let column = Column {

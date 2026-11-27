@@ -10,7 +10,7 @@ const KEY_NAMESPACE: Uuid = Uuid::from_u128(0x6d65_6c6f_6e2d_6865_6164_2d73_6b69
 
 /// Whether `state` is a player head, standing or on a wall.
 pub fn is_player_head(state: u16) -> bool {
-    use crate::world::block_entity::{Kind, kind_of, models::SkullType};
+    use crate::block_entity::{Kind, kind_of, models::SkullType};
     matches!(
         kind_of(state),
         Some(Kind::Skull {

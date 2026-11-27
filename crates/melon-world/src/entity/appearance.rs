@@ -19,9 +19,9 @@ use pumpkin_data::tracked_data::{
 use super::kind::EntityKind;
 use super::magic_name::Magic;
 use super::player::{Arm, ShownParts};
-use crate::network::play::game::DataValue;
-use crate::network::play::game::{LIVING_OFF_HAND, LIVING_USING_ITEM};
-use crate::world::player::hands::Hand;
+use crate::entity::wire::DataValue;
+use crate::entity::wire::{LIVING_OFF_HAND, LIVING_USING_ITEM};
+use crate::player::hands::Hand;
 
 /// `PrimedTnt.DEFAULT_FUSE_TIME`.
 pub const DEFAULT_FUSE: i32 = 80;

@@ -280,6 +280,22 @@ mod tests {
         "broken": 7
     }"#;
 
+    /// A pack's `sounds.json` adds to an event, or replaces it with `replace`.
+    #[test]
+    fn packs_merge_on_top_of_vanilla() {
+        let mut events = SoundEvents::default();
+        events
+            .merge("minecraft", br#"{"x":{"sounds":["one"]}}"#)
+            .unwrap();
+        events
+            .merge(
+                "minecraft",
+                br#"{"x":{"sounds":["two"]},"y":{"replace":true,"sounds":["three"]}}"#,
+            )
+            .unwrap();
+        assert_eq!(events.len(), 2, "x merged, y added");
+    }
+
     #[test]
     fn events_and_entries_are_read_in_every_form() {
         let events = SoundEvents::parse(JSON).unwrap();

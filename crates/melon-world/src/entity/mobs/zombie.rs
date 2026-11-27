@@ -1,9 +1,9 @@
 //! `ZombieModel` (the humanoid, arms held out) and `BabyZombieModel`.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
-use crate::world::entity::humanoid;
-use crate::world::entity::model::{LayerDefinition, PartDefinition};
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::humanoid;
+use crate::entity::model::{LayerDefinition, PartDefinition};
+use crate::model_part::{Cube, Pose};
 
 pub fn adult() -> LayerDefinition {
     LayerDefinition::new(humanoid::create_mesh(0.0, 0.0), 64.0, 64.0)

@@ -11,7 +11,7 @@ const CLAMP_COEFFICIENT: f64 = 3.0;
 /// The time per tick the client offers to spend on chunks.
 const BUDGET_NANOS_PER_TICK: f64 = 7_000_000.0;
 
-pub(crate) struct ChunkBatchSizeCalculator {
+pub struct ChunkBatchSizeCalculator {
     aggregated_nanos_per_chunk: f64,
     old_samples_weight: u32,
     batch_start: Instant,
@@ -29,12 +29,12 @@ impl Default for ChunkBatchSizeCalculator {
 
 impl ChunkBatchSizeCalculator {
     /// `ClientboundChunkBatchStartPacket` arrived.
-    pub(crate) fn on_batch_start(&mut self) {
+    pub fn on_batch_start(&mut self) {
         self.batch_start = Instant::now();
     }
 
     /// `ClientboundChunkBatchFinishedPacket` arrived, closing a batch of `batch_size` chunks.
-    pub(crate) fn on_batch_finished(&mut self, batch_size: i32) {
+    pub fn on_batch_finished(&mut self, batch_size: i32) {
         let nanos = self.batch_start.elapsed().as_nanos() as f64;
         self.add_sample(nanos, batch_size);
     }
@@ -52,12 +52,12 @@ impl ChunkBatchSizeCalculator {
     }
 
     /// The average time a chunk took to take in, for F3.
-    pub(crate) fn nanos_per_chunk(&self) -> f64 {
+    pub fn nanos_per_chunk(&self) -> f64 {
         self.aggregated_nanos_per_chunk
     }
 
     /// What `ServerboundChunkBatchReceivedPacket` reports.
-    pub(crate) fn desired_chunks_per_tick(&self) -> f32 {
+    pub fn desired_chunks_per_tick(&self) -> f32 {
         (BUDGET_NANOS_PER_TICK / self.aggregated_nanos_per_chunk) as f32
     }
 }

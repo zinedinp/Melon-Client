@@ -1,11 +1,11 @@
 //! Vanilla `ChatOptionsScreen`.
 
 use crate::cycle::Cycle;
-use crate::gui::screen::{ConfigChange, ScreenContext};
-use crate::gui::screens::options::{on_off_label, value_label};
-use crate::gui::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 use crate::i18n::Lang;
+use crate::screen::{ConfigChange, ScreenContext};
+use crate::screens::options::{on_off_label, value_label};
 use crate::settings::options::{ChatSettings, Config};
+use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 
 /// Unit sliders move in hundredths (their labels show whole percent).
 const UNIT_STEPS: u32 = 100;

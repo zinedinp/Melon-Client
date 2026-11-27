@@ -39,12 +39,12 @@ pub trait StackKey {
 
     /// `ItemStack.hasFoil`.
     fn foil(&self) -> bool {
-        crate::world::glint::has_foil(self.stack())
+        crate::glint::has_foil(self.stack())
     }
 
     /// Whether it is a player head with a profile, drawn with its skin.
     fn has_head(&self) -> bool {
-        crate::world::head_profile::HeadProfile::of_stack(self.stack()).is_some()
+        crate::head_profile::HeadProfile::of_stack(self.stack()).is_some()
     }
 }
 
@@ -173,12 +173,12 @@ impl StackKey for KeyedStack {
     }
 
     fn foil(&self) -> bool {
-        self.foil.get(|| crate::world::glint::has_foil(&self.stack))
+        self.foil.get(|| crate::glint::has_foil(&self.stack))
     }
 
     fn has_head(&self) -> bool {
         self.head
-            .get(|| crate::world::head_profile::HeadProfile::of_stack(&self.stack).is_some())
+            .get(|| crate::head_profile::HeadProfile::of_stack(&self.stack).is_some())
     }
 }
 

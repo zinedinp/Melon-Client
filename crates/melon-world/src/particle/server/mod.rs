@@ -4,7 +4,7 @@ use glam::DVec3;
 
 use super::Spawn;
 use super::options::ParticleSpec;
-use crate::world::java_random::JavaRandom;
+use crate::java_random::JavaRandom;
 
 pub mod entity_event;
 pub mod explosion;

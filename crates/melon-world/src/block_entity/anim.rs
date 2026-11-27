@@ -1,9 +1,9 @@
 //! What animates on block entities.
 
 use super::{BlockEntities, Kind, kind_of};
+use crate::block::direction::Direction;
+use crate::level::Level;
 use crate::math::angle::{PI, TAU};
-use crate::world::block::direction::Direction;
-use crate::world::level::Level;
 use glam::Vec3;
 
 impl BlockEntities {

@@ -4,9 +4,9 @@ use glam::{DVec3, IVec3};
 
 use super::super::{Kind, Spawn, World};
 use super::{block_name, lit};
-use crate::settings::options::ParticleStatus;
-use crate::world::fluid::{self, FluidKind};
-use crate::world::java_random::JavaRandom;
+use crate::fluid::{self, FluidKind};
+use crate::java_random::JavaRandom;
+use crate::particle::ParticleStatus;
 
 /// The rain's splashes this tick, up to `radius` blocks around `camera`.
 pub fn rain_splashes(
@@ -47,14 +47,13 @@ pub fn rain_splashes(
             .level
             .block_state(ground.x, ground.y, ground.z)
             .unwrap_or(0);
-        let block_top =
-            crate::world::physics::block_shapes(world.level, (ground.x, ground.y, ground.z))
-                .filter(|b| {
-                    let (px, pz) = (f64::from(ground.x) + bx, f64::from(ground.z) + bz);
-                    b.min.x <= px && px <= b.max.x && b.min.z <= pz && pz <= b.max.z
-                })
-                .map(|b| b.max.y - f64::from(ground.y))
-                .fold(0.0, f64::max);
+        let block_top = crate::physics::block_shapes(world.level, (ground.x, ground.y, ground.z))
+            .filter(|b| {
+                let (px, pz) = (f64::from(ground.x) + bx, f64::from(ground.z) + bz);
+                b.min.x <= px && px <= b.max.x && b.min.z <= pz && pz <= b.max.z
+            })
+            .map(|b| b.max.y - f64::from(ground.y))
+            .fold(0.0, f64::max);
         let here = fluid::fluid_of(state);
         let fluid_top = here.map_or(0.0, |f| f64::from(f.own_height()));
         let lava = here.is_some_and(|f| f.kind == FluidKind::Lava);

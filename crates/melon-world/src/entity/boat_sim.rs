@@ -2,10 +2,10 @@
 
 use glam::{DVec3, IVec3};
 
+use crate::fluid::{self, FluidKind};
+use crate::level::Level;
 use crate::math::angle::{DEG_TO_RAD, cos, sin};
-use crate::world::fluid::{self, FluidKind};
-use crate::world::level::Level;
-use crate::world::physics::{self, Aabb};
+use crate::physics::{self, Aabb};
 
 /// `AbstractBoat.getDefaultGravity`.
 const GRAVITY: f64 = 0.04;
@@ -376,7 +376,7 @@ fn ground_friction(level: &Level, bounds: &Aabb) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::chunk::{Chunk, Section};
+    use crate::chunk::{Chunk, Section};
     use pumpkin_data::Block;
 
     /// A lake: water from `y = 61` to `63` over a stone floor at 60.

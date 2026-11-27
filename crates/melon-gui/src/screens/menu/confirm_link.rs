@@ -1,8 +1,8 @@
 //! Vanilla `ConfirmLinkScreen` for an untrusted link from the chat.
 
-use crate::gui::screen::ScreenAction;
-use crate::gui::widgets::dialog::DialogScreen;
 use crate::math::argb;
+use crate::screen::ScreenAction;
+use crate::widgets::dialog::DialogScreen;
 
 /// `ConfirmLinkScreen`'s three buttons are narrower than the default.
 const BUTTON_W: f32 = 100.0;

@@ -10,12 +10,12 @@ use pumpkin_data::data_component::DataComponent;
 use pumpkin_data::item_stack::ItemStack;
 use serde_json::{Value, json};
 
-use crate::assets::json_model::{Model, TextureCache, element_quads, vec3};
+use crate::json_model::{Model, TextureCache, element_quads, vec3};
 use crate::math::angle::{self, DEG_TO_RAD, HALF_PI, PI, Rotation};
-use crate::renderer::WorldVertex;
-use crate::world::texture_animation;
-use crate::world::transparency::{AlphaMap, AlphaRule};
-use crate::world::{block_entity, geometry, model_part};
+use crate::mesh::WorldVertex;
+use crate::texture_animation;
+use crate::transparency::{AlphaMap, AlphaRule};
+use crate::{block_entity, geometry, model_part};
 
 mod key;
 
@@ -121,13 +121,13 @@ pub fn potion_color(stack: &ItemStack) -> Option<[u8; 3]> {
 }
 
 /// One thing an item definition draws in a GUI slot (`ItemModel.Unbaked`).
-pub(crate) struct Layer {
+pub struct Layer {
     source: Source,
     /// Model space (blocks) to the item's.
     transform: Mat4,
 }
 
-pub(crate) enum Source {
+pub enum Source {
     /// A JSON model, with the tint for each `tintindex`.
     Model {
         model: String,
@@ -320,7 +320,7 @@ impl ItemModel {
         let mut textures = TextureCache::new(assets_root);
         if let Some(skin) = skin {
             textures.insert(
-                crate::world::block_entity::models::SkullType::Player.texture(),
+                crate::block_entity::models::SkullType::Player.texture(),
                 skin.clone(),
             );
         }
@@ -351,7 +351,7 @@ impl ItemModel {
         let mut textures = TextureCache::new(assets_root);
         if let Some(skin) = skin {
             textures.insert(
-                crate::world::block_entity::models::SkullType::Player.texture(),
+                crate::block_entity::models::SkullType::Player.texture(),
                 skin.clone(),
             );
         }
@@ -583,17 +583,17 @@ impl HandPose {
         }
     }
 
-    pub fn first_person(arm: crate::world::entity::player::Arm) -> Self {
+    pub fn first_person(arm: crate::entity::player::Arm) -> Self {
         match arm {
-            crate::world::entity::player::Arm::Right => HandPose::FirstPersonRight,
-            crate::world::entity::player::Arm::Left => HandPose::FirstPersonLeft,
+            crate::entity::player::Arm::Right => HandPose::FirstPersonRight,
+            crate::entity::player::Arm::Left => HandPose::FirstPersonLeft,
         }
     }
 
-    pub fn third_person(arm: crate::world::entity::player::Arm) -> Self {
+    pub fn third_person(arm: crate::entity::player::Arm) -> Self {
         match arm {
-            crate::world::entity::player::Arm::Right => HandPose::ThirdPersonRight,
-            crate::world::entity::player::Arm::Left => HandPose::ThirdPersonLeft,
+            crate::entity::player::Arm::Right => HandPose::ThirdPersonRight,
+            crate::entity::player::Arm::Left => HandPose::ThirdPersonLeft,
         }
     }
 
@@ -1656,17 +1656,17 @@ mod tests {
             eprintln!("no extracted assets, skipping");
             return;
         };
-        let ids = crate::world::item_atlas::texture_ids(root);
+        let ids = crate::item_atlas::texture_ids(root);
         assert!(ids.iter().any(|id| id == "minecraft:item/diamond_sword"));
         let count = ids.len();
-        let atlas = crate::world::block_models::pack_sprites(root, ids, 4096);
+        let atlas = crate::block_models::pack_sprites(root, ids, 4096);
         eprintln!(
             "item atlas: {count} textures, {}x{}",
             atlas.image.width(),
             atlas.image.height()
         );
         let lookup = |id: &str| {
-            let id = crate::world::item_atlas::canonical(id);
+            let id = crate::item_atlas::canonical(id);
             atlas
                 .sprites
                 .get(&id)

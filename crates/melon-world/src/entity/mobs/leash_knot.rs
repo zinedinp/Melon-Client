@@ -1,8 +1,8 @@
 //! `LeashKnotModel`: the knot a lead is tied to a fence with.
 
 use super::{LayerSpec, ModelId as M};
-use crate::world::entity::model::{LayerDefinition, PartDefinition};
-use crate::world::model_part::{Cube, Pose};
+use crate::entity::model::{LayerDefinition, PartDefinition};
+use crate::model_part::{Cube, Pose};
 
 pub const TEXTURE: &str = "minecraft:entity/lead_knot/lead_knot";
 

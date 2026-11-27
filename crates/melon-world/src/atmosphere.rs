@@ -1,9 +1,9 @@
 //! The environment attributes at the camera (vanilla `EnvironmentAttributeSystem`).
 
+use crate::biome::{Biome, Biomes};
+use crate::clock::Environment as Day;
+use crate::dimension::{DimensionType, Rgb, Skybox, rgb};
 use crate::math::argb;
-use crate::world::biome::{Biome, Biomes};
-use crate::world::clock::Environment as Day;
-use crate::world::dimension::{DimensionType, Rgb, Skybox, rgb};
 
 /// `EnvironmentAttributes` defaults, for what neither the dimension nor the biome sets.
 const FOG_END: f32 = 1024.0;
@@ -305,7 +305,7 @@ impl Atmosphere {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::biome::{Biome, Visuals};
+    use crate::biome::{Biome, Visuals};
 
     fn biomes() -> Biomes {
         let plains = Biome::default();

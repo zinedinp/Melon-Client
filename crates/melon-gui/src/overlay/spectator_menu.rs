@@ -2,13 +2,13 @@
 
 use std::time::{Duration, Instant};
 
-use crate::assets::Assets;
-use crate::gui::hud::item_slot::ItemPainter;
-use crate::gui::sprite::GuiSprite;
-use crate::gui::text::{self, StyledText, colors};
+use crate::hud::item_slot::ItemPainter;
 use crate::i18n::Lang;
 use crate::renderer::quad::DrawList;
 use crate::renderer::{Renderer, TextureId};
+use crate::sprite::GuiSprite;
+use crate::text::{self, StyledText, colors};
+use melon_assets::assets::Assets;
 
 const FADE_DELAY: Duration = Duration::from_millis(5000);
 const FADE_TIME: f32 = 2000.0;
@@ -285,7 +285,7 @@ impl SpectatorMenu {
                 }
                 None => {
                     if let Item::Player { id, .. } = &item {
-                        crate::gui::face::draw_face(
+                        crate::face::draw_face(
                             draw_list,
                             skin_of(*id),
                             [x + 2.0, top + 2.0],

@@ -1,11 +1,11 @@
 //! `SpiderModel`: a head, two body segments and eight legs that scuttle.
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
+use crate::entity::quadruped::look;
 use crate::math::angle::{self, PI};
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::entity::quadruped::look;
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// The legs from the back pair forward.
 const LEGS: [(&str, &str, f32, f32, f32); 4] = [

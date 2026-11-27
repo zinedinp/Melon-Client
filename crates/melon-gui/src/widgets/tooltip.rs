@@ -1,11 +1,11 @@
 //! Tooltips: `TooltipRenderUtil`'s box (the `tooltip/*` sprites) around the text.
 
-use crate::gui::assets::TooltipSprites;
-use crate::gui::text::{self, StyledText, TextPaint};
-use crate::gui::widgets::Rect;
+use crate::assets::TooltipSprites;
 use crate::math::argb;
 use crate::renderer::TextureId;
 use crate::renderer::quad::DrawList;
+use crate::text::{self, StyledText, TextPaint};
+use crate::widgets::Rect;
 
 /// `Tooltip.MAX_WIDTH`: option tooltips wrap at this width.
 pub const MAX_WIDTH: f32 = 170.0;

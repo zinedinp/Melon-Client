@@ -2,8 +2,8 @@
 
 use glam::Vec3;
 
-use crate::renderer::WorldVertex as Vertex;
-use crate::world::block::direction::Direction;
+use crate::block::direction::Direction;
+use crate::mesh::WorldVertex as Vertex;
 
 /// Corners of a quad in the order they are stored, front facing.
 pub const QUAD_CORNERS: [usize; 4] = [0, 1, 2, 3];

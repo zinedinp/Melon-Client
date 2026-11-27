@@ -26,12 +26,12 @@ pub struct Row(pub [f32; LANES]);
 /// One frame's [`super::Culler`] as rows over the section heights.
 pub struct SectionCull {
     /// Per plane, for each section height: the y part of its test.
-    pub(crate) planes: Option<[Row; 6]>,
+    pub planes: Option<[Row; 6]>,
     /// Per plane, its normal's x and z.
-    pub(crate) across: [(f32, f32); 6],
+    pub across: [(f32, f32); 6],
     /// For each section height: the squared y distance of its nearest
     /// point, and the fog's end squared.
-    pub(crate) fog: Option<(Row, f32)>,
+    pub fog: Option<(Row, f32)>,
     eye_block: IVec3,
     eye_fraction: Vec3,
     #[cfg(target_arch = "x86_64")]
@@ -98,7 +98,7 @@ impl SectionCull {
 
     /// [`Self::column`] without AVX: one all-ones or zero word per section, ANDed plane by
     /// plane, so LLVM compiles each pass to SSE2 or NEON compares.
-    pub(crate) fn column_scalar(&self, least: &[f32; 6], fog_room: Option<f32>) -> u32 {
+    pub fn column_scalar(&self, least: &[f32; 6], fog_room: Option<f32>) -> u32 {
         let mut keep = [u32::MAX; LANES];
         if let Some(planes) = &self.planes {
             for (row, &least) in planes.iter().zip(least) {
@@ -131,9 +131,9 @@ mod tests {
     use glam::{DVec3, Mat4};
 
     use super::*;
+    use crate::culling::frustum::Frustum;
+    use crate::culling::{CullSettings, Culler};
     use crate::util::xorshift::XorShift;
-    use crate::world::culling::frustum::Frustum;
-    use crate::world::culling::{CullSettings, Culler};
 
     /// Every column of a view, by section, gives what the box test of
     /// each section gives; on every tier.
@@ -150,7 +150,7 @@ mod tests {
             let yaw = state.next_f64() as f32 * std::f32::consts::TAU;
             let pitch = (state.next_f64() as f32 - 0.5) * 3.0;
             let view = Mat4::from_rotation_x(pitch) * Mat4::from_rotation_y(yaw);
-            let projection = crate::renderer::world_projection(70.0, 16.0 / 9.0, 512.0);
+            let projection = crate::projection::world_projection(70.0, 16.0 / 9.0, 512.0);
             let settings = CullSettings {
                 frustum: round % 7 != 0,
                 ..CullSettings::default()
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     #[ignore = "timing"]
     fn column_cull_speed() {
-        let projection = crate::renderer::world_projection(70.0, 16.0 / 9.0, 512.0);
+        let projection = crate::projection::world_projection(70.0, 16.0 / 9.0, 512.0);
         let culler = Culler::new(
             Frustum::from_view_projection(projection * Mat4::from_rotation_y(0.7)),
             None,
@@ -268,7 +268,7 @@ mod tests {
     /// The scalar way gives what the vector one does, bit for bit.
     #[test]
     fn scalar_and_vector_agree() {
-        let projection = crate::renderer::world_projection(70.0, 16.0 / 9.0, 512.0);
+        let projection = crate::projection::world_projection(70.0, 16.0 / 9.0, 512.0);
         let culler = Culler::new(
             Frustum::from_view_projection(projection * Mat4::from_rotation_y(0.7)),
             None,

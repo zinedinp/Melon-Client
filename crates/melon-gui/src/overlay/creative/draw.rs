@@ -4,15 +4,15 @@ use super::{
     COLUMNS, CreativeOverlay, CreativeTextures, IMAGE_HEIGHT, IMAGE_WIDTH, Slot, TAB_HEIGHT,
     TAB_WIDTH,
 };
-use crate::gui::hud::item_slot::{self, ItemPainter};
-use crate::gui::overlay::container_input::ContainerView;
-use crate::gui::overlay::inventory::{SlotDrag, draw_carried, draw_slots};
-use crate::gui::overlay::{Overlay, OverlayDraw};
-use crate::gui::text::font::Glyphs;
-use crate::gui::text::{StyledText, colors};
+use crate::hud::item_slot::{self, ItemPainter};
 use crate::i18n::Lang;
 use crate::math::argb;
+use crate::overlay::container_input::ContainerView;
+use crate::overlay::inventory::{SlotDrag, draw_carried, draw_slots};
+use crate::overlay::{Overlay, OverlayDraw};
 use crate::renderer::quad::DrawList;
+use crate::text::font::Glyphs;
+use crate::text::{StyledText, colors};
 use crate::world::creative_tabs::{CreativeTab, Row, TabType, tabs};
 use pumpkin_data::item_stack::ItemStack;
 
@@ -25,12 +25,7 @@ impl CreativeOverlay {
         let (size, player) = (ui.size, ui.entity_preview);
         let (width, height) = size;
         let (left, top) = (self.left, self.top);
-        crate::gui::background::push_transparent_background(
-            draw_list,
-            painter.white,
-            width,
-            height,
-        );
+        crate::background::push_transparent_background(draw_list, painter.white, width, height);
         for (i, &tab) in self.tabs.iter().enumerate() {
             if i != self.selected {
                 self.draw_tab(draw_list, textures, painter, &tabs()[tab], false);
@@ -58,7 +53,7 @@ impl CreativeOverlay {
         }
         self.draw_tab(draw_list, textures, painter, self.tab(), true);
         if let (Some(texture), Some(preview)) = (player, self.entity_preview()) {
-            crate::gui::overlay::inventory::push_entity_preview(draw_list, texture, &preview);
+            crate::overlay::inventory::push_entity_preview(draw_list, texture, &preview);
         }
         if self.tab_type() == TabType::Search {
             self.draw_search(draw_list, painter.glyphs());

@@ -3,15 +3,15 @@
 //! the same entries here; View Bobbing and the high contrast block outline
 //! are only here, as in vanilla.
 
-use crate::gui::screen::{ConfigChange, ScreenAction, ScreenContext};
-use crate::gui::screens::options::chat::ChatOption;
-use crate::gui::screens::options::controls::controls_screen;
-use crate::gui::screens::options::on_off_label;
-use crate::gui::screens::options::sounds::SoundOption;
-use crate::gui::screens::options::video::VideoOption;
-use crate::gui::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 use crate::i18n::Lang;
+use crate::screen::{ConfigChange, ScreenAction, ScreenContext};
+use crate::screens::options::chat::ChatOption;
+use crate::screens::options::controls::controls_screen;
+use crate::screens::options::on_off_label;
+use crate::screens::options::sounds::SoundOption;
+use crate::screens::options::video::VideoOption;
 use crate::settings::options::Config;
+use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AccessibilityOption {

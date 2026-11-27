@@ -34,8 +34,8 @@ pub struct Lang {
 }
 
 /// Melon's own texts, baked in so a published binary has English and German.
-const EMBEDDED_EN: &str = include_str!("../../lang/en_us.json");
-const EMBEDDED_DE: &str = include_str!("../../lang/de_de.json");
+const EMBEDDED_EN: &str = include_str!("../../../../lang/en_us.json");
+const EMBEDDED_DE: &str = include_str!("../../../../lang/de_de.json");
 
 fn project_lang_dir() -> PathBuf {
     let candidates = [
@@ -190,13 +190,11 @@ impl Lang {
     }
 
     /// A language with no strings, for tests.
-    #[cfg(test)]
     pub fn empty() -> Self {
         Self::from_strings(Language::EnUs, HashMap::new())
     }
 
     /// A language with just these strings, for tests.
-    #[cfg(test)]
     pub fn from_pairs(pairs: &[(&str, &str)]) -> Self {
         Self::from_strings(
             Language::EnUs,

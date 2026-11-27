@@ -8,10 +8,10 @@ use super::rounded;
 use glam::{Mat3, Mat4, Quat, Vec3};
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::kind::EntityKind;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, DEG_TO_RAD, PI, Rotation};
-use crate::world::entity::kind::EntityKind;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 pub const WITHER_TEXTURE: &str = "minecraft:entity/wither/wither";
 pub const WITHER_INVULNERABLE_TEXTURE: &str = "minecraft:entity/wither/wither_invulnerable";

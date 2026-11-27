@@ -6,8 +6,8 @@ use std::sync::LazyLock;
 use anyhow::Result;
 
 use super::commands::{Argument, Parser};
-use crate::network::protocol::packet::Reader;
-use crate::network::protocol::reader::initial_capacity;
+use crate::protocol::packet::Reader;
+use crate::protocol::reader::initial_capacity;
 use pumpkin_protocol::codec::registry_ids;
 use pumpkin_protocol::ser::NetworkReadSliceExt;
 use pumpkin_util::version::JavaMinecraftVersion;

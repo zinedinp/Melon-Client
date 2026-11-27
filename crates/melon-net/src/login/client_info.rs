@@ -1,6 +1,6 @@
 //! `ClientInformation`: the settings the server is told about.
 
-use crate::network::protocol::{packet, varint};
+use crate::protocol::{packet, varint};
 use crate::world::entity::player::{Arm, ShownParts};
 use anyhow::Result;
 use std::io::Write;
@@ -53,7 +53,7 @@ impl ClientInfo {
 }
 
 /// `ClientInformation`'s fields, the same in configuration and play.
-pub(crate) fn write_client_information(buf: &mut Vec<u8>, info: &ClientInfo) -> Result<()> {
+pub fn write_client_information(buf: &mut Vec<u8>, info: &ClientInfo) -> Result<()> {
     packet::write_string(buf, &info.language)?;
     buf.write_all(&[info.view_distance])?;
     varint::write_var_int(buf, i32::from(info.chat_visibility))?;

@@ -1,11 +1,11 @@
 //! `AdultBeeModel` and `BabyBeeModel`.
 
 use super::{ClientEntity, LayerSpec, ModelId as M};
+use crate::entity::animation::rot_lerp_rad;
+use crate::entity::living::LivingRenderState;
+use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::math::angle::{self, DEG_TO_RAD, EIGHTH_PI, PI, QUARTER_PI};
-use crate::world::entity::animation::rot_lerp_rad;
-use crate::world::entity::living::LivingRenderState;
-use crate::world::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use crate::world::model_part::{Cube, Pose};
+use crate::model_part::{Cube, Pose};
 
 /// `Bee.FLAG_ROLL`.
 pub const FLAG_ROLL: u8 = 2;

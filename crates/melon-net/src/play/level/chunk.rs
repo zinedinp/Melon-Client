@@ -1,6 +1,6 @@
 //! Decodes `LevelChunkWithLight`, for the dimension's height.
 
-use crate::network::protocol::packet::Reader;
+use crate::protocol::packet::Reader;
 use crate::world::biome::{ChunkBiomes, SectionBiomes};
 use crate::world::chunk::{
     BLOCKS_PER_SECTION, Chunk, ChunkLight, ChunkScan, LIGHT_NIBBLES, LightSection, LightUpdate,
@@ -348,7 +348,7 @@ fn probe_states(blocks: &[u16]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::network::protocol::varint::write_var_int;
+    use crate::protocol::varint::write_var_int;
     use crate::world::chunk::LIGHT_NIBBLES;
 
     const OVERWORLD_SECTIONS: usize = Height::OVERWORLD.sections();

@@ -1,9 +1,9 @@
 //! `Hud.extractAirBubbles`.
 
 use super::Layout;
-use crate::gui::hud::{ICON, JavaRandom, PlayerStatus};
-use crate::gui::sprite::GuiSprite;
+use crate::hud::{ICON, JavaRandom, PlayerStatus};
 use crate::renderer::quad::DrawList;
+use crate::sprite::GuiSprite;
 
 /// `Entity.getMaxAirSupply` of a player.
 pub const MAX_AIR: i32 = 300;

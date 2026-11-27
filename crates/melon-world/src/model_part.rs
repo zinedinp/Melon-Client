@@ -2,10 +2,10 @@
 
 use glam::{Mat3, Mat4, Vec2, Vec3};
 
+use crate::block::direction::{Direction, Directions};
+use crate::geometry;
 use crate::math::angle::Rotation;
-use crate::renderer::WorldVertex as Vertex;
-use crate::world::block::direction::{Direction, Directions};
-use crate::world::geometry;
+use crate::mesh::WorldVertex as Vertex;
 
 /// All six faces.
 pub const ALL_FACES: Directions = Directions(0b11_1111);

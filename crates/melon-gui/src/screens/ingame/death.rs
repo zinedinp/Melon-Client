@@ -2,14 +2,14 @@
 
 use std::time::{Duration, Instant};
 
-use crate::gui::effects;
-use crate::gui::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use crate::gui::widgets::Ui;
-use crate::gui::widgets::button::Button;
-use crate::gui::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_left};
-use crate::gui::widgets::set::{KeyResult, WidgetSet};
+use crate::effects;
 use crate::math::argb;
 use crate::renderer::quad::Transform2D;
+use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
+use crate::widgets::Ui;
+use crate::widgets::button::Button;
+use crate::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_left};
+use crate::widgets::set::{KeyResult, WidgetSet};
 
 const BUTTON_DELAY: Duration = Duration::from_secs(1);
 
