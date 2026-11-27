@@ -9,9 +9,16 @@
 //! or destroyed before that frame's fence (or a device wait); a command buffer
 //! is recorded by one thread at a time.
 // TODO(backend): OpenGL and DirectX as render backbones beside Vulkan, for
-// systems without a usable Vulkan driver. The renderer calls `ash` directly
-// everywhere today; this needs a backend layer (devices, buffers, pipelines,
-// command recording) under `gfx` and `renderer` first.
+// systems without a usable Vulkan driver. majestix-vk is the layer they would
+// sit behind, but only `renderer/blur.rs`, the swapchain (`Presenter`) and the
+// frame ring (`Frames`) use it so far; the rest is raw `ash` (~900 `unsafe`
+// blocks) and has to move onto it first.
+// TODO(majestix): `suballoc`, `mapped`, `staging`, `residency` and
+// `descriptor_pools` do what majestix-vk does too; fold them into it so there
+// is one memory manager, not two. Blocked on what it lacks (its TODO.md):
+// pipeline caches, timeline semaphores, BAR ranges freed per finished epoch
+// (mesh arena), specialization constants, texel buffers, immutable samplers,
+// a budget per heap incl. the BAR heap, queue family release/acquire pairs.
 
 pub mod api;
 pub mod ascii8;

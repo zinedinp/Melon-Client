@@ -245,6 +245,8 @@ impl PipelineDesc<'_> {
             .layout(layout)
             .render_pass(render_pass)
             .subpass(0);
+        // TODO(perf): a pipeline cache saved to disk; without one every start
+        // compiles every pipeline again.
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let pipeline = unsafe {
             device.create_graphics_pipelines(vk::PipelineCache::null(), &[pipeline_info], None)

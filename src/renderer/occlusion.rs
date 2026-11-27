@@ -182,6 +182,7 @@ unsafe fn compute_pipeline(
     let info = vk::ComputePipelineCreateInfo::default()
         .stage(stage)
         .layout(layout);
+    // TODO(perf): the pipeline cache on disk, as in `gfx::pipeline`.
     // SAFETY: `device` is live, and the infos name only its own live handles.
     let result =
         unsafe { device.create_compute_pipelines(vk::PipelineCache::null(), &[info], None) };
