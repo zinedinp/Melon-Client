@@ -11,11 +11,11 @@ use pumpkin_data::item_stack::ItemStack;
 use serde_json::{Value, json};
 
 use crate::json_model::{Model, TextureCache, element_quads, vec3};
-use melon_core::math::angle::{self, DEG_TO_RAD, HALF_PI, PI, Rotation};
 use crate::mesh::WorldVertex;
 use crate::texture_animation;
 use crate::transparency::{AlphaMap, AlphaRule};
 use crate::{block_entity, geometry, model_part};
+use melon_core::math::angle::{self, DEG_TO_RAD, HALF_PI, PI, Rotation};
 
 mod key;
 
@@ -1611,7 +1611,9 @@ mod tests {
 
     fn assets() -> Option<&'static Path> {
         static ROOT: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
-        let root = ROOT.get_or_init(melon_assets::assets::default_root).as_path();
+        let root = ROOT
+            .get_or_init(melon_assets::assets::default_root)
+            .as_path();
         root.join("minecraft/items/stone.json")
             .is_file()
             .then_some(root)
@@ -1697,8 +1699,9 @@ mod tests {
         let trim = &atlas.sprites["minecraft:trims/items/chestplate_trim_gold"];
         let [u0, v0, u1, v1] = trim.0;
         assert!(u1 > u0 && v1 > v0);
-        let gold = melon_assets::assets::texture_image(root, "minecraft:trims/items/chestplate_trim_gold")
-            .expect("gold chestplate trim");
+        let gold =
+            melon_assets::assets::texture_image(root, "minecraft:trims/items/chestplate_trim_gold")
+                .expect("gold chestplate trim");
         assert!(gold.pixels().any(|p| p[3] == 255));
 
         let stone = held("stone");

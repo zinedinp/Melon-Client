@@ -9,12 +9,12 @@ use std::path::PathBuf;
 
 use melon_protocol::component::{Component, Contents};
 
-use melon_assets::i18n::Lang;
-use melon_net::play::chat::{BoundChatType, ChatEvent, ChatTypes};
-use melon_settings::options::{ChatSettings, ChatVisibility};
 use crate::text::font::Font;
 use crate::text::{self, StyledText, TextStyle, colors};
 use history::CommandHistory;
+use melon_assets::i18n::Lang;
+use melon_net::play::chat::{BoundChatType, ChatEvent, ChatTypes};
+use melon_settings::options::{ChatSettings, ChatVisibility};
 
 /// `ChatComponent.MAX_CHAT_HISTORY`.
 const MAX_MESSAGES: usize = 100;

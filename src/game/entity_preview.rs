@@ -145,7 +145,9 @@ impl InWorld {
                         target
                     }
                     Err(e) => {
-                        melon_base::warn!("Player preview not on the GPU, drawing it on the CPU: {e:#}");
+                        melon_base::warn!(
+                            "Player preview not on the GPU, drawing it on the CPU: {e:#}"
+                        );
                         self.preview.cpu_only = true;
                         return false;
                     }

@@ -5,8 +5,8 @@ use crate::entity::animations::{armadillo as adult_anim, baby_armadillo as baby_
 use crate::entity::keyframe::{AnimationDefinition, AnimationState, KeyframeAnimation};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{EIGHTH_PI, THIRD_PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{EIGHTH_PI, THIRD_PI};
 
 /// Animation slots (`PoseInput::anim`).
 pub const ROLL_OUT: usize = 0;

@@ -4,8 +4,8 @@ use pumpkin_data::item_stack::ItemStack;
 use pumpkin_data::{Block, BlockStateId};
 
 use super::{InWorld, sounds};
-use melon_audio::block_sounds::BlockSound;
 use crate::game::controls::WorldContext;
+use melon_audio::block_sounds::BlockSound;
 use melon_gui::overlay::container::ContainerOverlay;
 use melon_gui::overlay::{ChatExit, OverlayKind};
 use melon_net::play::SWAP_CHANNEL;

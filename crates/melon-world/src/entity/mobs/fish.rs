@@ -3,8 +3,8 @@
 use glam::Vec3;
 
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle;
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle;
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, dye_tint};
 use melon_core::math::angle::QUARTER_PI as Q;

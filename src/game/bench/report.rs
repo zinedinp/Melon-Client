@@ -565,8 +565,8 @@ pub fn compare(old: &Value, new: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use melon_audio::stats::AudioTotals;
     use crate::game::thread_cpu::ThreadTimes;
+    use melon_audio::stats::AudioTotals;
     use melon_net::play::stats::NetTotals;
     use std::time::{Duration, Instant};
 

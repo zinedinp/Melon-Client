@@ -260,7 +260,10 @@ impl Assets {
         let candidates = [
             PathBuf::from("assets"),
             exe_assets,
-            melon_base::home::version_assets(&melon_base::home::default_assets_dir(), melon_base::home::VERSION),
+            melon_base::home::version_assets(
+                &melon_base::home::default_assets_dir(),
+                melon_base::home::VERSION,
+            ),
             melon_base::home::default_assets_dir(),
             melon_base::home::version_assets(
                 &melon_base::home::assets_root(&melon_base::home::dir()),

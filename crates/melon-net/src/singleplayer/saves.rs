@@ -290,7 +290,8 @@ pub fn list_worlds(game_dir: &Path) -> Vec<WorldEntry> {
             let folder = e.file_name().to_string_lossy().into_owned();
             let path = e.path();
             let level = read_level(&path);
-            let file: Option<WorldFile> = melon_base::json_file::load(&path.join("melon_world.json"));
+            let file: Option<WorldFile> =
+                melon_base::json_file::load(&path.join("melon_world.json"));
             if file.is_none() && level.is_none() {
                 return None;
             }

@@ -5,8 +5,8 @@ use glam::{Mat3, Mat4, Vec3};
 use crate::clock::Environment;
 use crate::geometry;
 use crate::java_random::JavaRandom;
-use melon_core::math::angle::{self, HALF_PI, PI, Rotation, TAU};
 use crate::mesh::WorldVertex;
+use melon_core::math::angle::{self, HALF_PI, PI, Rotation, TAU};
 
 /// `SkyRenderer.SUN_HEIGHT` / `MOON_HEIGHT`.
 const BODY_HEIGHT: f32 = 100.0;

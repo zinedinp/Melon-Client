@@ -3,12 +3,12 @@
 use super::InWorld;
 use super::PlayerEntry;
 use super::world_resources::WorldResources;
-use melon_protocol::component::Component;
+use melon_assets::i18n::Lang;
 use melon_gui::hud::item_slot::ItemPainter;
 use melon_gui::hud::player_tab::{MAX_PLAYERS, TabDraw, TabEntry};
 use melon_gui::hud::sidebar::{self, SidebarRow};
 use melon_gui::text::StyledText;
-use melon_assets::i18n::Lang;
+use melon_protocol::component::Component;
 use melon_render::quad::DrawList;
 use melon_world::entity::magic_name::Magic;
 use melon_world::scoreboard::{DisplaySlot, NumberFormat, compare_ignore_case};

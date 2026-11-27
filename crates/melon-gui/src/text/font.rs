@@ -5,9 +5,9 @@ use image::RgbaImage;
 use std::collections::HashMap;
 
 use super::{StyledText, TextPaint};
+use melon_assets::assets::Assets;
 use melon_render::TextureId;
 use melon_render::quad::{DrawList, Program, Transform2D};
-use melon_assets::assets::Assets;
 
 mod load;
 pub mod unihex;

@@ -108,7 +108,8 @@ fn textures_of(assets_root: &Path, kind: Kind) -> Vec<String> {
     if SPRITELESS.contains(&kind.to_name()) {
         return Vec::new();
     }
-    let Some(json) = melon_assets::assets::json_resource(assets_root, "particles", kind.to_name()) else {
+    let Some(json) = melon_assets::assets::json_resource(assets_root, "particles", kind.to_name())
+    else {
         return Vec::new();
     };
     json["textures"]

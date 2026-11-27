@@ -75,7 +75,9 @@ impl InWorld {
                             let tp = format!("tp {:.1} {:.1} {:.1}", at.x, at.y, at.z);
                             self.joined.session.send_command(&tp);
                         }
-                        None => melon_base::warn!("Bench: no trees nearby, the forest phase stays put"),
+                        None => {
+                            melon_base::warn!("Bench: no trees nearby, the forest phase stays put")
+                        }
                     }
                 }
             }

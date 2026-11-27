@@ -12,8 +12,8 @@ use pumpkin_data::tag::{self, Taggable};
 
 use crate::game::InWorld;
 use crate::game::gizmos::{DEFAULT_WIDTH, Fill, Gizmos, Line, TEXT_SCALE, WorldText};
-use melon_gui::hud::debug_entries::Entry;
 use melon_core::math::argb;
+use melon_gui::hud::debug_entries::Entry;
 use melon_world::block::direction::Direction;
 use melon_world::culling::frustum::Frustum;
 use melon_world::fluid::{FluidKind, fluid_of};

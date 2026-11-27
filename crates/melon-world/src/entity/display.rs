@@ -6,9 +6,9 @@ use glam::{EulerRot, Mat4, Quat, Vec3};
 use pumpkin_data::item_stack::ItemStack;
 
 use super::kind::EntityKind;
-use melon_protocol::component::Component;
 use crate::entity::wire::DataValue;
 use crate::item_model::KeyedStack;
+use melon_protocol::component::Component;
 
 /// `Display.DATA_*`: the entity data indices after `Entity`'s 0-7.
 mod index {

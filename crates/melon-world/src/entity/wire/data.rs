@@ -1,7 +1,7 @@
 //! `ClientboundSetEntityDataPacket`.
 
-use melon_protocol::component::Component;
 use anyhow::{Result, bail};
+use melon_protocol::component::Component;
 use pumpkin_data::item_stack::ItemStack;
 use pumpkin_data::meta_data_type::MetaDataType as T;
 
@@ -187,7 +187,10 @@ pub fn read_entity_data(r: &mut Reader<'_>) -> Vec<(u8, DataValue)> {
             Ok(Some(value)) => values.push((index, value)),
             Ok(None) => {}
             Err(e) => {
-                melon_core::probe::count("entity.data", format!("index {index} serializer {ty}: {e}"));
+                melon_core::probe::count(
+                    "entity.data",
+                    format!("index {index} serializer {ty}: {e}"),
+                );
                 break;
             }
         }

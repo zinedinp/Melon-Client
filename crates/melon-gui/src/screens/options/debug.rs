@@ -4,7 +4,6 @@
 
 use crate::hud::debug::SharedEntries;
 use crate::hud::debug_entries::{Category, Entry, Profile, Status};
-use melon_core::math::argb;
 use crate::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::text::{StyledText, TextStyle};
 use crate::widgets::button::Button;
@@ -13,6 +12,7 @@ use crate::widgets::layout::{BUTTON_H, HeaderFooter};
 use crate::widgets::scroll_list::{ListClick, ScrollList};
 use crate::widgets::slider::Slider;
 use crate::widgets::{Rect, Ui, Widget};
+use melon_core::math::argb;
 
 /// `new HeaderAndFooterLayout(this, 61, 33)`.
 const LAYOUT: HeaderFooter = HeaderFooter::new(61.0, 33.0);

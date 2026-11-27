@@ -4,8 +4,8 @@ use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::look;
-use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, PI};
 
 /// The legs from the back pair forward.
 const LEGS: [(&str, &str, f32, f32, f32); 4] = [

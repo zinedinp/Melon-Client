@@ -13,13 +13,13 @@ use crate::overlay::menu_layout::{MenuLayout, SLOT_PITCH, Strip};
 use crate::overlay::menus::{self, Frame, MenuDraw, MenuScreen, MenuSprites};
 use crate::overlay::recipe_book::{self, Mode, RecipeBookPanel, RecipeBookSprites};
 use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
+use crate::screen::TextEvent;
+use crate::text::{self, StyledText};
+use melon_assets::assets::Assets;
 use melon_render::quad::DrawList;
 use melon_render::{Renderer, TextureId};
-use crate::screen::TextEvent;
 use melon_settings::input::InputBind;
-use crate::text::{self, StyledText};
 use melon_world::inventory::{self, ContainerKind, OpenContainer};
-use melon_assets::assets::Assets;
 
 const IMAGE_WIDTH: f32 = 176.0;
 

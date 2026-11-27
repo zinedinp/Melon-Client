@@ -6,8 +6,8 @@ use super::humanoid::{self, HumanoidParts, HumanoidRenderState, OVERLAY_SCALE};
 use super::living::{self, LivingRenderState, Placement, Swim};
 use super::magic_name::Magic;
 use super::model::{LayerDefinition, Model, ModelPose, PartId};
-use melon_core::math::angle::Rotation;
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::Rotation;
 
 /// `PlayerModelType`: the arms' width.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

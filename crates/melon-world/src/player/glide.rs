@@ -4,9 +4,9 @@ use super::mode::glide;
 use super::movement::{MoveState, Travel, priority};
 use super::{MoveMode, PlayerState};
 use crate::level::Level;
-use melon_core::math::angle;
 use crate::physics::Aabb;
 use glam::DVec3;
+use melon_core::math::angle;
 
 /// `LivingEntity.updateFallFlyingMovement`.
 pub(super) fn fall_flying_step(movement: DVec3, look: DVec3, lean: f32, gravity: f64) -> DVec3 {

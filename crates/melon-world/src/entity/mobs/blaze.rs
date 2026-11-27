@@ -4,8 +4,8 @@ use super::{LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::look;
-use melon_core::math::angle;
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle;
 
 const RODS: usize = 12;
 
@@ -38,7 +38,8 @@ pub fn layer() -> LayerDefinition {
                 -2.0 + angle::cos(i as f32 * 2.0 * 0.25),
             ),
             1 => (
-                melon_core::math::angle::QUARTER_PI + (i - 4) as f32 * melon_core::math::angle::HALF_PI,
+                melon_core::math::angle::QUARTER_PI
+                    + (i - 4) as f32 * melon_core::math::angle::HALF_PI,
                 7.0,
                 2.0 + angle::cos(i as f32 * 2.0 * 0.25),
             ),

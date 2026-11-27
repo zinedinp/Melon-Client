@@ -1,14 +1,14 @@
 //! Keys in a world: movement, hotbar, F3 combos, the game mode switcher.
 
 use super::WorldContext;
-use melon_core::cycle::Cycle;
 use crate::game::minecraft_yaw;
 use crate::game::{GAMEMASTER_LEVEL, InWorld};
+use melon_core::cycle::Cycle;
+use melon_core::math::wrap_degrees;
 use melon_gui::hud::item_slot;
 use melon_gui::overlay::OverlayAction;
 use melon_gui::screen::{ScreenAction, TextEvent};
 use melon_gui::text::StyledText;
-use melon_core::math::wrap_degrees;
 use melon_settings::input::{Action, InputBind};
 use melon_world::game_mode::GameMode;
 use melon_world::inventory::HOTBAR_SLOTS;

@@ -2,8 +2,8 @@
 
 use super::{Layout, fill};
 use crate::hud::{ICON, PlayerStatus};
-use melon_render::quad::DrawList;
 use crate::sprite::GuiSprite;
+use melon_render::quad::DrawList;
 
 pub struct Sprites {
     sprites: [GuiSprite; 3],

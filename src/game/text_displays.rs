@@ -5,11 +5,11 @@ use std::collections::HashMap;
 use glam::{IVec3, Mat4, Vec3};
 
 use super::InWorld;
-use melon_gui::hud::item_slot::ItemPainter;
-use melon_gui::text::{self, StyledText};
 use melon_assets::i18n::Lang;
 use melon_core::math::ChunkHash;
 use melon_core::math::argb;
+use melon_gui::hud::item_slot::ItemPainter;
+use melon_gui::text::{self, StyledText};
 use melon_render::quad::{DrawList, Vertex};
 use melon_render::{
     Blending, EntityDraw, Glint, MeshId, RenderLayer, Renderer, TextureId, WorldVertex,
@@ -339,19 +339,23 @@ impl InWorld {
                 } else {
                     "submitted"
                 };
-                melon_core::probe::note("text_display", format!("#{} {outcome}", entity.id), || {
-                    let feet = entity.pos(partial).as_vec3();
-                    let transform = entity
-                        .display
-                        .as_deref()
-                        .map(|s| s.transform(entity.age_in_ticks(0.0) as i32, partial));
-                    format!(
-                        "pos={feet:?} dist={:.1} translation={:?} scale={:?}",
-                        (feet - camera).length(),
-                        transform.as_ref().map(|t| t.translation),
-                        transform.as_ref().map(|t| t.scale),
-                    )
-                });
+                melon_core::probe::note(
+                    "text_display",
+                    format!("#{} {outcome}", entity.id),
+                    || {
+                        let feet = entity.pos(partial).as_vec3();
+                        let transform = entity
+                            .display
+                            .as_deref()
+                            .map(|s| s.transform(entity.age_in_ticks(0.0) as i32, partial));
+                        format!(
+                            "pos={feet:?} dist={:.1} translation={:?} scale={:?}",
+                            (feet - camera).length(),
+                            transform.as_ref().map(|t| t.translation),
+                            transform.as_ref().map(|t| t.scale),
+                        )
+                    },
+                );
             }
         }
         // Vanilla's order: the fully opaque text with the solid geometry, then

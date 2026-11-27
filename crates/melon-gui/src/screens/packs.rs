@@ -8,8 +8,6 @@ use std::sync::{Mutex, OnceLock};
 
 use image::RgbaImage;
 
-use melon_assets::i18n::Lang;
-use melon_render::TextureId;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::text::font::LINE_HEIGHT;
 use crate::text::{StyledText, colors};
@@ -23,6 +21,8 @@ use crate::widgets::set::{KeyResult, WidgetSet};
 use crate::widgets::{Rect, Ui};
 use melon_assets::assets::packs::server::PromptRequest;
 use melon_assets::assets::packs::{Compatibility, repository};
+use melon_assets::i18n::Lang;
+use melon_render::TextureId;
 
 /// `LIST_WIDTH`.
 const LIST_W: f32 = 200.0;
@@ -763,7 +763,9 @@ fn description_lines(
     let lang = ui.lang;
     let text = match description {
         serde_json::Value::String(s) => StyledText::formatted(s),
-        other => StyledText::from_component(&melon_protocol::component::decode::component(other), lang),
+        other => {
+            StyledText::from_component(&melon_protocol::component::decode::component(other), lang)
+        }
     };
     let text = text.with_default_color(DESCRIPTION_COLOR);
     let mut lines = ui.wrap_styled(&text, DESCRIPTION_W);

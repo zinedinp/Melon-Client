@@ -5,10 +5,10 @@ use std::time::Instant;
 
 use serde_json::Value;
 
+use melon_assets::assets::{Assets, decode_png, packs, split_id};
 use melon_render::quad::DrawList;
 use melon_render::{Renderer, TextureId};
 use melon_world::texture_animation;
-use melon_assets::assets::{Assets, decode_png, packs, split_id};
 
 /// `GuiSpriteScaling`: how a sprite covers a rectangle of another size.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

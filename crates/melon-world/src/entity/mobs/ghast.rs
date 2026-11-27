@@ -4,8 +4,8 @@ use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::java_random::JavaRandom;
-use melon_core::math::angle;
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle;
 
 /// `MeshTransformer.scaling(4.5)`.
 pub const SCALE: f32 = 4.5;

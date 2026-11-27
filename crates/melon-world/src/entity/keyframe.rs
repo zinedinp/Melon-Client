@@ -757,7 +757,11 @@ mod tests {
         assert_eq!(pos_vec(1.0, 2.0, 3.0), Vec3::new(1.0, -2.0, 3.0));
         assert!(
             (degree_vec(180.0, 0.0, 90.0)
-                - Vec3::new(melon_core::math::angle::PI, 0.0, melon_core::math::angle::HALF_PI))
+                - Vec3::new(
+                    melon_core::math::angle::PI,
+                    0.0,
+                    melon_core::math::angle::HALF_PI
+                ))
             .length()
                 < 1e-6
         );

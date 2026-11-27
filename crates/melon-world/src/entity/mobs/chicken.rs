@@ -4,8 +4,8 @@ use super::{ClientEntity, LayerSpec, ModelId as M, variant_body};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::look;
-use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, PI};
 use pumpkin_data::chicken_variant::ChickenVariant;
 
 /// `AdultChickenModel.createBaseChickenModel`.

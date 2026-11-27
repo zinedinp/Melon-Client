@@ -13,9 +13,9 @@ use serde::{Deserialize, Serialize};
 use melon::game::camera;
 use melon::game::level_meshes::LevelMeshes;
 use melon_core::math::euler::{Look, Orientation};
-use melon_net::{self, Identity, WorldEvent};
-use melon_render::world_projection;
 use melon_net::singleplayer::{self, server};
+use melon_net::{Identity, WorldEvent};
+use melon_render::world_projection;
 use melon_world::block_models::BlockModels;
 use melon_world::block_tint::TintSettings;
 use melon_world::chunk::{Chunk, ChunkLight, ChunkScan, LightSection, Section};
@@ -175,7 +175,7 @@ fn main() -> anyhow::Result<()> {
         "parse.packet_bytes",
         packets.iter().map(|p| p.len() as u64).sum(),
     );
-    let decoded = network::play::level::chunk::decode(
+    let decoded = melon_net::play::level::chunk::decode(
         &packets[0],
         melon_world::dimension::Height::OVERWORLD,
     )?;
@@ -191,7 +191,7 @@ fn main() -> anyhow::Result<()> {
     for _ in 0..3 {
         for packet in &packets {
             let t = Instant::now();
-            std::hint::black_box(network::play::level::chunk::decode(
+            std::hint::black_box(melon_net::play::level::chunk::decode(
                 packet,
                 melon_world::dimension::Height::OVERWORLD,
             )?);
@@ -337,7 +337,7 @@ fn frozen_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec<
         let chunks = packets
             .iter()
             .map(|p| {
-                network::play::level::chunk::decode(p, melon_world::dimension::Height::OVERWORLD)
+                melon_net::play::level::chunk::decode(p, melon_world::dimension::Height::OVERWORLD)
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
         return Ok((spawn, chunks));
@@ -360,7 +360,9 @@ fn frozen_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec<
     let (_, packets) = read_frozen(&bytes).expect("just written");
     let chunks = packets
         .iter()
-        .map(|p| network::play::level::chunk::decode(p, melon_world::dimension::Height::OVERWORLD))
+        .map(|p| {
+            melon_net::play::level::chunk::decode(p, melon_world::dimension::Height::OVERWORLD)
+        })
         .collect::<anyhow::Result<Vec<_>>>()?;
     Ok((spawn, chunks))
 }
@@ -426,7 +428,7 @@ fn receive_chunks(report: &mut Report, fresh: bool) -> anyhow::Result<(Vec3, Vec
             online: false,
         },
     })?;
-    let mut session = network::join_stream(
+    let mut session = melon_net::join_stream(
         pipe,
         &Identity::Offline {
             username: "Bench".into(),

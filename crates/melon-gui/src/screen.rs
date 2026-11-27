@@ -3,12 +3,12 @@
 use std::path::Path;
 
 use crate::assets::GuiAssets;
-use melon_audio::AudioEngine;
+use crate::widgets::Ui;
 use melon_assets::i18n::Lang;
 use melon_assets::i18n::languages::Language;
+use melon_audio::AudioEngine;
 use melon_render::TextureId;
 use melon_settings::options::Config;
-use crate::widgets::Ui;
 
 /// A change to the options, applied and saved at once, as vanilla's options screens do.
 pub type ConfigChange = Box<dyn FnOnce(&mut Config)>;
@@ -249,10 +249,7 @@ pub trait Screen {
     }
     /// The item stacks this screen draws, so their icons are made before the
     /// frame (in a world; see [`crate::widgets::Ui::items`]).
-    fn visit_stacks(
-        &self,
-        _visit: &mut dyn FnMut(&dyn melon_world::item_model::StackKey) -> bool,
-    ) {
+    fn visit_stacks(&self, _visit: &mut dyn FnMut(&dyn melon_world::item_model::StackKey) -> bool) {
     }
     /// A physical key or mouse button while [`Self::capturing_bind`].
     fn on_bind(

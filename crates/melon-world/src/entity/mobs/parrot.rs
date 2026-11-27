@@ -3,8 +3,8 @@
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{self, HALF_PI, PI, SIXTH_PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, HALF_PI, PI, SIXTH_PI};
 
 /// `ParrotModel.Pose`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

@@ -16,7 +16,6 @@ use winit::window::{Window, WindowId};
 use melon::game::camera;
 use melon::game::level_meshes::LevelMeshes;
 use melon_core::math::euler::{Look, Orientation};
-use melon_net;
 use melon_render::quad::DrawList;
 use melon_render::{
     EntityDraw, Frame, RenderLayer, Renderer, SceneFrame, WorldDraw, world_projection,
@@ -64,7 +63,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
     let (spawn, packets) = read_frozen(&bytes).context("chunks.bin unreadable")?;
     let mut level = Level::default();
     for packet in &packets {
-        level.insert(network::play::level::chunk::decode(
+        level.insert(melon_net::play::level::chunk::decode(
             packet,
             melon_world::dimension::Height::OVERWORLD,
         )?);

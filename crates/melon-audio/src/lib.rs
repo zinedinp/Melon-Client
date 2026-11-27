@@ -12,8 +12,8 @@ pub mod source;
 pub mod spatial;
 pub mod stats;
 
-use melon_assets::assets::Assets;
 use library::{Sound, SoundEvents};
+use melon_assets::assets::Assets;
 use pcm::PcmBuffer;
 use rodio::mixer::Mixer;
 use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Sample, Source};
@@ -671,8 +671,11 @@ mod tests {
     /// Decode-only: the `.ogg` yields stereo samples without an OS audio device.
     #[test]
     fn click_sound_decodes() {
-        let bytes = melon_assets::assets::sound(&melon_assets::assets::default_root(), "random/click_stereo")
-            .expect("assets/minecraft/sounds/random/click_stereo.ogg unreadable");
+        let bytes = melon_assets::assets::sound(
+            &melon_assets::assets::default_root(),
+            "random/click_stereo",
+        )
+        .expect("assets/minecraft/sounds/random/click_stereo.ogg unreadable");
         let mut decoder = Decoder::new(std::io::Cursor::new(bytes))
             .expect("Decoder::new sollte click_stereo.ogg dekodieren");
         assert_eq!(

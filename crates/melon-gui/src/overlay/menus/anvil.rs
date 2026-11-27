@@ -4,13 +4,13 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::{Frame, Loader, MenuDraw, MenuScreen};
 use crate::hud::item_slot;
-use melon_core::math::argb;
 use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::{OverlayAction, OverlayContext};
 use crate::screen::TextEvent;
-use melon_settings::input::InputBind;
 use crate::sprite::GuiSprite;
 use crate::widgets::text_input::{Edit, TextInput};
+use melon_core::math::argb;
+use melon_settings::input::InputBind;
 use melon_world::inventory::{empty, stacks_equal};
 
 /// `EditBox.setMaxLength(50)`.
@@ -60,7 +60,11 @@ impl Default for AnvilScreen {
 
 impl AnvilScreen {
     /// The field follows the first slot: its item's name, or nothing.
-    fn follow_slot(&mut self, stack: &ItemStack, lang: &melon_assets::i18n::Lang) -> Option<String> {
+    fn follow_slot(
+        &mut self,
+        stack: &ItemStack,
+        lang: &melon_assets::i18n::Lang,
+    ) -> Option<String> {
         if stacks_equal(&self.item, stack) {
             return None;
         }

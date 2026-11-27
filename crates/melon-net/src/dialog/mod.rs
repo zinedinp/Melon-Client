@@ -19,10 +19,10 @@ mod parse;
 
 use std::sync::Arc;
 
-use melon_protocol::component::Component;
 pub use action::{Action, DialogClick, InputValue, Template};
 pub use body::{DialogBody, ItemBody, PlainMessage};
 pub use input::{Input, InputControl};
+use melon_protocol::component::Component;
 
 /// `CommonButtonData.DEFAULT_WIDTH`.
 pub const DEFAULT_BUTTON_WIDTH: u32 = 150;

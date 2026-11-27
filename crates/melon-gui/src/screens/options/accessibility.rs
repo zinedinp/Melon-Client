@@ -3,15 +3,15 @@
 //! the same entries here; View Bobbing and the high contrast block outline
 //! are only here, as in vanilla.
 
-use melon_assets::i18n::Lang;
 use crate::screen::{ConfigChange, ScreenAction, ScreenContext};
 use crate::screens::options::chat::ChatOption;
 use crate::screens::options::controls::controls_screen;
 use crate::screens::options::on_off_label;
 use crate::screens::options::sounds::SoundOption;
 use crate::screens::options::video::VideoOption;
-use melon_settings::options::Config;
 use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
+use melon_assets::i18n::Lang;
+use melon_settings::options::Config;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AccessibilityOption {

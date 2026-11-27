@@ -5,8 +5,8 @@ use glam::DVec3;
 
 use crate::fluid::FluidKind;
 use crate::level::Level;
-use melon_core::math::angle::DEG_TO_RAD;
 use crate::physics::{self, Aabb};
+use melon_core::math::angle::DEG_TO_RAD;
 
 /// `Attributes.GRAVITY`'s default.
 const GRAVITY: f64 = 0.08;

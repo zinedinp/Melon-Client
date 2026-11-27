@@ -94,9 +94,9 @@ mod tests {
 
     #[test]
     fn every_event_exists_in_sounds_json() {
-        let Ok(json) =
-            std::fs::read_to_string(melon_assets::assets::default_root().join("minecraft/sounds.json"))
-        else {
+        let Ok(json) = std::fs::read_to_string(
+            melon_assets::assets::default_root().join("minecraft/sounds.json"),
+        ) else {
             return;
         };
         let events: serde_json::Value = serde_json::from_str(&json).unwrap();

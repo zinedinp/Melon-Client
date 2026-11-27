@@ -19,8 +19,8 @@ use crate::culling::visgraph::VisibilitySet;
 use crate::dimension::{DimensionType, Height};
 use crate::fluid::FluidSprites;
 use crate::head_profile::{HeadProfile, is_player_head};
-use melon_core::math::{ChunkMap, SectionSet, section_coord, section_relative};
 use crate::terrain::SectionMesh;
+use melon_core::math::{ChunkMap, SectionSet, section_coord, section_relative};
 use mesh_queue::MeshQueue;
 
 struct LoadedChunk {

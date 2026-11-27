@@ -14,23 +14,23 @@ pub mod spectator_menu;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::item_slot::ItemPainter;
-use melon_assets::i18n::Lang;
-use melon_net::play::chat::Suggestions;
-use melon_net::play::chat::commands::CommandTree;
-use melon_render::quad::DrawList;
 use crate::screen::TextEvent;
-use melon_settings::input::InputBind;
-use melon_settings::options::{ChatSettings, Config};
 use crate::text::font::Font;
-use melon_world::game_mode::GameMode;
-use melon_world::hotbars::Hotbars;
-use melon_world::inventory::{Inventory, OpenContainer};
 use chat::Chat;
 use container::ContainerTextures;
 use container_input::{MouseButtonKind, SlotClick};
 use creative::CreativeTextures;
 use game_mode_switcher::SwitcherTextures;
 use inventory::InventoryTextures;
+use melon_assets::i18n::Lang;
+use melon_net::play::chat::Suggestions;
+use melon_net::play::chat::commands::CommandTree;
+use melon_render::quad::DrawList;
+use melon_settings::input::InputBind;
+use melon_settings::options::{ChatSettings, Config};
+use melon_world::game_mode::GameMode;
+use melon_world::hotbars::Hotbars;
+use melon_world::inventory::{Inventory, OpenContainer};
 
 /// Which overlay it is, for what the world treats differently.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

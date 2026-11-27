@@ -20,8 +20,8 @@ mod events;
 mod gizmos;
 mod hand_render;
 mod heads;
-pub use melon_gui::screens::ingame::loading::LoadingReason;
 pub use heads::sync_head_objects;
+pub use melon_gui::screens::ingame::loading::LoadingReason;
 mod crystal_beams;
 mod entity_sprites;
 mod fishing;
@@ -61,6 +61,9 @@ use std::path::Path;
 
 use glam::DVec3;
 
+use camera::CameraMode;
+use keys::Keys;
+use level_meshes::{BlockEntityMeshes, LevelMeshes};
 use melon_gui::hud::debug::{DebugOverlay, RenderStats};
 use melon_gui::hud::{Hud, PlayerStatus};
 use melon_gui::overlay::chat::Chat;
@@ -76,9 +79,6 @@ use melon_world::hotbars::Hotbars;
 use melon_world::inventory::Inventory;
 use melon_world::level::Level;
 use melon_world::player::PlayerState;
-use camera::CameraMode;
-use keys::Keys;
-use level_meshes::{BlockEntityMeshes, LevelMeshes};
 use world_resources::WorldResources;
 
 /// `Permissions.COMMANDS_GAMEMASTER`: what switching game modes needs.
@@ -281,10 +281,7 @@ pub struct Received {
     /// The level the loading screen waited for is ready.
     pub loaded: bool,
     /// The server ended a reconfiguration with a new world.
-    pub rejoined: Option<(
-        Box<melon_net::JoinInfo>,
-        Vec<melon_net::WorldEvent>,
-    )>,
+    pub rejoined: Option<(Box<melon_net::JoinInfo>, Vec<melon_net::WorldEvent>)>,
 }
 
 /// What vanilla's `Camera` and `Hud` carry from one world into the next,
@@ -593,11 +590,7 @@ impl InWorld {
     }
 
     /// Colour maps, the biome registry and biome blend, for terrain tints.
-    pub fn set_tints(
-        &mut self,
-        maps: std::sync::Arc<melon_world::colormap::ColorMaps>,
-        blend: u8,
-    ) {
+    pub fn set_tints(&mut self, maps: std::sync::Arc<melon_world::colormap::ColorMaps>, blend: u8) {
         self.level.set_tints(TintSettings::new(
             &self.level_info.biomes,
             &maps,

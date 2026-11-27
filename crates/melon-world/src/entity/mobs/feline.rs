@@ -3,8 +3,8 @@
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M, dye_tint};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, PI};
 
 /// `Mth.rotLerp` on angles in radians.
 fn mix(t: f32, from: f32, to: f32) -> f32 {

@@ -4,8 +4,8 @@ use super::{LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::look;
-use melon_core::math::angle::{self, HALF_PI, PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, HALF_PI, PI};
 
 /// `RavagerRenderer`'s texture.
 pub const TEXTURE: &str = "minecraft:entity/illager/ravager";

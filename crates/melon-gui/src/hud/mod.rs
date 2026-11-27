@@ -15,17 +15,17 @@ pub mod subtitles;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::item_slot::ItemPainter;
+use crate::sprite::GuiSprite;
+use crate::text::{self, StyledText, TextPaint, colors};
+use melon_assets::assets::Assets;
 use melon_core::math::argb;
 use melon_render::Renderer;
 use melon_render::quad::{BlendMode, DrawList};
 use melon_settings::options::AttackIndicator;
-use crate::sprite::GuiSprite;
-use crate::text::{self, StyledText, TextPaint, colors};
 use melon_world::entity::player::Arm;
 use melon_world::game_mode::GameMode;
 use melon_world::inventory::{Inventory, OFFHAND_SLOT};
 pub use melon_world::java_random::JavaRandom;
-use melon_assets::assets::Assets;
 
 /// `Hud.setOverlayMessage`: 3 seconds.
 const OVERLAY_TICKS: u32 = 60;

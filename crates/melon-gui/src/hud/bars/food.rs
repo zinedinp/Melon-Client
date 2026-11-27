@@ -2,8 +2,8 @@
 
 use super::{Layout, fill};
 use crate::hud::{ICON, JavaRandom, PlayerStatus};
-use melon_render::quad::DrawList;
 use crate::sprite::GuiSprite;
+use melon_render::quad::DrawList;
 
 /// Empty, half and full, plain and with hunger.
 pub struct Sprites {

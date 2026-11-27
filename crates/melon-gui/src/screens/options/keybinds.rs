@@ -1,13 +1,13 @@
 //! Vanilla `KeyBindsScreen` / `KeyBindsList`.
 
 use crate::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext};
-use melon_settings::input::{self, Action, InputBind};
-use melon_settings::options::Config;
 use crate::text::{StyledText, TextStyle, colors};
 use crate::widgets::button::Button;
 use crate::widgets::layout::{BUTTON_H, HeaderFooter, SPACING, WIDE_BUTTON_W};
 use crate::widgets::scroll_list::{ListClick, ScrollList};
 use crate::widgets::{Rect, Ui, Widget};
+use melon_settings::input::{self, Action, InputBind};
+use melon_settings::options::Config;
 
 /// `KeyBindsList.ITEM_HEIGHT`.
 const ROW_H: f32 = 20.0;

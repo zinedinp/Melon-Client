@@ -6,8 +6,8 @@ use pumpkin_data::{Block, BlockStateId};
 use super::InWorld;
 use super::environment::FrameEnvironment;
 use super::world_resources::WorldResources;
-use melon_gui::effects::{AtlasSprite, ScreenEffects, Underwater, Vignette};
 use melon_core::math::angle;
+use melon_gui::effects::{AtlasSprite, ScreenEffects, Underwater, Vignette};
 use melon_world::fog::FogType;
 use melon_world::level::Level;
 use melon_world::physics::Aabb;
@@ -146,7 +146,11 @@ impl InWorld {
         }
         let skew = 5.0 / (intensity * intensity + 5.0) - intensity * 0.04;
         let skew = skew * skew;
-        let axis = Vec3::new(0.0, melon_core::math::SQRT_2 / 2.0, melon_core::math::SQRT_2 / 2.0);
+        let axis = Vec3::new(
+            0.0,
+            melon_core::math::SQRT_2 / 2.0,
+            melon_core::math::SQRT_2 / 2.0,
+        );
         let angle = (state.spin_time + partial * state.spin_speed).to_radians();
         Mat4::from_quat(angle::axis_angle(axis, angle))
             * Mat4::from_scale(Vec3::new(1.0 / skew, 1.0, 1.0))

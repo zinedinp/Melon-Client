@@ -106,7 +106,8 @@ pub fn build(
                 prev_pitch,
                 ..
             } => {
-                let sway = ((p.age as f32 + partial - melon_core::math::angle::TAU) * 0.05).sin() * 2.0;
+                let sway =
+                    ((p.age as f32 + partial - melon_core::math::angle::TAU) * 0.05).sin() * 2.0;
                 let rot = prev_rot + (rot - prev_rot) * partial;
                 let pitch =
                     prev_pitch + (pitch - prev_pitch) * partial + melon_core::math::angle::HALF_PI;

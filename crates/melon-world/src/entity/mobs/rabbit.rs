@@ -75,7 +75,10 @@ pub fn adult() -> LayerDefinition {
     let body = root.add_or_replace_child(
         "body",
         vec![Cube::new((0.0, 0.0), (-4.0, -6.0, -9.0), (8.0, 6.0, 10.0))],
-        Pose::offset_rotation((0.0, 23.0, 4.0), (-melon_core::math::angle::EIGHTH_PI, 0.0, 0.0)),
+        Pose::offset_rotation(
+            (0.0, 23.0, 4.0),
+            (-melon_core::math::angle::EIGHTH_PI, 0.0, 0.0),
+        ),
     );
     body.add_or_replace_child(
         "tail",
@@ -136,14 +139,20 @@ pub fn adult() -> LayerDefinition {
     right.add_or_replace_child(
         "right_haunch",
         vec![Cube::new((20.0, 24.0), (-1.0, 0.0, -5.0), (2.0, 1.0, 6.0))],
-        Pose::offset_rotation((0.0, -0.5, 0.0), (0.0, melon_core::math::angle::EIGHTH_PI, 0.0)),
+        Pose::offset_rotation(
+            (0.0, -0.5, 0.0),
+            (0.0, melon_core::math::angle::EIGHTH_PI, 0.0),
+        ),
     );
     let left =
         back_legs.add_or_replace_child("left_hind_leg", Vec::new(), Pose::offset(3.0, 0.5, 0.0));
     left.add_or_replace_child(
         "left_haunch",
         vec![Cube::new((36.0, 24.0), (-1.0, 0.0, -5.0), (2.0, 1.0, 6.0))],
-        Pose::offset_rotation((0.0, -0.5, 0.0), (0.0, -melon_core::math::angle::EIGHTH_PI, 0.0)),
+        Pose::offset_rotation(
+            (0.0, -0.5, 0.0),
+            (0.0, -melon_core::math::angle::EIGHTH_PI, 0.0),
+        ),
     );
     LayerDefinition::new(root, 64.0, 64.0)
 }
@@ -154,7 +163,10 @@ pub fn baby() -> LayerDefinition {
     body.add_or_replace_child(
         "body_r1",
         vec![Cube::new((0.0, 8.0), (-2.0, -2.0, -3.0), (4.0, 3.0, 6.0))],
-        Pose::offset_rotation((0.0, -2.0, -1.6), (-melon_core::math::angle::SIXTH_PI, 0.0, 0.0)),
+        Pose::offset_rotation(
+            (0.0, -2.0, -1.6),
+            (-melon_core::math::angle::SIXTH_PI, 0.0, 0.0),
+        ),
     );
     let tail = body.add_or_replace_child("tail", Vec::new(), Pose::offset(0.0, -2.2, 2.0));
     tail.add_or_replace_child(
@@ -164,7 +176,10 @@ pub fn baby() -> LayerDefinition {
             (-1.4, -2.0268, -1.0177),
             (3.0, 3.0, 3.0),
         )],
-        Pose::offset_rotation((-0.1, 0.0, 0.0), (-melon_core::math::angle::SIXTH_PI, 0.0, 0.0)),
+        Pose::offset_rotation(
+            (-0.1, 0.0, 0.0),
+            (-melon_core::math::angle::SIXTH_PI, 0.0, 0.0),
+        ),
     );
     let head = body.add_or_replace_child(
         "head",
@@ -190,12 +205,18 @@ pub fn baby() -> LayerDefinition {
         let leg = front_legs.add_or_replace_child(
             name,
             Vec::new(),
-            Pose::offset_rotation((x, 1.0, -0.5), (melon_core::math::angle::EIGHTH_PI, 0.0, 0.0)),
+            Pose::offset_rotation(
+                (x, 1.0, -0.5),
+                (melon_core::math::angle::EIGHTH_PI, 0.0, 0.0),
+            ),
         );
         leg.add_or_replace_child(
             inner,
             vec![Cube::new((u, 8.0), (-0.5, -1.5, -0.5), (1.0, 3.0, 1.0))],
-            Pose::offset_rotation((0.0, 1.0, 0.0), (-melon_core::math::angle::EIGHTH_PI, 0.0, 0.0)),
+            Pose::offset_rotation(
+                (0.0, 1.0, 0.0),
+                (-melon_core::math::angle::EIGHTH_PI, 0.0, 0.0),
+            ),
         );
     }
     let back_legs = root.add_or_replace_child("backlegs", Vec::new(), Pose::offset(0.0, 23.0, 2.0));
@@ -207,7 +228,10 @@ pub fn baby() -> LayerDefinition {
     left.add_or_replace_child(
         "left_haunch",
         vec![Cube::new((10.0, 17.0), (-2.0, -0.5, 0.0), (2.0, 1.0, 3.0))],
-        Pose::offset_rotation((1.0, 0.0, 0.5), (0.0, -melon_core::math::angle::QUARTER_PI, 0.0)),
+        Pose::offset_rotation(
+            (1.0, 0.0, 0.5),
+            (0.0, -melon_core::math::angle::QUARTER_PI, 0.0),
+        ),
     );
     let right = back_legs.add_or_replace_child(
         "right_hind_leg",
@@ -217,7 +241,10 @@ pub fn baby() -> LayerDefinition {
     right.add_or_replace_child(
         "right_haunch",
         vec![Cube::new((0.0, 17.0), (-2.0, -0.5, 0.0), (2.0, 1.0, 3.0))],
-        Pose::offset_rotation((0.5, 0.0, -0.9), (0.0, melon_core::math::angle::QUARTER_PI, 0.0)),
+        Pose::offset_rotation(
+            (0.5, 0.0, -0.9),
+            (0.0, melon_core::math::angle::QUARTER_PI, 0.0),
+        ),
     );
     LayerDefinition::new(root, 32.0, 32.0)
 }

@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 
-use melon_protocol::component::Component;
 use glam::{DVec3, Vec3};
+use melon_protocol::component::Component;
 use pumpkin_data::entity::EntityType;
 use pumpkin_data::item_stack::ItemStack;
 
@@ -27,9 +27,9 @@ use crate::entity::wire::{
 };
 use crate::item_model::KeyedStack;
 use crate::level::Level;
-use melon_core::math::wrap_degrees;
 use crate::physics::{self, Aabb};
 use crate::player::hands::{Hand, SwingState};
+use melon_core::math::wrap_degrees;
 
 mod drive;
 mod entities;

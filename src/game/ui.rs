@@ -3,9 +3,9 @@
 use super::camera::CameraMode;
 use super::world_resources::WorldResources;
 use super::{DebugFrame, InWorld};
+use melon_assets::i18n::Lang;
 use melon_gui::hud::item_slot::ItemPainter;
 use melon_gui::overlay::{OverlayDraw, OverlayKind, OverlayTextures};
-use melon_assets::i18n::Lang;
 use melon_render::Renderer;
 use melon_render::quad::DrawList;
 use melon_settings::options::Config;
@@ -172,8 +172,7 @@ impl InWorld {
         visit: &mut dyn FnMut(&dyn melon_world::item_model::StackKey) -> bool,
     ) {
         let inventory = &self.inventory;
-        let mut go =
-            |stack: &melon_world::item_model::KeyedStack| stack.is_empty() || visit(stack);
+        let mut go = |stack: &melon_world::item_model::KeyedStack| stack.is_empty() || visit(stack);
         let fixed = (0..9)
             .map(|i| inventory.hotbar(i))
             .chain([&inventory.slots()[melon_world::inventory::OFFHAND_SLOT]])

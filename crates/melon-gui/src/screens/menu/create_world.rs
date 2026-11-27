@@ -1,18 +1,11 @@
 //! Vanilla `CreateWorldScreen`.
 
-use melon_assets::i18n::Lang;
-use melon_net::join::Target;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::menu::connecting::ConnectingScreen;
 use crate::screens::menu::experiments::ExperimentsScreen;
 use crate::screens::menu::game_rules::GameRulesScreen;
 use crate::screens::options::{on_off_label, value_label};
 use crate::screens::packs::PackSelectionScreen;
-use melon_net::singleplayer::creation::{CreationState, GAME_MODES};
-use melon_net::singleplayer::rules::{self, Changes};
-use melon_net::singleplayer::{
-    self, Difficulty, WorldCreationMode, WorldEntry, WorldSettings, WorldType, data_packs,
-};
 use crate::text::font::LINE_HEIGHT;
 use crate::widgets::Ui;
 use crate::widgets::button::Button;
@@ -20,6 +13,13 @@ use crate::widgets::edit_box::EditBox;
 use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
 use crate::widgets::set::{KeyResult, WidgetSet};
 use crate::widgets::tab_bar::{self, TabBar};
+use melon_assets::i18n::Lang;
+use melon_net::join::Target;
+use melon_net::singleplayer::creation::{CreationState, GAME_MODES};
+use melon_net::singleplayer::rules::{self, Changes};
+use melon_net::singleplayer::{
+    self, Difficulty, WorldCreationMode, WorldEntry, WorldSettings, WorldType, data_packs,
+};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;

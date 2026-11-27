@@ -5,9 +5,9 @@ use std::sync::Arc;
 use glam::DVec3;
 
 use crate::block_models::BlockModels;
-use melon_core::cycle::Cycle;
 use crate::java_random::JavaRandom;
 use crate::level::Level;
+use melon_core::cycle::Cycle;
 
 pub mod animation;
 pub mod base;

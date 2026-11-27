@@ -4,8 +4,8 @@ use glam::DVec3;
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, PI};
 
 /// `EntityEvent` 19: the tentacles start a new stroke.
 pub const EVENT_STROKE: u8 = 19;

@@ -9,8 +9,8 @@ use crate::game::InWorld;
 use crate::game::camera::{Camera, CameraMode};
 use crate::game::gizmos::{DEFAULT_WIDTH, GizmoMesh, Gizmos, TextView};
 use crate::game::scene::OverlayInput;
-use melon_gui::hud::debug_entries::Category;
 use melon_core::math::argb;
+use melon_gui::hud::debug_entries::Category;
 use melon_render::{EntityDraw, Renderer};
 use melon_world::physics::Aabb;
 

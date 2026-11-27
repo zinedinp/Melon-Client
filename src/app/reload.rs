@@ -7,10 +7,10 @@ use super::{RunningState, load_panorama};
 use melon_assets::assets::Assets;
 use melon_assets::assets::packs::server::{self, Action};
 use melon_assets::assets::packs::{self, repository};
+use melon_assets::i18n::Lang;
 use melon_gui::assets::GuiAssets;
 use melon_gui::screens::menu::connecting::disconnected_screen;
 use melon_gui::screens::packs::PackConfirmScreen;
-use melon_assets::i18n::Lang;
 use melon_render::Renderer;
 use melon_settings::options::Config;
 

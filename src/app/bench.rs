@@ -2,19 +2,19 @@
 
 use std::path::{Path, PathBuf};
 
-use melon_audio::stats::AudioStats;
 use crate::game::InWorld;
 use crate::game::bench::nvml::GpuMonitor;
 use crate::game::bench::report::{self, FrameSample, Recorder, Setup};
 use crate::game::bench::{BenchOptions, Phase, Scene, WORLD_SEED};
 use crate::game::subsystems::Snapshot;
+use melon_audio::stats::AudioStats;
 use melon_gui::hud::debug::RenderStats;
 use melon_net::join::Target;
-use melon_render::Renderer;
-use melon_settings::options::{self, Config};
 use melon_net::singleplayer::{
     self, Difficulty, WorldCreationMode, WorldSettings, rules, rules::Value,
 };
+use melon_render::Renderer;
+use melon_settings::options::{self, Config};
 
 /// Where the runs' CSV and summaries go without `--out`, from the working
 /// directory.

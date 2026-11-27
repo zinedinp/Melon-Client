@@ -3,8 +3,8 @@
 use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, PI};
 
 const COLORS: [&str; 16] = [
     "minecraft:entity/shulker/shulker_white",

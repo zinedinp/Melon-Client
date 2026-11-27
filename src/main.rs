@@ -3,7 +3,6 @@
 use melon::app::{self, cli};
 use melon_assets::assets::Assets;
 use melon_assets::i18n::languages::Language;
-use melon_net;
 use melon_settings::options::Config;
 
 fn main() -> anyhow::Result<()> {
@@ -22,7 +21,7 @@ fn main() -> anyhow::Result<()> {
 
 fn run_game(command: cli::Command) -> anyhow::Result<()> {
     if let cli::Command::Packets(file) = &command {
-        return network::play::debug::replay(std::path::Path::new(file));
+        return melon_net::play::debug::replay(std::path::Path::new(file));
     }
     let mut assets = Assets::discover()?;
     let args: Vec<String> = std::env::args().collect();
@@ -50,9 +49,9 @@ fn run_game(command: cli::Command) -> anyhow::Result<()> {
 
 /// `--connect`: joins a server and logs what it sent, no GUI.
 fn connect(address: &str, assets: &Assets) -> anyhow::Result<()> {
-    let identity = network::Identity::saved(assets.launcher_dir());
+    let identity = melon_net::Identity::saved(assets.launcher_dir());
     let config = Config::load(assets.game_dir());
-    let client = network::ClientInfo::from_config(&config);
+    let client = melon_net::ClientInfo::from_config(&config);
     use melon_assets::assets::packs::server as packs;
     packs::begin(
         assets.game_dir(),
@@ -65,7 +64,7 @@ fn connect(address: &str, assets: &Assets) -> anyhow::Result<()> {
     );
     let joining = {
         let address = address.to_owned();
-        std::thread::spawn(move || network::join_server(&address, &identity, &client))
+        std::thread::spawn(move || melon_net::join_server(&address, &identity, &client))
     };
     let answer_packs = || {
         while let Some(action) = packs::poll() {
@@ -97,7 +96,7 @@ fn connect(address: &str, assets: &Assets) -> anyhow::Result<()> {
             std::process::exit(1);
         }
     };
-    let identity = network::Identity::saved(assets.launcher_dir());
+    let identity = melon_net::Identity::saved(assets.launcher_dir());
     println!(
         "Verbunden mit {address} als {}: {:#?}",
         identity.username(),
@@ -131,7 +130,7 @@ fn connect(address: &str, assets: &Assets) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn log_event(event: &network::WorldEvent, lang: &melon_assets::i18n::Lang) {
+fn log_event(event: &melon_net::WorldEvent, lang: &melon_assets::i18n::Lang) {
     use melon_net::play::game::GameEvent;
     let item = |slot: String, stack: &pumpkin_data::item_stack::ItemStack| {
         if stack.is_empty() {
@@ -163,17 +162,17 @@ fn log_event(event: &network::WorldEvent, lang: &melon_assets::i18n::Lang) {
         ))
     };
     match event {
-        network::WorldEvent::Game(GameEvent::Chat(ChatEvent::ActionBar(component))) => {
+        melon_net::WorldEvent::Game(GameEvent::Chat(ChatEvent::ActionBar(component))) => {
             println!("Actionbar: {}", text(component));
         }
-        network::WorldEvent::Game(GameEvent::Chat(ChatEvent::System {
+        melon_net::WorldEvent::Game(GameEvent::Chat(ChatEvent::System {
             content,
             overlay: true,
         })) => println!("Actionbar: {}", text(content)),
-        network::WorldEvent::Game(GameEvent::Scores(ScorePacket::TabList { header, footer })) => {
+        melon_net::WorldEvent::Game(GameEvent::Scores(ScorePacket::TabList { header, footer })) => {
             println!("Tab-Kopf: {}\nTab-Fuss: {}", text(header), text(footer));
         }
-        network::WorldEvent::Game(GameEvent::Scores(ScorePacket::Scoreboard(update))) => {
+        melon_net::WorldEvent::Game(GameEvent::Scores(ScorePacket::Scoreboard(update))) => {
             match update {
                 ScoreUpdate::SetObjective {
                     name, objective, ..
@@ -202,16 +201,16 @@ fn log_event(event: &network::WorldEvent, lang: &melon_assets::i18n::Lang) {
                 _ => {}
             }
         }
-        network::WorldEvent::Reconfiguring => println!("Server: zurueck in die Konfiguration"),
-        network::WorldEvent::Rejoined(info, events) => {
+        melon_net::WorldEvent::Reconfiguring => println!("Server: zurueck in die Konfiguration"),
+        melon_net::WorldEvent::Rejoined(info, events) => {
             println!("Neue Welt: {info:#?}");
             for event in events {
                 log_event(event, lang);
             }
         }
-        network::WorldEvent::Teleport(teleport) => println!("Spawn: {teleport:?}"),
-        network::WorldEvent::ChunkLoaded(chunk) => println!("Chunk ({}, {})", chunk.x, chunk.z),
-        network::WorldEvent::Game(GameEvent::ContainerContent {
+        melon_net::WorldEvent::Teleport(teleport) => println!("Spawn: {teleport:?}"),
+        melon_net::WorldEvent::ChunkLoaded(chunk) => println!("Chunk ({}, {})", chunk.x, chunk.z),
+        melon_net::WorldEvent::Game(GameEvent::ContainerContent {
             container, slots, ..
         }) => {
             println!("Inhalt von Container {container}:");
@@ -219,7 +218,7 @@ fn log_event(event: &network::WorldEvent, lang: &melon_assets::i18n::Lang) {
                 item(format!("Slot {i}"), stack);
             }
         }
-        network::WorldEvent::Game(GameEvent::ContainerSlot {
+        melon_net::WorldEvent::Game(GameEvent::ContainerSlot {
             container,
             slot,
             item: stack,

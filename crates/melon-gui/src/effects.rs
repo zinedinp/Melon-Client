@@ -1,10 +1,10 @@
 //! Screen effects.
 
+use melon_assets::assets::Assets;
 use melon_core::math::angle::{self, PI};
 use melon_core::math::argb;
 use melon_render::quad::{BlendMode, DrawList};
 use melon_render::{Renderer, TextureId};
-use melon_assets::assets::Assets;
 
 /// The field of view the hand and these overlays are drawn with.
 const HUD_FOV_DEGREES: f32 = 70.0;

@@ -12,7 +12,7 @@ pub mod singleplayer;
 pub mod status;
 
 pub use login::{ClientInfo, Identity, JoinInfo, connect_and_join, join_server, join_stream};
-pub use play::{Session, Teleport, WorldEvent};
 pub use melon_protocol::connection::Stream;
+pub use play::{Session, Teleport, WorldEvent};
 
 pub const PROTOCOL_VERSION: i32 = 777;

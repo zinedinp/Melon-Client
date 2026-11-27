@@ -5,8 +5,8 @@ use crate::entity::animations::warden as anim;
 use crate::entity::keyframe::{AnimationDefinition, AnimationState};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{self, HALF_PI, PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, HALF_PI, PI};
 
 /// Animation slots (`PoseInput::anim`).
 pub const EMERGE: usize = 0;

@@ -3,11 +3,11 @@
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
+use crate::input::{self, Action, InputBind, InputSettings};
+use melon_assets::i18n::languages::Language;
 use melon_audio::music::{MusicFrequency, MusicToast};
 use melon_audio::source::{SoundSource, Volumes};
 use melon_core::cycle::Cycle;
-use melon_assets::i18n::languages::Language;
-use crate::input::{self, Action, InputBind, InputSettings};
 use melon_world::clouds::CloudStatus;
 use melon_world::culling::CullSettings;
 use melon_world::entity::player::{Arm, PlayerModelPart, ShownParts};
@@ -18,11 +18,11 @@ mod keys;
 #[cfg(test)]
 mod tests;
 
-pub use melon_world::particle::ParticleStatus;
-pub use melon_world::level::ChunkBuilder;
 pub use chat::*;
 pub use choices::*;
 use keys::*;
+pub use melon_world::level::ChunkBuilder;
+pub use melon_world::particle::ParticleStatus;
 
 /// `Options.fov`'s range and default, in degrees.
 pub const FOV_RANGE: (u8, u8) = (30, 110);

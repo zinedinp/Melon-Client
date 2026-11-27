@@ -8,13 +8,13 @@ use std::sync::Arc;
 
 use pumpkin_data::item_stack::ItemStack;
 
-use melon_protocol::component::{ClickEvent, Component};
-use melon_net::dialog::{Action, Dialog, InputValue};
 use crate::screen::{CursorKind, ScreenContext, TextEvent};
 use crate::text::{self, Hover, StyledText};
 use crate::widgets::button::Button;
 use crate::widgets::tooltip::MAX_WIDTH as TOOLTIP_WIDTH;
 use crate::widgets::{Rect, Ui, Widget};
+use melon_net::dialog::{Action, Dialog, InputValue};
+use melon_protocol::component::{ClickEvent, Component};
 
 /// What a click or key on an element asks of the dialog.
 pub enum Press {

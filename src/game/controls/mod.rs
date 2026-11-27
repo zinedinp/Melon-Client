@@ -1,7 +1,7 @@
 //! Input while in a world and not paused (vanilla `Minecraft.handleKeybinds`).
 
-use melon_gui::text::font::Font;
 use melon_assets::i18n::Lang;
+use melon_gui::text::font::Font;
 use melon_settings::options::Config;
 
 mod chat;

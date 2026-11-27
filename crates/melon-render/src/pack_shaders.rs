@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use crate::GuiShader;
-use melon_assets::assets::shaders::{self, Interface, Stage};
 use crate::quad::Program;
+use melon_assets::assets::shaders::{self, Interface, Stage};
 
 /// One GUI pipeline as vanilla declares it.
 struct Pipeline {
@@ -165,8 +165,10 @@ mod tests {
     #[test]
     fn a_real_packs_gui_shaders_compile() {
         use melon_assets::assets::packs::{self, Pack, ResourceStack};
-        let (Some(root), Some(path)) = (melon_assets::assets::test_root(), std::env::var_os("MELON_PACK"))
-        else {
+        let (Some(root), Some(path)) = (
+            melon_assets::assets::test_root(),
+            std::env::var_os("MELON_PACK"),
+        ) else {
             eprintln!("no pack in MELON_PACK (or no assets), test skipped");
             return;
         };

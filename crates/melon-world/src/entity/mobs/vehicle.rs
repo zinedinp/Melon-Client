@@ -1,13 +1,15 @@
 //! Boats, rafts and minecarts.
 
-use melon_core::math::angle::{EIGHTH_PI, HALF_PI as FRAC_PI_2, PI, QUARTER_PI as FRAC_PI_4, THIRD_PI};
+use melon_core::math::angle::{
+    EIGHTH_PI, HALF_PI as FRAC_PI_2, PI, QUARTER_PI as FRAC_PI_4, THIRD_PI,
+};
 
 use glam::{Mat4, Vec3};
 
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{self, Rotation};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, Rotation};
 
 pub const MINECART_TEXTURE: &str = "minecraft:entity/minecart/minecart";
 
@@ -134,7 +136,10 @@ pub fn raft(chest: bool) -> LayerDefinition {
             Cube::new((0.0, 0.0), (-14.0, -11.0, -4.0), (28.0, 20.0, 4.0)),
             Cube::new((0.0, 0.0), (-14.0, -9.0, -8.0), (28.0, 16.0, 4.0)),
         ],
-        at((0.0, -2.1, 1.0), (melon_core::math::angle::HALF_PI, 0.0, 0.0)),
+        at(
+            (0.0, -2.1, 1.0),
+            (melon_core::math::angle::HALF_PI, 0.0, 0.0),
+        ),
     );
     add_paddles(&mut root, (0.0, 24.0), (40.0, 24.0), -4.0);
     if chest {

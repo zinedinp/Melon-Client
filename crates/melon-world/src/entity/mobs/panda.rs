@@ -5,8 +5,8 @@ use crate::entity::animation::rot_lerp_rad;
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::{self, QuadrupedParts};
-use melon_core::math::angle::{self, HALF_PI, PI, QUARTER_PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, HALF_PI, PI, QUARTER_PI};
 
 /// `Panda.FLAG_*` on `DATA_ID_FLAGS`.
 pub const FLAG_SNEEZE: u8 = 2;

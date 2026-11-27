@@ -9,8 +9,8 @@ pub mod x86;
 
 use glam::{DVec3, IVec3, Vec3};
 
-use melon_core::math::{SECTION_SIZE, section_coord};
 use frustum::Frustum;
+use melon_core::math::{SECTION_SIZE, section_coord};
 use occlusion::{OcclusionMask, SectionPos};
 
 /// Which culling runs. All on is vanilla.

@@ -6,11 +6,11 @@ use pumpkin_data::item_stack::ItemStack;
 
 use super::scroll::Scroller;
 use super::{Frame, Loader, MenuDraw, MenuScreen, MenuSprites};
-use melon_core::math::argb;
 use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::{OverlayAction, OverlayContext};
-use melon_render::TextureId;
 use crate::sprite::GuiSprite;
+use melon_core::math::argb;
+use melon_render::TextureId;
 use melon_world::inventory::{OpenContainer, loom};
 
 const COLUMNS: usize = 4;

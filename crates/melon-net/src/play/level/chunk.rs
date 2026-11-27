@@ -1,5 +1,6 @@
 //! Decodes `LevelChunkWithLight`, for the dimension's height.
 
+use anyhow::{Result, bail};
 use melon_protocol::packet::Reader;
 use melon_world::biome::{ChunkBiomes, SectionBiomes};
 use melon_world::chunk::{
@@ -8,7 +9,6 @@ use melon_world::chunk::{
 };
 use melon_world::dimension::Height;
 use melon_world::head_profile::{HeadProfile, is_player_head};
-use anyhow::{Result, bail};
 use pumpkin_protocol::ser::NetworkReadSliceExt;
 use std::sync::Arc;
 

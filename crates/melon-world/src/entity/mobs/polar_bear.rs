@@ -4,8 +4,8 @@ use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::{self, QuadrupedParts};
-use melon_core::math::angle::PI;
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::PI;
 
 pub fn adult() -> LayerDefinition {
     let mut root = PartDefinition::root();

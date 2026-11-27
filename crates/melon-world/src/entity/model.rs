@@ -341,7 +341,10 @@ impl Model {
                 let r = state.pose.rotation;
                 let turn = (r != Vec3::ZERO).then(|| {
                     let [(sx, cx), (sy, cy), (sz, cz)] = r.to_array().map(&mut take);
-                    melon_core::math::angle::euler_zyx_of(Vec3::new(sx, sy, sz), Vec3::new(cx, cy, cz))
+                    melon_core::math::angle::euler_zyx_of(
+                        Vec3::new(sx, sy, sz),
+                        Vec3::new(cx, cy, cz),
+                    )
                 });
                 out.push(
                     parent

@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use melon_net::{self, Identity, WorldEvent};
 use melon_net::singleplayer::{self, server};
+use melon_net::{Identity, WorldEvent};
 use melon_world::block_models::BlockModels;
 use melon_world::block_tint::TintSettings;
 use melon_world::chunk::Chunk;
@@ -82,7 +82,7 @@ fn main() -> anyhow::Result<()> {
             online: false,
         },
     })?;
-    let mut session = network::join_stream(
+    let mut session = melon_net::join_stream(
         pipe,
         &Identity::Offline {
             username: "Perf".into(),

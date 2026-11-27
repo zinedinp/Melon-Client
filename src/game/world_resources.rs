@@ -5,6 +5,7 @@ use melon_world::item_model::StackKey;
 
 use super::entity_models::{MobModels, PlayerModels};
 use super::held_items::HeldItems;
+use image::RgbaImage;
 use melon_assets::assets::Assets;
 use melon_gui::hud::HudTextures;
 use melon_gui::hud::item_icon::ItemIcons;
@@ -21,7 +22,6 @@ use melon_world::colormap::ColorMaps;
 use melon_world::fluid::FluidSprites;
 use melon_world::head_profile::HeadProfile;
 use melon_world::texture_animation::TextureAnimator;
-use image::RgbaImage;
 
 pub struct WorldResources {
     /// Every block state's baked model, and the atlas they sample.

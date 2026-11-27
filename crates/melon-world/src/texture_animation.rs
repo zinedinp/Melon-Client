@@ -141,7 +141,10 @@ pub struct SpriteAnimation {
 /// The frames of a texture, if it is animated.
 pub fn load_frames(assets_root: &Path, texture_id: &str) -> Option<Frames> {
     let (png, meta) = melon_assets::assets::texture_with_meta(assets_root, texture_id)?;
-    frames_of(&melon_assets::assets::decode_png(&png)?, meta?.get("animation")?)
+    frames_of(
+        &melon_assets::assets::decode_png(&png)?,
+        meta?.get("animation")?,
+    )
 }
 
 /// `strip` cut into the frames its `animation` section describes, if there are any.

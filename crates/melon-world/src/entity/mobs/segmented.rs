@@ -3,8 +3,8 @@
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, PI};
 
 /// What one of the two models is made of.
 struct Shape {

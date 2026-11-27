@@ -5,8 +5,8 @@ use glam::{Mat4, Vec3};
 use super::animation::{animate_zombie_arms, bob_model_part, out_quart, rot_lerp_rad};
 use super::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use super::player::Arm;
-use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, PI};
 
 /// `HumanoidModel.OVERLAY_SCALE`: how far the outer layer stands off.
 pub const OVERLAY_SCALE: f32 = 0.25;

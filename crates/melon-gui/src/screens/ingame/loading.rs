@@ -2,9 +2,9 @@
 
 use crate::background;
 use crate::effects::AtlasSprite;
-use melon_core::math::argb;
 use crate::screen::{Screen, ScreenAction, ScreenContext};
 use crate::widgets::Ui;
+use melon_core::math::argb;
 
 /// `LevelLoadingScreen.Reason`: what the loading screen paints behind it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -118,9 +118,11 @@ impl LauncherSettings {
 
     /// Folder the game reads (`assets/<VERSION>/`, or the flat `assets/` of old).
     pub fn melon_play_assets(&self, home: &Path) -> PathBuf {
-        let versioned = melon_base::home::version_assets(&self.assets_dir(home), melon_base::home::VERSION);
+        let versioned =
+            melon_base::home::version_assets(&self.assets_dir(home), melon_base::home::VERSION);
         let base = self.assets_dir(home);
-        if !melon_base::home::is_prepared_at(&versioned) && melon_base::home::is_prepared_at(&base) {
+        if !melon_base::home::is_prepared_at(&versioned) && melon_base::home::is_prepared_at(&base)
+        {
             base
         } else {
             versioned
@@ -193,7 +195,10 @@ mod tests {
         );
         assert_eq!(
             settings.melon_play_assets(home),
-            PathBuf::from(format!("/tmp/melon-assets-test/{}", melon_base::home::VERSION))
+            PathBuf::from(format!(
+                "/tmp/melon-assets-test/{}",
+                melon_base::home::VERSION
+            ))
         );
     }
 }

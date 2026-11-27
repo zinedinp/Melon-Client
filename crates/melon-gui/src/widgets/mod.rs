@@ -16,11 +16,11 @@ pub mod text_input;
 pub mod tooltip;
 
 use crate::assets::GuiAssets;
+use crate::screen::CursorKind;
+use crate::text::font::Font;
 use melon_assets::i18n::Lang;
 use melon_render::TextureId;
 use melon_render::quad::DrawList;
-use crate::screen::CursorKind;
-use crate::text::font::Font;
 
 /// A widget's area in GUI pixels.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

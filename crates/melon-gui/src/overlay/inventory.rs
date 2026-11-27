@@ -5,8 +5,6 @@ use pumpkin_data::item_stack::ItemStack;
 
 use crate::entity_preview::EntityPreview;
 use crate::hud::item_slot::{self, ItemPainter};
-use melon_assets::i18n::Lang;
-use melon_core::math::argb;
 use crate::overlay::container::draw_panel;
 use crate::overlay::container_input::{
     self, ContainerMouse, ContainerView, MouseButtonKind, QuickCraft, SlotClick,
@@ -14,14 +12,16 @@ use crate::overlay::container_input::{
 use crate::overlay::menu_layout::MenuLayout;
 use crate::overlay::recipe_book::{self, Mode, RecipeBookPanel};
 use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
-use melon_render::quad::DrawList;
-use melon_render::{Renderer, TextureId};
 use crate::screen::TextEvent;
-use melon_settings::input::InputBind;
 use crate::sprite::GuiSprite;
 use crate::text::{StyledText, colors};
-use melon_world::inventory::{self, Inventory};
 use melon_assets::assets::Assets;
+use melon_assets::i18n::Lang;
+use melon_core::math::argb;
+use melon_render::quad::DrawList;
+use melon_render::{Renderer, TextureId};
+use melon_settings::input::InputBind;
+use melon_world::inventory::{self, Inventory};
 
 const IMAGE_WIDTH: f32 = 176.0;
 const IMAGE_HEIGHT: f32 = 166.0;

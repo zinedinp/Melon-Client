@@ -24,10 +24,10 @@ mod mod_hints;
 mod tint;
 pub mod variants;
 
-use melon_core::math::angle::Rotation;
 use ao_shape::AoShape;
 use atlas::{PackedAtlas, pack_atlas};
 use block_state::{BlockState, ModelRef, Options, condition_holds, parse_block_state};
+use melon_core::math::angle::Rotation;
 use tint::bake_tint;
 use variants::{Part, RandomModel, StateModel};
 
@@ -578,7 +578,8 @@ impl ModelFiles<'_> {
         if let Some(json) = read().get(id) {
             return json.clone();
         }
-        let json = melon_assets::assets::json_resource(self.assets_root, "models", id).map(Arc::new);
+        let json =
+            melon_assets::assets::json_resource(self.assets_root, "models", id).map(Arc::new);
         read().insert(id.to_owned(), json.clone());
         json
     }
@@ -957,7 +958,9 @@ impl<'a> Baker<'a> {
         *self
             .existing_textures
             .entry(id.to_owned())
-            .or_insert_with(|| melon_assets::assets::resource_exists(assets_root, "textures", id, "png"))
+            .or_insert_with(|| {
+                melon_assets::assets::resource_exists(assets_root, "textures", id, "png")
+            })
     }
 
     fn texture(&mut self, id: String) -> usize {

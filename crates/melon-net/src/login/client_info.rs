@@ -1,8 +1,8 @@
 //! `ClientInformation`: the settings the server is told about.
 
+use anyhow::Result;
 use melon_protocol::{packet, varint};
 use melon_world::entity::player::{Arm, ShownParts};
-use anyhow::Result;
 use std::io::Write;
 
 /// The options the server is told about (vanilla `ClientInformation`).

@@ -4,9 +4,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use melon_core::math::angle::{self, Rotation};
 use glam::{Mat3, Vec2, Vec3};
 use image::RgbaImage;
+use melon_core::math::angle::{self, Rotation};
 use serde_json::Value;
 
 /// `ItemTransform`: the model's placement in one display context.
@@ -203,7 +203,8 @@ impl<'a> TextureCache<'a> {
     }
 
     fn load(&mut self, id: &str) -> Option<RgbaImage> {
-        let Some((png, meta)) = melon_assets::assets::texture_with_meta(self.assets_root, id) else {
+        let Some((png, meta)) = melon_assets::assets::texture_with_meta(self.assets_root, id)
+        else {
             return melon_assets::assets::palette::resolve(self.assets_root, id);
         };
         let img = melon_assets::assets::decode_png(&png)?;

@@ -5,12 +5,12 @@
 
 use pumpkin_data::item_stack::ItemStack;
 
-use melon_protocol::component::Component;
 use crate::game::InWorld;
+use melon_assets::i18n::Lang;
 use melon_gui::overlay::OverlayKind;
 use melon_gui::text::StyledText;
-use melon_assets::i18n::Lang;
 use melon_net::play::game::recipes::{FLAG_HIGHLIGHT, RecipeEvent};
+use melon_protocol::component::Component;
 use melon_world::entity::kind::EntityKind;
 use melon_world::inventory::merchant::Offers;
 use melon_world::inventory::{ContainerKind, MountLook, OpenContainer, empty};

@@ -2,6 +2,7 @@
 
 use super::InWorld;
 use crate::game::controls::WorldContext;
+use melon_assets::i18n::Lang;
 use melon_gui::overlay::chat::input::ChatInput;
 use melon_gui::overlay::creative::CreativeOverlay;
 use melon_gui::overlay::game_mode_switcher::GameModeSwitcher;
@@ -9,7 +10,6 @@ use melon_gui::overlay::inventory::InventoryOverlay;
 use melon_gui::overlay::recipe_book::RecipeAction;
 use melon_gui::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayKind};
 use melon_gui::screen::ScreenAction;
-use melon_assets::i18n::Lang;
 
 /// The menus the server opens and what the overlays keep of them.
 #[derive(Default)]
@@ -266,9 +266,9 @@ impl InWorld {
             }
             OverlayAction::OpenUrl(url) => {
                 return if ui.config.chat.links_prompt {
-                    ScreenAction::open(
-                        melon_gui::screens::menu::confirm_link::confirm_link_screen(url),
-                    )
+                    ScreenAction::open(melon_gui::screens::menu::confirm_link::confirm_link_screen(
+                        url,
+                    ))
                 } else {
                     ScreenAction::OpenUrl(url)
                 };

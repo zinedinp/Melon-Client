@@ -4,7 +4,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use melon_net::singleplayer::data_packs::EXPERIMENTS;
 use crate::text::font::LINE_HEIGHT;
 use crate::text::{StyledText, colors};
 use crate::widgets::button::Button;
@@ -12,6 +11,7 @@ use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
 use crate::widgets::scroll_list::{ListClick, ScrollList};
 use crate::widgets::set::{KeyResult, WidgetSet};
 use crate::widgets::{Rect, Ui};
+use melon_net::singleplayer::data_packs::EXPERIMENTS;
 
 const LAYOUT: HeaderFooter = HeaderFooter::DEFAULT;
 

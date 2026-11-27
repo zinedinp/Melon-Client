@@ -3,12 +3,12 @@
 use std::time::{Duration, Instant};
 
 use crate::hud::item_slot::ItemPainter;
-use melon_assets::i18n::Lang;
-use melon_render::quad::DrawList;
-use melon_render::{Renderer, TextureId};
 use crate::sprite::GuiSprite;
 use crate::text::{self, StyledText, colors};
 use melon_assets::assets::Assets;
+use melon_assets::i18n::Lang;
+use melon_render::quad::DrawList;
+use melon_render::{Renderer, TextureId};
 
 const FADE_DELAY: Duration = Duration::from_millis(5000);
 const FADE_TIME: f32 = 2000.0;

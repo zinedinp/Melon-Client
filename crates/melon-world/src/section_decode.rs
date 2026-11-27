@@ -7,13 +7,13 @@
 //! [`Bytes`], the `target_feature` bodies for x86_64 in `x86/` beside this
 //! file. The scalar code is the reference every tier must match exactly.
 
+use crate::section::BLOCKS_PER_SECTION;
 #[cfg(any(
     target_arch = "x86_64",
     all(target_arch = "aarch64", target_endian = "little")
 ))]
 use melon_core::math::bytes::Bytes;
 use melon_core::math::simd::{self, ByteTier};
-use crate::section::BLOCKS_PER_SECTION;
 
 /// Rows of 16 blocks along x in a section, index `y * 16 + z`.
 pub const ROWS: usize = 256;

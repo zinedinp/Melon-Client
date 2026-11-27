@@ -12,7 +12,6 @@ pub mod skin;
 pub mod sounds;
 pub mod video;
 
-use melon_assets::i18n::Lang;
 use crate::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::menu::placeholder::placeholder_screen;
 use crate::screens::options::accessibility::accessibility_options_screen;
@@ -23,12 +22,13 @@ use crate::screens::options::melon::melon_settings_screen;
 use crate::screens::options::skin::skin_customization_screen;
 use crate::screens::options::sounds::sound_options_screen;
 use crate::screens::options::video::video_settings_screen;
-use melon_settings::options::{self, Config};
 use crate::widgets::button::Button;
 use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, WIDE_BUTTON_W};
 use crate::widgets::set::{KeyResult, WidgetSet};
 use crate::widgets::slider::Slider;
 use crate::widgets::{Ui, Widget};
+use melon_assets::i18n::Lang;
+use melon_settings::options::{self, Config};
 
 /// `OptionsScreen`'s `HeaderAndFooterLayout(this, 61, 33)`.
 const LAYOUT: HeaderFooter = HeaderFooter::new(61.0, 33.0);

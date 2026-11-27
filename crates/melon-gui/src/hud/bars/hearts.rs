@@ -2,8 +2,8 @@
 
 use super::Layout;
 use crate::hud::{ICON, JavaRandom, PlayerStatus};
-use melon_render::quad::DrawList;
 use crate::sprite::GuiSprite;
+use melon_render::quad::DrawList;
 
 /// `Hud.HeartType`: how the hearts look.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

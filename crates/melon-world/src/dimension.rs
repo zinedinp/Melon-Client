@@ -1,7 +1,7 @@
 //! Dimension types (vanilla `DimensionType`).
 
-use melon_core::math::argb;
 use anyhow::Result;
+use melon_core::math::argb;
 use serde_json::Value;
 
 /// Blocks along Y in a chunk section.

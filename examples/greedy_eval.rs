@@ -243,10 +243,7 @@ fn frozen() -> anyhow::Result<Vec<Chunk>> {
             let len = word(&mut at)?;
             let packet = bytes.get(at..at + len).context("short file")?;
             at += len;
-            melon_net::play::level::chunk::decode(
-                packet,
-                melon_world::dimension::Height::OVERWORLD,
-            )
+            melon_net::play::level::chunk::decode(packet, melon_world::dimension::Height::OVERWORLD)
         })
         .collect()
 }

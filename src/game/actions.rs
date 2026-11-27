@@ -1,9 +1,9 @@
 //! What the player does to the inventory and the hotbar, and the F3 key combinations.
 
 use super::InWorld;
+use melon_assets::i18n::Lang;
 use melon_gui::text::font::Font;
 use melon_gui::text::{StyledText, TextStyle, colors};
-use melon_assets::i18n::Lang;
 use melon_net::play::game::PlayerAction;
 use melon_world::inventory::ClickType;
 

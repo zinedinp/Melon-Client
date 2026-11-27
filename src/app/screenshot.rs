@@ -79,8 +79,8 @@ impl Screenshots {
 /// `screenshot.success` with the file's name underlined, a click on it
 /// opening the file (`ClickEvent.OpenFile`).
 pub fn saved_message(lang: &melon_assets::i18n::Lang, file: &Path) -> melon_gui::text::StyledText {
-    use melon_protocol::component::ClickEvent;
     use melon_gui::text::{StyledText, TextStyle};
+    use melon_protocol::component::ClickEvent;
     let name = file
         .file_name()
         .map_or_else(String::new, |n| n.to_string_lossy().into_owned());

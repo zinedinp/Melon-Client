@@ -4,10 +4,10 @@
 //! overlay lays them out in two columns as vanilla does.
 
 use super::debug_entries::{DebugEntries, Entry};
+use crate::text::font::Font;
 use melon_core::math::{section_coord, section_relative, wrap_degrees};
 use melon_render::quad::DrawList;
 use melon_render::{DeviceInfo, TextureId};
-use crate::text::font::Font;
 
 /// `DebugScreenOverlay.extractLines`: `int height = 9`.
 const LINE_HEIGHT: f32 = 9.0;

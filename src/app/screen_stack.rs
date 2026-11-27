@@ -1,7 +1,7 @@
 //! Vanilla `minecraft.setScreen` as a plain stack.
 
-use melon_gui::screen::{CursorKind, Screen, ScreenContext};
 use melon_assets::i18n::Lang;
+use melon_gui::screen::{CursorKind, Screen, ScreenContext};
 use melon_settings::options::Config;
 
 #[derive(Default)]

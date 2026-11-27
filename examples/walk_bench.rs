@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use glam::DVec3;
-use melon_net::{self, ClientInfo, Identity, WorldEvent};
 use melon_net::singleplayer::{self, server};
+use melon_net::{ClientInfo, Identity, WorldEvent};
 use melon_world::culling::occlusion::{self, Column, Eye, SectionGrid, WalkJob};
 use melon_world::culling::visgraph::VisibilitySet;
 use melon_world::terrain;
@@ -135,7 +135,7 @@ fn gather(dir: &str) -> anyhow::Result<Sets> {
         view_distance: VIEW_DISTANCE as u8,
         ..Default::default()
     };
-    let mut session = network::join_stream(
+    let mut session = melon_net::join_stream(
         pipe,
         &Identity::Offline {
             username: "Walk".into(),

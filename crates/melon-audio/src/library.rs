@@ -122,7 +122,8 @@ impl SoundEvents {
     pub fn load(assets_root: &Path) -> Self {
         let mut events = Self::default();
         for namespace in melon_assets::assets::namespaces(assets_root) {
-            for json in melon_assets::assets::resource_stack(assets_root, &namespace, "sounds.json") {
+            for json in melon_assets::assets::resource_stack(assets_root, &namespace, "sounds.json")
+            {
                 if events.merge(&namespace, &json).is_none() {
                     melon_base::warn!("{namespace}:sounds.json unreadable");
                 }

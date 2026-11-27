@@ -1,7 +1,7 @@
 //! `ClientboundBossEventPacket`: the boss bars at the top of the screen.
 
-use melon_protocol::component::Component;
 use anyhow::{Result, bail};
+use melon_protocol::component::Component;
 use uuid::Uuid;
 
 use melon_protocol::packet::Reader;

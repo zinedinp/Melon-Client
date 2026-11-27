@@ -9,13 +9,13 @@ use super::particle_meshes::ParticleMeshes;
 use super::world_resources::WorldResources;
 use melon_net::play::game::EquipmentSlot;
 use melon_net::play::game::sound::{Explosion, LevelEvent};
+use melon_render::{ParticleDraw, Renderer};
+use melon_world::entity::tracker::Entities;
+use melon_world::inventory::Inventory;
 use melon_world::particle::client::{self, entity as own};
 use melon_world::particle::mesh::View;
 use melon_world::particle::server::{LevelParticles, entity_event, level_event};
 use melon_world::particle::{EntityBox, Kind, ParticleEngine, Spawn, World};
-use melon_render::{ParticleDraw, Renderer};
-use melon_world::entity::tracker::Entities;
-use melon_world::inventory::Inventory;
 use melon_world::player::PlayerState;
 
 /// A level event 2001 for a block this client broke itself within this many ticks is its own.

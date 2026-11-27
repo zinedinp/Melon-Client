@@ -387,12 +387,10 @@ pub fn drag_remainder(
             i32::from(current.item_count)
         };
         let max = i32::from(carried.get_max_stack_size().min(max_in_slot));
-        let placed = (melon_world::inventory::quick_craft_place_count(
-            drag.slots.len(),
-            drag.kind,
-            carried,
-        ) + carry)
-            .min(max);
+        let placed =
+            (melon_world::inventory::quick_craft_place_count(drag.slots.len(), drag.kind, carried)
+                + carry)
+                .min(max);
         remaining -= placed - carry;
     }
     remaining

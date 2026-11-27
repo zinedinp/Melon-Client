@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use crate::block::direction::Direction;
-use melon_core::cycle::Cycle;
 use crate::mesh::WorldVertex;
+use melon_core::cycle::Cycle;
 
 /// `CloudRenderer.CELL_SIZE_IN_BLOCKS`.
 pub const CELL_SIZE: f32 = 12.0;
@@ -83,7 +83,8 @@ impl CloudTexture {
     }
 
     pub fn load(assets_root: &Path) -> Self {
-        let Some(rgba) = melon_assets::assets::texture_image(assets_root, "environment/clouds") else {
+        let Some(rgba) = melon_assets::assets::texture_image(assets_root, "environment/clouds")
+        else {
             return Self::empty();
         };
         let width = rgba.width() as i32;

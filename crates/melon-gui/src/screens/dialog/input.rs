@@ -4,12 +4,6 @@
 use pumpkin_nbt::tag::NbtTag;
 
 use super::element::{Element, Press};
-use melon_protocol::component::Component;
-use melon_net::dialog::action::escape_without_quotes;
-use melon_net::dialog::input::{
-    BooleanInput, NumberRangeInput, SingleOptionInput, TextInput, value_to_string,
-};
-use melon_net::dialog::{Input, InputControl, InputValue};
 use crate::screen::{CursorKind, ScreenContext, TextEvent};
 use crate::text::{self, StyledText};
 use crate::widgets::button::Button;
@@ -18,6 +12,12 @@ use crate::widgets::edit_box::EditBox;
 use crate::widgets::multiline_edit::MultiLineEditBox;
 use crate::widgets::slider::Slider;
 use crate::widgets::{Rect, Ui, Widget};
+use melon_net::dialog::action::escape_without_quotes;
+use melon_net::dialog::input::{
+    BooleanInput, NumberRangeInput, SingleOptionInput, TextInput, value_to_string,
+};
+use melon_net::dialog::{Input, InputControl, InputValue};
+use melon_protocol::component::Component;
 
 /// `InputControlHandlers.createHandler`: the element for `input`.
 pub fn element(input: &Input, ctx: &ScreenContext) -> Box<dyn Element> {

@@ -11,9 +11,9 @@ use winit::keyboard::{Key, KeyCode, ModifiersState, NamedKey, NativeKey, Physica
 use winit::window::{CursorGrabMode, CursorIcon, Window};
 
 use super::RunningState;
+use melon_base::platform::clipboard_text;
 use melon_gui::overlay::container_input::MouseButtonKind;
 use melon_gui::screen::{CursorKind, TextEvent};
-use melon_base::platform::clipboard_text;
 use melon_settings::input::InputBind;
 
 /// What the window last said about input, and the cursor grab.

@@ -1,7 +1,5 @@
 //! Vanilla `LanguageSelectScreen` / `LanguageSelectionList` (`ObjectSelectionList`).
 
-use melon_assets::i18n::available_languages;
-use melon_assets::i18n::languages::Language;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::menu::placeholder::placeholder_screen;
 use crate::text::font::LINE_HEIGHT;
@@ -12,6 +10,8 @@ use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING, wide_col
 use crate::widgets::scroll_list::{ListClick, ScrollList};
 use crate::widgets::set::{KeyResult, WidgetSet};
 use melon_assets::assets::Assets;
+use melon_assets::i18n::available_languages;
+use melon_assets::i18n::languages::Language;
 
 /// `AbstractSelectionList`'s default row width (`220`), `+50` as `LanguageSelectionList`
 /// overrides it.

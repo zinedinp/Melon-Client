@@ -3,8 +3,8 @@
 
 use std::sync::Arc;
 
-use melon_protocol::component::{ClickEvent, Component, Contents, HoverEvent, ObjectInfo, Style};
 use crate::i18n::Lang;
+use melon_protocol::component::{ClickEvent, Component, Contents, HoverEvent, ObjectInfo, Style};
 
 /// The font a run without one of its own is drawn in.
 pub const DEFAULT_FONT: &str = "minecraft:default";

@@ -5,8 +5,8 @@ use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
 use crate::entity::quadruped::{self, QuadrupedParts};
-use melon_core::math::angle::EIGHTH_PI;
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::EIGHTH_PI;
 
 /// `GoatRenderer.getTextureLocation`.
 pub fn texture(baby: bool) -> &'static str {

@@ -468,7 +468,8 @@ impl LevelMeshes {
 
     fn upload_to(&mut self, sink: &mut impl MeshSink, finished: Vec<FinishedMesh>) {
         if !finished.is_empty() && !self.waiting.is_empty() {
-            let newer: melon_core::math::SectionSet = finished.iter().map(|mesh| mesh.pos).collect();
+            let newer: melon_core::math::SectionSet =
+                finished.iter().map(|mesh| mesh.pos).collect();
             self.waiting.retain(|waiting| !newer.contains(&waiting.pos));
         }
         for mesh in finished {

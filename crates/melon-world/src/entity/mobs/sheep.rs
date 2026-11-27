@@ -6,8 +6,8 @@ use super::{ClientEntity, LayerSpec, ModelId as M};
 use crate::entity::magic_name::Magic;
 use crate::entity::model::{LayerDefinition, PartDefinition};
 use crate::entity::quadruped;
-use melon_core::math::angle::PI;
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::PI;
 
 pub fn adult() -> LayerDefinition {
     let mut root = quadruped::create_body_mesh(12.0, false, true, 0.0);

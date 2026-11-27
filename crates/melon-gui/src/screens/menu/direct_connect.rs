@@ -2,7 +2,6 @@
 
 use std::path::{Path, PathBuf};
 
-use melon_net::join::Target;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::menu::connecting::ConnectingScreen;
 use crate::widgets::Ui;
@@ -10,6 +9,7 @@ use crate::widgets::button::Button;
 use crate::widgets::edit_box::EditBox;
 use crate::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_left};
 use crate::widgets::set::{KeyResult, WidgetSet};
+use melon_net::join::Target;
 
 /// Vanilla keeps the last address in `options.txt` (`lastMpIp`); Melon keeps it in its own
 /// file.

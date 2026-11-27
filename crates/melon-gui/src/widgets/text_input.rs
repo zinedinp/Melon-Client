@@ -3,9 +3,9 @@
 use std::cell::{Cell, RefCell};
 use std::time::{Duration, Instant};
 
-use melon_render::quad::{BlendMode, DrawList};
 use crate::screen::TextEvent;
 use crate::text::font::{Font, Glyphs};
+use melon_render::quad::{BlendMode, DrawList};
 
 /// `TextCursorUtils.isCursorVisible`.
 pub fn cursor_visible(since: Instant) -> bool {

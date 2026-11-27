@@ -1,12 +1,12 @@
 //! Vanilla `OptionsList` inside an `OptionsSubScreen`.
 
-use melon_assets::i18n::Lang;
 use crate::screen::{ConfigChange, CursorKind, Screen, ScreenAction, ScreenContext};
-use melon_settings::options::Config;
 use crate::widgets::button::Button;
 use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, WIDE_BUTTON_W};
 use crate::widgets::slider::Slider;
 use crate::widgets::{Rect, Ui, Widget};
+use melon_assets::i18n::Lang;
+use melon_settings::options::Config;
 
 /// `OptionsList`'s `itemHeight`.
 const ROW_H: f32 = 25.0;

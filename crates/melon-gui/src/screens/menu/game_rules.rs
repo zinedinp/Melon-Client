@@ -6,7 +6,6 @@ use std::rc::Rc;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
-use melon_net::singleplayer::rules::{self, Category, Changes, Rule, Value};
 use crate::text::font::LINE_HEIGHT;
 use crate::text::{StyledText, TextStyle, colors};
 use crate::widgets::button::Button;
@@ -15,6 +14,7 @@ use crate::widgets::layout::{BUTTON_H, BUTTON_W, HeaderFooter, SPACING};
 use crate::widgets::scroll_list::ScrollList;
 use crate::widgets::set::{KeyResult, WidgetSet};
 use crate::widgets::{Rect, Ui};
+use melon_net::singleplayer::rules::{self, Category, Changes, Rule, Value};
 
 /// `RuleList.ITEM_HEIGHT`, and `getRowWidth()`.
 const ROW_H: f32 = 24.0;

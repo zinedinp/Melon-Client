@@ -217,7 +217,9 @@ fn fit(sprites: &mut [Sprite], max_side: u32) {
     if cap >= largest {
         return;
     }
-    melon_base::warn!("Block atlas: textures over {cap}px are scaled down to fit {max_side}x{max_side}");
+    melon_base::warn!(
+        "Block atlas: textures over {cap}px are scaled down to fit {max_side}x{max_side}"
+    );
     for sprite in sprites.iter_mut() {
         while sprite.image.width().max(sprite.image.height()) > cap {
             sprite.image = mipmap::halve(&sprite.image);

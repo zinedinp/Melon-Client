@@ -33,7 +33,8 @@ pub(super) const END_PORTAL: &str = "minecraft:entity/end_portal/end_portal";
 
 /// A banner's flag in dye `color`.
 pub(super) fn banner_flag(assets_root: &Path, color: usize) -> Option<RgbaImage> {
-    let load = |id: &str| -> Option<RgbaImage> { melon_assets::assets::texture_image(assets_root, id) };
+    let load =
+        |id: &str| -> Option<RgbaImage> { melon_assets::assets::texture_image(assets_root, id) };
     let mut flag = load(BANNER_BASE)?;
     let mut dyed = load("minecraft:entity/banner/base")?;
     let rgb = DYES[color].1;

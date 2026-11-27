@@ -1,12 +1,12 @@
 //! The packets of the scoreboard and the tab list.
 
+use anyhow::Result;
 use melon_protocol::component::Component;
 use melon_protocol::packet::Reader;
 use melon_world::scoreboard::{
     CollisionRule, DisplaySlot, NumberFormat, Objective, RenderType, Score, ScoreUpdate,
     TeamAction, TeamColor, TeamLook, Visibility,
 };
-use anyhow::Result;
 use pumpkin_data::packet::clientbound::play as cb;
 
 /// What one of these packets says.

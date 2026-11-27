@@ -8,8 +8,8 @@ mod scoreboard;
 mod teleport;
 
 use super::{InWorld, LoadingReason, Received};
-use melon_gui::text::{StyledText, font::Font};
 use melon_assets::i18n::Lang;
+use melon_gui::text::{StyledText, font::Font};
 use melon_net::WorldEvent;
 use melon_net::play::game::GameEvent;
 use melon_render::Renderer;

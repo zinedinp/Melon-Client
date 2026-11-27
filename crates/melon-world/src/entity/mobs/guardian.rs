@@ -3,8 +3,8 @@
 use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{self, PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, PI};
 
 /// `MeshTransformer.scaling(2.35)` of the elder.
 pub const ELDER_SCALE: f32 = 2.35;

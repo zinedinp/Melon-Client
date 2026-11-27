@@ -4,18 +4,18 @@ use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::item_slot;
-use melon_core::math::angle::PI;
-use melon_core::math::argb;
 use crate::overlay::container_input::MouseButtonKind;
 use crate::overlay::menu_layout::MenuLayout;
 use crate::overlay::{OverlayAction, OverlayDraw};
-use melon_render::{Renderer, TextureId};
 use crate::screen::TextEvent;
 use crate::sprite::GuiSprite;
 use crate::text::StyledText;
 use crate::widgets::text_input::TextInput;
-use melon_world::recipes::{BookType, Category, RecipeBook, RecipeDisplay, RecipeId, Stock, Tab};
 use melon_assets::assets::Assets;
+use melon_core::math::angle::PI;
+use melon_core::math::argb;
+use melon_render::{Renderer, TextureId};
+use melon_world::recipes::{BookType, Category, RecipeBook, RecipeDisplay, RecipeId, Stock, Tab};
 
 const WIDTH: f32 = 147.0;
 const HEIGHT: f32 = 166.0;
@@ -1264,9 +1264,8 @@ mod tests {
             [OverlayAction::Recipe(RecipeAction::Seen(0))]
         ));
         assert!(!book.will_highlight(RecipeId(0)));
-        let mut layout = crate::overlay::container::menu_layout(
-            melon_world::inventory::ContainerKind::Crafting,
-        );
+        let mut layout =
+            crate::overlay::container::menu_layout(melon_world::inventory::ContainerKind::Crafting);
         layout.place_at(panel.menu_left(427.0, 176.0), 240.0);
         let (x, y) = panel.cell_pos(0);
         panel.mouse_moved(x + 3.0, y + 3.0);

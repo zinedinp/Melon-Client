@@ -1,12 +1,12 @@
 //! Every GUI sprite plus the font, uploaded once at startup.
 
-use melon_render::{Renderer, TextureId};
 use crate::sprite::GuiSprite;
 use crate::text::font::{DYNAMIC_PAGE, Font, Glyphs};
 use crate::widgets::button::{ButtonTextures, TabTextures};
 use crate::widgets::row_icon::{Arrow, RowIconSprites};
 use crate::widgets::slider::SliderTextures;
 use melon_assets::assets::Assets;
+use melon_render::{Renderer, TextureId};
 
 /// `ServerSelectionList`'s sprites: the status bars and the icon overlays.
 pub struct ServerListSprites {
@@ -127,8 +127,8 @@ impl GuiAssets {
 
     /// The atlas sprites `object` components in the last frame's text asked for.
     fn sync_objects(&mut self, renderer: &mut Renderer) {
-        use melon_protocol::component::ObjectInfo;
         use crate::text::objects::{ObjectQuads, sprite_image};
+        use melon_protocol::component::ObjectInfo;
         for info in self.font.take_wanted_objects() {
             let ObjectInfo::Atlas(sprite) = &info else {
                 continue;

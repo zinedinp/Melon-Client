@@ -5,13 +5,13 @@ use std::thread;
 
 use anyhow::Result;
 
-use melon_net::join::{self, Joined, Target};
-use melon_net::{ClientInfo, Identity};
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::widgets::button::Button;
 use crate::widgets::dialog::DialogScreen;
 use crate::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter, wide_column_left};
 use crate::widgets::{Ui, Widget};
+use melon_net::join::{self, Joined, Target};
+use melon_net::{ClientInfo, Identity};
 
 /// `DisconnectedScreen`'s title colour (`-6250336`, `0xA0A0A0`).
 const FAILURE_TITLE_COLOR: [f32; 4] = [0.63, 0.63, 0.63, 1.0];

@@ -314,13 +314,14 @@ fn give_host_its_skin(server: std::sync::Weak<Server>, uuid: uuid::Uuid) {
     let spawned = thread::Builder::new()
         .name("host-skin".to_owned())
         .spawn(move || {
-            let properties = match melon_base::auth::skin::fetch_signed_properties(&uuid.to_string()) {
-                Ok(properties) => properties,
-                Err(error) => {
-                    melon_base::warn!("The host's skin not fetched: {error:#}");
-                    return;
-                }
-            };
+            let properties =
+                match melon_base::auth::skin::fetch_signed_properties(&uuid.to_string()) {
+                    Ok(properties) => properties,
+                    Err(error) => {
+                        melon_base::warn!("The host's skin not fetched: {error:#}");
+                        return;
+                    }
+                };
             let properties: Vec<pumpkin_protocol::Property> = properties
                 .into_iter()
                 .map(|p| pumpkin_protocol::Property {

@@ -1,12 +1,12 @@
 //! Vanilla `SoundOptionsScreen`.
 
-use melon_audio::source::SoundSource;
-use melon_core::cycle::Cycle;
-use melon_assets::i18n::Lang;
 use crate::screen::{ConfigChange, ScreenContext};
 use crate::screens::options::{on_off_label, value_label};
-use melon_settings::options::Config;
 use crate::widgets::options_list::{OptionEntry, OptionsSubScreen, Section};
+use melon_assets::i18n::Lang;
+use melon_audio::source::SoundSource;
+use melon_core::cycle::Cycle;
+use melon_settings::options::Config;
 
 /// One step per percent.
 const STEPS: u32 = 100;

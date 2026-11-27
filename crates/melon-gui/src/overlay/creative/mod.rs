@@ -6,18 +6,18 @@ use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::item_slot::{self};
-use melon_assets::i18n::Lang;
 use crate::overlay::container_input::{self, ContainerMouse, MouseButtonKind, SlotClick};
 use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
-use melon_render::{Renderer, TextureId};
 use crate::screen::TextEvent;
-use melon_settings::input::InputBind;
 use crate::sprite::GuiSprite;
 use crate::widgets::text_input::{Edit, TextInput};
+use melon_assets::assets::Assets;
+use melon_assets::i18n::Lang;
+use melon_render::{Renderer, TextureId};
+use melon_settings::input::InputBind;
 use melon_world::creative_tabs::{CreativeTab, TabType, tabs};
 use melon_world::hotbars::{HOTBARS, Hotbars};
 use melon_world::inventory::{Inventory, SLOT_COUNT, empty};
-use melon_assets::assets::Assets;
 
 /// `searchBox`: `EditBox(font, leftPos + 82, topPos + 6, 80, 9)`, borderless.
 pub(super) const SEARCH_BOX: (f32, f32, f32, f32) = (82.0, 6.0, 80.0, 9.0);

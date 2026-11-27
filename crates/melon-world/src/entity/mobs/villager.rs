@@ -4,9 +4,9 @@ use super::{ClientEntity, EntityKind, LayerSpec, ModelId as M};
 use crate::entity::humanoid;
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{self, HALF_PI, PI, Rotation, THIRD_PI};
 use crate::model_part::{Cube, Pose};
 use glam::{Mat4, Vec3};
+use melon_core::math::angle::{self, HALF_PI, PI, Rotation, THIRD_PI};
 
 /// `VillagerMetadataSection.Hat`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

@@ -5,15 +5,15 @@ use pumpkin_data::item::Item;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::item_slot::ItemPainter;
-use melon_assets::i18n::Lang;
 use crate::overlay::{ChatExit, Overlay, OverlayAction, OverlayContext, OverlayDraw, OverlayKind};
-use melon_render::quad::DrawList;
-use melon_render::{Renderer, TextureId};
 use crate::sprite::GuiSprite;
 use crate::text::{self, StyledText, TextStyle, colors};
+use melon_assets::assets::Assets;
+use melon_assets::i18n::Lang;
+use melon_render::quad::DrawList;
+use melon_render::{Renderer, TextureId};
 use melon_world::game_mode::{GameMode, LocalGameMode};
 use melon_world::inventory::Inventory;
-use melon_assets::assets::Assets;
 
 /// `GameModeIcon.values().length * 31 - 5`.
 const ALL_SLOTS_WIDTH: f32 = 119.0;

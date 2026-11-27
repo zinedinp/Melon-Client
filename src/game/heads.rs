@@ -233,8 +233,8 @@ pub fn sync_head_objects(
     font: &melon_gui::text::font::Font,
     players: &mut super::entity_models::PlayerModels,
 ) {
-    use melon_protocol::component::ObjectInfo;
     use melon_gui::text::objects::ObjectQuads;
+    use melon_protocol::component::ObjectInfo;
     for player in font.player_objects() {
         let profile = &player.profile;
         let head = (!profile.is_empty()).then(|| HeadProfile {

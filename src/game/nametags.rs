@@ -4,11 +4,11 @@ use glam::{DVec3, Mat4, Vec3};
 
 use super::InWorld;
 use super::camera::Camera;
-use melon_protocol::component::Component;
-use melon_gui::hud::item_slot::ItemPainter;
-use melon_gui::text::{self, StyledText};
 use melon_assets::i18n::Lang;
 use melon_core::math::argb;
+use melon_gui::hud::item_slot::ItemPainter;
+use melon_gui::text::{self, StyledText};
+use melon_protocol::component::Component;
 use melon_render::quad::DrawList;
 use melon_world::entity::kind::EntityKind;
 use melon_world::entity::tracker::ClientEntity;
@@ -526,7 +526,12 @@ mod tests {
     #[test]
     fn a_camera_away_from_the_origin_sees_a_point_at_its_real_distance() {
         let eye = DVec3::new(1_000_000.3, 75.0, -1_000_044.7);
-        let camera = Camera::new(eye, melon_core::math::euler::Look::new(20.0, 10.0), 70.0, 256.0);
+        let camera = Camera::new(
+            eye,
+            melon_core::math::euler::Look::new(20.0, 10.0),
+            70.0,
+            256.0,
+        );
         let camera = NameView::of(&camera, 16.0 / 9.0);
         let size = (320.0, 180.0);
         let forward = melon_core::math::euler::Orientation::new(camera.look).forwards;

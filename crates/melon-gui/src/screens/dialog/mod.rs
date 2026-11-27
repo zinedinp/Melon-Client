@@ -20,13 +20,13 @@ use element::{ButtonAction, ButtonElement, Element, Press, WarningElement};
 pub use waiting::WaitingScreen;
 pub use warning::WarningScreen;
 
-use melon_protocol::component::ClickEvent;
-use melon_net::dialog::{
-    ActionButton, AfterAction, Dialog, DialogClick, DialogKind, InputValue, connection,
-};
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::text::{self, StyledText};
 use crate::widgets::{Rect, Ui};
+use melon_net::dialog::{
+    ActionButton, AfterAction, Dialog, DialogClick, DialogKind, InputValue, connection,
+};
+use melon_protocol::component::ClickEvent;
 
 /// What a dialog asks the app to do.
 #[derive(Clone, Debug)]

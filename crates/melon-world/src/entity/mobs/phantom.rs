@@ -2,8 +2,8 @@
 
 use super::{LayerSpec, ModelId as M};
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle::{self, DEG_TO_RAD};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{self, DEG_TO_RAD};
 
 pub const TEXTURE: &str = "minecraft:entity/phantom/phantom";
 /// `PhantomEyesLayer`, drawn glowing (`RenderTypes.eyes`).

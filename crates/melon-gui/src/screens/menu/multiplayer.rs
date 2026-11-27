@@ -8,19 +8,14 @@ use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::Instant;
 
-use melon_protocol::component::Component;
 use image::RgbaImage;
+use melon_protocol::component::Component;
 
-use melon_net::join::Target;
-use melon_net::lan::{LanDetector, LanServer};
-use melon_net::status::{self, CannotResolve, ServerStatus};
-use melon_render::TextureId;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::menu::confirm_delete::confirm_delete_server;
 use crate::screens::menu::connecting::ConnectingScreen;
 use crate::screens::menu::direct_connect::DirectConnectScreen;
 use crate::screens::menu::edit_server::EditServerScreen;
-use melon_settings::server_list::{self, ServerEntry};
 use crate::text::colors;
 use crate::text::font::{Font, LINE_HEIGHT, sprite_index};
 use crate::text::{StyledText, TextStyle};
@@ -30,6 +25,11 @@ use crate::widgets::row_icon::{self, Layout, Moves, Zone};
 use crate::widgets::scroll_list::{ListClick, ScrollList};
 use crate::widgets::set::{KeyResult, WidgetSet};
 use crate::widgets::{Rect, Ui};
+use melon_net::join::Target;
+use melon_net::lan::{LanDetector, LanServer};
+use melon_net::status::{self, CannotResolve, ServerStatus};
+use melon_render::TextureId;
+use melon_settings::server_list::{self, ServerEntry};
 
 /// `HeaderAndFooterLayout`: the default header, and the two-row footer.
 const LAYOUT: HeaderFooter = HeaderFooter::new(33.0, 60.0);
@@ -320,8 +320,9 @@ impl Screen for MultiplayerScreen {
                         row.pending_icon = Some(favicon);
                     }
                     Ping::Done(Box::new(Answer {
-                        motd: (!status.description.is_null())
-                            .then(|| melon_protocol::component::decode::component(&status.description)),
+                        motd: (!status.description.is_null()).then(|| {
+                            melon_protocol::component::decode::component(&status.description)
+                        }),
                         motd_lines: OnceCell::new(),
                         players: player_count(status.online, status.max),
                         compatible: status.protocol == melon_net::PROTOCOL_VERSION,

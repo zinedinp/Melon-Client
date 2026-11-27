@@ -2,8 +2,8 @@
 
 use std::ops::Range;
 
-use melon_core::math::{radix, section_to_block};
 use glam::{DVec3, Vec3};
+use melon_core::math::{radix, section_to_block};
 
 use crate::block::direction::Direction;
 use crate::block::offset;

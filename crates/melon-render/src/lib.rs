@@ -45,10 +45,10 @@ pub use frame::{
     TerrainMesh, WeatherDraw, WorldDraw,
 };
 // The formats the world builds its meshes in, and its camera.
-pub use melon_world::particle::mesh::ParticleQuad;
 #[cfg(test)]
 pub use melon_world::mesh::quads_of_index_list;
 pub use melon_world::mesh::{CornerLight, TerrainQuad, WorldVertex, quad_index_list};
+pub use melon_world::particle::mesh::ParticleQuad;
 pub use melon_world::projection::{WORLD_Z_NEAR, world_projection};
 
 use ash::vk;

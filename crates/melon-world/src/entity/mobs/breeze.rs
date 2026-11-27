@@ -5,8 +5,8 @@ use crate::entity::animations::breeze as anim;
 use crate::entity::keyframe::{AnimationDefinition, AnimationState};
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition};
-use melon_core::math::angle::{EIGHTH_PI, PI, THIRD_PI};
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle::{EIGHTH_PI, PI, THIRD_PI};
 
 /// Animation slots (`PoseInput::anim`).
 pub const IDLE: usize = 0;

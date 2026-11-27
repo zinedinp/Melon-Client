@@ -1,8 +1,8 @@
 //! `DialogBodyHandlers`: an element for each kind of dialog body.
 
 use super::element::{Element, ItemElement, TextElement};
-use melon_net::dialog::DialogBody;
 use crate::screen::ScreenContext;
+use melon_net::dialog::DialogBody;
 
 /// `DialogBodyHandlers.createBodyElement`.
 pub fn element(body: &DialogBody, ctx: &ScreenContext) -> Box<dyn Element> {

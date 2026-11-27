@@ -7,12 +7,12 @@ use crate::screens::menu::placeholder::placeholder_screen;
 use crate::screens::menu::singleplayer::SingleplayerScreen;
 use crate::screens::options::OptionsScreen;
 use crate::screens::options::language::LanguageScreen;
-use melon_net::singleplayer;
 use crate::text::splash;
 use crate::widgets::button::Button;
 use crate::widgets::layout::{BUTTON_H, WIDE_BUTTON_W, quarter};
 use crate::widgets::set::{KeyResult, WidgetSet};
 use crate::widgets::{Ui, Widget};
+use melon_net::singleplayer;
 use std::time::Instant;
 
 const HALF_BUTTON_W: f32 = 98.0;

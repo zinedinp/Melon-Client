@@ -4,11 +4,11 @@
 use std::collections::HashMap;
 use std::path::Path;
 
+use melon_render::{ParticleDraw, ParticleMeshId, Renderer, TextureId};
+use melon_world::level::Level;
 use melon_world::particle::Particle;
 use melon_world::particle::base::Atlas;
 use melon_world::particle::mesh::{Batch, ParticleQuad, View, build};
-use melon_render::{ParticleDraw, ParticleMeshId, Renderer, TextureId};
-use melon_world::level::Level;
 
 /// The particles' GPU side.
 #[derive(Default)]

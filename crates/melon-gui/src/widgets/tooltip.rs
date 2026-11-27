@@ -1,11 +1,11 @@
 //! Tooltips: `TooltipRenderUtil`'s box (the `tooltip/*` sprites) around the text.
 
 use crate::assets::TooltipSprites;
+use crate::text::{self, StyledText, TextPaint};
+use crate::widgets::Rect;
 use melon_core::math::argb;
 use melon_render::TextureId;
 use melon_render::quad::DrawList;
-use crate::text::{self, StyledText, TextPaint};
-use crate::widgets::Rect;
 
 /// `Tooltip.MAX_WIDTH`: option tooltips wrap at this width.
 pub const MAX_WIDTH: f32 = 170.0;

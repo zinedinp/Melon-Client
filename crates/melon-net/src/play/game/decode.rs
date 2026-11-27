@@ -600,9 +600,11 @@ pub fn decode(pid: i32, body: &[u8]) -> Result<Option<GameEvent>> {
                 Ok(None) => {}
                 Err(e) => {
                     melon_base::warn!("Scoreboard packet {pid} unreadable: {e:#}");
-                    melon_core::probe::note("decode.error", format!("scoreboard packet {pid}"), || {
-                        format!("{e:#}")
-                    });
+                    melon_core::probe::note(
+                        "decode.error",
+                        format!("scoreboard packet {pid}"),
+                        || format!("{e:#}"),
+                    );
                     return Ok(None);
                 }
             }

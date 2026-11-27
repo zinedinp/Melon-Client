@@ -3,8 +3,8 @@
 use glam::Vec2;
 
 use crate::block::direction::{Direction, Directions};
-use melon_core::math::angle::{HALF_PI, PI, SIXTH_PI};
 use crate::model_part::{Cube, Part, Pose};
+use melon_core::math::angle::{HALF_PI, PI, SIXTH_PI};
 
 /// `ChestType`: which half of a double chest, if any.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

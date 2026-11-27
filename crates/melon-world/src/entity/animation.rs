@@ -1,7 +1,7 @@
 //! Vanilla `AnimationUtils` and the easing the models share: the arms' poses.
 
-use melon_core::math::angle::{self, PI};
 use crate::model_part::Pose;
+use melon_core::math::angle::{self, PI};
 
 /// `Ease.outQuart`.
 pub fn out_quart(x: f32) -> f32 {

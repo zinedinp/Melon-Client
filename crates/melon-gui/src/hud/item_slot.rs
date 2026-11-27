@@ -11,13 +11,13 @@ use pumpkin_data::effect::MobEffectCategory;
 use pumpkin_data::item_stack::ItemStack;
 
 use crate::hud::item_icon::ItemIcons;
+use crate::text::font::{Font, Glyphs};
+use crate::text::{self, StyledText, TextPaint, TextStyle, colors};
+use crate::widgets::tooltip;
 use melon_assets::i18n::Lang;
 use melon_core::math::argb;
 use melon_render::TextureId;
 use melon_render::quad::{DrawList, Program};
-use crate::text::font::{Font, Glyphs};
-use crate::text::{self, StyledText, TextPaint, TextStyle, colors};
-use crate::widgets::tooltip;
 use melon_world::item_model::StackKey;
 
 /// Everything drawing an item needs, bundled so the HUD and the screens pass one value.
@@ -203,10 +203,11 @@ pub fn display_name(lang: &Lang, stack: &ItemStack) -> String {
 /// `ItemStack.getHoverName`: the custom name, else the item's.
 pub fn hover_name(lang: &Lang, stack: &ItemStack) -> String {
     match stack.get_custom_name() {
-        Some(custom) => {
-            StyledText::from_component(&melon_protocol::component::pumpkin::from_pumpkin(custom), lang)
-                .to_plain()
-        }
+        Some(custom) => StyledText::from_component(
+            &melon_protocol::component::pumpkin::from_pumpkin(custom),
+            lang,
+        )
+        .to_plain(),
         None => display_name(lang, stack),
     }
 }
@@ -354,7 +355,11 @@ pub fn tooltip_lines(lang: &Lang, stack: &ItemStack) -> Vec<StyledText> {
         style.italic = true;
         for line in &lore.lines {
             let mut text = StyledText::default();
-            text.push_component(&melon_protocol::component::pumpkin::from_pumpkin(line), &style, lang);
+            text.push_component(
+                &melon_protocol::component::pumpkin::from_pumpkin(line),
+                &style,
+                lang,
+            );
             lines.push(text);
         }
     }
@@ -411,7 +416,9 @@ pub fn hover_stack(
             let data = match component {
                 DataComponent::CustomName => Some(
                     pumpkin_data::data_component_impl::CustomNameImpl {
-                        name: melon_protocol::component::pumpkin::to_pumpkin(&hover_component(value)),
+                        name: melon_protocol::component::pumpkin::to_pumpkin(&hover_component(
+                            value,
+                        )),
                     }
                     .to_dyn(),
                 ),
@@ -420,7 +427,9 @@ pub fn hover_stack(
                         lines: lines
                             .iter()
                             .map(|line| {
-                                melon_protocol::component::pumpkin::to_pumpkin(&hover_component(line))
+                                melon_protocol::component::pumpkin::to_pumpkin(&hover_component(
+                                    line,
+                                ))
                             })
                             .collect(),
                     }

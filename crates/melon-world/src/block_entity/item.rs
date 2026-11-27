@@ -5,10 +5,10 @@ use super::models::{self, ChestHalf, SkullType};
 use super::textures::{
     BANNER_BASE, CONDUIT_SHELL, POT_BASE, POT_SIDE, banner_flag, banner_texture, chest_texture,
 };
-use melon_core::math::angle::PI;
 use crate::model_part::Part;
 use glam::Vec2;
 use image::RgbaImage;
+use melon_core::math::angle::PI;
 use serde_json::Value;
 use std::path::Path;
 

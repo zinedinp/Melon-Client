@@ -2,8 +2,6 @@
 
 use std::sync::Arc;
 
-use melon_net::dialog::Dialog;
-use melon_assets::i18n::Lang;
 use crate::screen::{CursorKind, Screen, ScreenAction, ScreenContext, TextEvent};
 use crate::screens::dialog::DialogRequest;
 use crate::screens::options::OptionsScreen;
@@ -12,6 +10,8 @@ use crate::widgets::Ui;
 use crate::widgets::Widget;
 use crate::widgets::button::{Button, IconSprite};
 use crate::widgets::set::{KeyResult, WidgetSet};
+use melon_assets::i18n::Lang;
+use melon_net::dialog::Dialog;
 
 /// `PauseScreen.BUTTON_WIDTH_FULL` / `BUTTON_WIDTH_HALF`, and the 20px button height.
 const BUTTON_W: f32 = 204.0;

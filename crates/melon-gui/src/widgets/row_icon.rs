@@ -6,9 +6,9 @@ use std::sync::{Mutex, OnceLock};
 use image::RgbaImage;
 use rustc_hash::FxHashMap;
 
-use melon_render::TextureId;
 use crate::sprite::GuiSprite;
 use crate::widgets::{Rect, Ui};
+use melon_render::TextureId;
 
 /// `SelectableEntry`'s `size`.
 pub const SIZE: f32 = 32.0;

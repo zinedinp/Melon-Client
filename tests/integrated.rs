@@ -2,9 +2,9 @@
 
 use std::path::PathBuf;
 
-use melon_net::{Identity, Session, Teleport, WorldEvent};
 use melon_net::singleplayer::server::{self, IntegratedServer, Options};
 use melon_net::singleplayer::{self, WorldSettings};
+use melon_net::{Identity, Session, Teleport, WorldEvent};
 use melon_world::game_mode::GameMode;
 
 /// A fresh world, its server, and a session joined to it. Dropping it
@@ -998,11 +998,7 @@ impl MobWorld {
     }
 
     /// Polls and ticks until `done`, for at most 30 s.
-    fn wait(
-        &mut self,
-        what: &str,
-        done: impl Fn(&melon_world::entity::tracker::Entities) -> bool,
-    ) {
+    fn wait(&mut self, what: &str, done: impl Fn(&melon_world::entity::tracker::Entities) -> bool) {
         let until = std::time::Instant::now() + std::time::Duration::from_secs(30);
         loop {
             let events = self.world.session.poll();

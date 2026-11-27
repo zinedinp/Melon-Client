@@ -5,11 +5,11 @@
 
 use std::sync::Arc;
 
-use melon_protocol::component::ClickEvent;
-use melon_net::dialog::connection::{self, Request};
-use melon_net::dialog::{AfterAction, Dialog, DialogClick};
 use crate::game::InWorld;
 use melon_gui::screens::dialog::{DialogLayer, DialogRequest, DialogScreen, WaitingScreen};
+use melon_net::dialog::connection::{self, Request};
+use melon_net::dialog::{AfterAction, Dialog, DialogClick};
+use melon_protocol::component::ClickEvent;
 
 use super::RunningState;
 
@@ -130,7 +130,9 @@ impl RunningState {
                     melon_base::platform::open_url(&url);
                 }
             }
-            ClickEvent::CopyToClipboard { value } => melon_base::platform::copy_to_clipboard(&value),
+            ClickEvent::CopyToClipboard { value } => {
+                melon_base::platform::copy_to_clipboard(&value)
+            }
             ClickEvent::Custom { id, payload } => {
                 let payload = payload.as_ref().map(melon_net::dialog::action::json_to_nbt);
                 connection::send_custom(&id, payload.as_ref());

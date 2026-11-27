@@ -8,9 +8,9 @@ use anyhow::{Context, Result, bail};
 use image::RgbaImage;
 use serde_json::Value;
 
+use melon_assets::text::{SPRITE_COUNT, sprite_char};
 use melon_protocol::packet::{self, Reader, read_packet, write_packet};
 use melon_protocol::varint;
-use melon_assets::text::{SPRITE_COUNT, sprite_char};
 
 const TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -240,7 +240,10 @@ mod tests {
         assert!(status.max > 0);
         assert!(!status.description.is_null());
         let motd = melon_protocol::component::decode::component(&status.description);
-        let text = melon_assets::text::StyledText::from_component(&motd, &melon_assets::i18n::Lang::empty());
+        let text = melon_assets::text::StyledText::from_component(
+            &motd,
+            &melon_assets::i18n::Lang::empty(),
+        );
         eprintln!("MOTD: {:?}", text.to_plain());
     }
 
@@ -255,7 +258,10 @@ mod tests {
         let mut sprites = Vec::new();
         let sanitized = sanitize_description(&motd, 0, &mut sprites);
         let component = melon_protocol::component::decode::component(&sanitized);
-        let text = melon_assets::text::StyledText::from_component(&component, &melon_assets::i18n::Lang::empty());
+        let text = melon_assets::text::StyledText::from_component(
+            &component,
+            &melon_assets::i18n::Lang::empty(),
+        );
         assert_eq!(text.to_plain(), "   \u{E000} G\n  +");
         assert_eq!(sprites, ["item/totem_of_undying"]);
     }

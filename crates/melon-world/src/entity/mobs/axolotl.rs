@@ -7,8 +7,8 @@ use crate::entity::animations::baby_axolotl as baby_anim;
 use crate::entity::keyframe::AnimationDefinition;
 use crate::entity::living::LivingRenderState;
 use crate::entity::model::{LayerDefinition, Model, ModelPose, PartDefinition, PartId};
-use melon_core::math::angle;
 use crate::model_part::{Cube, Pose};
+use melon_core::math::angle;
 
 /// `Axolotl.Variant` names by id: lucy, wild, gold, cyan, blue.
 pub fn texture(variant: i32, baby: bool) -> &'static str {

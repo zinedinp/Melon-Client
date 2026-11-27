@@ -6,10 +6,10 @@ use super::hands::ItemUse;
 use crate::entity::humanoid::{ArmPose, HumanoidRenderState, SwingPose};
 use crate::entity::living::{Swim, SwimTurn};
 use crate::entity::player::{Arm, AvatarRenderState, ShownParts};
+use glam::{DVec3, Mat4, Vec3};
 use melon_core::math::angle::{self, PI, Rotation};
 use melon_core::math::euler::{self, Look};
 use melon_core::math::wrap_degrees;
-use glam::{DVec3, Mat4, Vec3};
 
 impl PlayerState {
     /// Once a frame.
@@ -92,7 +92,8 @@ impl PlayerState {
         let (body_yaw, head_turn) = match self.ride_body.filter(|_| self.riding) {
             Some((before, now)) => {
                 let mount = crate::entity::living::rot_lerp(self.partial, before, now);
-                let turn = melon_core::math::wrap_degrees(self.yaw_degrees - mount).clamp(-85.0, 85.0);
+                let turn =
+                    melon_core::math::wrap_degrees(self.yaw_degrees - mount).clamp(-85.0, 85.0);
                 let body =
                     self.yaw_degrees - turn + if turn.abs() > 50.0 { turn * 0.2 } else { 0.0 };
                 (body, self.yaw_degrees - body)

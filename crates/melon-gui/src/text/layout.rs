@@ -1,9 +1,9 @@
 //! Drawing and measuring [`StyledText`]: the way `Font.PreparedTextBuilder`
 
 use super::{StyledText, TextStyle};
+use crate::text::font::{self, BASELINE_ASCENT, Font, GlyphKind, shadow_color};
 use melon_render::TextureId;
 use melon_render::quad::DrawList;
-use crate::text::font::{self, BASELINE_ASCENT, Font, GlyphKind, shadow_color};
 
 /// How styled text is drawn: where, how opaque, with or without shadow.
 #[derive(Clone, Copy)]

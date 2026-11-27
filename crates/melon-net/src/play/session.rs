@@ -5,12 +5,12 @@ use super::level::chunk_batch::ChunkBatchSizeCalculator;
 use super::stats::NetStats;
 use super::{chat, game};
 use crate::login::{self, ClientInfo, JoinInfo, write_client_information};
+use anyhow::{Context, Result};
 use melon_protocol::connection::{ReadHalf, WriteHalf};
 use melon_protocol::packet::{self, Reader, write_packet};
 use melon_protocol::{id, varint};
 use melon_world::dimension::{DimensionTypes, Height};
 use melon_world::player::hands::Hand;
-use anyhow::{Context, Result};
 use pumpkin_data::packet::clientbound::play as cb;
 use std::io::Write;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -552,7 +552,11 @@ impl Session {
     /// `ServerboundPlayerInputPacket`.
     pub fn send_player_input(&self, input: game::PlayerInput) {
         if melon_core::probe::enabled() {
-            melon_core::probe::trace_io(true, "player_input", format!("bits={:#04x}", input.bits()));
+            melon_core::probe::trace_io(
+                true,
+                "player_input",
+                format!("bits={:#04x}", input.bits()),
+            );
         }
         self.send(game::id::SB_PLAYER_INPUT, |buf| {
             buf.write_all(&[input.bits()])?;

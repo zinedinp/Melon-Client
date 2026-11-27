@@ -4,11 +4,11 @@ use ash::vk;
 use glam::Mat4;
 
 use super::frame::WorldDraw;
-use melon_world::fog::FogData;
 use majestix_vk::{
     Binding, Descriptor, DescriptorSet, DescriptorSetLayout, Frames, Mapped, MemoryUse,
     Simple as _, Write,
 };
+use melon_world::fog::FogData;
 use numerobis::elem::Pod;
 
 /// `Globals` in `globals.glsl`, std140: ten `vec4`s.

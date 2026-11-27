@@ -19,10 +19,14 @@ use winit::event::{DeviceEvent, DeviceId, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
 
-use melon_assets::assets::Assets;
-use melon_audio::AudioEngine;
 use crate::game::InWorld;
 use crate::game::world_resources::{PendingBake, WorldResources};
+use cli::LaunchOptions;
+use input::InputState;
+use melon_assets::assets::Assets;
+use melon_assets::i18n::Lang;
+use melon_audio::AudioEngine;
+use melon_base::platform::{copy_to_clipboard, open_url};
 use melon_gui::assets::GuiAssets;
 use melon_gui::panorama::Panorama;
 use melon_gui::screen::{GuiScale, ScreenAction, ScreenContext};
@@ -31,14 +35,10 @@ use melon_gui::screens::ingame::loading::LevelLoadingScreen;
 use melon_gui::screens::ingame::pause::PauseScreen;
 use melon_gui::screens::menu::connecting::{ConnectingScreen, disconnected_screen};
 use melon_gui::screens::menu::title::TitleScreen;
-use melon_assets::i18n::Lang;
 use melon_net::join::{Joined, Target};
-use melon_base::platform::{copy_to_clipboard, open_url};
 use melon_render::Renderer;
 use melon_render::quad::DrawList;
 use melon_settings::options::Config;
-use cli::LaunchOptions;
-use input::InputState;
 use screen_stack::ScreenStack;
 
 /// Runs the game until its window closes.

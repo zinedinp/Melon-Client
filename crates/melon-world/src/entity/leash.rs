@@ -2,8 +2,8 @@
 
 use glam::Vec3;
 
-use melon_core::math::angle;
 use crate::mesh::WorldVertex;
+use melon_core::math::angle;
 
 /// `LeashFeatureRenderer.LEASH_RENDER_STEPS`.
 const STEPS: usize = 24;

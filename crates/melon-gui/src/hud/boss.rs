@@ -5,12 +5,12 @@ use std::time::Instant;
 use uuid::Uuid;
 
 use super::item_slot::ItemPainter;
-use melon_net::play::game::boss::{BossEvent, COLORS, OVERLAYS};
-use melon_render::Renderer;
-use melon_render::quad::DrawList;
 use crate::sprite::GuiSprite;
 use crate::text::{self, StyledText, TextPaint, colors};
 use melon_assets::assets::Assets;
+use melon_net::play::game::boss::{BossEvent, COLORS, OVERLAYS};
+use melon_render::Renderer;
+use melon_render::quad::DrawList;
 
 const BAR_WIDTH: f32 = 182.0;
 const BAR_HEIGHT: f32 = 5.0;

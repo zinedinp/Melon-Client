@@ -3,8 +3,8 @@
 use super::{BlockEntities, Kind, kind_of};
 use crate::block::direction::Direction;
 use crate::level::Level;
-use melon_core::math::angle::{PI, TAU};
 use glam::Vec3;
+use melon_core::math::angle::{PI, TAU};
 
 impl BlockEntities {
     pub(super) fn random(&mut self, bound: u32) -> i32 {
