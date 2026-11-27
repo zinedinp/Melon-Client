@@ -6,21 +6,31 @@ they are about; this file holds the plans that span modules or crates.
 
 Melon is on majestix-vk 0.2.1 and numerobis 0.6.0.
 
+**Next:** melon-render's re-exports (below), which finish the split's
+naming; then `gui_uniforms.rs` onto a `Mapped` ring, the renderer move's
+next step.
+
 ## melon (the client)
 
 ### The crate split
 
 The client is ten crates in `crates/` (the layering is in `src/lib.rs`);
-the bin keeps `game` and `app`. What the cut left behind:
+the bin keeps `game` and `app`. Code names other crates by their own names
+(`melon_world::chunk::Chunk`); no crate re-exports another under an old
+module name. What the cut left behind:
 
-- **Alias blocks.** Each crate root has `use melon_core::{math, probe};`
-  and the like, so moved code still says `crate::math::…`. Rewrite those
-  paths to the crates' names (`melon_core::math::…`) crate by crate, then
-  drop the blocks. The bin's `pub use melon_world as world;` and its
-  siblings likewise, for `game`, `app`, the examples and `tests/`.
+- **melon-render's re-exports.** Its root still hands out other crates'
+  items: `melon_base::gfx::quad` (42 uses as `melon_render::quad`),
+  `TextureId` (20) and `DeviceInfo`, and melon-world's `WorldVertex`,
+  `TerrainQuad`, `CornerLight`, `quad_index_list`, `ParticleQuad`,
+  `WORLD_Z_NEAR`, `world_projection`. Users in melon-gui, `game`, `app` and
+  the examples name the owning crate instead. (melon-net's `Stream` stays:
+  `join_stream` takes it.)
 - **Widened visibility.** What was `pub(crate)` in a moved module is `pub`
-  now, so the crates above still reach it. `unreachable_pub` finds what no
-  other crate uses, to go back to `pub(crate)`.
+  now, so the crates above still reach it. `unreachable_pub` catches only
+  `pub` in private modules (395: 124 in the bin, 108 in melon-render, 76 in
+  melon-world); what a public module exports but no other crate uses needs
+  a search across the crates.
 - **Test helpers outside tests.** Other crates' tests use
   `util::xorshift`, `Lang::empty`/`from_pairs`, `assets::test_root` and
   `test_post_chains`, `Chunk::new`, `TranslucentMesh::sorted_quads` and
@@ -92,10 +102,13 @@ path beside the 1.0 one:
 ### Lints, tests, CI
 
 - **`clippy::pedantic`**, as majestix-vk and keinbonus have it. Shared lints
-  live in `[workspace.lints]` now, but turning pedantic on gives 6244
-  warnings (313 in melon-base): ~2000 `must_use`, ~2400 casts (mostly game
-  math), the rest docs and style. Fixed in code, not allowed: melon-base
-  first, then the client module by module.
+  live in `[workspace.lints]`; pedantic gives 5777 warnings: melon-world
+  2856, melon-gui 973, the bin 445, melon-base and melon-render 302 each,
+  melon-net 264, melon-core 247, melon-protocol 125, melon-assets 107,
+  melon-audio 95, melon-settings 61. ~2000 `must_use_candidate`, ~2200
+  casts (mostly game math), the rest docs and style. Fixed in code, not
+  allowed, crate by crate from the small ones up; a crate that is clean
+  takes its own `[lints]` (the workspace's plus pedantic) until all are.
 - **CI.** There is none. The GPU checks (melon-render's `vk_check.rs`) are unit
   tests that need a device; with lavapipe or SwiftShader they could run on
   a runner, as majestix-vk's could.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes src/audio/level_sounds/data.rs: the sound each level event plays,
+"""Writes crates/melon-audio/src/level_sounds/data.rs: the sound each level event plays,
 from the decompiled vanilla `LevelEventHandler.java` and `SoundEvents.java`.
 
     tools/gen_level_sounds.py [path/to/mc-decomp/src/26.3/client]
@@ -16,7 +16,7 @@ DEFAULT_ROOT = "/mnt/ssd/Programmieren/Pumpkin-Reference/mc-decomp/src/26.3/clie
 ROOT = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_ROOT
 MC = os.path.join(ROOT, "net/minecraft")
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                   "src/audio/level_sounds/data.rs")
+                   "crates/melon-audio/src/level_sounds/data.rs")
 
 # Cases `playLocalSound` isn't plain in, with the sound they come to.
 MANUAL = {

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Writes src/world/entity/animations/: vanilla's keyframe animation
+"""Writes crates/melon-world/src/entity/animations/: vanilla's keyframe animation
 definitions (client/animation/definitions/*.java) as Rust statics for
-src/world/entity/keyframe.rs.
+crates/melon-world/src/entity/keyframe.rs.
 
     tools/port_animations.py [path/to/mc-decomp/src/26.3/client]
 
@@ -19,7 +19,7 @@ DEFAULT_ROOT = "/mnt/ssd/Programmieren/Pumpkin-Reference/mc-decomp/src/26.3/clie
 ROOT = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_ROOT
 SRC = os.path.join(ROOT, "net/minecraft/client/animation/definitions")
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                   "src/world/entity/animations")
+                   "crates/melon-world/src/entity/animations")
 
 INTERPOLATION = {"LINEAR": "Linear", "CATMULLROM": "CatmullRom"}
 TARGET = {"POSITION": "Position", "ROTATION": "Rotation", "SCALE": "Scale"}

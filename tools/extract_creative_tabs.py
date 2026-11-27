@@ -8,7 +8,7 @@ item list. Items made at runtime from registries (potions, enchanted books,
 goat horns, fireworks, ominous bottles, paintings, light levels...) are kept
 as generator entries that Melon expands itself.
 
-Writes `src/world/creative_tabs.json`. Re-run after a version bump:
+Writes `crates/melon-world/src/creative_tabs.json`. Re-run after a version bump:
 
     python3 tools/extract_creative_tabs.py [decomp-src-dir] [pumpkin-items.json]
 """
@@ -25,7 +25,7 @@ SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(
 ITEMS_JSON = Path(sys.argv[2]) if len(sys.argv) > 2 else (
     ROOT.parent / "Pumpkin/Pumpkin/assets/items.json"
 )
-OUT = ROOT / "src/world/creative_tabs.json"
+OUT = ROOT / "crates/melon-world/src/creative_tabs.json"
 
 # `ColorCollection.forEach` and the tab code's `gameplayColorOrder`.
 COLORS = ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",

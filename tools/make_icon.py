@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Draws the program's icon: the cut face of the website's melon cube
 (`.cube .f` in website/melon-cube.css), flat and head on. Writes
-src/icon.png (the window's icon, embedded in the binary) and
+crates/melon-base/src/icon.png (the window's icon, embedded in the binary) and
 packaging/melon*.png (the desktop entry's). Needs PIL.
 Run from the repository root."""
 from PIL import Image, ImageDraw
@@ -38,8 +38,8 @@ for x, y in [(72, 80), (160, 72), (112, 136), (192, 152), (64, 184), (144, 200)]
     d.rectangle([x * K, y * K, (x + 16) * K - 1, (y + 16) * K - 1], fill=rgb(0x111111))
 
 icon = img.resize((256, 256), Image.LANCZOS)
-icon.save("src/icon.png")
+icon.save("crates/melon-base/src/icon.png")
 icon.save("packaging/melon.png")
 for size in (48, 128):  # the sizes a taskbar or dock asks for
     icon.resize((size, size), Image.LANCZOS).save(f"packaging/melon-{size}.png")
-print("src/icon.png, packaging/melon*.png")
+print("crates/melon-base/src/icon.png, packaging/melon*.png")

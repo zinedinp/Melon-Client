@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes src/audio/block_sounds/data.rs: each block's sound type, from the
+"""Writes crates/melon-audio/src/block_sounds/data.rs: each block's sound type, from the
 decompiled vanilla sources (Blocks.java, SoundType.java, SoundEvents.java).
 
     tools/gen_block_sounds.py [path/to/mc-decomp/src/26.3/client]
@@ -17,7 +17,7 @@ DEFAULT_ROOT = "/mnt/ssd/Programmieren/Pumpkin-Reference/mc-decomp/src/26.3/clie
 ROOT = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_ROOT
 MC = os.path.join(ROOT, "net/minecraft")
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                   "src/audio/block_sounds/data.rs")
+                   "crates/melon-audio/src/block_sounds/data.rs")
 
 
 def read(*parts):
