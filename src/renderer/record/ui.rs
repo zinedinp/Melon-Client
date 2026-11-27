@@ -18,8 +18,7 @@ impl Renderer {
             cmd,
             pipelines: &self.pipelines.ui,
             gui_set: self.gui_uniforms.set(self.frames.current),
-            vertices: self.ui_vertices.buffer(self.frames.current),
-            indices: self.ui_vertices.indices,
+            vertices: self.ui_vertices.bound(self.frames.current),
             extent: self.swapchain.extent,
         };
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.

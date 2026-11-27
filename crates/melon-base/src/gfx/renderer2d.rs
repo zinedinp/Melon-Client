@@ -15,7 +15,10 @@ use super::{
 };
 use ash::vk;
 use image::RgbaImage;
+use majestix_vk::{Frames, PresentConfig, Presenter};
+use numerobis::vulkan::swapchain::{Encoding, Extent, Output, Pacing};
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
+use std::mem::ManuallyDrop;
 
 const FRAMES_IN_FLIGHT: usize = 2;
 /// Descriptor sets in the first pool; a full pool is followed by a bigger one.
@@ -28,13 +31,20 @@ pub struct Renderer2d {
     debug: Option<(ash::ext::debug_utils::Instance, vk::DebugUtilsMessengerEXT)>,
     surface_loader: ash::khr::surface::Instance,
     surface: vk::SurfaceKHR,
-    physical: vk::PhysicalDevice,
     info: super::DeviceInfo,
     /// The Vulkan loader's instance version, packed.
     loader_version: u32,
     mem_props: vk::PhysicalDeviceMemoryProperties,
+    /// `layer`'s device, for the calls the renderer still makes itself.
     device: ash::Device,
-    queue: vk::Queue,
+    /// majestix-vk's device and queue.
+    layer: ManuallyDrop<Layer>,
+    /// The frames in flight; lent out while a frame is rendered.
+    ring: Option<Frames>,
+    /// The swapchain; lent out while a frame is rendered.
+    presenter: Option<Presenter>,
+    /// The window's size, which the next swapchain is made for.
+    window: vk::Extent2D,
     render_pass: vk::RenderPass,
     depth_format: vk::Format,
     swapchain: Swapchain,
@@ -48,28 +58,36 @@ pub struct Renderer2d {
     pending: Vec<PendingInit>,
     staging: Vec<Staging>,
     white: TextureId,
-    frames: Frames,
     vertices: UiVertices,
 }
 
+/// majestix-vk's device and queue, dropped by hand in [`Drop`]: after the
+/// renderer's own handles, before the surface and the instance.
+struct Layer {
+    queue: majestix_vk::Queue,
+    device: majestix_vk::Device,
+}
+
+/// What is sized with the presenter's swapchain.
 struct Swapchain {
-    loader: ash::khr::swapchain::Device,
-    handle: vk::SwapchainKHR,
+    /// What the render pass was made for.
+    format: vk::Format,
     extent: vk::Extent2D,
+    images: Vec<vk::Image>,
     views: Vec<vk::ImageView>,
     depth: (vk::Image, vk::DeviceMemory, vk::ImageView),
     framebuffers: Vec<vk::Framebuffer>,
 }
 
-struct Frames {
-    command_pool: vk::CommandPool,
-    command_buffers: Vec<vk::CommandBuffer>,
-    image_available: Vec<vk::Semaphore>,
-    /// One per swapchain image.
-    render_finished: Vec<vk::Semaphore>,
-    in_flight: Vec<vk::Fence>,
-    images_in_flight: Vec<vk::Fence>,
-    current: usize,
+/// FIFO, in UNORM as the client's (an `_SRGB` format would encode the
+/// colour a second time).
+fn present_config() -> PresentConfig {
+    PresentConfig {
+        pacing: Pacing::Vsync,
+        requested: None,
+        outputs: vec![Output::Sdr(Encoding::Unorm)],
+        usage: vk::ImageUsageFlags::empty(),
+    }
 }
 
 impl Renderer2d {
@@ -110,7 +128,21 @@ impl Renderer2d {
             )
         };
         // SAFETY: `device` is live, and the infos name only its own live handles.
-        let (device, queue) = unsafe { device::create(&instance, &gpu, &features) }?;
+        let (raw_device, _) = unsafe { device::create(&instance, &gpu, &features) }?;
+        // SAFETY: made just now from `features.plan` on `gpu.physical`, with one
+        // queue of `gpu.queue_family`; the layer is dropped before the instance.
+        let layer = unsafe {
+            majestix_vk::Device::adopt(
+                &instance,
+                gpu.physical,
+                raw_device,
+                features.plan.clone(),
+                &[(gpu.queue_family, 1)],
+            )
+        }?;
+        let device = layer.raw().clone();
+        let queue = layer.queue(gpu.queue_family, 0)?;
+        let ring = Frames::new(&layer, &queue, FRAMES_IN_FLIGHT as u32)?;
         let mem_props = gpu.mem_props;
 
         // SAFETY: `device` is live, and the infos name only its own live handles.
@@ -160,22 +192,24 @@ impl Renderer2d {
                 vk::SamplerAddressMode::CLAMP_TO_EDGE,
             )
         }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let frames = unsafe { create_frames(&device, gpu.queue_family) }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let vertices = unsafe { UiVertices::new(&device, &mem_props, FRAMES_IN_FLIGHT) }?;
+        let vertices = UiVertices::new(&layer, &queue, &ring)?;
+        // SAFETY: `surface` is the instance's, outlives the presenter (dropped
+        // first in `Drop`), and `device::pick` chose a family that presents to it.
+        let presenter =
+            unsafe { Presenter::new(&layer, &entry, surface, &ring, present_config()) }?;
         // SAFETY: `entry` holds the loaded Vulkan loader.
         let loader_version = unsafe { entry.try_enumerate_instance_version() }
             .ok()
             .flatten()
             .unwrap_or(vk::API_VERSION_1_0);
 
+        let size = window.inner_size();
         let mut renderer = Self {
             _entry: entry,
             swapchain: Swapchain {
-                loader: ash::khr::swapchain::Device::new(&instance, &device),
-                handle: vk::SwapchainKHR::null(),
+                format: surface_format,
                 extent: vk::Extent2D::default(),
+                images: Vec::new(),
                 views: Vec::new(),
                 depth: Default::default(),
                 framebuffers: Vec::new(),
@@ -184,12 +218,20 @@ impl Renderer2d {
             debug,
             surface_loader,
             surface,
-            physical: gpu.physical,
             info: gpu.info.clone(),
             loader_version,
             mem_props,
             device,
-            queue,
+            layer: ManuallyDrop::new(Layer {
+                queue,
+                device: layer,
+            }),
+            ring: Some(ring),
+            presenter: Some(presenter),
+            window: vk::Extent2D {
+                width: size.width.max(1),
+                height: size.height.max(1),
+            },
             render_pass,
             depth_format,
             texture_layout,
@@ -201,12 +243,8 @@ impl Renderer2d {
             pending: Vec::new(),
             staging: (0..FRAMES_IN_FLIGHT).map(|_| Staging::default()).collect(),
             white: TextureId(0),
-            frames,
             vertices,
         };
-        let size = window.inner_size();
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe { renderer.create_swapchain(size.width.max(1), size.height.max(1)) }?;
         let white = RgbaImage::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
         renderer.white = renderer.load_texture(&white)?;
         let view = renderer.textures[renderer.white.0].view;
@@ -256,16 +294,16 @@ impl Renderer2d {
         Ok(TextureId(self.textures.len() - 1))
     }
 
-    /// The window was resized to `width` x `height` pixels.
+    /// The window's new size; the next frame makes the swapchain for it.
     pub fn resize(&mut self, width: u32, height: u32) -> anyhow::Result<()> {
         if width == 0 || height == 0 {
             return Ok(());
         }
-        // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
-        unsafe {
-            self.device.device_wait_idle()?;
-            self.create_swapchain(width, height)
+        self.window = vk::Extent2D { width, height };
+        if let Some(presenter) = &mut self.presenter {
+            presenter.invalidate();
         }
+        Ok(())
     }
 
     /// Draws `ui`, whose coordinates span `ui_size`, over `clear_color`.
@@ -279,54 +317,27 @@ impl Renderer2d {
         unsafe { self.render_inner(ui, ui_size, clear_color) }
     }
 
-    unsafe fn create_swapchain(&mut self, width: u32, height: u32) -> anyhow::Result<()> {
-        // SAFETY: `instance` is live, and the physical device and surface are its own.
-        let capabilities = unsafe {
-            self.surface_loader
-                .get_physical_device_surface_capabilities(self.physical, self.surface)
-        }?;
-        let format = choose_surface_format(&self.surface_loader, self.physical, self.surface)?;
-        let old = self.swapchain.handle;
-        let window = vk::Extent2D { width, height };
-        let Some(shape) =
-            vk_util::swapchain_shape(&capabilities, window, 3, old != vk::SwapchainKHR::null())
-        else {
-            // Minimized: keep the old swapchain until the window has a size again.
+    /// The views, depth buffer and framebuffers for `presenter`'s swapchain.
+    unsafe fn rebuild_targets(&mut self, presenter: &Presenter) -> anyhow::Result<()> {
+        let Some((extent, format, _, _)) = presenter.current() else {
             return Ok(());
         };
-        let extent = shape.extent;
-        let info = vk::SwapchainCreateInfoKHR::default()
-            .surface(self.surface)
-            .min_image_count(shape.image_count)
-            .image_format(format.format)
-            .image_color_space(format.color_space)
-            .image_extent(extent)
-            .image_array_layers(1)
-            .image_usage(vk::ImageUsageFlags::COLOR_ATTACHMENT)
-            .image_sharing_mode(vk::SharingMode::EXCLUSIVE)
-            .pre_transform(capabilities.current_transform)
-            .composite_alpha(shape.composite_alpha)
-            .present_mode(vk::PresentModeKHR::FIFO)
-            .clipped(true)
-            .old_swapchain(old);
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let handle = unsafe { self.swapchain.loader.create_swapchain(&info, None) }?;
-        // SAFETY: made by this device, and no frame in flight uses it any more.
+        anyhow::ensure!(
+            format == self.swapchain.format,
+            "the swapchain came in {format:?}, the render pass was made for {:?}",
+            self.swapchain.format
+        );
+        // The old targets may still be drawn into by a frame in flight.
+        self.layer.device.wait_idle()?;
+        // SAFETY: made by this device, and the wait above finished every frame using it.
         unsafe { self.destroy_swapchain_resources() };
-        if old != vk::SwapchainKHR::null() {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { self.swapchain.loader.destroy_swapchain(old, None) };
-        }
-        self.swapchain.handle = handle;
         self.swapchain.extent = extent;
-
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let images = unsafe { self.swapchain.loader.get_swapchain_images(handle) }?;
-        for &image in &images {
+        self.swapchain.images = presenter.images().iter().map(|i| i.raw()).collect();
+        for &image in &self.swapchain.images {
             let view_info = vk::ImageViewCreateInfo::default()
                 .image(image)
                 .view_type(vk::ImageViewType::TYPE_2D)
-                .format(format.format)
+                .format(format)
                 .subresource_range(vk::ImageSubresourceRange {
                     aspect_mask: vk::ImageAspectFlags::COLOR,
                     base_mip_level: 0,
@@ -360,15 +371,6 @@ impl Renderer2d {
             let framebuffer = unsafe { self.device.create_framebuffer(&info, None) }?;
             self.swapchain.framebuffers.push(framebuffer);
         }
-        for _ in 0..images.len() {
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            let semaphore = unsafe {
-                self.device
-                    .create_semaphore(&vk::SemaphoreCreateInfo::default(), None)
-            }?;
-            self.frames.render_finished.push(semaphore);
-        }
-        self.frames.images_in_flight = vec![vk::Fence::null(); images.len()];
         Ok(())
     }
 
@@ -381,6 +383,7 @@ impl Renderer2d {
             // SAFETY: made by this device, and no frame in flight uses it any more.
             unsafe { self.device.destroy_image_view(view, None) };
         }
+        self.swapchain.images.clear();
         let (image, memory, view) = std::mem::take(&mut self.swapchain.depth);
         if image != vk::Image::null() {
             // SAFETY: made by this device, and no frame in flight uses it any more.
@@ -390,10 +393,6 @@ impl Renderer2d {
                 vk_util::free_memory(&self.device, memory);
             }
         }
-        for semaphore in self.frames.render_finished.drain(..) {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { self.device.destroy_semaphore(semaphore, None) };
-        }
     }
 
     unsafe fn render_inner(
@@ -402,7 +401,30 @@ impl Renderer2d {
         ui_size: (f32, f32),
         clear_color: [f32; 4],
     ) -> anyhow::Result<()> {
-        let current = self.frames.current;
+        let mut ring = self
+            .ring
+            .take()
+            .expect("the frame ring is back after each frame");
+        let mut presenter = self
+            .presenter
+            .take()
+            .expect("the presenter is back after each frame");
+        // SAFETY: the caller's promise, passed on.
+        let result =
+            unsafe { self.render_frame(&mut ring, &mut presenter, ui, ui_size, clear_color) };
+        self.ring = Some(ring);
+        self.presenter = Some(presenter);
+        result
+    }
+
+    unsafe fn render_frame(
+        &mut self,
+        ring: &mut Frames,
+        presenter: &mut Presenter,
+        ui: &DrawList,
+        ui_size: (f32, f32),
+        clear_color: [f32; 4],
+    ) -> anyhow::Result<()> {
         let vertex_count = ui.vertices.len().min(VERTEX_CAPACITY);
         let fitting = ui
             .calls
@@ -410,12 +432,12 @@ impl Renderer2d {
             .take_while(|call| (call.first + call.count) as usize / 6 * 4 <= vertex_count)
             .count();
         let calls = &ui.calls[..fitting];
-        let fence = self.frames.in_flight[current];
-        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-        unsafe { self.device.wait_for_fences(&[fence], true, u64::MAX) }?;
+        // Waits for the slot's last frame and destroys what finished frames retired.
+        let frame = ring.begin()?;
+        let current = frame.slot().index() as usize;
 
-        // Every allocation before an image is acquired: a failure after that would leave the
-        // image acquired with nothing to present it.
+        // Every allocation before an image is acquired: an image acquired and
+        // then dropped costs the presenter a device wait.
         // SAFETY: `device` is live, and the infos name only its own live handles.
         unsafe {
             texture_update::prepare(
@@ -426,36 +448,26 @@ impl Renderer2d {
                 &[],
             )
         }?;
-        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-        let acquired = unsafe {
-            self.swapchain.loader.acquire_next_image(
-                self.swapchain.handle,
-                u64::MAX,
-                self.frames.image_available[current],
-                vk::Fence::null(),
-            )
+        let window = Extent::new(self.window.width, self.window.height);
+        // Minimized: nothing to draw into, the frame is skipped.
+        let Some(acquired) = presenter.acquire(&frame, window)? else {
+            return Ok(());
         };
-        let (width, height) = (self.swapchain.extent.width, self.swapchain.extent.height);
-        let image_index = match acquired {
-            Ok((index, _suboptimal)) => index,
-            Err(vk::Result::ERROR_OUT_OF_DATE_KHR) => {
-                // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-                unsafe { self.device.device_wait_idle() }?;
-                // SAFETY: `device` is live, and the infos name only its own live handles.
-                return unsafe { self.create_swapchain(width, height) };
-            }
-            Err(e) => return Err(e.into()),
-        };
-        let image_fence = self.frames.images_in_flight[image_index as usize];
-        if image_fence != vk::Fence::null() {
-            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-            unsafe { self.device.wait_for_fences(&[image_fence], true, u64::MAX) }?;
+        let fresh = presenter.images().len() != self.swapchain.images.len()
+            || presenter
+                .images()
+                .iter()
+                .zip(&self.swapchain.images)
+                .any(|(new, &old)| new.raw() != old);
+        if fresh || self.swapchain.framebuffers.is_empty() {
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { self.rebuild_targets(presenter) }?;
         }
-        self.frames.images_in_flight[image_index as usize] = fence;
+        let image_index = acquired.index as usize;
+        let (width, height) = (self.swapchain.extent.width, self.swapchain.extent.height);
 
-        // SAFETY: this frame's fence was waited on, so the GPU no longer reads its vertices.
-        unsafe { self.vertices.write(current, &ui.vertices) };
-        // SAFETY: this frame's fence was waited on, so the GPU no longer reads its uniform slot.
+        self.vertices.write(&frame, &ui.vertices);
+        // SAFETY: `ring.begin` waited for the slot's last frame, so the GPU no longer reads its uniforms.
         unsafe {
             self.gui.write(
                 current,
@@ -467,17 +479,8 @@ impl Renderer2d {
             )
         };
 
-        let cmd = self.frames.command_buffers[current];
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe {
-            self.device
-                .reset_command_buffer(cmd, vk::CommandBufferResetFlags::empty())
-        }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe {
-            self.device
-                .begin_command_buffer(cmd, &vk::CommandBufferBeginInfo::default())
-        }?;
+        let rec = frame.record()?;
+        let cmd = rec.raw();
         let inits = std::mem::take(&mut self.pending);
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe {
@@ -510,7 +513,7 @@ impl Renderer2d {
         };
         let pass_info = vk::RenderPassBeginInfo::default()
             .render_pass(self.render_pass)
-            .framebuffer(self.swapchain.framebuffers[image_index as usize])
+            .framebuffer(self.swapchain.framebuffers[image_index])
             .render_area(full)
             .clear_values(&clear_values);
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
@@ -537,8 +540,7 @@ impl Renderer2d {
                     cmd,
                     pipelines: &self.pipelines,
                     gui_set: self.gui.set(current),
-                    vertices: self.vertices.buffer(current),
-                    indices: self.vertices.indices,
+                    vertices: self.vertices.bound(current),
                     extent: self.swapchain.extent,
                 },
                 ui_size,
@@ -549,97 +551,25 @@ impl Renderer2d {
         };
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.device.cmd_end_render_pass(cmd) };
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe { self.device.end_command_buffer(cmd) }?;
+        let recorded = rec.finish()?;
 
-        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-        unsafe { self.device.reset_fences(&[fence]) }?;
-        let wait_semaphores = [self.frames.image_available[current]];
-        let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
-        let signal_semaphores = [self.frames.render_finished[image_index as usize]];
-        let command_buffers = [cmd];
-        let submit = vk::SubmitInfo::default()
-            .wait_semaphores(&wait_semaphores)
-            .wait_dst_stage_mask(&wait_stages)
-            .command_buffers(&command_buffers)
-            .signal_semaphores(&signal_semaphores);
-        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-        unsafe { self.device.queue_submit(self.queue, &[submit], fence) }?;
-
-        let swapchains = [self.swapchain.handle];
-        let image_indices = [image_index];
-        let present = vk::PresentInfoKHR::default()
-            .wait_semaphores(&signal_semaphores)
-            .swapchains(&swapchains)
-            .image_indices(&image_indices);
-        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-        let presented = unsafe { self.swapchain.loader.queue_present(self.queue, &present) };
-        let recreate = vk_util::recreate_after_present(presented, self.swapchain.extent, || {
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            unsafe { vk_util::surface_extent(&self.surface_loader, self.physical, self.surface) }
-        })?;
-        if recreate {
-            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-            unsafe { self.device.device_wait_idle() }?;
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            unsafe { self.create_swapchain(width, height) }?;
-        }
-        self.frames.current = (current + 1) % FRAMES_IN_FLIGHT;
+        let waits_on = [(
+            acquired.wait,
+            vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
+        )];
+        frame.submit(&self.layer.queue, [recorded], &waits_on, &[acquired.signal])?;
+        // Out of date or resized: the next acquire makes a new swapchain.
+        presenter.present(&self.layer.queue, acquired)?;
         Ok(())
     }
-}
-
-/// The command buffers, semaphores and fences of each frame in flight.
-unsafe fn create_frames(device: &ash::Device, queue_family: u32) -> anyhow::Result<Frames> {
-    // SAFETY: `device` is live, and the infos name only its own live handles.
-    let command_pool = unsafe {
-        device.create_command_pool(
-            &vk::CommandPoolCreateInfo::default()
-                .queue_family_index(queue_family)
-                .flags(vk::CommandPoolCreateFlags::RESET_COMMAND_BUFFER),
-            None,
-        )
-    }?;
-    // SAFETY: `device` is live, and the infos name only its own live handles.
-    let command_buffers = unsafe {
-        device.allocate_command_buffers(
-            &vk::CommandBufferAllocateInfo::default()
-                .command_pool(command_pool)
-                .level(vk::CommandBufferLevel::PRIMARY)
-                .command_buffer_count(FRAMES_IN_FLIGHT as u32),
-        )
-    }?;
-    let mut image_available = Vec::new();
-    let mut in_flight = Vec::new();
-    for _ in 0..FRAMES_IN_FLIGHT {
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        image_available
-            .push(unsafe { device.create_semaphore(&vk::SemaphoreCreateInfo::default(), None) }?);
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        in_flight.push(unsafe {
-            device.create_fence(
-                &vk::FenceCreateInfo::default().flags(vk::FenceCreateFlags::SIGNALED),
-                None,
-            )
-        }?);
-    }
-    Ok(Frames {
-        command_pool,
-        command_buffers,
-        image_available,
-        render_finished: Vec::new(),
-        in_flight,
-        images_in_flight: Vec::new(),
-        current: 0,
-    })
 }
 
 impl Drop for Renderer2d {
     fn drop(&mut self) {
         // SAFETY: the device is waited idle first, and every handle freed is this renderer's own.
         unsafe {
-            let _ = self.device.device_wait_idle();
-            self.vertices.destroy(&self.device);
+            let _ = self.layer.device.wait_idle();
+            self.vertices.destroy();
             for texture in &self.textures {
                 self.device.destroy_image_view(texture.view, None);
                 self.device.destroy_image(texture.image, None);
@@ -648,20 +578,7 @@ impl Drop for Renderer2d {
             for staging in &mut self.staging {
                 staging.destroy(&self.device);
             }
-            for &semaphore in &self.frames.image_available {
-                self.device.destroy_semaphore(semaphore, None);
-            }
-            for &fence in &self.frames.in_flight {
-                self.device.destroy_fence(fence, None);
-            }
             self.destroy_swapchain_resources();
-            if self.swapchain.handle != vk::SwapchainKHR::null() {
-                self.swapchain
-                    .loader
-                    .destroy_swapchain(self.swapchain.handle, None);
-            }
-            self.device
-                .destroy_command_pool(self.frames.command_pool, None);
             self.device.destroy_sampler(self.sampler, None);
             self.pipelines.destroy(&self.device);
             self.gui.destroy(&self.device);
@@ -670,7 +587,11 @@ impl Drop for Renderer2d {
             self.pools.destroy(&self.device);
             self.device.destroy_render_pass(self.render_pass, None);
             suballoc::forget(&self.device);
-            self.device.destroy_device(None);
+            // The swapchain, then the frames (which destroy what was
+            // retired), then the device, all before the surface.
+            drop(self.presenter.take());
+            drop(self.ring.take());
+            ManuallyDrop::drop(&mut self.layer);
             self.surface_loader.destroy_surface(self.surface, None);
             if let Some((debug, messenger)) = self.debug.take() {
                 debug.destroy_debug_utils_messenger(messenger, None);

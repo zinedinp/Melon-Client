@@ -1,6 +1,6 @@
 [package]
 name = "melon-base"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Zinedin Polic"]
 edition = "2024"
 rust-version = "1.100.0"
@@ -14,6 +14,8 @@ arboard = { version = "3.7.0", features = ["wayland-data-control"] }
 ash = "0.38.0"
 ash-window = "0.13.0"
 image = { version = "0.25.10", default-features = false, features = ["png"] }
+# The safe Vulkan layer the 2D base moves onto, buffer by buffer.
+majestix-vk = "0.2.1"
 # The GPU's vendor and architecture from its PCI ids, for vendor paths at run time.
 numerobis = { version = "0.6.0", default-features = false, features = ["vulkan"] }
 open = "5.4.5"

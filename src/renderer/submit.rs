@@ -180,11 +180,7 @@ impl Renderer {
         let image_index = acquired.index;
         let recording = Instant::now();
 
-        // SAFETY: the image's fence was waited on, so the GPU no longer reads this frame's vertices.
-        unsafe {
-            self.ui_vertices
-                .write(self.frames.current, &frame.ui.vertices)
-        };
+        self.ui_vertices.write(&gpu_frame, &frame.ui.vertices);
 
         let mut globals = frame
             .scene
@@ -198,7 +194,7 @@ impl Renderer {
             0.0,
             0.0,
         ];
-        self.globals.write(&gpu_frame, &globals)?;
+        self.globals.write(&gpu_frame, &globals);
         // SAFETY: this frame's fence was waited on, so the GPU no longer reads its uniform slot.
         unsafe {
             self.gui_uniforms.write(

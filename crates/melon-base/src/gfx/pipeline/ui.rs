@@ -209,8 +209,8 @@ pub struct Target<'a> {
     pub pipelines: &'a UiPipelines,
     /// The GUI uniform blocks' set of the frame being recorded.
     pub gui_set: vk::DescriptorSet,
-    pub vertices: vk::Buffer,
-    pub indices: vk::Buffer,
+    /// The frame's vertices and the indices.
+    pub vertices: crate::gfx::ui_vertices::Bound,
     /// The size of what is drawn into, in pixels.
     pub extent: vk::Extent2D,
 }
@@ -250,8 +250,9 @@ pub unsafe fn record(
     bind(ui.pass(applied.0, applied.1));
     // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
     unsafe {
-        device.cmd_bind_vertex_buffers(cmd, 0, &[target.vertices], &[0]);
-        device.cmd_bind_index_buffer(cmd, target.indices, 0, vk::IndexType::UINT32);
+        let bound = target.vertices;
+        device.cmd_bind_vertex_buffers(cmd, 0, &[bound.vertices], &[bound.offset]);
+        device.cmd_bind_index_buffer(cmd, bound.indices, 0, vk::IndexType::UINT32);
     }
     // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
     unsafe {

@@ -1,91 +1,108 @@
-//! The UI's vertices: a mapped buffer per frame in flight, and the quads' shared indices.
+//! The UI's vertices: a mapped ring with a range per frame slot, and the
+//! quads' shared indices.
 
 use ash::vk;
+use majestix_vk::{Buffer, BufferDesc, Frame, Frames, Mapped, MemoryUse, Queue};
 
-use super::mapped::{self, MappedBuffer};
 use super::quad::Vertex;
-use super::vk_util::{self, Place};
 
 /// Vertices a frame's UI holds at most.
 pub const VERTEX_CAPACITY: usize = 1 << 16;
 
 pub struct UiVertices {
-    buffers: Vec<MappedBuffer>,
+    /// majestix-vk's part; given up in [`Self::destroy`], before the device goes.
+    own: Option<Own>,
+}
+
+struct Own {
+    device: majestix_vk::Device,
+    ring: Mapped<Vertex>,
+    /// Where each slot's range starts in the ring's buffer.
+    offsets: Vec<u64>,
     /// Six indices per quad, shared by every frame.
+    indices: Buffer,
+}
+
+/// What a frame binds: its slot's vertices, and the indices.
+#[derive(Clone, Copy)]
+pub struct Bound {
+    pub vertices: vk::Buffer,
+    pub offset: u64,
     pub indices: vk::Buffer,
-    index_memory: vk::DeviceMemory,
 }
 
 impl UiVertices {
-    /// `frames` vertex buffers and the indices: vanilla's `QUADS` pattern (0, 1, 2, 2, 3, 0).
+    /// A range of [`VERTEX_CAPACITY`] vertices per slot of `frames`, and the
+    /// indices, vanilla's `QUADS` pattern (0, 1, 2, 2, 3, 0), copied in on `queue`.
     ///
-    /// # Safety
+    /// # Errors
     ///
-    /// `device` must be live, `mem_props` its physical device's.
-    pub unsafe fn new(
-        device: &ash::Device,
-        mem_props: &vk::PhysicalDeviceMemoryProperties,
-        frames: usize,
+    /// Out of memory, or the device is lost.
+    pub fn new(
+        layer: &majestix_vk::Device,
+        queue: &Queue,
+        frames: &Frames,
     ) -> anyhow::Result<Self> {
-        let indices: Vec<u32> = (0..(VERTEX_CAPACITY / 4) as u32)
+        let pattern: Vec<u32> = (0..(VERTEX_CAPACITY / 4) as u32)
             .flat_map(|quad| [0, 1, 2, 2, 3, 0].map(|corner| quad * 4 + corner))
             .collect();
-        let usage = vk::BufferUsageFlags::INDEX_BUFFER;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let (indices, index_memory) =
-            unsafe { mapped::upload(device, mem_props, usage, &indices) }?;
-        let mut made = Self {
-            buffers: Vec::with_capacity(frames),
-            indices,
-            index_memory,
+        let indices = layer.create_buffer_init(
+            queue,
+            &BufferDesc {
+                size: (pattern.len() * size_of::<u32>()) as u64,
+                usage: vk::BufferUsageFlags::INDEX_BUFFER,
+                memory: MemoryUse::Device,
+            },
+            &pattern,
+        )?;
+        let ring = match Mapped::new(
+            layer,
+            frames,
+            VERTEX_CAPACITY,
+            vk::BufferUsageFlags::VERTEX_BUFFER,
+            MemoryUse::Upload,
+        ) {
+            Ok(ring) => ring,
+            Err(e) => {
+                layer.retire(indices);
+                return Err(e.into());
+            }
         };
-        let size = (VERTEX_CAPACITY * size_of::<Vertex>()) as u64;
-        for _ in 0..frames {
-            let usage = vk::BufferUsageFlags::VERTEX_BUFFER;
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            match unsafe { MappedBuffer::new(device, mem_props, size, usage, Place::UPLOAD) } {
-                Ok(buffer) => made.buffers.push(buffer),
-                Err(e) => {
-                    // SAFETY: made by this device, and nothing uses it yet.
-                    unsafe { made.destroy(device) };
-                    return Err(e);
-                }
-            }
+        let offsets = frames.slots().map(|slot| ring.offset(slot)).collect();
+        Ok(Self {
+            own: Some(Own {
+                device: layer.clone(),
+                ring,
+                offsets,
+                indices,
+            }),
+        })
+    }
+
+    /// Frame slot `slot`'s vertices and the indices.
+    pub fn bound(&self, slot: usize) -> Bound {
+        let own = self.own.as_ref().expect("UI vertices used after destroy");
+        Bound {
+            vertices: own.ring.buffer().raw(),
+            offset: own.offsets[slot],
+            indices: own.indices.raw(),
         }
-        Ok(made)
     }
 
-    /// Frame `frame`'s vertex buffer.
-    pub fn buffer(&self, frame: usize) -> vk::Buffer {
-        self.buffers[frame].buffer
-    }
-
-    /// Writes frame `frame`'s vertices, at most [`VERTEX_CAPACITY`] of them.
-    ///
-    /// # Safety
-    ///
-    /// Frame `frame`'s fence was waited on, so the GPU no longer reads its buffer.
-    pub unsafe fn write(&self, frame: usize, vertices: &[Vertex]) {
+    /// Writes the frame's vertices, at most [`VERTEX_CAPACITY`] of them.
+    pub fn write(&mut self, frame: &Frame<'_>, vertices: &[Vertex]) {
+        let own = self
+            .own
+            .as_mut()
+            .expect("UI vertices written after destroy");
         let vertices = &vertices[..vertices.len().min(VERTEX_CAPACITY)];
-        // SAFETY: the caller's promise, passed on.
-        unsafe { self.buffers[frame].write(0, vertices) };
+        own.ring.get_mut(frame)[..vertices.len()].copy_from_slice(vertices);
     }
 
-    /// Frees the buffers and the indices.
-    ///
-    /// # Safety
-    ///
-    /// `device` made them, and no frame in flight uses them any more.
-    pub unsafe fn destroy(&mut self, device: &ash::Device) {
-        // SAFETY: made by this device, and no frame in flight uses it any more.
-        unsafe {
-            for buffer in self.buffers.drain(..) {
-                buffer.destroy(device);
-            }
-            device.destroy_buffer(self.indices, None);
-            vk_util::free_memory(device, self.index_memory);
+    /// Retires the ring and the indices.
+    pub fn destroy(&mut self) {
+        if let Some(own) = self.own.take() {
+            own.device.retire(own.indices);
         }
-        self.indices = vk::Buffer::null();
-        self.index_memory = vk::DeviceMemory::null();
     }
 }

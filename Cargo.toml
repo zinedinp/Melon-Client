@@ -1,6 +1,6 @@
 [package]
 name = "melon"
-version = "0.10.9+mc26.3"
+version = "0.10.10+mc26.3"
 authors = ["Zinedin Polic"]
 edition = "2024"
 rust-version = "1.100.0"
@@ -72,7 +72,7 @@ miraculix = "0.7.1"
 # The GPU's vendor and architecture, for vendor paths (see melon-base).
 numerobis = { version = "0.6.0", default-features = false, features = ["vulkan"] }
 # The safe call layer: the device, its frame ring and the swapchain.
-majestix-vk = "0.2.0"
+majestix-vk = "0.2.1"
 
 [target.'cfg(windows)'.dependencies]
 # SRV records through the system resolver.

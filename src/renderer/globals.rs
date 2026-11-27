@@ -120,8 +120,8 @@ struct Own {
     device: majestix_vk::Device,
     layout: DescriptorSetLayout,
     ring: Mapped<Globals>,
-    /// Each slot's set, made in the slot's first frame.
-    sets: Vec<Option<DescriptorSet>>,
+    /// Each slot's set, naming its range.
+    sets: Vec<DescriptorSet>,
 }
 
 /// The set layout, made apart from the renderer for the headless check.
@@ -164,12 +164,36 @@ impl GlobalBuffers {
                 return Err(e.into());
             }
         };
+        let mut sets = Vec::with_capacity(frames.count() as usize);
+        for slot in frames.slots() {
+            let set = layer.create_descriptor_set(
+                layout,
+                &[Write::new(
+                    0,
+                    Descriptor::Buffer {
+                        buffer: ring.buffer(),
+                        offset: ring.offset(slot),
+                        range: ring.bytes(),
+                    },
+                )],
+            );
+            match set {
+                Ok(set) => sets.push(set),
+                Err(e) => {
+                    for set in sets {
+                        layer.retire(set);
+                    }
+                    layer.retire(layout);
+                    return Err(e.into());
+                }
+            }
+        }
         Ok(Self {
             own: Some(Own {
                 device: layer.clone(),
                 layout,
                 ring,
-                sets: vec![None; frames.count() as usize],
+                sets,
             }),
         })
     }
@@ -179,44 +203,21 @@ impl GlobalBuffers {
         self.own().layout.raw()
     }
 
-    /// Writes the frame's globals, and makes its slot's set the first time.
-    pub fn write(
-        &mut self,
-        frame: &majestix_vk::Frame<'_>,
-        globals: &Globals,
-    ) -> anyhow::Result<()> {
+    /// Writes the frame's globals.
+    pub fn write(&mut self, frame: &majestix_vk::Frame<'_>, globals: &Globals) {
         let own = self.own.as_mut().expect("globals written after destroy");
-        let slot = frame.slot();
         own.ring.get_mut(frame)[0] = *globals;
-        let at = slot.index() as usize;
-        if own.sets[at].is_none() {
-            let set = own.device.create_descriptor_set(
-                own.layout,
-                &[Write::new(
-                    0,
-                    Descriptor::Buffer {
-                        buffer: own.ring.buffer(),
-                        offset: own.ring.offset(slot),
-                        range: own.ring.bytes(),
-                    },
-                )],
-            )?;
-            own.sets[at] = Some(set);
-        }
-        Ok(())
     }
 
-    /// The set of frame slot `slot`, once [`Self::write`] wrote it.
+    /// Frame slot `slot`'s set.
     pub fn set(&self, slot: usize) -> vk::DescriptorSet {
-        self.own().sets[slot]
-            .expect("globals bound before written")
-            .raw()
+        self.own().sets[slot].raw()
     }
 
     /// Retires the buffer, the sets and the layout.
     pub fn destroy(&mut self) {
         if let Some(own) = self.own.take() {
-            for set in own.sets.into_iter().flatten() {
+            for set in own.sets {
                 own.device.retire(set);
             }
             own.device.retire(own.layout);

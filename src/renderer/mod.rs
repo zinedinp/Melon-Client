@@ -385,7 +385,7 @@ impl Drop for Renderer {
                 cache.close(&self.layer.device);
             }
 
-            self.ui_vertices.destroy(&self.device);
+            self.ui_vertices.destroy();
             self.device.destroy_buffer(self.sky_cube.buffer, None);
             vk_util::free_memory(&self.device, self.sky_cube.memory);
             self.meshes.destroy(&self.device);

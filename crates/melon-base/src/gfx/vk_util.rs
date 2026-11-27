@@ -4,7 +4,7 @@ use ash::vk;
 use numerobis::vulkan::alloc::{AllocationCount, Usage};
 use numerobis::vulkan::format::{self, Depth};
 use numerobis::vulkan::memory::Memory;
-use numerobis::vulkan::swapchain::{self, Encoding, Extent, SurfaceFormat, result};
+use numerobis::vulkan::swapchain::{self, Encoding, SurfaceFormat};
 use std::ffi::CStr;
 
 /// `mipmapped`.
@@ -217,98 +217,6 @@ pub fn choose_surface_format(
         format: vk::Format::from_raw(chosen.format as i32),
         color_space: vk::ColorSpaceKHR::from_raw(chosen.color_space as i32),
     })
-}
-
-/// What a new swapchain takes from the surface.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SwapchainShape {
-    pub extent: vk::Extent2D,
-    pub image_count: u32,
-    pub composite_alpha: vk::CompositeAlphaFlagsKHR,
-}
-
-/// The shape for a `window` of that size and at least `images` images.
-/// `None` while the surface has no pixels (minimized) and an old swapchain
-/// can stay (`has_old`); without one, 1x1.
-pub fn swapchain_shape(
-    capabilities: &vk::SurfaceCapabilitiesKHR,
-    window: vk::Extent2D,
-    images: u32,
-    has_old: bool,
-) -> Option<SwapchainShape> {
-    let capabilities = surface_capabilities(capabilities);
-    let extent = match capabilities.extent(extent_in(window)) {
-        Some(extent) => extent,
-        None if has_old => return None,
-        None => Extent::new(1, 1),
-    };
-    Some(SwapchainShape {
-        extent: extent_out(extent),
-        image_count: capabilities.image_count(images),
-        composite_alpha: vk::CompositeAlphaFlagsKHR::from_raw(capabilities.composite_alpha()),
-    })
-}
-
-fn surface_capabilities(c: &vk::SurfaceCapabilitiesKHR) -> swapchain::SurfaceCapabilities {
-    swapchain::SurfaceCapabilities {
-        min_image_count: c.min_image_count,
-        max_image_count: c.max_image_count,
-        current_extent: extent_in(c.current_extent),
-        min_image_extent: extent_in(c.min_image_extent),
-        max_image_extent: extent_in(c.max_image_extent),
-        max_image_array_layers: c.max_image_array_layers,
-        supported_transforms: c.supported_transforms.as_raw(),
-        current_transform: c.current_transform.as_raw(),
-        supported_composite_alpha: c.supported_composite_alpha.as_raw(),
-        supported_usage_flags: c.supported_usage_flags.as_raw(),
-    }
-}
-
-fn extent_in(e: vk::Extent2D) -> Extent {
-    Extent::new(e.width, e.height)
-}
-
-fn extent_out(e: Extent) -> vk::Extent2D {
-    vk::Extent2D {
-        width: e.width,
-        height: e.height,
-    }
-}
-
-/// Whether a `vkQueuePresentKHR` result asks for a new swapchain, by
-/// numerobis's policy: always when out of date, when suboptimal only if the
-/// surface's size (`surface_extent`) differs from `extent`.
-pub fn recreate_after_present(
-    presented: ash::prelude::VkResult<bool>,
-    extent: vk::Extent2D,
-    surface_extent: impl FnOnce() -> Option<vk::Extent2D>,
-) -> ash::prelude::VkResult<bool> {
-    let raw = match presented {
-        Ok(false) => result::SUCCESS,
-        Ok(true) => result::SUBOPTIMAL,
-        Err(e) => e.as_raw(),
-    };
-    swapchain::recreate(raw, extent_in(extent), || surface_extent().map(extent_in))
-        .map_err(vk::Result::from_raw)
-}
-
-/// The surface's `currentExtent`; `None` where the swapchain picks it (Wayland) or it can't be read.
-///
-/// # Safety
-///
-/// `surface` must be live and made from the instance `loader` is for.
-pub unsafe fn surface_extent(
-    loader: &ash::khr::surface::Instance,
-    physical_device: vk::PhysicalDevice,
-    surface: vk::SurfaceKHR,
-) -> Option<vk::Extent2D> {
-    // SAFETY: `instance` is live, and the physical device and surface are its own.
-    let capabilities =
-        unsafe { loader.get_physical_device_surface_capabilities(physical_device, surface) }
-            .ok()?;
-    surface_capabilities(&capabilities)
-        .current()
-        .map(extent_out)
 }
 
 /// How a frame's render pass starts.
@@ -638,36 +546,4 @@ pub unsafe extern "system" fn debug_callback(
     let message = unsafe { CStr::from_ptr((*data).p_message) }.to_string_lossy();
     crate::warn!("[vulkan] {message}");
     vk::FALSE
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const EXTENT: vk::Extent2D = vk::Extent2D {
-        width: 854,
-        height: 480,
-    };
-
-    #[test]
-    fn suboptimal_recreates_only_when_the_surface_resized() {
-        let grown = vk::Extent2D {
-            width: 1280,
-            height: 720,
-        };
-        let recreate = |presented, now| recreate_after_present(presented, EXTENT, || now);
-        assert_eq!(recreate(Ok(false), Some(grown)), Ok(false));
-        assert_eq!(recreate(Ok(true), Some(EXTENT)), Ok(false));
-        assert_eq!(recreate(Ok(true), None), Ok(false));
-        assert_eq!(recreate(Ok(true), Some(vk::Extent2D::default())), Ok(false));
-        assert_eq!(recreate(Ok(true), Some(grown)), Ok(true));
-        assert_eq!(
-            recreate(Err(vk::Result::ERROR_OUT_OF_DATE_KHR), Some(EXTENT)),
-            Ok(true)
-        );
-        assert_eq!(
-            recreate(Err(vk::Result::ERROR_DEVICE_LOST), None),
-            Err(vk::Result::ERROR_DEVICE_LOST)
-        );
-    }
 }

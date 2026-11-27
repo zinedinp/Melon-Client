@@ -2580,9 +2580,9 @@ checksum = "dae608c151f68243f2b000364e1f7b186d9c29845f7d2d85bd31b9ad77ad552b"
 
 [[package]]
 name = "majestix-vk"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "077be88fe74144e81148c9d81e2e005117b47ba404c18072508c04487028e929"
+checksum = "fd5630a8c7d47725d2099b2b8550a908e977fcd6ca094bafb73099860045eaf1"
 dependencies = [
  "ash",
  "numerobis",
@@ -2630,7 +2630,7 @@ checksum = "7ebb8d8732c6a6df3d8f032a82911cfc747e00efb95cc46e8d0acd5b5b88570c"
 
 [[package]]
 name = "melon"
-version = "0.10.9+mc26.3"
+version = "0.10.10+mc26.3"
 dependencies = [
  "aes 0.9.4",
  "anyhow",
@@ -2685,13 +2685,14 @@ dependencies = [
 
 [[package]]
 name = "melon-base"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "arboard",
  "ash",
  "ash-window",
  "image",
+ "majestix-vk",
  "numerobis",
  "open",
  "raw-window-handle",

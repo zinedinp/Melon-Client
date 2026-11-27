@@ -4,33 +4,32 @@ What is open, per crate. Smaller spots stay in the code as
 `// TODO(<area>): …` (`perf`, `parity`, `mods`, `macos`, …), next to what
 they are about; this file holds the plans that span modules or crates.
 
-Melon is on majestix-vk 0.2.0 and numerobis 0.6.0.
+Melon is on majestix-vk 0.2.1 and numerobis 0.6.0.
 
 ## melon (the client)
 
 ### The renderer onto majestix-vk
 
-The renderer adopts melon-base's device with `Device::adopt` and moves one
-module at a time. Through majestix-vk so far: `renderer/blur.rs`, the
-world's per-frame globals (`renderer/globals.rs`, a `Mapped` ring), the
-pipeline cache (`renderer/pipeline_cache.rs`, `cache/pipelines.bin`), the
-swapchain (`Presenter`) and the frame ring (`Frames`). About 810 `unsafe`
-blocks are left: ~550 in `src/renderer`, ~260 in melon-base's `gfx`.
+Both renderers adopt melon-base's device with `Device::adopt` and take
+their frame ring (`Frames`) and swapchain (`Presenter`) from majestix-vk:
+the game's and the launcher's `Renderer2d`. Through majestix-vk besides:
+`renderer/blur.rs`, the world's per-frame globals (`renderer/globals.rs`),
+the UI's vertices and indices (melon-base's `gfx/ui_vertices.rs`, shared by
+both), and the pipeline cache (`renderer/pipeline_cache.rs`,
+`cache/pipelines.bin`). About 775 `unsafe` blocks are left: ~545 in
+`src/renderer`, ~230 in melon-base's `gfx`.
 
-Per-frame buffers the renderer alone owns can move any time, like the globals:
-a `Mapped` ring, each slot's set made in its first frame (majestix-vk has no
-`Slot` without a frame). melon-base's own (`ui_vertices`, `gui_uniforms`,
-`staging`) also serve the launcher's `Renderer2d`, which has no majestix-vk
-device yet; it adopts one first.
+A fixed-size per-frame buffer moves as the globals and the UI vertices did:
+a `Mapped` ring, each slot's set or offset fixed up front from
+`Frames::slots`. Next of those: melon-base's `gfx/gui_uniforms.rs`.
 
 Of the rest, the memory modules go first, as melon-base and majestix-vk
 would otherwise keep two memory managers. In this order, each waiting on one gap in
 majestix-vk (see its section):
 
-1. **Rings that grow.** `gfx/staging.rs` and `gfx/ui_vertices.rs` are mapped
-   buffers per frame in flight that grow on demand (`Staging::ensure`) and
-   shrink after a burst (`Staging::trim`); `Mapped` has a fixed length.
-   `gfx/gui_uniforms.rs` moves with them.
+1. **Rings that grow.** `gfx/staging.rs` is a mapped buffer per frame in
+   flight that grows on demand (`Staging::ensure`) and shrinks after a
+   burst (`Staging::trim`); `Mapped` has a fixed length.
 2. **Textures.** `gfx/suballoc.rs` (images in shared blocks, a dedicated
    allocation past half a block) is what majestix's blocks do already;
    `gfx/texture.rs` moves to `create_image`, `gfx/texture_update.rs`'s

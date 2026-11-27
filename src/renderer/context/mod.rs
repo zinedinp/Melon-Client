@@ -156,9 +156,7 @@ impl Renderer {
         }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let frames = unsafe { resources::create_frames(&device, gpu.queue_family) }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let ui_vertices =
-            unsafe { super::UiVertices::new(&device, &mem_props, MAX_FRAMES_IN_FLIGHT) }?;
+        let ui_vertices = super::UiVertices::new(&layer, &queue, &ring)?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let sky_cube = unsafe { resources::create_sky_cube(&device, &mem_props) }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
