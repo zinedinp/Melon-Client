@@ -1,13 +1,46 @@
 //! Running the chains in a frame, and handing them to the renderer.
 
 use ash::vk;
+use majestix_vk::{Barriers, Image, ImageBarrier, MemoryBarrier, Recording, Scope};
 
-use super::gpu::{ChainSource, Dest, Source};
+use super::gpu::{COLOR_LAYER, ChainSource, Dest, READABLE, Source};
 use crate::blur::COLOR;
-use crate::{Renderer, SceneFrame, free_effect_texture};
+use crate::{Renderer, SceneFrame};
 
 /// The chain glowing entities feed (`entity_outline.json`).
 pub const OUTLINE_CHAIN: &str = "minecraft:entity_outline";
+
+/// Stages and accesses of the barriers around the chains.
+const STAGES_AROUND: vk::PipelineStageFlags2 = vk::PipelineStageFlags2::from_raw(
+    vk::PipelineStageFlags2::FRAGMENT_SHADER.as_raw()
+        | vk::PipelineStageFlags2::ALL_TRANSFER.as_raw()
+        | vk::PipelineStageFlags2::COLOR_ATTACHMENT_OUTPUT.as_raw(),
+);
+/// What a pass's output saw last: sampled, cleared, copied or drawn into.
+const BEFORE_PASS: Scope = Scope::new(
+    STAGES_AROUND,
+    vk::AccessFlags2::from_raw(
+        vk::AccessFlags2::COLOR_ATTACHMENT_WRITE.as_raw()
+            | vk::AccessFlags2::TRANSFER_WRITE.as_raw(),
+    ),
+);
+/// A pass's output as its attachment.
+const ATTACHMENT: Scope = Scope::new(
+    vk::PipelineStageFlags2::COLOR_ATTACHMENT_OUTPUT,
+    vk::AccessFlags2::from_raw(
+        vk::AccessFlags2::COLOR_ATTACHMENT_READ.as_raw()
+            | vk::AccessFlags2::COLOR_ATTACHMENT_WRITE.as_raw(),
+    ),
+);
+/// What a pass's output may see next: sampled, copied or drawn into.
+const AFTER_PASS: Scope = Scope::new(
+    STAGES_AROUND,
+    vk::AccessFlags2::from_raw(
+        vk::AccessFlags2::SHADER_SAMPLED_READ.as_raw()
+            | vk::AccessFlags2::TRANSFER_READ.as_raw()
+            | vk::AccessFlags2::COLOR_ATTACHMENT_READ.as_raw(),
+    ),
+);
 
 impl Renderer {
     /// Loads these chains in place of the ones there are; those that can't be built are left
@@ -29,144 +62,48 @@ impl Renderer {
             }
             Vec::new()
         };
-        // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
-        unsafe {
-            if let Err(e) = self.device.device_wait_idle() {
-                melon_base::warn!("Waiting for the GPU failed: {e}");
-            }
-            let mut prepared = Vec::new();
-            for source in sources {
-                match self.upload_effect_textures(&source) {
-                    Ok(textures) => prepared.push((source, textures)),
-                    Err(e) => failed.push((source.id, e)),
-                }
-            }
-            let (device, pools) = (self.device.clone(), &self.textures.descriptor_pools);
-            failed.extend(self.post.set_chains(
-                &self.device,
-                &self.mem_props,
-                self.gui_uniforms.layout(),
-                prepared,
-                &|t| free_effect_texture(&device, pools, t),
-            ));
-            if let Err(e) = self
-                .post
-                .set_blit(&self.device, self.passes.clear, blit.as_ref())
-            {
-                melon_base::warn!("Outline blit: {e:#}");
-            }
-            // Occlusion culling reads the depth buffer too.
-            let wanted = self.post.is_active() || self.occlusion.is_some();
-            let result = if wanted != self.swapchain.depth_sampled {
-                self.swapchain.depth_sampled = wanted;
-                self.rebuild_targets_now()
-            } else {
-                self.resize_post()
-            };
-            if let Err(e) = result {
-                melon_base::warn!("Post effects: {e:#}");
-            }
+        failed.extend(
+            self.post
+                .set_chains(self.gui_uniforms.set_layout(), sources),
+        );
+        // SAFETY: the scene's render pass, which lives as long as the renderer.
+        if let Err(e) = unsafe { self.post.set_blit(self.passes.clear, blit.as_ref()) } {
+            melon_base::warn!("Outline blit: {e:#}");
+        }
+        // Occlusion culling reads the depth buffer too.
+        let wanted = self.post.is_active() || self.occlusion.is_some();
+        let result = if wanted != self.swapchain.depth_sampled {
+            self.swapchain.depth_sampled = wanted;
+            // SAFETY: between frames, on the renderer's own device.
+            unsafe { self.rebuild_targets_now() }
+        } else {
+            self.resize_post()
+        };
+        if let Err(e) = result {
+            melon_base::warn!("Post effects: {e:#}");
         }
         failed
     }
 
     /// Makes what the chains size with the screen, again.
-    pub(crate) unsafe fn resize_post(&mut self) -> anyhow::Result<()> {
+    pub(crate) fn resize_post(&mut self) -> anyhow::Result<()> {
         let depth = self
             .swapchain
-            .depth_sampled
-            .then_some((self.swapchain.depth.image, self.swapchain.depth_format));
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe {
-            self.post.resize(
-                &self.device,
-                &self.mem_props,
-                self.swapchain.extent,
-                &self.swapchain.views,
-                depth,
-            )
-        }
+            .depth
+            .0
+            .as_ref()
+            .filter(|_| self.swapchain.depth_sampled)
+            .map(|&(image, _)| image);
+        self.post
+            .resize(self.swapchain.extent, &self.swapchain.views, depth)
     }
 
-    /// Each texture input of `source`'s passes, in order.
-    unsafe fn upload_effect_textures(
-        &self,
-        source: &ChainSource,
-    ) -> anyhow::Result<Vec<(crate::texture::Texture, u32, u32)>> {
-        use crate::post::config::Input;
-        let mut out: Vec<(crate::texture::Texture, u32, u32)> = Vec::new();
-        let mut inits = Vec::new();
-        let fail = |out: &mut Vec<(crate::texture::Texture, u32, u32)>, e| {
-            let (device, pools) = (self.device.clone(), &self.textures.descriptor_pools);
-            for (texture, _, _) in out.drain(..) {
-                // SAFETY: made by this device, and no frame in flight uses it any more.
-                unsafe { free_effect_texture(&device, pools, texture) };
-            }
-            e
-        };
-        for pass in &source.config.passes {
-            for input in &pass.inputs {
-                let Input::Texture {
-                    location,
-                    width,
-                    height,
-                    ..
-                } = input
-                else {
-                    continue;
-                };
-                let image = source
-                    .textures
-                    .get(location)
-                    .cloned()
-                    .unwrap_or_else(melon_assets::assets::missing_texture);
-                // SAFETY: `device` is live, and the infos name only its own live handles.
-                match unsafe {
-                    self.uploader(self.textures.nearest_sampler)
-                        .image_2d(&image)
-                } {
-                    Ok((texture, init)) => {
-                        out.push((texture, *width, *height));
-                        inits.push(init);
-                    }
-                    Err(e) => return Err(fail(&mut out, e)),
-                }
-            }
-        }
-        // Loaded while the device is idle anyway, and freed without
-        // waiting for a frame: up now, not with the next frame.
-        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        if let Err(e) = unsafe {
-            self.layer.queue.with_raw(|queue| {
-                crate::texture_update::submit_now(
-                    &self.device,
-                    &self.mem_props,
-                    self.frames.command_pool,
-                    queue,
-                    &inits,
-                )
-            })
-        } {
-            return Err(fail(&mut out, e));
-        }
-        Ok(out)
-    }
-
-    /// The chains this frame runs, in order.
+    /// The chains this frame runs, in order: the outline's when an outlined entity is drawn
+    /// (`LevelRenderer.currentFrameRendersEntityOutline`), then the ones the scene asks for.
     pub(crate) fn post_chains(&self, scene: &SceneFrame) -> Vec<String> {
         let mut out = Vec::new();
-        let outline_every_frame = scene.world.is_some()
-            && self
-                .post
-                .chains
-                .get(OUTLINE_CHAIN)
-                .is_some_and(|chain| chain.config.targets.len() > 1);
-        if (outline_every_frame || !scene.glowing.is_empty()) && self.has_post_chain(OUTLINE_CHAIN)
-        {
+        if !scene.glowing.is_empty() && self.has_post_chain(OUTLINE_CHAIN) {
             out.push(OUTLINE_CHAIN.to_owned());
-        }
-        if scene.world.is_some() && self.has_post_chain(super::load::END_OF_FRAME) {
-            out.push(super::load::END_OF_FRAME.to_owned());
         }
         for id in &scene.post_effects {
             if self.has_post_chain(id) {
@@ -176,23 +113,34 @@ impl Renderer {
         out
     }
 
-    /// Everything between the scene's pass and the one after it.
-    pub(crate) unsafe fn record_post(
+    /// The outline's pass and chain, between the level and the hand (`LevelRenderer.render`);
+    /// `main` is the swapchain's image `image_index`.
+    pub(crate) unsafe fn record_outline_post(
         &self,
-        cmd: vk::CommandBuffer,
-        image_index: usize,
+        rec: &mut Recording<'_>,
+        main: (Image, usize),
         scene: &SceneFrame,
+    ) {
+        self.begin_post(rec);
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.record_outline_pass(rec, scene);
+            self.record_post_chain(rec, main, OUTLINE_CHAIN);
+        }
+    }
+
+    /// The requested chains, after the hand and the outline's blit
+    /// (`GameRenderer.applyPostEffects`).
+    pub(crate) unsafe fn record_effect_chains(
+        &self,
+        rec: &mut Recording<'_>,
+        main: (Image, usize),
         chains: &[String],
     ) {
-        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        unsafe { self.begin_post(cmd) };
-        if chains.iter().any(|c| c == OUTLINE_CHAIN) {
+        self.begin_post(rec);
+        for id in chains.iter().filter(|id| *id != OUTLINE_CHAIN) {
             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe { self.record_outline_pass(cmd, scene) };
-        }
-        for id in chains {
-            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe { self.record_post_chain(cmd, image_index, id) };
+            unsafe { self.record_post_chain(rec, main, id) };
         }
     }
 
@@ -201,27 +149,23 @@ impl Renderer {
         if !chains.iter().any(|c| c == OUTLINE_CHAIN) {
             return;
         }
-        let Some((pass, set)) = &self.post.blit else {
+        let Some((pass, set)) = self.post.blit() else {
             return;
         };
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe {
             self.device
-                .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline)
-        };
-        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        unsafe {
+                .cmd_bind_pipeline(cmd, vk::PipelineBindPoint::GRAPHICS, pass.pipeline);
             self.device.cmd_bind_descriptor_sets(
                 cmd,
                 vk::PipelineBindPoint::GRAPHICS,
                 pass.layout,
                 0,
-                &[*set],
+                &[set],
                 &[],
-            )
-        };
-        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        unsafe { self.device.cmd_draw(cmd, 3, 1, 0, 0) };
+            );
+            self.device.cmd_draw(cmd, 3, 1, 0, 0);
+        }
     }
 
     /// Whether the chain `id` is loaded.
@@ -230,110 +174,88 @@ impl Renderer {
     }
 
     /// Before the chains of a frame.
-    pub(crate) unsafe fn begin_post(&self, cmd: vk::CommandBuffer) {
-        let device = &self.device;
-        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        unsafe {
-            device.cmd_pipeline_barrier(
-                cmd,
-                vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT
-                    | vk::PipelineStageFlags::LATE_FRAGMENT_TESTS,
-                vk::PipelineStageFlags::FRAGMENT_SHADER | vk::PipelineStageFlags::TRANSFER,
-                vk::DependencyFlags::empty(),
-                &[vk::MemoryBarrier::default()
-                    .src_access_mask(
-                        vk::AccessFlags::COLOR_ATTACHMENT_WRITE
-                            | vk::AccessFlags::DEPTH_STENCIL_ATTACHMENT_WRITE,
-                    )
-                    .dst_access_mask(
-                        vk::AccessFlags::SHADER_READ | vk::AccessFlags::TRANSFER_READ,
-                    )],
-                &[],
-                &[],
-            )
-        };
+    pub(crate) fn begin_post(&self, rec: &mut Recording<'_>) {
+        rec.barrier(&Barriers {
+            memory: &[MemoryBarrier {
+                src: Scope::new(
+                    vk::PipelineStageFlags2::COLOR_ATTACHMENT_OUTPUT
+                        | vk::PipelineStageFlags2::LATE_FRAGMENT_TESTS,
+                    vk::AccessFlags2::COLOR_ATTACHMENT_WRITE
+                        | vk::AccessFlags2::DEPTH_STENCIL_ATTACHMENT_WRITE,
+                ),
+                dst: Scope::new(
+                    vk::PipelineStageFlags2::FRAGMENT_SHADER
+                        | vk::PipelineStageFlags2::ALL_TRANSFER,
+                    vk::AccessFlags2::SHADER_SAMPLED_READ | vk::AccessFlags2::TRANSFER_READ,
+                ),
+            }],
+            ..Barriers::default()
+        });
         self.post.main_dirty.set(true);
         if self.post.needs_init.replace(false) {
-            let images = self.post.internal_images();
-            let barrier = |image, old, new, src, dst| {
-                vk::ImageMemoryBarrier::default()
-                    .image(image)
-                    .old_layout(old)
-                    .new_layout(new)
-                    .src_access_mask(src)
-                    .dst_access_mask(dst)
-                    .src_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
-                    .dst_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
-                    .subresource_range(COLOR)
-            };
-            let to_clear: Vec<_> = images
-                .iter()
-                .map(|&image| {
-                    barrier(
-                        image,
-                        vk::ImageLayout::UNDEFINED,
-                        vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-                        vk::AccessFlags::empty(),
-                        vk::AccessFlags::TRANSFER_WRITE,
-                    )
-                })
-                .collect();
-            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe {
-                device.cmd_pipeline_barrier(
-                    cmd,
-                    vk::PipelineStageFlags::TOP_OF_PIPE,
-                    vk::PipelineStageFlags::TRANSFER,
-                    vk::DependencyFlags::empty(),
-                    &[],
-                    &[],
-                    &to_clear,
-                )
-            };
-            for &image in &images {
-                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-                unsafe {
-                    device.cmd_clear_color_image(
-                        cmd,
-                        image,
-                        vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-                        &vk::ClearColorValue { float32: [0.0; 4] },
-                        &[COLOR],
-                    )
-                };
-            }
-            let to_read: Vec<_> = images
-                .iter()
-                .map(|&image| {
-                    barrier(
-                        image,
-                        vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-                        vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-                        vk::AccessFlags::TRANSFER_WRITE,
-                        vk::AccessFlags::SHADER_READ,
-                    )
-                })
-                .collect();
-            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe {
-                device.cmd_pipeline_barrier(
-                    cmd,
-                    vk::PipelineStageFlags::TRANSFER,
-                    vk::PipelineStageFlags::FRAGMENT_SHADER,
-                    vk::DependencyFlags::empty(),
-                    &[],
-                    &[],
-                    &to_read,
-                )
-            };
+            let mut images = self.post.internal_images();
+            images.extend(self.post.outline().map(|(o, _)| (o, [0.0; 4])));
+            self.clear_targets(rec, &images, vk::ImageLayout::UNDEFINED);
         }
     }
 
-    /// Runs the chain `id`.
+    /// Clears `images` to their colours; they come from `from` and are left readable.
+    pub(crate) fn clear_targets(
+        &self,
+        rec: &mut Recording<'_>,
+        images: &[(Image, [f32; 4])],
+        from: vk::ImageLayout,
+    ) {
+        if images.is_empty() {
+            return;
+        }
+        let src = if from == vk::ImageLayout::UNDEFINED {
+            Scope::NONE
+        } else {
+            Scope::new(
+                vk::PipelineStageFlags2::FRAGMENT_SHADER
+                    | vk::PipelineStageFlags2::COLOR_ATTACHMENT_OUTPUT,
+                vk::AccessFlags2::COLOR_ATTACHMENT_WRITE,
+            )
+        };
+        let cleared = Scope::new(
+            vk::PipelineStageFlags2::ALL_TRANSFER,
+            vk::AccessFlags2::TRANSFER_WRITE,
+        );
+        let readable = Scope::new(
+            vk::PipelineStageFlags2::FRAGMENT_SHADER
+                | vk::PipelineStageFlags2::COLOR_ATTACHMENT_OUTPUT,
+            vk::AccessFlags2::SHADER_SAMPLED_READ
+                | vk::AccessFlags2::COLOR_ATTACHMENT_READ
+                | vk::AccessFlags2::COLOR_ATTACHMENT_WRITE,
+        );
+        let dst = vk::ImageLayout::TRANSFER_DST_OPTIMAL;
+        let to_clear: Vec<_> = images
+            .iter()
+            .map(|&(image, _)| ImageBarrier::whole(image, src, cleared, from, dst))
+            .collect();
+        rec.barrier(&Barriers {
+            images: &to_clear,
+            ..Barriers::default()
+        });
+        for &(image, color) in images {
+            rec.clear_color_image(image, dst, vk::ClearColorValue { float32: color }, &[COLOR]);
+        }
+        let to_read: Vec<_> = images
+            .iter()
+            .map(|&(image, _)| ImageBarrier::whole(image, cleared, readable, dst, READABLE))
+            .collect();
+        rec.barrier(&Barriers {
+            images: &to_read,
+            ..Barriers::default()
+        });
+    }
+
+    /// Runs the chain `id`; `main` is the swapchain's image `image_index`.
     pub(crate) unsafe fn record_post_chain(
         &self,
-        cmd: vk::CommandBuffer,
-        image_index: usize,
+        rec: &mut Recording<'_>,
+        main: (Image, usize),
         id: &str,
     ) {
         let Some(chain) = self.post.chains.get(id) else {
@@ -341,49 +263,34 @@ impl Renderer {
         };
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.gpu_timer.pass("post") };
-        let device = &self.device;
+        let clears = self.post.run_clears(chain);
+        self.clear_targets(rec, &clears, READABLE);
+        let gui = self.gui_uniforms.slot_set(self.frames.current);
         for pass in &chain.passes {
             if pass.inputs.contains(&Source::MainColor) && self.post.main_dirty.get() {
-                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-                unsafe { self.snapshot_main(cmd, image_index) };
+                self.snapshot_main(rec, main.0);
             }
-            let (render_pass, framebuffer, extent, clear) = match pass.output {
-                Dest::Main => (
-                    self.post.main_pass,
-                    self.post.main_framebuffers[image_index],
-                    self.swapchain.extent,
-                    [0.0; 4],
-                ),
-                dest => {
-                    let Some((framebuffer, extent, clear)) = self.post.target(chain, dest) else {
-                        continue;
-                    };
-                    (self.post.color_pass, framebuffer, extent, clear)
-                }
+            let Some(sets) = pass.sets else {
+                continue;
             };
-            let area = vk::Rect2D {
-                offset: vk::Offset2D::default(),
-                extent,
+            let Some((target, image, between)) = self.post.target(chain, pass.output, main) else {
+                continue;
             };
-            let clears = [vk::ClearValue {
-                color: vk::ClearColorValue { float32: clear },
-            }];
-            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe {
-                device.cmd_begin_render_pass(
-                    cmd,
-                    &vk::RenderPassBeginInfo::default()
-                        .render_pass(render_pass)
-                        .framebuffer(framebuffer)
-                        .render_area(area)
-                        .clear_values(&clears),
-                    vk::SubpassContents::INLINE,
-                )
-            };
-            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe {
-                device.cmd_set_viewport(
-                    cmd,
+            let attachment = vk::ImageLayout::ATTACHMENT_OPTIMAL;
+            rec.barrier(&Barriers {
+                images: &[ImageBarrier::whole(
+                    image,
+                    BEFORE_PASS,
+                    ATTACHMENT,
+                    between,
+                    attachment,
+                )],
+                ..Barriers::default()
+            });
+            let extent = target.extent();
+            {
+                let mut drawing = rec.begin_pass(target, &[]);
+                drawing.set_viewport(
                     0,
                     &[vk::Viewport {
                         x: 0.0,
@@ -393,165 +300,124 @@ impl Renderer {
                         min_depth: 0.0,
                         max_depth: 1.0,
                     }],
-                )
-            };
-            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe {
-                device.cmd_set_scissor(cmd, 0, &[area]);
-                device.cmd_bind_pipeline(
-                    cmd,
-                    vk::PipelineBindPoint::GRAPHICS,
-                    pass.pipeline.pipeline,
                 );
-            }
-            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe {
-                device.cmd_bind_descriptor_sets(
-                    cmd,
-                    vk::PipelineBindPoint::GRAPHICS,
-                    pass.pipeline.layout,
+                drawing.set_scissor(
                     0,
-                    &[
-                        pass.sampler_set,
-                        self.gui_uniforms.set(self.frames.current),
-                        pass.block_set,
-                    ],
+                    &[vk::Rect2D {
+                        offset: vk::Offset2D::default(),
+                        extent,
+                    }],
+                );
+                drawing.bind_pipeline(pass.pipeline);
+                drawing.bind_descriptor_sets(
+                    vk::PipelineBindPoint::GRAPHICS,
+                    pass.layout,
+                    0,
+                    &[sets[0], gui, sets[1]],
                     &[],
-                )
-            };
-            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe {
-                device.cmd_draw(cmd, 3, 1, 0, 0);
-                device.cmd_end_render_pass(cmd);
+                );
+                drawing.draw(3, 1, 0, 0);
             }
+            rec.barrier(&Barriers {
+                images: &[ImageBarrier::whole(
+                    image, ATTACHMENT, AFTER_PASS, attachment, between,
+                )],
+                ..Barriers::default()
+            });
             if pass.output == Dest::Main {
                 self.post.main_dirty.set(true);
             }
         }
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        unsafe { self.gpu_timer.mark(device, "post") };
+        unsafe { self.gpu_timer.mark(&self.device, "post") };
     }
 
-    /// Copies the swapchain image into the image the passes read `main`
-    unsafe fn snapshot_main(&self, cmd: vk::CommandBuffer, image_index: usize) {
-        let Some(snapshot) = &self.post.snapshot else {
+    /// Copies the swapchain's image `main` into the image the passes read `main` from.
+    fn snapshot_main(&self, rec: &mut Recording<'_>, main: Image) {
+        let Some(snapshot) = self.post.snapshot() else {
             return;
         };
-        let device = &self.device;
-        let source = self.swapchain.images[image_index];
-        let barrier = |image, old, new, src, dst| {
-            vk::ImageMemoryBarrier::default()
-                .image(image)
-                .old_layout(old)
-                .new_layout(new)
-                .src_access_mask(src)
-                .dst_access_mask(dst)
-                .src_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
-                .dst_queue_family_index(vk::QUEUE_FAMILY_IGNORED)
-                .subresource_range(COLOR)
-        };
-        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        unsafe {
-            device.cmd_pipeline_barrier(
-                cmd,
-                vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT
-                    | vk::PipelineStageFlags::FRAGMENT_SHADER,
-                vk::PipelineStageFlags::TRANSFER,
-                vk::DependencyFlags::empty(),
-                &[],
-                &[],
-                &[
-                    barrier(
-                        source,
-                        vk::ImageLayout::PRESENT_SRC_KHR,
-                        vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                        vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
-                        vk::AccessFlags::TRANSFER_READ,
+        // Drawn into, or sampled by the passes before.
+        let used = Scope::new(
+            vk::PipelineStageFlags2::COLOR_ATTACHMENT_OUTPUT
+                | vk::PipelineStageFlags2::FRAGMENT_SHADER,
+            vk::AccessFlags2::COLOR_ATTACHMENT_WRITE,
+        );
+        let read = Scope::new(
+            vk::PipelineStageFlags2::COPY,
+            vk::AccessFlags2::TRANSFER_READ,
+        );
+        let written = Scope::new(
+            vk::PipelineStageFlags2::COPY,
+            vk::AccessFlags2::TRANSFER_WRITE,
+        );
+        let (present, src, dst) = (
+            vk::ImageLayout::PRESENT_SRC_KHR,
+            vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
+            vk::ImageLayout::TRANSFER_DST_OPTIMAL,
+        );
+        rec.barrier(&Barriers {
+            images: &[
+                ImageBarrier::whole(main, used, read, present, src),
+                ImageBarrier::whole(
+                    snapshot,
+                    Scope::new(used.stages, vk::AccessFlags2::NONE),
+                    written,
+                    vk::ImageLayout::UNDEFINED,
+                    dst,
+                ),
+            ],
+            ..Barriers::default()
+        });
+        rec.copy_image(
+            main,
+            src,
+            snapshot,
+            dst,
+            &[vk::ImageCopy {
+                src_subresource: COLOR_LAYER,
+                src_offset: vk::Offset3D::default(),
+                dst_subresource: COLOR_LAYER,
+                dst_offset: vk::Offset3D::default(),
+                extent: snapshot.extent(),
+            }],
+        );
+        rec.barrier(&Barriers {
+            images: &[
+                ImageBarrier::whole(
+                    snapshot,
+                    written,
+                    Scope::new(
+                        vk::PipelineStageFlags2::FRAGMENT_SHADER,
+                        vk::AccessFlags2::SHADER_SAMPLED_READ,
                     ),
-                    barrier(
-                        snapshot.image,
-                        vk::ImageLayout::UNDEFINED,
-                        vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-                        vk::AccessFlags::empty(),
-                        vk::AccessFlags::TRANSFER_WRITE,
-                    ),
-                ],
-            )
-        };
-        let layer = vk::ImageSubresourceLayers {
-            aspect_mask: vk::ImageAspectFlags::COLOR,
-            mip_level: 0,
-            base_array_layer: 0,
-            layer_count: 1,
-        };
-        let extent = self.swapchain.extent;
-        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        unsafe {
-            device.cmd_copy_image(
-                cmd,
-                source,
-                vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                snapshot.image,
-                vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-                &[vk::ImageCopy {
-                    src_subresource: layer,
-                    src_offset: vk::Offset3D::default(),
-                    dst_subresource: layer,
-                    dst_offset: vk::Offset3D::default(),
-                    extent: vk::Extent3D {
-                        width: extent.width,
-                        height: extent.height,
-                        depth: 1,
-                    },
-                }],
-            )
-        };
-        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        unsafe {
-            device.cmd_pipeline_barrier(
-                cmd,
-                vk::PipelineStageFlags::TRANSFER,
-                vk::PipelineStageFlags::FRAGMENT_SHADER
-                    | vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
-                vk::DependencyFlags::empty(),
-                &[],
-                &[],
-                &[
-                    barrier(
-                        snapshot.image,
-                        vk::ImageLayout::TRANSFER_DST_OPTIMAL,
-                        vk::ImageLayout::SHADER_READ_ONLY_OPTIMAL,
-                        vk::AccessFlags::TRANSFER_WRITE,
-                        vk::AccessFlags::SHADER_READ,
-                    ),
-                    barrier(
-                        source,
-                        vk::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                        vk::ImageLayout::PRESENT_SRC_KHR,
-                        vk::AccessFlags::TRANSFER_READ,
-                        vk::AccessFlags::COLOR_ATTACHMENT_READ
-                            | vk::AccessFlags::COLOR_ATTACHMENT_WRITE,
-                    ),
-                ],
-            )
-        };
+                    dst,
+                    READABLE,
+                ),
+                ImageBarrier::whole(main, read, ATTACHMENT, src, present),
+            ],
+            ..Barriers::default()
+        });
         self.post.main_dirty.set(false);
     }
 }
 
 impl Renderer {
     /// Draws the glowing entities flat into the outline target.
-    pub(crate) unsafe fn record_outline_pass(&self, cmd: vk::CommandBuffer, scene: &SceneFrame) {
+    pub(crate) unsafe fn record_outline_pass(&self, rec: &mut Recording<'_>, scene: &SceneFrame) {
         use crate::RenderLayer;
         use crate::pipeline::world::{DrawLight, Mode};
         let Some(world) = &scene.world else {
             return;
         };
-        if self.post.outline.is_none() {
+        let Some((outline, framebuffer)) = self.post.outline() else {
             return;
-        }
+        };
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.gpu_timer.pass("outline") };
+        // `LevelRenderer`'s outline pass starts from `ZERO_CLEAR_COLOR`.
+        self.clear_targets(rec, &[(outline, [0.0; 4])], READABLE);
+        let cmd = rec.raw();
         let device = &self.device;
         let extent = self.swapchain.extent;
         let area = vk::Rect2D {
@@ -567,7 +433,7 @@ impl Renderer {
                 cmd,
                 &vk::RenderPassBeginInfo::default()
                     .render_pass(self.post.color_pass)
-                    .framebuffer(self.post.outline_framebuffer)
+                    .framebuffer(framebuffer)
                     .render_area(area)
                     .clear_values(&clears),
                 vk::SubpassContents::INLINE,
@@ -593,7 +459,7 @@ impl Renderer {
         self.recording.forget_all();
         if self.pack_outline.is_some() {
             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe { self.record_pack_outline(cmd, scene, world) };
+            unsafe { self.record_pack_outline(cmd, scene) };
         } else {
             let view_proj = self.world_view_projection(world, RenderLayer::Entities);
             for &(index, [r, g, b]) in &scene.glowing {
@@ -629,20 +495,21 @@ impl Renderer {
     }
 
     /// Pack `rendertype_outline`.
-    unsafe fn record_pack_outline(
-        &self,
-        cmd: vk::CommandBuffer,
+    /// Writes the pack outline's blocks for this frame's glowing entities, before recording.
+    pub(crate) fn prepare_pack_outline(
+        &mut self,
+        frame: &majestix_vk::Frame<'_>,
         scene: &SceneFrame,
-        world: &crate::WorldDraw,
     ) {
         use crate::RenderLayer;
-        use crate::mesh_arena;
         use glam::{Mat4, Vec4};
         use melon_world::projection::world_projection;
-        let Some(pack) = self.pack_outline.as_ref() else {
+        let Some(world) = &scene.world else {
             return;
         };
-        let extent = self.swapchain.extent;
+        if scene.glowing.is_empty() || self.pack_outline.is_none() {
+            return;
+        }
         let mut rotation = world.view;
         rotation.w_axis = Vec4::W;
         let view =
@@ -652,8 +519,33 @@ impl Renderer {
             self.aspect_ratio(),
             world.far,
         );
-        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        unsafe { pack.write_frame(proj, (extent.width as f32, extent.height as f32)) };
+        let globals =
+            super::super::gui_uniforms::Globals::of(&self.gui_frame((1.0, 1.0), Some(world)));
+        let (textures, meshes) = (&self.textures, &self.meshes);
+        let entities = scene.glowing.iter().filter_map(|&(index, [r, g, b])| {
+            let entity = scene.entities.get(index)?;
+            textures.list.get(entity.atlas.0)?;
+            meshes.slot(entity.mesh.0)?;
+            let colour = [r, g, b].map(|c| f32::from(c) / 255.0);
+            Some((
+                index,
+                view * world.relative_to(entity.model, entity.origin),
+                [colour[0], colour[1], colour[2], 1.0],
+            ))
+        });
+        if let Some(pack) = self.pack_outline.as_mut() {
+            pack.prepare(frame, proj, &globals, entities);
+        }
+    }
+
+    unsafe fn record_pack_outline(&self, cmd: vk::CommandBuffer, scene: &SceneFrame) {
+        use crate::mesh_arena;
+        let Some(pack) = self.pack_outline.as_ref() else {
+            return;
+        };
+        if pack.drawn().next().is_none() {
+            return;
+        }
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe {
             self.device
@@ -668,26 +560,14 @@ impl Renderer {
                 vk::IndexType::UINT16,
             )
         };
-        for (slot, &(index, [r, g, b])) in scene
-            .glowing
-            .iter()
-            .take(crate::pack_outline::PackOutline::slots())
-            .enumerate()
-        {
-            let Some(entity) = scene.entities.get(index) else {
+        let blocks = pack.set(self.frames.current);
+        for (index, offset) in pack.drawn() {
+            let entity = &scene.entities[index];
+            let (Some(texture), Some(mesh)) = (
+                self.textures.list.get(entity.atlas.0),
+                self.meshes.slot(entity.mesh.0),
+            ) else {
                 continue;
-            };
-            let Some(texture) = self.textures.list.get(entity.atlas.0) else {
-                continue;
-            };
-            let colour = [r, g, b].map(|c| f32::from(c) / 255.0);
-            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-            unsafe {
-                pack.write_entity(
-                    slot,
-                    view * world.relative_to(entity.model, entity.origin),
-                    [colour[0], colour[1], colour[2], 1.0],
-                )
             };
             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
             unsafe {
@@ -696,12 +576,9 @@ impl Renderer {
                     vk::PipelineBindPoint::GRAPHICS,
                     pack.pass.layout,
                     0,
-                    &[texture.descriptor_set, pack.set(slot)],
-                    &[],
+                    &[texture.descriptor_set, blocks],
+                    &[offset],
                 )
-            };
-            let Some(mesh) = self.meshes.slot(entity.mesh.0) else {
-                continue;
             };
             let (buffer, base) = self.meshes.location(mesh);
             // SAFETY: `device` is live, and the infos name only its own live handles.

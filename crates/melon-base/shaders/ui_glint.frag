@@ -14,6 +14,15 @@ layout(location = 0) out vec4 out_color;
 layout(set = 0, binding = 0) uniform sampler2D tex_sampler;
 layout(set = 1, binding = 3) uniform sampler2D glint_sampler;
 
+// Matches `gui_uniforms::DynamicTransforms`; `ModelOffset`'s padding carries
+// the glint's clock, where no vanilla shader looks.
+layout(std140, set = 1, binding = 0) uniform DynamicTransforms {
+    mat4 model_view;
+    mat4 texture_mat;
+    vec4 color_modulator;
+    vec4 model_offset_and_clock;
+} t;
+
 // Matches `gui_uniforms::Globals` / vanilla `include/globals.glsl`.
 layout(std140, set = 1, binding = 2) uniform Globals {
     ivec3 camera_block_pos;
@@ -32,7 +41,7 @@ void main() {
     }
     // `ITEM_SPRITE_SCALE`: vanilla's 8.0 is for atlas UVs, a 16-texel sprite
     // of a 1024 atlas; here over the icon's own quad, 0..1.
-    vec4 glint_color = g.glint_alpha * texture(glint_sampler, glint_uv(frag_corner, 8.0 * 16.0 / 1024.0, g.camera_offset.x));
+    vec4 glint_color = g.glint_alpha * texture(glint_sampler, glint_uv(frag_corner, 8.0 * 16.0 / 1024.0, t.model_offset_and_clock.w));
     color.rgb += glint_color.rgb * glint_color.rgb;
     out_color = color;
 }

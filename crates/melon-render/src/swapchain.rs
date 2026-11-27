@@ -1,9 +1,9 @@
 //! What is sized with the presenter's swapchain (views, depth buffer,
 //! framebuffers), and the settings the presenter makes it with.
 
-use super::{Renderer, create_depth_image, vk_util};
+use super::Renderer;
 use ash::vk;
-use majestix_vk::{PresentConfig, Presenter};
+use majestix_vk::{ImageDesc, MemoryUse, PresentConfig, Presenter, ViewDesc};
 use numerobis::vulkan::swapchain::{Encoding, Output, Pacing, PresentMode};
 
 impl super::Swapchain {
@@ -51,47 +51,47 @@ impl Renderer {
         self.swapchain.can_copy = presenter
             .usage()
             .contains(vk::ImageUsageFlags::TRANSFER_SRC);
+        let layer = &self.layer.device;
         let images: Vec<vk::Image> = presenter.images().iter().map(|i| i.raw()).collect();
 
         let mut views = Vec::with_capacity(images.len());
-        for &image in &images {
-            let view_info = vk::ImageViewCreateInfo::default()
-                .image(image)
-                .view_type(vk::ImageViewType::TYPE_2D)
-                .format(format)
-                .subresource_range(vk::ImageSubresourceRange {
-                    aspect_mask: vk::ImageAspectFlags::COLOR,
-                    base_mip_level: 0,
-                    level_count: 1,
-                    base_array_layer: 0,
-                    layer_count: 1,
-                });
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            views.push(unsafe { self.device.create_image_view(&view_info, None) }?);
+        for &image in presenter.images() {
+            views.push(layer.create_image_view(&ViewDesc::d2(image))?);
         }
         // Kept at once, so a failure below leaves them to the next rebuild.
         self.swapchain.views = views;
         self.swapchain.images = images;
 
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let (image, memory, depth_view) = unsafe {
-            create_depth_image(
-                &self.device,
-                &self.mem_props,
-                self.swapchain.depth_format,
-                extent,
-                self.swapchain.depth_sampled,
-            )
-        }?;
-        self.swapchain.depth = super::DepthImage {
-            image,
-            memory,
-            view: depth_view,
+        // Transient unless a post chain or culling reads it.
+        let sampled = self.swapchain.depth_sampled;
+        let mut desc = ImageDesc::d2(
+            self.swapchain.depth_format,
+            extent.width,
+            extent.height,
+            if sampled {
+                vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT | vk::ImageUsageFlags::SAMPLED
+            } else {
+                vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT
+                    | vk::ImageUsageFlags::TRANSIENT_ATTACHMENT
+            },
+        );
+        if !sampled {
+            desc.memory = MemoryUse::Transient;
+        }
+        let depth = layer.create_image(&desc)?;
+        let depth_view = match layer.create_image_view(&ViewDesc::d2(depth)) {
+            Ok(view) => view,
+            Err(e) => {
+                layer.retire(depth);
+                return Err(e.into());
+            }
         };
+        self.swapchain.depth = super::DepthImage(Some((depth, depth_view)));
+        let depth_view = depth_view.raw();
 
         let mut framebuffers = Vec::with_capacity(self.swapchain.views.len());
-        for &view in &self.swapchain.views {
-            let attachments = [view, depth_view];
+        for view in &self.swapchain.views {
+            let attachments = [view.raw(), depth_view];
             let fb_info = vk::FramebufferCreateInfo::default()
                 .render_pass(self.passes.clear)
                 .attachments(&attachments)
@@ -102,15 +102,14 @@ impl Renderer {
             framebuffers.push(unsafe { self.device.create_framebuffer(&fb_info, None) }?);
         }
         self.swapchain.framebuffers = framebuffers;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe { self.resize_post() }?;
+        self.resize_post()?;
         if let Some(occlusion) = &mut self.occlusion {
             // SAFETY: `device` is live, and the infos name only its own live handles.
             unsafe {
                 occlusion.resize(
                     &self.device,
                     &self.mem_props,
-                    self.swapchain.depth.image,
+                    self.swapchain.depth.image(),
                     self.swapchain.depth_format,
                     extent,
                 )
@@ -131,11 +130,9 @@ impl Renderer {
     }
 
     pub(super) unsafe fn destroy_swapchain_resources(&mut self) {
-        // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
-        unsafe {
-            self.blur.destroy_targets(&self.device);
-            self.post.release_sized(&self.device);
-        }
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { self.blur.destroy_targets(&self.device) };
+        self.post.release_sized();
         if let Some(occlusion) = &mut self.occlusion {
             // SAFETY: made by this device, and no frame in flight uses it any more.
             unsafe { occlusion.release_sized(&self.device) };
@@ -145,20 +142,14 @@ impl Renderer {
             unsafe { self.device.destroy_framebuffer(fb, None) };
         }
         self.swapchain.framebuffers.clear();
-        for &view in &self.swapchain.views {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { self.device.destroy_image_view(view, None) };
+        let layer = &self.layer.device;
+        for view in self.swapchain.views.drain(..) {
+            layer.retire(view);
         }
-        self.swapchain.views.clear();
         self.swapchain.images.clear();
-        let depth = std::mem::take(&mut self.swapchain.depth);
-        if depth.image != vk::Image::null() {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe {
-                self.device.destroy_image_view(depth.view, None);
-                self.device.destroy_image(depth.image, None);
-                vk_util::free_memory(&self.device, depth.memory);
-            }
+        if let Some((image, view)) = std::mem::take(&mut self.swapchain.depth).0 {
+            layer.retire(view);
+            layer.retire(image);
         }
     }
 

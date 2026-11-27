@@ -85,27 +85,12 @@ fn describe_packs() {
         for file in &files {
             let name = file.trim_start_matches("shaders/core/");
             let stem = name.split('.').next().unwrap_or(name);
-            if !["text", "gui", "position_tex_color"].contains(&stem) {
+            if !["text", "gui", "position_tex_color", "rendertype_outline"].contains(&stem) {
                 note("pack.feature", format!("core shader {name}"), || {
                     format!(
                         "replaces a vanilla world shader in {}; Melon draws the world with its own",
                         pack.id
                     )
-                });
-            }
-        }
-        files.clear();
-        pack.list("minecraft", "post_effect", &mut files);
-        for file in &files {
-            let id = file
-                .trim_start_matches("post_effect/")
-                .trim_end_matches(".json");
-            if !melon_render::post::load::IDS
-                .iter()
-                .any(|known| known.trim_start_matches("minecraft:") == id)
-            {
-                note("pack.feature", format!("post effect {id}"), || {
-                    format!("a chain Melon doesn't run, in {}", pack.id)
                 });
             }
         }

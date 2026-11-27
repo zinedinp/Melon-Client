@@ -6,8 +6,8 @@ they are about; this file holds the plans that span modules or crates.
 
 Melon is on majestix-vk 0.2.1 and numerobis 0.6.0.
 
-**Next:** melon-render's `pack_outline.rs` onto a `Mapped` ring, which
-also ends a race (below).
+**Next:** a live check of the post chains on a server with Lumiere, then
+the post work in "Post effects and shader packs".
 
 ## melon (the client)
 
@@ -41,8 +41,8 @@ melon-render's `blur.rs`, the world's per-frame globals (`globals.rs`),
 the UI's vertices and indices (melon-base's `gfx/ui_vertices.rs`, shared by
 both), the GUI's uniform blocks and their sets (`gfx/gui_uniforms.rs`,
 with a copy of the glint of its own), and the pipeline cache
-(melon-render's `pipeline_cache.rs`, `cache/pipelines.bin`). About 760
-`unsafe` blocks are left: ~540 in melon-render, ~215 in melon-base's `gfx`.
+(melon-render's `pipeline_cache.rs`, `cache/pipelines.bin`). About 665
+`unsafe` blocks are left: ~450 in melon-render, ~215 in melon-base's `gfx`.
 
 A fixed-size per-frame buffer moves as the globals and the UI vertices did:
 a `Mapped` ring, each slot's set or offset fixed up front from
@@ -72,6 +72,42 @@ majestix-vk (see its section):
 
 Then the rest, `gfx` before melon-render, on generated wrappers once
 numerobis writes them (see its section).
+
+### Post effects and shader packs
+
+Resource packs' chains run as vanilla runs them; shader packs come in the
+OptiFine/Iris format, a Melon shader type (with hardware ray tracing) after
+that. Plan and vanilla's rules: `notes/post-and-shaderpacks.md` (local).
+
+Done so far (M1, first half):
+- Chains run by id: every `post_effect/*.json` of the packs, with
+  `end_of_frame`, then the server's list (`ClientboundPostEffectsPacket`).
+- The outline chain runs only when an outlined entity is drawn.
+- Chains run after the hand and the outline's blit.
+- Targets: cleared per run (`clear_color`), `persistent` kept, passes load.
+- `Globals` carries the level's `GameTime` and the camera.
+- The pack's outline shader reads a `Mapped` ring: one set per frame slot,
+  each entity at a dynamic offset, up to 1024 a frame (was 64, and raced
+  with the frame in flight).
+
+Open:
+- **The rest of post on majestix-vk.** The chains are on it (images, effect
+  textures, one loaded `Pass`, pipelines, sets, barriers; the main depth
+  and the swapchain views too). Raw still: the glowing-entity draw and the
+  pack outline pipeline (built against the raw `color_pass`) and the
+  outline blit (inside the scene's raw `resume` pass); they move with the
+  scene passes. A graph core for the shader packs' composite passes grows
+  from `post/gpu.rs`.
+- **The hand's own depth** when chains follow (`integrate3DHudDepth`):
+  chains after the hand see only its depth today.
+- **The spectated entity's chain** (creeper, spider, enderman): needs
+  `ClientboundSetCameraPacket`, which Melon doesn't handle yet.
+- **`blur.json`** for the menu blur instead of `blur.rs`.
+- **`gl_VertexIndex` in the pack outline pass** counts from the entity's
+  place in the mesh arena; vanilla batches the frame's outlined vertices.
+  Lumiere's markers read it (`notes/post-and-shaderpacks.md`).
+- **Shader packs**: loading and picking (M2), the GLSL translator (M3), the
+  pipeline (M4), breadth (M5).
 
 ### Features
 

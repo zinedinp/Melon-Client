@@ -7,36 +7,40 @@ use super::config::{Config, ENTITY_OUTLINE, Input, MAIN, Pass};
 use super::gpu::ChainSource;
 use super::shader::{self, Compiled};
 
-/// The chains vanilla asks for by name.
-pub const IDS: [&str; 5] = [
-    "minecraft:entity_outline",
-    "minecraft:creeper",
-    "minecraft:spider",
-    "minecraft:invert",
-    "minecraft:end_of_frame",
-];
-
-/// The chain run every frame, if a pack has it.
+/// The chain `GameRenderer` asks for every frame with a player.
 pub const END_OF_FRAME: &str = "minecraft:end_of_frame";
 
-/// Every chain of [`IDS`] the packs have that can be used, and the outline blit's shaders.
+/// Every chain the packs have (`post_effect/*.json` in any namespace) that can be used, and
+/// the outline blit's shaders. Servers name the ones to run (`ClientboundPostEffectsPacket`),
+/// so none is left out.
 pub fn load(assets_root: &Path) -> (Vec<ChainSource>, Option<Compiled>) {
+    let stack = melon_assets::assets::packs::active();
     let mut chains = Vec::new();
-    for id in IDS {
-        match load_one(assets_root, id) {
-            Ok(Some(chain)) => chains.push(chain),
-            Ok(None) => {}
-            Err(e) => melon_base::warn!("Post effect {id}: {e:#}"),
+    for namespace in stack.namespaces(assets_root) {
+        for path in stack.list(assets_root, &namespace, "post_effect") {
+            let Some(name) = path
+                .strip_prefix("post_effect/")
+                .and_then(|p| p.strip_suffix(".json"))
+            else {
+                continue;
+            };
+            let id = format!("{namespace}:{name}");
+            match load_one(assets_root, &id) {
+                Ok(Some(chain)) => chains.push(chain),
+                Ok(None) => {}
+                Err(e) => melon_base::warn!("Post effect {id}: {e:#}"),
+            }
         }
     }
     (chains, blit(assets_root))
 }
 
 fn load_one(assets_root: &Path, id: &str) -> anyhow::Result<Option<ChainSource>> {
-    let name = id.trim_start_matches("minecraft:");
-    let Some(json) = melon_assets::assets::json_resource(assets_root, "post_effect", name) else {
+    let Some(bytes) = melon_assets::assets::resource(assets_root, "post_effect", id, "json") else {
         return Ok(None);
     };
+    let json: serde_json::Value =
+        serde_json::from_slice(melon_assets::assets::packs::meta::strip_bom(&bytes))?;
     let config = Config::parse(&json).map_err(|e| anyhow::anyhow!("{e}"))?;
     let allowed: &[&str] = if id == ENTITY_OUTLINE_CHAIN {
         &[MAIN, ENTITY_OUTLINE]

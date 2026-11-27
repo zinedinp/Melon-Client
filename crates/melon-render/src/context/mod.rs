@@ -70,8 +70,7 @@ impl Renderer {
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let passes =
             unsafe { pipelines::create_render_passes(&device, surface_format, depth_format) }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let post = unsafe { super::post::gpu::Post::new(&device, surface_format) }?;
+        let post = super::post::gpu::Post::new(&layer, &queue, surface_format)?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let pictures =
             unsafe { super::picture::Pictures::new(&device, surface_format, depth_format) }?;

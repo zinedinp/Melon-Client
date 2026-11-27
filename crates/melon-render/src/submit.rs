@@ -196,17 +196,12 @@ impl Renderer {
             0.0,
         ];
         self.globals.write(&gpu_frame, &globals);
-        self.gui_uniforms.write(
-            &gpu_frame,
-            &super::gui_uniforms::GuiFrame {
-                gui_size: frame.ui_size,
-                screen_size: (
-                    self.swapchain.extent.width as f32,
-                    self.swapchain.extent.height as f32,
-                ),
-                game_time: super::gui_uniforms::game_time(),
-            },
-        );
+        let world = frame.scene.and_then(|scene| scene.world.as_ref());
+        self.gui_uniforms
+            .write(&gpu_frame, &self.gui_frame(frame.ui_size, world));
+        if let Some(scene) = frame.scene {
+            self.prepare_pack_outline(&gpu_frame, scene);
+        }
 
         let mut rec = gpu_frame.record()?;
         let cmd = rec.raw();
@@ -299,6 +294,13 @@ impl Renderer {
             .scene
             .map(|scene| self.post_chains(scene))
             .unwrap_or_default();
+        self.post.running(&chains);
+        let outlined = chains
+            .iter()
+            .any(|c| c == super::post::record::OUTLINE_CHAIN);
+        let effects = chains
+            .iter()
+            .any(|c| c != super::post::record::OUTLINE_CHAIN);
         if frame.scene.is_some_and(|scene| scene.world.is_some()) {
             self.frames.applied_post_effects.clear();
             self.frames.applied_post_effects.extend(
@@ -356,8 +358,27 @@ impl Renderer {
             None => (calls, &[][..]),
         };
 
+        // `GameRenderer.render`: the level (the outline's chain in it), the hand, the outline's
+        // blit, then the requested chains. The hand clears the depth those chains read.
+        // TODO(parity): vanilla draws the hand into a depth of its own when chains follow and
+        // merges it in (`integrate3DHudDepth`), so they see the level's depth too.
+        let resume = |render_pass: vk::RenderPass| {
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device.cmd_begin_render_pass(
+                    cmd,
+                    &vk::RenderPassBeginInfo::default()
+                        .render_pass(render_pass)
+                        .framebuffer(self.swapchain.framebuffers[image_index as usize])
+                        .render_area(full_scissor),
+                    vk::SubpassContents::INLINE,
+                );
+                self.device.cmd_set_viewport(cmd, 0, &[viewport]);
+                self.device.cmd_set_scissor(cmd, 0, &[full_scissor]);
+            }
+        };
         if let Some(scene) = frame.scene {
-            let part = if split {
+            let part = if split && outlined {
                 ScenePart::World
             } else {
                 ScenePart::All
@@ -366,30 +387,39 @@ impl Renderer {
             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
             unsafe { self.record_scene(cmd, scene, part) };
             waits.record_scene = started.elapsed();
-            if split {
+            if split && outlined {
                 // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
                 unsafe {
                     self.device.cmd_end_render_pass(cmd);
-                    self.record_post(cmd, image_index as usize, scene, &chains);
+                    self.record_outline_post(
+                        &mut rec,
+                        (acquired.image, image_index as usize),
+                        scene,
+                    );
                 }
-                // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-                unsafe {
-                    self.device.cmd_begin_render_pass(
-                        cmd,
-                        &vk::RenderPassBeginInfo::default()
-                            .render_pass(self.passes.resume)
-                            .framebuffer(self.swapchain.framebuffers[image_index as usize])
-                            .render_area(full_scissor),
-                        vk::SubpassContents::INLINE,
-                    )
-                };
+                // Keeps the depth for the chains that follow.
+                resume(if effects {
+                    self.passes.resume_keep
+                } else {
+                    self.passes.resume
+                });
                 // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
                 unsafe {
-                    self.device.cmd_set_viewport(cmd, 0, &[viewport]);
-                    self.device.cmd_set_scissor(cmd, 0, &[full_scissor]);
-                    self.record_outline_blit(cmd, &chains);
                     self.record_scene(cmd, scene, ScenePart::Hand);
+                    self.record_outline_blit(cmd, &chains);
                 }
+            }
+            if split && effects {
+                // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
+                unsafe {
+                    self.device.cmd_end_render_pass(cmd);
+                    self.record_effect_chains(
+                        &mut rec,
+                        (acquired.image, image_index as usize),
+                        &chains,
+                    );
+                }
+                resume(self.passes.resume);
             }
         }
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.

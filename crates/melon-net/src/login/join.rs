@@ -411,6 +411,10 @@ pub fn configure_loop(
             pid if pid == config::SHOW_DIALOG.0 => {
                 crate::dialog::connection::read_show(&body, false)?;
             }
+            // `handlePostEffects`: there is no player yet to give them to.
+            pid if pid == config::POST_EFFECTS.0 => {
+                bail!("Cannot set player post effects before the player is created.");
+            }
             pid if pid == config::CLEAR_DIALOG.0 => crate::dialog::connection::clear(),
             pid if pid == config::SERVER_LINKS.0 => crate::dialog::connection::read_links(&body)?,
             pid if pid == config::UPDATE_TAGS.0 => crate::dialog::connection::read_tags(&body)?,

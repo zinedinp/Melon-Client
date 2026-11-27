@@ -1,7 +1,7 @@
 //! A renderer for 2D interfaces alone: one pass that draws a [`DrawList`].
 
 use super::descriptor_pools::DescriptorPools;
-use super::gui_uniforms::{self, GuiFrame, GuiUniforms};
+use super::gui_uniforms::{GuiFrame, GuiUniforms};
 use super::pipeline::ui::{self, UiPipelines};
 use super::quad::{BlendMode, DrawList};
 use super::staging::Staging;
@@ -460,11 +460,7 @@ impl Renderer2d {
         self.vertices.write(&frame, &ui.vertices);
         self.gui.write(
             &frame,
-            &GuiFrame {
-                gui_size: ui_size,
-                screen_size: (width as f32, height as f32),
-                game_time: gui_uniforms::game_time(),
-            },
+            &GuiFrame::without_level(ui_size, (width as f32, height as f32)),
         );
 
         let rec = frame.record()?;

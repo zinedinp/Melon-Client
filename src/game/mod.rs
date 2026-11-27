@@ -171,6 +171,8 @@ pub struct InWorld {
     hud: Hud,
     /// A spectator's hotbar menu.
     spectator_menu: melon_gui::overlay::spectator_menu::SpectatorMenu,
+    /// `LocalPlayer.postEffects`: the chains the server asked for, gone with the player.
+    post_effects: Vec<String>,
     /// The open inventory, chat or switcher, if any. The world keeps running.
     overlay: Option<Box<dyn melon_gui::overlay::Overlay>>,
     /// Real time not yet spent on whole ticks.
@@ -380,6 +382,7 @@ impl InWorld {
             menus: Default::default(),
             hud: Hud::default(),
             spectator_menu: Default::default(),
+            post_effects: Vec::new(),
             overlay: None,
             tick_time: 0.0,
             paused_at: None,

@@ -285,12 +285,9 @@ impl Renderer {
                 descriptor_pools,
                 ..
             } = &mut self.textures;
-            let (post, blur) = (&mut self.post, &mut self.blur);
+            let blur = &mut self.blur;
             let result = descriptor_pools.compact(&self.device, self.pipelines.layout, |swap| {
                 for tex in list.iter_mut().chain(cubemaps.iter_mut()) {
-                    swap(&mut tex.descriptor_set);
-                }
-                for tex in post.textures_mut() {
                     swap(&mut tex.descriptor_set);
                 }
                 for set in blur.sets_mut() {

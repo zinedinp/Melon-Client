@@ -322,6 +322,8 @@ pub struct WorldDraw {
     pub view: Mat4,
     /// The camera position the view translates by.
     pub eye: glam::DVec3,
+    /// `Globals.GameTime`: `((gameTime % 24000) + partialTick) / 24000`.
+    pub game_time: f32,
     pub fov_y_degrees: f32,
     /// The hand's.
     pub hand_fov_y_degrees: f32,
@@ -555,6 +557,7 @@ mod tests {
             atlas: melon_base::gfx::TextureId(0),
             view: Mat4::IDENTITY,
             eye: glam::DVec3::new(1234.567, 70.31, -987.654),
+            game_time: 0.0,
             fov_y_degrees: 70.0,
             hand_fov_y_degrees: 70.0,
             far: 256.0,

@@ -38,11 +38,40 @@ pub enum WorldEvent {
     ServerChannels(Vec<String>),
     /// `ClientboundPingPacket` in play.
     Ping(i32),
+    /// `ClientboundPostEffectsPacket`: the chains the player's frames run.
+    PostEffects(Vec<String>),
     Game(game::GameEvent),
     /// `ClientboundStartConfigurationPacket`.
     Reconfiguring,
     /// The configuration ended and a new `Login` came.
     Rejoined(Box<JoinInfo>, Vec<WorldEvent>),
+}
+
+/// `ClientboundPostEffectsPacket`: a list of identifiers (`Identifier.STREAM_CODEC`).
+pub(crate) fn read_post_effects(body: &[u8]) -> Result<Vec<String>> {
+    let mut r = Reader::new(body);
+    let count = r.list_count()?;
+    let mut ids = Vec::with_capacity(count.min(64));
+    for _ in 0..count {
+        ids.push(identifier(&r.string()?)?);
+    }
+    Ok(ids)
+}
+
+/// `Identifier.parse`: `minecraft` without a namespace, vanilla's characters only.
+fn identifier(text: &str) -> Result<String> {
+    let (namespace, path) = text.split_once(':').unwrap_or(("minecraft", text));
+    let namespace = if namespace.is_empty() {
+        "minecraft"
+    } else {
+        namespace
+    };
+    let plain = |c: char| c.is_ascii_lowercase() || c.is_ascii_digit() || "_-.".contains(c);
+    anyhow::ensure!(
+        namespace.chars().all(plain) && path.chars().all(|c| plain(c) || c == '/'),
+        "not an identifier: {text}"
+    );
+    Ok(format!("{namespace}:{path}"))
 }
 
 /// `ClientboundPlayerPositionPacket`'s position, velocity and rotation.
@@ -939,6 +968,10 @@ fn handle_play_packet(
             login::read_pack_pop(body)?;
             (None, Play::Nothing)
         }
+        pid if pid == cb::POST_EFFECTS.0 => (
+            None,
+            Play::Event(WorldEvent::PostEffects(read_post_effects(body)?)),
+        ),
         pid if pid == cb::SHOW_DIALOG.0 => {
             crate::dialog::connection::read_show(body, true)?;
             (None, Play::Nothing)
@@ -1185,6 +1218,22 @@ const IGNORED: [i32; 5] = [
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn post_effects_are_identifiers_with_minecraft_as_default() {
+        let mut body = Vec::new();
+        varint::write_var_int(&mut body, 2).unwrap();
+        packet::write_string(&mut body, "creeper").unwrap();
+        packet::write_string(&mut body, "lumiere:fx/portal").unwrap();
+        assert_eq!(
+            read_post_effects(&body).unwrap(),
+            ["minecraft:creeper", "lumiere:fx/portal"]
+        );
+        let mut bad = Vec::new();
+        varint::write_var_int(&mut bad, 1).unwrap();
+        packet::write_string(&mut bad, "Not Valid").unwrap();
+        assert!(read_post_effects(&bad).is_err());
+    }
 
     #[test]
     fn a_read_that_waited_too_long_is_a_timeout() {

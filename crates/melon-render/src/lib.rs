@@ -175,7 +175,8 @@ struct Swapchain {
     /// What the current swapchain presents with.
     present_mode: PresentMode,
     images: Vec<vk::Image>,
-    views: Vec<vk::ImageView>,
+    /// The presenter's images as colour attachments, majestix-vk's.
+    views: Vec<majestix_vk::ImageView>,
     format: vk::Format,
     /// Whether the images can be copied from, which the blur needs.
     can_copy: bool,
@@ -341,6 +342,27 @@ struct Textures {
 
 impl Renderer {
     /// Drawable aspect ratio.
+    /// What the GUI's blocks say this frame: the world's clock and camera when there is one.
+    pub(crate) fn gui_frame(
+        &self,
+        ui_size: (f32, f32),
+        world: Option<&WorldDraw>,
+    ) -> gui_uniforms::GuiFrame {
+        let screen = (
+            self.swapchain.extent.width as f32,
+            self.swapchain.extent.height as f32,
+        );
+        match world {
+            Some(world) => gui_uniforms::GuiFrame {
+                gui_size: ui_size,
+                screen_size: screen,
+                game_time: world.game_time,
+                camera: world.eye.to_array(),
+            },
+            None => gui_uniforms::GuiFrame::without_level(ui_size, screen),
+        }
+    }
+
     pub fn aspect_ratio(&self) -> f32 {
         self.swapchain.extent.width as f32 / self.swapchain.extent.height.max(1) as f32
     }
@@ -479,9 +501,7 @@ impl Drop for Renderer {
             }
             self.device
                 .destroy_descriptor_set_layout(self.pipelines.layout, None);
-            let (device, pools) = (self.device.clone(), &self.textures.descriptor_pools);
-            self.post
-                .destroy(&self.device, &|t| free_effect_texture(&device, pools, t));
+            self.post.destroy();
             self.textures.descriptor_pools.destroy(&self.device);
             self.pictures.destroy(&self.device);
             self.passes.destroy(&self.device);
@@ -501,25 +521,15 @@ impl Drop for Renderer {
     }
 }
 
-/// The shared depth buffer; null handles while there is no swapchain.
+/// The shared depth buffer and its view, majestix-vk's; none while there is no swapchain.
 #[derive(Default)]
-struct DepthImage {
-    image: vk::Image,
-    memory: vk::DeviceMemory,
-    view: vk::ImageView,
-}
+struct DepthImage(Option<(majestix_vk::Image, majestix_vk::ImageView)>);
 
-/// Frees a texture a post chain owns outside the texture list.
-unsafe fn free_effect_texture(
-    device: &ash::Device,
-    pools: &descriptor_pools::DescriptorPools,
-    texture: texture::Texture,
-) {
-    // SAFETY: live handles of this device, a recording command buffer, nothing in flight freed.
-    unsafe {
-        device.destroy_image_view(texture.view, None);
-        device.destroy_image(texture.image, None);
-        suballoc::release(device, texture.memory);
-        pools.free(device, texture.descriptor_set);
+impl DepthImage {
+    /// The image, null without one.
+    fn image(&self) -> vk::Image {
+        self.0
+            .as_ref()
+            .map_or(vk::Image::null(), |(image, _)| image.raw())
     }
 }

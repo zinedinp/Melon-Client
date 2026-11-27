@@ -66,6 +66,7 @@ impl InWorld {
                 WorldEvent::Ping(id) => self.joined.session.send_pong(id),
                 WorldEvent::Movement(payload) => self.apply_movement_payload(payload),
                 WorldEvent::ServerChannels(channels) => self.server_channels.extend(channels),
+                WorldEvent::PostEffects(ids) => self.post_effects = ids,
                 WorldEvent::Teleport(teleport) => self.teleport(&teleport),
                 WorldEvent::Game(GameEvent::Respawn {
                     dimension_id,
@@ -136,6 +137,7 @@ impl InWorld {
     /// the server of slot 0 when it held another.
     fn new_local_player(&mut self, keep_entity_data: bool, keep_attributes: bool) {
         self.player.respawned(keep_entity_data, keep_attributes);
+        self.post_effects.clear();
         self.hands.using = None;
         self.body.respawned(keep_entity_data);
         self.sent.respawned(keep_entity_data);

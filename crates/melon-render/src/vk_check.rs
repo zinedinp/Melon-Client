@@ -70,6 +70,11 @@ struct Gpu {
     messenger: vk::DebugUtilsMessengerEXT,
     physical: vk::PhysicalDevice,
     device: ash::Device,
+    /// What `device` was made from, for [`Self::adopt`].
+    plan: numerobis::vulkan::Plan,
+    family: u32,
+    /// The layer owns `device` now, and destroys it.
+    adopted: bool,
 }
 
 impl Gpu {
@@ -166,7 +171,29 @@ impl Gpu {
             messenger,
             physical,
             device,
+            plan: features.plan.clone(),
+            family,
+            adopted: false,
         })
+    }
+
+    /// majestix-vk's device over this one, and its queue: dropped before `self`, it destroys
+    /// the device.
+    unsafe fn adopt(&mut self) -> anyhow::Result<(majestix_vk::Device, majestix_vk::Queue)> {
+        // SAFETY: made from `plan` on `physical` with one queue of `family`; the instance
+        // outlives the layer (the caller drops it first).
+        let layer = unsafe {
+            majestix_vk::Device::adopt(
+                &self.instance,
+                self.physical,
+                self.device.clone(),
+                self.plan.clone(),
+                &[(self.family, 1)],
+            )
+        }?;
+        self.adopted = true;
+        let queue = layer.queue(self.family, 0)?;
+        Ok((layer, queue))
     }
 }
 
@@ -174,8 +201,10 @@ impl Drop for Gpu {
     fn drop(&mut self) {
         // SAFETY: the test's own device, waited idle before it is destroyed.
         unsafe {
-            self.device.device_wait_idle().ok();
-            self.device.destroy_device(None);
+            if !self.adopted {
+                self.device.device_wait_idle().ok();
+                self.device.destroy_device(None);
+            }
             self.debug
                 .destroy_debug_utils_messenger(self.messenger, None);
             self.instance.destroy_instance(None);
@@ -373,7 +402,6 @@ fn every_pipeline_passes_validation(version: Option<ApiVersion>) {
 fn post_chains_pass_validation() {
     use super::post::gpu::Post;
     use super::post::load;
-    use super::texture::Texture;
     use melon_assets::assets::packs::{self, Pack, ResourceStack};
     use std::path::Path;
 
@@ -391,95 +419,47 @@ fn post_chains_pass_validation() {
     }
     // SAFETY: a test instance and device of its own; the queue is waited idle before anything is freed.
     unsafe {
-        let gpu = Gpu::new().expect("Vulkan instance with validation");
-        let mem_props = gpu
-            .instance
-            .get_physical_device_memory_properties(gpu.physical);
+        let mut gpu = Gpu::new().expect("Vulkan instance with validation");
         let depth = find_depth_format(&gpu.instance, gpu.physical).expect("depth format");
+        let (layer, queue) = gpu.adopt().expect("majestix-vk device");
+        let device = &gpu.device;
         let color = vk::Format::B8G8R8A8_UNORM;
-        let scene = create_render_pass(&gpu.device, color, depth, PassStart::Clear).expect("clear");
-        let split =
-            create_render_pass(&gpu.device, color, depth, PassStart::SceneSplit).expect("split");
-        let resume =
-            create_render_pass(&gpu.device, color, depth, PassStart::Resume).expect("resume");
-        let gui_layout = super::gui_uniforms::create_layout(&gpu.device).expect("gui layout");
-        let mut post = Post::new(&gpu.device, color).expect("post");
+        let scene = create_render_pass(device, color, depth, PassStart::Clear).expect("clear");
+        let split = create_render_pass(device, color, depth, PassStart::SceneSplit).expect("split");
+        let resume = create_render_pass(device, color, depth, PassStart::Resume).expect("resume");
+        let gui_layout = layer
+            .create_descriptor_set_layout(&super::gui_uniforms::BINDINGS)
+            .expect("gui layout");
+        let mut post = Post::new(&layer, &queue, color).expect("post");
 
         let (chains, blit) = load::load(&root);
         assert!(!chains.is_empty(), "no chains in {}", root.display());
-        let sizes = |chain: &super::post::ChainSource| -> Vec<(u32, u32)> {
-            chain
-                .config
-                .passes
-                .iter()
-                .flat_map(|p| p.inputs.iter())
-                .filter_map(|i| match i {
-                    super::post::config::Input::Texture { width, height, .. } => {
-                        Some((*width, *height))
-                    }
-                    _ => None,
-                })
-                .collect()
-        };
-        let extent = vk::Extent2D {
-            width: 640,
-            height: 360,
-        };
-        let mut prepared = Vec::new();
-        for chain in chains {
-            let textures = sizes(&chain)
-                .into_iter()
-                .map(|(width, height)| {
-                    let image = super::blur::create_image(
-                        &gpu.device,
-                        &mem_props,
-                        vk::Format::R8G8B8A8_UNORM,
-                        vk::Extent2D {
-                            width: 8,
-                            height: 8,
-                        },
-                        vk::ImageUsageFlags::SAMPLED | vk::ImageUsageFlags::TRANSFER_DST,
-                    )
-                    .expect("effect texture");
-                    let texture = Texture {
-                        image: image.image,
-                        memory: melon_base::gfx::suballoc::Allocation::whole(image.memory),
-                        view: image.view,
-                        descriptor_set: vk::DescriptorSet::null(),
-                        mip_levels: 1,
-                        shared: false,
-                    };
-                    (texture, width, height)
-                })
-                .collect();
-            prepared.push((chain, textures));
-        }
-        let device = &gpu.device;
-        let free = |t: Texture| {
-            device.destroy_image_view(t.view, None);
-            device.destroy_image(t.image, None);
-            melon_base::gfx::suballoc::release(device, t.memory);
-        };
-        let failed = post.set_chains(device, &mem_props, gui_layout, prepared, &free);
+        let failed = post.set_chains(gui_layout, chains);
         assert!(failed.is_empty(), "chains failed: {failed:?}");
-        post.set_blit(device, scene, blit.as_ref()).expect("blit");
-        let (image, memory, view) =
-            super::vk_util::create_depth_image(device, &mem_props, depth, extent, true)
-                .expect("depth");
-        post.resize(device, &mem_props, extent, &[], Some((image, depth)))
-            .expect("resize");
-        post.resize(device, &mem_props, extent, &[], Some((image, depth)))
+        post.set_blit(scene, blit.as_ref()).expect("blit");
+        let (width, height) = (640, 360);
+        let depth_image = layer
+            .create_image(&majestix_vk::ImageDesc::d2(
+                depth,
+                width,
+                height,
+                vk::ImageUsageFlags::DEPTH_STENCIL_ATTACHMENT | vk::ImageUsageFlags::SAMPLED,
+            ))
+            .expect("depth");
+        let extent = vk::Extent2D { width, height };
+        post.resize(extent, &[], Some(depth_image)).expect("resize");
+        post.resize(extent, &[], Some(depth_image))
             .expect("resize again");
 
-        device.device_wait_idle().expect("idle");
-        post.destroy(device, &free);
-        device.destroy_image_view(view, None);
-        device.destroy_image(image, None);
-        vk_util::free_memory(device, memory);
-        device.destroy_descriptor_set_layout(gui_layout, None);
+        post.destroy();
+        layer.retire(depth_image);
+        layer.retire(gui_layout);
+        layer.wait_idle().expect("idle");
         for pass in [scene, split, resume] {
             device.destroy_render_pass(pass, None);
         }
+        drop(queue);
+        drop(layer);
     }
     packs::activate(ResourceStack::default());
     let messages = messages();

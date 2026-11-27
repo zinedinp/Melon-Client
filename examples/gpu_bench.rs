@@ -304,6 +304,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                         atlas: atlas_id,
                         view,
                         eye,
+                        game_time: 0.0,
                         fov_y_degrees: 70.0,
                         hand_fov_y_degrees: 70.0,
                         far,

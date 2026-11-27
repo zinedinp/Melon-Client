@@ -815,6 +815,7 @@ fn the_nether_comes_with_its_own_height() {
                         WorldEvent::BiomesChanged(_) => "biomes",
                         WorldEvent::Teleport(_) => "teleport",
                         WorldEvent::Ping(_) => "ping",
+                        WorldEvent::PostEffects(_) => "post effects",
                         WorldEvent::Movement(_) => "movement",
                         WorldEvent::ServerChannels(_) => "channels",
                         WorldEvent::Game(_) => "game",

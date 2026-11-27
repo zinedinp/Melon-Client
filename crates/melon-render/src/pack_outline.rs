@@ -4,18 +4,52 @@ use std::path::Path;
 
 use ash::vk;
 use glam::Mat4;
+use majestix_vk::{
+    Binding, Descriptor, DescriptorSet, DescriptorSetLayout, Frames, Mapped, MemoryUse,
+    Simple as _, Write,
+};
 
 use super::Renderer;
 use super::gui_uniforms::{BLOCKS, DynamicTransforms, Globals, IDENTITY, STRIDE};
 use super::pipeline::{Pass, PipelineDesc, depth_disabled};
-use super::vk_util::Place;
 use melon_assets::assets::shaders::{self, Interface, Stage};
-use melon_base::gfx::mapped::MappedBuffer;
 use melon_world::mesh::WorldVertex;
 
-/// Glowing entities that write pack-outline markers this frame.
-const SLOTS: usize = 64;
-const BLOCKS_N: u64 = BLOCKS.len() as u64;
+/// The glowing entities a frame draws with the pack's shader; the rest go without (logged once).
+pub const MAX_ENTITIES: usize = 1024;
+
+/// The blocks' stages.
+const STAGES: vk::ShaderStageFlags = vk::ShaderStageFlags::from_raw(
+    vk::ShaderStageFlags::VERTEX.as_raw() | vk::ShaderStageFlags::FRAGMENT.as_raw(),
+);
+
+/// Set 1: each entity's `DynamicTransforms` (at a dynamic offset), `Projection`, `Globals`.
+const BINDINGS: [Binding; 3] = [
+    Binding {
+        binding: 0,
+        ty: vk::DescriptorType::UNIFORM_BUFFER_DYNAMIC,
+        count: 1,
+        stages: STAGES,
+    },
+    Binding {
+        binding: 1,
+        ty: vk::DescriptorType::UNIFORM_BUFFER,
+        count: 1,
+        stages: STAGES,
+    },
+    Binding {
+        binding: 2,
+        ty: vk::DescriptorType::UNIFORM_BUFFER,
+        count: 1,
+        stages: STAGES,
+    },
+];
+const _: () = assert!(BLOCKS.len() == BINDINGS.len());
+
+/// Where a slot's blocks sit in its range: the projection, the globals, then the entities.
+const PROJECTION_AT: usize = 0;
+const GLOBALS_AT: usize = STRIDE as usize;
+const ENTITIES_AT: u64 = 2 * STRIDE;
 
 /// Compiled pack shaders for the outline pass.
 pub struct Shader {
@@ -27,11 +61,21 @@ pub struct Shader {
 /// The pack's outline pipeline and the uniform blocks it reads.
 pub(super) struct PackOutline {
     pub pass: Pass,
-    layout: vk::DescriptorSetLayout,
-    pool: vk::DescriptorPool,
-    buffer: MappedBuffer,
-    /// One set per slot.
-    sets: Vec<vk::DescriptorSet>,
+    /// The scene's entities [`Self::prepare`] wrote, in draw order.
+    drawn: Vec<usize>,
+    /// Whether a frame had more glowing entities than [`MAX_ENTITIES`].
+    warned: bool,
+    /// majestix-vk's part; given up in [`Self::destroy`], before the device goes.
+    own: Option<Own>,
+}
+
+struct Own {
+    device: majestix_vk::Device,
+    layout: DescriptorSetLayout,
+    /// Per frame slot: the blocks, as [`PROJECTION_AT`] and the rest say.
+    ring: Mapped<u8>,
+    /// By slot index.
+    sets: Vec<DescriptorSet>,
 }
 
 /// `core/rendertype_outline` from the active packs, when a pack ships it.
@@ -74,89 +118,174 @@ pub fn compile(assets_root: &Path) -> anyhow::Result<Option<Shader>> {
 }
 
 impl PackOutline {
+    /// The pipeline in `color_pass` and a set per slot of `frames`.
+    ///
+    /// # Safety
+    ///
+    /// `color_pass` and `texture_layout` are live handles of `layer`'s device.
     pub unsafe fn create(
-        device: &ash::Device,
-        mem_props: &vk::PhysicalDeviceMemoryProperties,
+        layer: &majestix_vk::Device,
+        frames: &Frames,
         color_pass: vk::RenderPass,
         texture_layout: vk::DescriptorSetLayout,
         shader: &Shader,
     ) -> anyhow::Result<Self> {
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let layout = unsafe { blocks_layout(device) }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let pass = unsafe { create_pass(device, color_pass, texture_layout, layout, shader) }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let (buffer, pool, sets) = unsafe { uniforms(device, mem_props, layout) }?;
-        Ok(Self {
-            pass,
+        let layout = layer.create_descriptor_set_layout(&BINDINGS)?;
+        let made = Mapped::<u8>::new(
+            layer,
+            frames,
+            (ENTITIES_AT + STRIDE * MAX_ENTITIES as u64) as usize,
+            vk::BufferUsageFlags::UNIFORM_BUFFER,
+            MemoryUse::Upload,
+        )
+        .map_err(anyhow::Error::from)
+        .and_then(|ring| Ok((sets(layer, layout, &ring, frames)?, ring)));
+        let (sets, ring) = match made {
+            Ok(made) => made,
+            Err(e) => {
+                layer.retire(layout);
+                return Err(e);
+            }
+        };
+        let own = Own {
+            device: layer.clone(),
             layout,
-            pool,
-            buffer,
+            ring,
             sets,
-        })
-    }
-
-    /// Projection, screen size and the day's fraction, once a frame.
-    pub unsafe fn write_frame(&self, proj: Mat4, screen: (f32, f32)) {
-        let game_time = super::gui_uniforms::game_time();
-        let globals = Globals::gui(melon_world::glint::millis(), game_time, screen);
-        let stride = STRIDE as usize;
-        // SAFETY: the caller keeps the GPU off the shared blocks (every frame's fence was waited on).
-        unsafe {
-            self.buffer.write_one(stride, &proj.to_cols_array());
-            self.buffer.write_one(2 * stride, &globals);
+        };
+        // SAFETY: `layer`'s device is live, and the layouts and pass named are its own.
+        match unsafe {
+            create_pass(
+                layer.raw(),
+                color_pass,
+                texture_layout,
+                layout.raw(),
+                shader,
+            )
+        } {
+            Ok(pass) => Ok(Self {
+                pass,
+                drawn: Vec::new(),
+                warned: false,
+                own: Some(own),
+            }),
+            Err(e) => {
+                own.retire();
+                Err(e)
+            }
         }
     }
 
-    /// Model-view and colour modulator of glowing entity `slot`.
-    pub unsafe fn write_entity(&self, slot: usize, model_view: Mat4, colour: [f32; 4]) {
-        let transforms = DynamicTransforms {
-            model_view: model_view.to_cols_array(),
-            texture: IDENTITY,
-            color_modulator: colour,
-            model_offset: [0.0; 4],
-        };
-        let at = (BLOCKS_N + slot as u64) as usize * STRIDE as usize;
-        // SAFETY: the caller keeps the GPU off this slot's block (its frame's fence was waited on).
-        unsafe { self.buffer.write_one(at, &transforms) };
+    /// Writes the frame's projection and globals, and each glowing entity's transforms, the
+    /// first [`MAX_ENTITIES`] of `entities` (scene index, model-view, colour) in order.
+    pub fn prepare(
+        &mut self,
+        frame: &majestix_vk::Frame<'_>,
+        proj: Mat4,
+        globals: &Globals,
+        entities: impl Iterator<Item = (usize, Mat4, [f32; 4])>,
+    ) {
+        let own = self.own.as_mut().expect("pack outline used after destroy");
+        own.ring.write(frame, PROJECTION_AT, &proj.to_cols_array());
+        own.ring.write(frame, GLOBALS_AT, globals);
+        self.drawn.clear();
+        for (index, model_view, colour) in entities {
+            if self.drawn.len() == MAX_ENTITIES {
+                if !std::mem::replace(&mut self.warned, true) {
+                    melon_base::warn!(
+                        "More than {MAX_ENTITIES} glowing entities: the rest skip the pack's outline shader"
+                    );
+                }
+                break;
+            }
+            let transforms = DynamicTransforms {
+                model_view: model_view.to_cols_array(),
+                texture: IDENTITY,
+                color_modulator: colour,
+                model_offset: [0.0; 4],
+            };
+            let at = ENTITIES_AT as usize + self.drawn.len() * STRIDE as usize;
+            own.ring.write(frame, at, &transforms);
+            self.drawn.push(index);
+        }
     }
 
+    /// The scene's entities [`Self::prepare`] wrote, each with its dynamic offset.
+    pub fn drawn(&self) -> impl Iterator<Item = (usize, u32)> + '_ {
+        self.drawn
+            .iter()
+            .enumerate()
+            .map(|(i, &index)| (index, (i as u64 * STRIDE) as u32))
+    }
+
+    /// Frame slot `slot`'s set.
     pub fn set(&self, slot: usize) -> vk::DescriptorSet {
-        self.sets[slot]
+        self.own
+            .as_ref()
+            .expect("pack outline used after destroy")
+            .sets[slot]
+            .raw()
     }
 
-    pub fn slots() -> usize {
-        SLOTS
-    }
-
-    pub unsafe fn destroy(self, device: &ash::Device) {
+    /// Frees the pipeline and retires the ring, the sets and the layout.
+    ///
+    /// # Safety
+    ///
+    /// `device` is the pipeline's and no frame in flight uses it any more.
+    pub unsafe fn destroy(mut self, device: &ash::Device) {
         // SAFETY: made by this device, and no frame in flight uses it any more.
-        unsafe {
-            self.pass.destroy(device);
-            device.destroy_descriptor_pool(self.pool, None);
-            device.destroy_descriptor_set_layout(self.layout, None);
-            self.buffer.destroy(device);
+        unsafe { self.pass.destroy(device) };
+        if let Some(own) = self.own.take() {
+            own.retire();
         }
     }
 }
 
-unsafe fn blocks_layout(device: &ash::Device) -> anyhow::Result<vk::DescriptorSetLayout> {
-    let bindings: Vec<_> = (0..BLOCKS.len() as u32)
-        .map(|binding| {
-            vk::DescriptorSetLayoutBinding::default()
-                .binding(binding)
-                .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-                .descriptor_count(1)
-                .stage_flags(vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT)
-        })
-        .collect();
-    // SAFETY: `device` is live, and the infos name only its own live handles.
-    Ok(unsafe {
-        device.create_descriptor_set_layout(
-            &vk::DescriptorSetLayoutCreateInfo::default().bindings(&bindings),
-            None,
-        )
-    }?)
+impl Own {
+    fn retire(self) {
+        for set in self.sets {
+            self.device.retire(set);
+        }
+        self.device.retire(self.layout);
+    }
+}
+
+/// A set per slot of `frames`: its entity range (dynamic), projection and globals.
+fn sets(
+    layer: &majestix_vk::Device,
+    layout: DescriptorSetLayout,
+    ring: &Mapped<u8>,
+    frames: &Frames,
+) -> anyhow::Result<Vec<DescriptorSet>> {
+    let mut sets = Vec::with_capacity(frames.count() as usize);
+    for slot in frames.slots() {
+        let start = ring.offset(slot);
+        let block = |binding, offset| {
+            Write::new(
+                binding,
+                Descriptor::Buffer {
+                    buffer: ring.buffer(),
+                    offset: start + offset,
+                    range: STRIDE,
+                },
+            )
+        };
+        let writes = [
+            block(0, ENTITIES_AT),
+            block(1, PROJECTION_AT as u64),
+            block(2, GLOBALS_AT as u64),
+        ];
+        match layer.create_descriptor_set(layout, &writes) {
+            Ok(set) => sets.push(set),
+            Err(e) => {
+                for set in sets {
+                    layer.retire(set);
+                }
+                return Err(e.into());
+            }
+        }
+    }
+    Ok(sets)
 }
 
 unsafe fn create_pass(
@@ -207,91 +336,6 @@ unsafe fn create_pass(
     }
 }
 
-unsafe fn uniforms(
-    device: &ash::Device,
-    mem_props: &vk::PhysicalDeviceMemoryProperties,
-    layout: vk::DescriptorSetLayout,
-) -> anyhow::Result<(MappedBuffer, vk::DescriptorPool, Vec<vk::DescriptorSet>)> {
-    let sizes = [vk::DescriptorPoolSize {
-        ty: vk::DescriptorType::UNIFORM_BUFFER,
-        descriptor_count: (SLOTS as u32) * BLOCKS_N as u32,
-    }];
-    // SAFETY: `device` is live, and the infos name only its own live handles.
-    let pool = unsafe {
-        device.create_descriptor_pool(
-            &vk::DescriptorPoolCreateInfo::default()
-                .pool_sizes(&sizes)
-                .max_sets(SLOTS as u32),
-            None,
-        )
-    }?;
-    let layouts = vec![layout; SLOTS];
-    // SAFETY: `device` is live, and the infos name only its own live handles.
-    let sets = match unsafe {
-        device.allocate_descriptor_sets(
-            &vk::DescriptorSetAllocateInfo::default()
-                .descriptor_pool(pool)
-                .set_layouts(&layouts),
-        )
-    } {
-        Ok(sets) => sets,
-        Err(e) => {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { device.destroy_descriptor_pool(pool, None) };
-            return Err(e.into());
-        }
-    };
-    let size = STRIDE * (BLOCKS_N + SLOTS as u64);
-    // SAFETY: `device` is live, and the infos name only its own live handles.
-    let made = unsafe {
-        MappedBuffer::new(
-            device,
-            mem_props,
-            size,
-            vk::BufferUsageFlags::UNIFORM_BUFFER,
-            Place::UPLOAD,
-        )
-    };
-    let buffer = match made {
-        Ok(buffer) => buffer,
-        Err(e) => {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { device.destroy_descriptor_pool(pool, None) };
-            return Err(e);
-        }
-    };
-    for (i, &set) in sets.iter().enumerate() {
-        let infos = [
-            vk::DescriptorBufferInfo::default()
-                .buffer(buffer.buffer)
-                .offset(STRIDE * (BLOCKS_N + i as u64))
-                .range(STRIDE),
-            vk::DescriptorBufferInfo::default()
-                .buffer(buffer.buffer)
-                .offset(STRIDE)
-                .range(STRIDE),
-            vk::DescriptorBufferInfo::default()
-                .buffer(buffer.buffer)
-                .offset(2 * STRIDE)
-                .range(STRIDE),
-        ];
-        let writes: Vec<_> = infos
-            .iter()
-            .enumerate()
-            .map(|(binding, info)| {
-                vk::WriteDescriptorSet::default()
-                    .dst_set(set)
-                    .dst_binding(binding as u32)
-                    .descriptor_type(vk::DescriptorType::UNIFORM_BUFFER)
-                    .buffer_info(std::slice::from_ref(info))
-            })
-            .collect();
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe { device.update_descriptor_sets(&writes, &[]) };
-    }
-    Ok((buffer, pool, sets))
-}
-
 impl Renderer {
     /// The pack's outline shaders from now on, or Melon's flat colour when `None`.
     pub fn set_outline_pack_shader(&mut self, shader: Option<&Shader>) -> Option<anyhow::Error> {
@@ -304,9 +348,13 @@ impl Renderer {
                 pack.destroy(&self.device);
             }
             let shader = shader?;
+            let frames = self
+                .ring
+                .as_ref()
+                .expect("the frame ring is back between frames");
             match PackOutline::create(
-                &self.device,
-                &self.mem_props,
+                &self.layer.device,
+                frames,
                 self.post.color_pass,
                 self.pipelines.layout,
                 shader,

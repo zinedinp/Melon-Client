@@ -21,7 +21,7 @@ pub struct DynamicTransforms {
     pub model_view: [f32; 16],
     pub texture: [f32; 16],
     pub color_modulator: [f32; 4],
-    /// `vec3 ModelOffset` and its padding.
+    /// `vec3 ModelOffset`; its padding (`w`) carries [`glint_millis`] for Melon's GUI glint.
     pub model_offset: [f32; 4],
 }
 
@@ -47,14 +47,15 @@ const _: () = assert!(std::mem::size_of::<Globals>() == 48);
 unsafe impl Pod for Globals {}
 
 impl Globals {
-    /// The GUI's globals: no camera, the glint scrolling by `glint_millis`.
-    pub fn gui(glint_millis: f32, game_time: f32, screen_size: (f32, f32)) -> Self {
+    /// `GlobalSettingsUniform.update`'s block for a frame.
+    pub fn of(frame: &GuiFrame) -> Self {
+        let block = frame.camera.map(f64::floor);
         Self {
-            camera_block_pos: [0; 3],
+            camera_block_pos: block.map(|c| c as i32),
             glint_alpha: 1.0,
-            camera_offset: [glint_millis, 0.0, 0.0],
-            game_time,
-            screen_size: [screen_size.0, screen_size.1],
+            camera_offset: [0, 1, 2].map(|i| (block[i] - frame.camera[i]) as f32),
+            game_time: frame.game_time,
+            screen_size: [frame.screen_size.0, frame.screen_size.1],
             menu_blur_radius: 5,
             use_rgss: 0,
         }
@@ -72,8 +73,22 @@ pub struct GuiFrame {
     pub gui_size: (f32, f32),
     /// The window's size in pixels.
     pub screen_size: (f32, f32),
-    /// `Globals.GameTime`: the day's fraction, 0..1.
+    /// `Globals.GameTime`: `((gameTime % 24000) + partialTick) / 24000`, 0 without a level.
     pub game_time: f32,
+    /// The camera's position, 0 without a level.
+    pub camera: [f64; 3],
+}
+
+impl GuiFrame {
+    /// A frame without a level.
+    pub fn without_level(gui_size: (f32, f32), screen_size: (f32, f32)) -> Self {
+        Self {
+            gui_size,
+            screen_size,
+            game_time: 0.0,
+            camera: [0.0; 3],
+        }
+    }
 }
 
 /// `Util.getMillis() * glintSpeed * 8` from process start, speed 1: what scrolls the glint.
@@ -85,17 +100,6 @@ pub fn glint_millis() -> f32 {
         .as_secs_f64()
         * 1000.0
         * 8.0) as f32
-}
-
-/// `Globals.GameTime` without a world's clock.
-pub fn game_time() -> f32 {
-    static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
-    let ticks = START
-        .get_or_init(std::time::Instant::now)
-        .elapsed()
-        .as_secs_f64()
-        * 20.0;
-    (ticks % 24000.0 / 24000.0) as f32
 }
 
 /// `ProjMat` for GUI coordinates.
@@ -129,7 +133,7 @@ const BLOCK_STAGES: vk::ShaderStageFlags = vk::ShaderStageFlags::from_raw(
 );
 
 /// The set's bindings: the blocks, then the glint.
-const BINDINGS: [Binding; 4] = [
+pub const BINDINGS: [Binding; 4] = [
     block_binding(0),
     block_binding(1),
     block_binding(2),
@@ -256,6 +260,11 @@ impl GuiUniforms {
         self.own().layout.raw()
     }
 
+    /// Set 1 of the GUI pipelines, majestix-vk's.
+    pub fn set_layout(&self) -> DescriptorSetLayout {
+        self.own().layout
+    }
+
     /// Writes the frame's blocks.
     pub fn write(&mut self, frame: &majestix_vk::Frame<'_>, gui: &GuiFrame) {
         let own = self
@@ -266,9 +275,9 @@ impl GuiUniforms {
             model_view: IDENTITY,
             texture: IDENTITY,
             color_modulator: [1.0; 4],
-            model_offset: [0.0; 4],
+            model_offset: [0.0, 0.0, 0.0, glint_millis()],
         };
-        let globals = Globals::gui(glint_millis(), gui.game_time, gui.screen_size);
+        let globals = Globals::of(gui);
         let stride = STRIDE as usize;
         own.ring.write(frame, 0, &transforms);
         own.ring
@@ -306,6 +315,11 @@ impl GuiUniforms {
     /// Frame slot `slot`'s set.
     pub fn set(&self, slot: usize) -> vk::DescriptorSet {
         self.own().sets[slot].raw()
+    }
+
+    /// Frame slot `slot`'s set, majestix-vk's.
+    pub fn slot_set(&self, slot: usize) -> DescriptorSet {
+        self.own().sets[slot]
     }
 
     /// Retires the ring, the sets, the glint, the sampler and the layout.
@@ -450,5 +464,19 @@ mod tests {
         let apply = |x: f32, y: f32| [m[0] * x + m[12], m[5] * y + m[13], m[14]];
         assert_eq!(apply(0.0, 0.0), [-1.0, -1.0, 0.5]);
         assert_eq!(apply(320.0, 240.0), [1.0, 1.0, 0.5]);
+    }
+
+    #[test]
+    fn the_camera_splits_into_its_block_and_the_offset_back_to_it() {
+        let frame = GuiFrame {
+            gui_size: (1.0, 1.0),
+            screen_size: (1.0, 1.0),
+            game_time: 0.25,
+            camera: [-1.25, 64.5, 3.0],
+        };
+        let globals = Globals::of(&frame);
+        assert_eq!(globals.camera_block_pos, [-2, 64, 3]);
+        assert_eq!(globals.camera_offset, [-0.75, -0.5, 0.0]);
+        assert_eq!(globals.game_time, 0.25);
     }
 }

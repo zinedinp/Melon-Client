@@ -118,6 +118,8 @@ impl InWorld {
                 atlas: assets.atlas,
                 view: camera.view,
                 eye: camera.position,
+                game_time: (self.clocks.game_time().rem_euclid(24000) as f32 + view.level_partial)
+                    / 24000.0,
                 fov_y_degrees: camera.fov,
                 hand_fov_y_degrees: view.hand_fov,
                 far: camera.far,
@@ -141,9 +143,19 @@ impl InWorld {
             glint_item: Some(assets.glint.item),
             glint_armor: Some(assets.glint.armor),
             glowing: layer.glowing,
-            post_effects: Vec::new(),
+            post_effects: self.requested_post_effects(),
         };
         (scene, stats)
+    }
+
+    /// `GameRenderer.update`'s chains: `end_of_frame`, then the player's. The spectated
+    /// entity's (`checkEntityPostEffect`) would follow, but Melon's camera never leaves the
+    /// player yet (no `ClientboundSetCameraPacket`).
+    fn requested_post_effects(&self) -> Vec<String> {
+        let mut out = Vec::with_capacity(1 + self.post_effects.len());
+        out.push(melon_render::post::load::END_OF_FRAME.to_owned());
+        out.extend(self.post_effects.iter().cloned());
+        out
     }
 
     /// Takes back a drawn [`SceneFrame`], so the next frame reuses its buffers.
