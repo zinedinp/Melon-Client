@@ -126,13 +126,15 @@ impl Renderer {
         self.textures.pending_init_bytes = 0;
         // SAFETY: `submit_now` waits on its own fence, so the copies are done when it returns.
         let result = unsafe {
-            texture_update::submit_now(
-                &self.device,
-                &self.mem_props,
-                self.frames.command_pool,
-                self.queue,
-                &inits,
-            )
+            self.layer.queue.with_raw(|queue| {
+                texture_update::submit_now(
+                    &self.device,
+                    &self.mem_props,
+                    self.frames.command_pool,
+                    queue,
+                    &inits,
+                )
+            })
         };
         if let Err(e) = result {
             crate::warn!("Texture upload failed: {e:#}");

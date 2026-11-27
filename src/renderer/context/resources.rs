@@ -62,7 +62,7 @@ pub(super) fn textures(descriptor_pools: DescriptorPools, samplers: Samplers) ->
     }
 }
 
-/// The command buffers, semaphores and fences of each frame in flight.
+/// The frames' bookkeeping, and the pool of one-off uploads.
 pub(super) unsafe fn create_frames(
     device: &ash::Device,
     queue_family: u32,
@@ -76,36 +76,8 @@ pub(super) unsafe fn create_frames(
             None,
         )
     }?;
-    // SAFETY: `device` is live, and the infos name only its own live handles.
-    let command_buffers = unsafe {
-        device.allocate_command_buffers(
-            &vk::CommandBufferAllocateInfo::default()
-                .command_pool(command_pool)
-                .level(vk::CommandBufferLevel::PRIMARY)
-                .command_buffer_count(MAX_FRAMES_IN_FLIGHT as u32),
-        )
-    }?;
-    let mut image_available = Vec::new();
-    let mut in_flight = Vec::new();
-    for _ in 0..MAX_FRAMES_IN_FLIGHT {
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        image_available
-            .push(unsafe { device.create_semaphore(&vk::SemaphoreCreateInfo::default(), None) }?);
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        in_flight.push(unsafe {
-            device.create_fence(
-                &vk::FenceCreateInfo::default().flags(vk::FenceCreateFlags::SIGNALED),
-                None,
-            )
-        }?);
-    }
     Ok(Frames {
         command_pool,
-        command_buffers,
-        image_available,
-        render_finished: Vec::new(),
-        in_flight,
-        images_in_flight: Vec::new(),
         current: 0,
         number: 0,
         submitted: [0; MAX_FRAMES_IN_FLIGHT],
@@ -126,20 +98,17 @@ pub(super) unsafe fn create_sky_cube(
     Ok(SkyCube { buffer, memory })
 }
 
-/// No swapchain yet: [`create_swapchain`](crate::renderer::Renderer) makes it.
+/// No swapchain yet: the first frame's acquire makes it, for `window`.
 pub(super) fn swapchain(
-    loader: ash::khr::swapchain::Device,
-    latest_ready: bool,
+    window: vk::Extent2D,
     format: vk::Format,
     depth_format: vk::Format,
 ) -> Swapchain {
     Swapchain {
-        loader,
-        handle: vk::SwapchainKHR::null(),
-        extent: vk::Extent2D::default(),
+        window,
+        extent: window,
         vsync: true,
         requested: None,
-        latest_ready,
         present_mode: numerobis::vulkan::swapchain::PresentMode::Fifo,
         images: Vec::new(),
         views: Vec::new(),

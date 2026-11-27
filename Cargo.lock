@@ -2579,6 +2579,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dae608c151f68243f2b000364e1f7b186d9c29845f7d2d85bd31b9ad77ad552b"
 
 [[package]]
+name = "majestix-vk"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92c7e8d1b28dbaf29cebf1c3effb1802abb93335f7dbe2417b303a8e85860b97"
+dependencies = [
+ "ash",
+ "numerobis",
+]
+
+[[package]]
 name = "malloc_buf"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2635,6 +2645,7 @@ dependencies = [
  "glam",
  "image",
  "libloading 0.9.1",
+ "majestix-vk",
  "melon-base",
  "miraculix",
  "num-bigint 0.5.1",
@@ -2774,9 +2785,9 @@ dependencies = [
 
 [[package]]
 name = "miraculix"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a28fdcb2c7225cadf33441b386134b800497a9ab01c602ab9d2a101c0cd236e6"
+checksum = "5c1d98a06a6adbe52803ec9e96ef24c966be29a681f685013228ee1439dd537d"
 dependencies = [
  "libc",
  "raw-cpuid",

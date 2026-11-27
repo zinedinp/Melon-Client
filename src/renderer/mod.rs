@@ -98,8 +98,14 @@ pub struct Renderer {
     mem_props: vk::PhysicalDeviceMemoryProperties,
     /// Where mesh blocks go, and the VRAM budget.
     residency: Residency,
+    /// `layer`'s device, for the calls the renderer still makes itself.
     device: ash::Device,
-    queue: vk::Queue,
+    /// majestix-vk's device and queue.
+    layer: std::mem::ManuallyDrop<Layer>,
+    /// The frames in flight; lent out while a frame is rendered.
+    ring: Option<majestix_vk::Frames>,
+    /// The swapchain; lent out while a frame is rendered.
+    presenter: Option<majestix_vk::Presenter>,
     passes: context::RenderPasses,
     /// Post effect chains.
     post: post::gpu::Post,
@@ -150,17 +156,22 @@ pub struct Renderer {
     pictures: picture::Pictures,
 }
 
-/// The swapchain and what is sized with it, rebuilt together.
+/// majestix-vk's device and queue, dropped by hand in [`Drop`]: after the
+/// renderer's own handles, before the surface and the instance.
+struct Layer {
+    queue: majestix_vk::Queue,
+    device: majestix_vk::Device,
+}
+
+/// What is sized with the presenter's swapchain, rebuilt with it.
 struct Swapchain {
-    loader: ash::khr::swapchain::Device,
-    handle: vk::SwapchainKHR,
+    /// The window's size, which the next swapchain is made for.
+    window: vk::Extent2D,
     extent: vk::Extent2D,
     /// `Options.enableVsync`.
     vsync: bool,
     /// A present mode asked for by name, overriding `vsync` when offered.
     requested: Option<PresentMode>,
-    /// Whether `VK_KHR/EXT_present_mode_fifo_latest_ready` is enabled on the device.
-    latest_ready: bool,
     /// What the current swapchain presents with.
     present_mode: PresentMode,
     images: Vec<vk::Image>,
@@ -232,12 +243,8 @@ struct Pipelines {
 
 /// The frames in flight.
 struct Frames {
+    /// For [`texture_update::submit_now`]'s one-off uploads.
     command_pool: vk::CommandPool,
-    command_buffers: Vec<vk::CommandBuffer>,
-    image_available: Vec<vk::Semaphore>,
-    render_finished: Vec<vk::Semaphore>,
-    in_flight: Vec<vk::Fence>,
-    images_in_flight: Vec<vk::Fence>,
     /// Which frame in flight is being recorded.
     current: usize,
     /// Frames rendered so far.
@@ -356,8 +363,14 @@ impl Renderer {
 /// Whether a renderer error is `VK_ERROR_DEVICE_LOST`: the driver gave the
 /// device up (a GPU fault or reset), and nothing on it works again.
 pub fn is_device_lost(e: &anyhow::Error) -> bool {
-    e.chain()
-        .any(|cause| cause.downcast_ref::<vk::Result>() == Some(&vk::Result::ERROR_DEVICE_LOST))
+    const LOST: vk::Result = vk::Result::ERROR_DEVICE_LOST;
+    e.chain().any(|cause| {
+        cause.downcast_ref::<vk::Result>() == Some(&LOST)
+            || matches!(
+                cause.downcast_ref::<majestix_vk::Error>(),
+                Some(majestix_vk::Error::Vulkan(LOST))
+            )
+    })
 }
 
 impl Drop for Renderer {
@@ -402,19 +415,8 @@ impl Drop for Renderer {
                 suballoc::release(&self.device, tex.memory);
             }
 
-            for &sem in &self.frames.image_available {
-                self.device.destroy_semaphore(sem, None);
-            }
-            for &fence in &self.frames.in_flight {
-                self.device.destroy_fence(fence, None);
-            }
             self.blur.destroy(&self.device);
             self.destroy_swapchain_resources();
-            if self.swapchain.handle != vk::SwapchainKHR::null() {
-                self.swapchain
-                    .loader
-                    .destroy_swapchain(self.swapchain.handle, None);
-            }
 
             self.device
                 .destroy_command_pool(self.frames.command_pool, None);
@@ -481,7 +483,11 @@ impl Drop for Renderer {
             self.pictures.destroy(&self.device);
             self.passes.destroy(&self.device);
             suballoc::forget(&self.device);
-            self.device.destroy_device(None);
+            // The swapchain, then the frames (which destroy what was
+            // retired), then the device, all before the surface.
+            drop(self.presenter.take());
+            drop(self.ring.take());
+            std::mem::ManuallyDrop::drop(&mut self.layer);
 
             self.surface_loader.destroy_surface(self.surface, None);
             if let Some((debug_instance, messenger)) = self.debug.take() {

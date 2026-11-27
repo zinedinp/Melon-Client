@@ -1,6 +1,6 @@
 [package]
 name = "melon"
-version = "0.10.6+mc26.3"
+version = "0.10.7+mc26.3"
 authors = ["Zinedin Polic"]
 edition = "2024"
 rust-version = "1.100.0"
@@ -68,9 +68,11 @@ regex = { version = "1.13.2", default-features = false, features = ["std", "perf
 # system's shaderc library, from the same install `glslc` comes from.
 shaderc = "0.10.1"
 zip = { version = "9.8.1", default-features = false, features = ["deflate-flate2"] }
-miraculix = "0.7.0"
+miraculix = "0.7.1"
 # The GPU's vendor and architecture, for vendor paths (see melon-base).
 numerobis = { version = "0.5.6", default-features = false, features = ["vulkan"] }
+# The safe call layer: the device, its frame ring and the swapchain.
+majestix-vk = "0.1.1"
 
 [target.'cfg(windows)'.dependencies]
 # SRV records through the system resolver.

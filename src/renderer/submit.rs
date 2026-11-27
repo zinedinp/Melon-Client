@@ -2,8 +2,10 @@
 
 use super::globals::Globals;
 use super::record::scene::ScenePart;
-use super::{Frame, FrameWaits, MAX_FRAMES_IN_FLIGHT, Renderer, VERTEX_CAPACITY, quad, vk_util};
+use super::{Frame, FrameWaits, Renderer, VERTEX_CAPACITY, quad};
 use ash::vk;
+use majestix_vk::{Frames, Presenter};
+use numerobis::vulkan::swapchain::Extent;
 use std::time::Instant;
 
 impl Renderer {
@@ -97,6 +99,27 @@ impl Renderer {
     }
 
     pub(super) unsafe fn render_inner(&mut self, frame: &Frame<'_>) -> anyhow::Result<()> {
+        let mut ring = self
+            .ring
+            .take()
+            .expect("the frame ring is back after each frame");
+        let mut presenter = self
+            .presenter
+            .take()
+            .expect("the presenter is back after each frame");
+        // SAFETY: the caller's promise, passed on.
+        let result = unsafe { self.render_frame(&mut ring, &mut presenter, frame) };
+        self.ring = Some(ring);
+        self.presenter = Some(presenter);
+        result
+    }
+
+    unsafe fn render_frame(
+        &mut self,
+        ring: &mut Frames,
+        presenter: &mut Presenter,
+        frame: &Frame<'_>,
+    ) -> anyhow::Result<()> {
         let ui_vertices = frame.ui.vertices.len().min(VERTEX_CAPACITY);
         if ui_vertices < frame.ui.vertices.len() {
             static WARNED: std::sync::Once = std::sync::Once::new();
@@ -119,67 +142,43 @@ impl Renderer {
         }
         waits.gather = started.elapsed();
         let started = Instant::now();
-        let fence = self.frames.in_flight[self.frames.current];
-        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-        unsafe { self.device.wait_for_fences(&[fence], true, u64::MAX) }?;
-        self.frames.submitted[self.frames.current] = 0;
+        // Waits for the slot's last frame and destroys what finished frames retired.
+        let gpu_frame = ring.begin()?;
+        let current = gpu_frame.slot().index() as usize;
+        self.frames.current = current;
+        self.frames.submitted[current] = 0;
         self.frames.number += 1;
         self.destroy_retired_textures();
         waits.gpu = started.elapsed();
 
-        if self.swapchain.framebuffers.is_empty() {
-            // A recreate failed half-way (out of memory): try again.
-            let (w, h) = (self.swapchain.extent.width, self.swapchain.extent.height);
-            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-            unsafe { self.device.device_wait_idle() }?;
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            unsafe { self.create_swapchain(w, h) }?;
-            return Ok(());
-        }
-        // Every allocation the frame needs, before an image is acquired:
-        // past that point a failure would leave the image acquired and its
-        // semaphore signalled with nothing to wait on it. Out of memory
-        // (another program holding the VRAM) now just skips the frame.
+        // Every allocation the frame needs, before an image is acquired: an
+        // image acquired and then dropped costs the presenter a device wait.
+        // Out of memory (another program holding the VRAM) just skips the frame.
         let started = Instant::now();
         // SAFETY: `device` is live, and the infos name only its own live handles.
         unsafe { self.prepare_frame() }?;
         waits.prepare = started.elapsed();
 
         let started = Instant::now();
-        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-        let acquire = unsafe {
-            self.swapchain.loader.acquire_next_image(
-                self.swapchain.handle,
-                u64::MAX,
-                self.frames.image_available[self.frames.current],
-                vk::Fence::null(),
-            )
-        };
-        let image_index = match acquire {
-            Ok((idx, _suboptimal)) => idx,
-            Err(vk::Result::ERROR_OUT_OF_DATE_KHR) => {
-                let (w, h) = (self.swapchain.extent.width, self.swapchain.extent.height);
-                // The other frame in flight may still draw into the
-                // framebuffers and depth buffer this destroys.
-                // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-                unsafe { self.device.device_wait_idle() }?;
-                // SAFETY: `device` is live, and the infos name only its own live handles.
-                unsafe { self.create_swapchain(w, h) }?;
-                return Ok(());
-            }
-            Err(e) => return Err(e.into()),
+        let window = Extent::new(self.swapchain.window.width, self.swapchain.window.height);
+        // Minimized: nothing to draw into, the frame is skipped.
+        let Some(acquired) = presenter.acquire(&gpu_frame, window)? else {
+            return Ok(());
         };
         waits.acquire = started.elapsed();
-
-        let started = Instant::now();
-        let img_fence = self.frames.images_in_flight[image_index as usize];
-        if img_fence != vk::Fence::null() {
-            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-            unsafe { self.device.wait_for_fences(&[img_fence], true, u64::MAX) }?;
+        let fresh = presenter.images().len() != self.swapchain.images.len()
+            || presenter
+                .images()
+                .iter()
+                .zip(&self.swapchain.images)
+                .any(|(new, &old)| new.raw() != old);
+        if fresh || self.swapchain.framebuffers.is_empty() {
+            // A new swapchain (or a rebuild that failed half-way).
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            unsafe { self.rebuild_targets(presenter) }?;
         }
-        waits.gpu += started.elapsed();
+        let image_index = acquired.index;
         let recording = Instant::now();
-        self.frames.images_in_flight[image_index as usize] = fence;
 
         // SAFETY: the image's fence was waited on, so the GPU no longer reads this frame's vertices.
         unsafe {
@@ -216,17 +215,8 @@ impl Renderer {
             )
         };
 
-        let cmd = self.frames.command_buffers[self.frames.current];
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe {
-            self.device
-                .reset_command_buffer(cmd, vk::CommandBufferResetFlags::empty())
-        }?;
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe {
-            self.device
-                .begin_command_buffer(cmd, &vk::CommandBufferBeginInfo::default())
-        }?;
+        let mut rec = gpu_frame.record()?;
+        let cmd = rec.raw();
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe {
             self.gpu_timer.begin(&self.device, cmd, self.frames.current);
@@ -423,7 +413,14 @@ impl Renderer {
         if let Some(blur) = blur {
             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
             unsafe {
-                self.record_blur(cmd, image_index as usize, blur.radius, frame, late);
+                self.record_blur(
+                    &mut rec,
+                    acquired.image,
+                    image_index as usize,
+                    blur.radius,
+                    frame,
+                    late,
+                );
                 self.gpu_timer.mark(&self.device, "menu");
             }
         }
@@ -434,28 +431,23 @@ impl Renderer {
             None
         };
         self.gpu_timer.end(self.frames.current);
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let ended = unsafe { self.device.end_command_buffer(cmd) }
-            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-            .and_then(|()| unsafe { self.device.reset_fences(&[fence]) });
-        if let Err(e) = ended {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { self.drop_capture(readback) };
-            return Err(e.into());
-        }
+        let recorded = match rec.finish() {
+            Ok(recorded) => recorded,
+            Err(e) => {
+                // SAFETY: made by this device, and no frame in flight uses it any more.
+                unsafe { self.drop_capture(readback) };
+                return Err(e.into());
+            }
+        };
 
-        let wait_semaphores = [self.frames.image_available[self.frames.current]];
-        let wait_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
-        let signal_semaphores = [self.frames.render_finished[image_index as usize]];
-        let command_buffers = [cmd];
-        let submit = vk::SubmitInfo::default()
-            .wait_semaphores(&wait_semaphores)
-            .wait_dst_stage_mask(&wait_stages)
-            .command_buffers(&command_buffers)
-            .signal_semaphores(&signal_semaphores);
         let submitting = Instant::now();
-        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-        if let Err(e) = unsafe { self.device.queue_submit(self.queue, &[submit], fence) } {
+        let waits_on = [(
+            acquired.wait,
+            vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
+        )];
+        let submitted =
+            gpu_frame.submit(&self.layer.queue, [recorded], &waits_on, &[acquired.signal]);
+        if let Err(e) = submitted {
             // SAFETY: made by this device, and no frame in flight uses it any more.
             unsafe { self.drop_capture(readback) };
             return Err(e.into());
@@ -473,51 +465,21 @@ impl Renderer {
             arena.submitted();
         }
         if let Some(readback) = readback {
-            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-            if let Err(e) = unsafe { self.device.wait_for_fences(&[fence], true, u64::MAX) } {
-                // The copy may still run: let it end (or the device be lost) first.
-                // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-                let _ = unsafe { self.device.device_wait_idle() };
-                // SAFETY: made by this device, and no frame in flight uses it any more.
+            // Its frame has to finish first; a capture is rare (a world's icon).
+            if let Err(e) = self.layer.device.wait_idle() {
+                // SAFETY: the device is waited idle (or lost), so nothing writes it any more.
                 unsafe { self.drop_capture(Some(readback)) };
                 return Err(e.into());
             }
-            // SAFETY: the frame that copied into the readback finished: its fence was waited on above.
+            // SAFETY: the frame that copied into the readback finished: the device is idle.
             unsafe { self.finish_capture(readback) };
         }
 
-        let swapchains = [self.swapchain.handle];
-        let image_indices = [image_index];
-        let present_info = vk::PresentInfoKHR::default()
-            .wait_semaphores(&signal_semaphores)
-            .swapchains(&swapchains)
-            .image_indices(&image_indices);
         let started = Instant::now();
-        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-        let present_result = unsafe {
-            self.swapchain
-                .loader
-                .queue_present(self.queue, &present_info)
-        };
+        // Out of date or resized: the next acquire makes a new swapchain.
+        presenter.present(&self.layer.queue, acquired)?;
         waits.present = started.elapsed();
         self.frames.last_waits = waits;
-        let extent = self.swapchain.extent;
-        let recreate = vk_util::recreate_after_present(present_result, extent, || {
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            unsafe {
-                vk_util::surface_extent(&self.surface_loader, self.physical_device, self.surface)
-            }
-        })?;
-        if recreate {
-            // The frame just submitted still uses the framebuffer, the
-            // depth buffer and the semaphore this destroys.
-            // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
-            unsafe { self.device.device_wait_idle() }?;
-            // SAFETY: `device` is live, and the infos name only its own live handles.
-            unsafe { self.create_swapchain(extent.width, extent.height) }?;
-        }
-
-        self.frames.current = (self.frames.current + 1) % MAX_FRAMES_IN_FLIGHT;
         Ok(())
     }
 }

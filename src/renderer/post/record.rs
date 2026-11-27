@@ -57,10 +57,9 @@ impl Renderer {
             }
             // Occlusion culling reads the depth buffer too.
             let wanted = self.post.is_active() || self.occlusion.is_some();
-            let (w, h) = (self.swapchain.extent.width, self.swapchain.extent.height);
-            let result = if wanted != self.swapchain.depth_sampled && w > 0 {
+            let result = if wanted != self.swapchain.depth_sampled {
                 self.swapchain.depth_sampled = wanted;
-                self.create_swapchain(w, h)
+                self.rebuild_targets_now()
             } else {
                 self.resize_post()
             };
@@ -138,13 +137,15 @@ impl Renderer {
         // waiting for a frame: up now, not with the next frame.
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         if let Err(e) = unsafe {
-            crate::renderer::texture_update::submit_now(
-                &self.device,
-                &self.mem_props,
-                self.frames.command_pool,
-                self.queue,
-                &inits,
-            )
+            self.layer.queue.with_raw(|queue| {
+                crate::renderer::texture_update::submit_now(
+                    &self.device,
+                    &self.mem_props,
+                    self.frames.command_pool,
+                    queue,
+                    &inits,
+                )
+            })
         } {
             return Err(fail(&mut out, e));
         }

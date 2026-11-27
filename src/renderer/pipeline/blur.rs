@@ -4,8 +4,8 @@ use ash::vk;
 
 use super::{Pass, PipelineDesc, depth_disabled};
 
-const VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/blur.vert.spv"));
-const FRAG_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/blur.frag.spv"));
+pub const VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/blur.vert.spv"));
+pub const FRAG_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/blur.frag.spv"));
 
 /// `vec2 texel_step`, `float radius`, padded to a `vec4`.
 pub const PUSH_CONSTANT_SIZE: u32 = 16;

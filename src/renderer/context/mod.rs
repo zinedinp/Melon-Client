@@ -45,7 +45,21 @@ impl Renderer {
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let features = unsafe { features::probe(&instance, gpu.physical, api, features::GAME) };
         // SAFETY: `device` is live, and the infos name only its own live handles.
-        let (device, queue) = unsafe { device::create(&instance, &gpu, &features) }?;
+        let (raw_device, _) = unsafe { device::create(&instance, &gpu, &features) }?;
+        // SAFETY: made just now from `features.plan` on `gpu.physical`, with one
+        // queue of `gpu.queue_family`; the layer is dropped before the instance.
+        let layer = unsafe {
+            majestix_vk::Device::adopt(
+                &instance,
+                gpu.physical,
+                raw_device,
+                features.plan.clone(),
+                &[(gpu.queue_family, 1)],
+            )
+        }?;
+        let device = layer.raw().clone();
+        let queue = layer.queue(gpu.queue_family, 0)?;
+        let ring = majestix_vk::Frames::new(&layer, &queue, MAX_FRAMES_IN_FLIGHT as u32)?;
         let mem_props = gpu.mem_props;
         let residency = residency::Residency::new(&features, gpu.info.gpu);
 
@@ -136,8 +150,7 @@ impl Renderer {
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let blur = unsafe {
             blur::Blur::new(
-                (&instance, gpu.physical),
-                &device,
+                &layer,
                 surface_format,
                 passes.clear,
                 layouts.texture,
@@ -201,12 +214,17 @@ impl Renderer {
                 features.statistics(),
             )
         };
-        let swapchain = resources::swapchain(
-            ash::khr::swapchain::Device::new(&instance, &device),
-            features.latest_ready(),
-            surface_format,
-            depth_format,
-        );
+        let size = window.inner_size();
+        let window_extent = vk::Extent2D {
+            width: size.width.max(1),
+            height: size.height.max(1),
+        };
+        let swapchain = resources::swapchain(window_extent, surface_format, depth_format);
+        // SAFETY: `surface` is the instance's, outlives the presenter (dropped
+        // first in `Drop`), and `device_pick` chose a family that presents to it.
+        let presenter = unsafe {
+            majestix_vk::Presenter::new(&layer, &entry, surface, &ring, swapchain.present_config())
+        }?;
 
         let mut renderer = Self {
             _entry: entry,
@@ -218,7 +236,12 @@ impl Renderer {
             mem_props,
             residency,
             device,
-            queue,
+            layer: std::mem::ManuallyDrop::new(super::Layer {
+                queue,
+                device: layer,
+            }),
+            ring: Some(ring),
+            presenter: Some(presenter),
             passes,
             post,
             blur,
@@ -249,9 +272,6 @@ impl Renderer {
         };
 
         renderer.swapchain.depth_sampled = renderer.occlusion.is_some();
-        let size = window.inner_size();
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        unsafe { renderer.create_swapchain(size.width.max(1), size.height.max(1)) }?;
 
         let white = RgbaImage::from_pixel(1, 1, image::Rgba([255, 255, 255, 255]));
         renderer.textures.white = renderer.load_texture(&white)?;

@@ -1,101 +1,64 @@
-//! The swapchain and what is sized with it (depth buffer, framebuffers).
+//! What is sized with the presenter's swapchain (views, depth buffer,
+//! framebuffers), and the settings the presenter makes it with.
 
-use super::{Renderer, choose_surface_format, create_depth_image, vk_util};
+use super::{Renderer, create_depth_image, vk_util};
 use ash::vk;
-use numerobis::vulkan::swapchain::{self as present, Pacing, PresentMode};
+use majestix_vk::{PresentConfig, Presenter};
+use numerobis::vulkan::swapchain::{Encoding, Output, Pacing, PresentMode};
+
+impl super::Swapchain {
+    /// What the presenter makes swapchains with: UNORM, as vanilla's GL
+    /// framebuffer stores colour (an `_SRGB` format would encode it a second
+    /// time), copyable for the blur and screenshots where the surface allows.
+    pub(super) fn present_config(&self) -> PresentConfig {
+        PresentConfig {
+            pacing: if self.vsync {
+                Pacing::Vsync
+            } else {
+                Pacing::Uncapped
+            },
+            requested: self.requested,
+            outputs: vec![Output::Sdr(Encoding::Unorm)],
+            usage: vk::ImageUsageFlags::TRANSFER_SRC,
+        }
+    }
+}
 
 impl Renderer {
-    pub(super) unsafe fn create_swapchain(
-        &mut self,
-        width: u32,
-        height: u32,
-    ) -> anyhow::Result<()> {
-        // SAFETY: `instance` is live, and the physical device and surface are its own.
-        let capabilities = unsafe {
-            self.surface_loader
-                .get_physical_device_surface_capabilities(self.physical_device, self.surface)
-        }?;
-        let format =
-            choose_surface_format(&self.surface_loader, self.physical_device, self.surface)?;
-        // SAFETY: `instance` is live, and the physical device and surface are its own.
-        let modes = unsafe {
-            self.surface_loader
-                .get_physical_device_surface_present_modes(self.physical_device, self.surface)
-        }
-        .unwrap_or_default();
-        let offered: Vec<u32> = modes.iter().map(|mode| mode.as_raw() as u32).collect();
-        let pacing = if self.swapchain.vsync {
-            Pacing::Vsync
-        } else {
-            Pacing::Uncapped
-        };
-        let requested = self.swapchain.requested;
-        let present_mode =
-            present::present_mode(&offered, pacing, requested, self.swapchain.latest_ready);
-        if let Some(asked) = requested
-            && asked != present_mode
-        {
-            crate::warn!("vulkan: present mode {asked} unavailable ({modes:?}), choosing one");
-        }
-        self.swapchain.present_mode = present_mode;
-
-        let window = vk::Extent2D { width, height };
-        let has_old = self.swapchain.handle != vk::SwapchainKHR::null();
-        let Some(shape) = vk_util::swapchain_shape(&capabilities, window, 3, has_old) else {
-            // Minimized on Windows: no extent is valid, keep the old
-            // swapchain until the window has a size again.
+    /// The views, depth buffer, framebuffers and what is sized with them,
+    /// for `presenter`'s swapchain.
+    pub(super) unsafe fn rebuild_targets(&mut self, presenter: &Presenter) -> anyhow::Result<()> {
+        let Some((extent, format, _, mode)) = presenter.current() else {
             return Ok(());
         };
-        let extent = shape.extent;
-
-        let can_copy = capabilities
-            .supported_usage_flags
-            .contains(vk::ImageUsageFlags::TRANSFER_SRC);
-        let usage = if can_copy {
-            vk::ImageUsageFlags::COLOR_ATTACHMENT | vk::ImageUsageFlags::TRANSFER_SRC
-        } else {
-            vk::ImageUsageFlags::COLOR_ATTACHMENT
-        };
-
-        let old_swapchain = self.swapchain.handle;
-        let create_info = vk::SwapchainCreateInfoKHR::default()
-            .surface(self.surface)
-            .min_image_count(shape.image_count)
-            .image_format(format.format)
-            .image_color_space(format.color_space)
-            .image_extent(extent)
-            .image_array_layers(1)
-            .image_usage(usage)
-            .image_sharing_mode(vk::SharingMode::EXCLUSIVE)
-            .pre_transform(capabilities.current_transform)
-            .composite_alpha(shape.composite_alpha)
-            .present_mode(vk::PresentModeKHR::from_raw(present_mode.raw() as i32))
-            .clipped(true)
-            .old_swapchain(old_swapchain);
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let swapchain = unsafe { self.swapchain.loader.create_swapchain(&create_info, None) }?;
-
+        anyhow::ensure!(
+            format == self.swapchain.format,
+            "the swapchain came in {format:?}, the render passes were made for {:?}",
+            self.swapchain.format
+        );
+        if let Some(asked) = self.swapchain.requested
+            && asked != mode
+        {
+            crate::warn!("vulkan: present mode {asked} unavailable, presenting with {mode}");
+        }
+        // The old targets may still be drawn into by a frame in flight.
+        // SAFETY: the queue, swapchain and sync objects are this device's, used from one thread.
+        unsafe { self.device.device_wait_idle() }?;
         // SAFETY: made by this device, and no frame in flight uses it any more.
         unsafe { self.destroy_swapchain_resources() };
-        if old_swapchain != vk::SwapchainKHR::null() {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { self.swapchain.loader.destroy_swapchain(old_swapchain, None) };
-        }
-        // Kept at once: a failure below leaves the new swapchain without
-        // framebuffers, which the next frame recreates, not a freed handle.
-        self.swapchain.handle = swapchain;
         self.swapchain.extent = extent;
-        self.swapchain.format = format.format;
-        self.swapchain.can_copy = can_copy;
+        self.swapchain.present_mode = mode;
+        self.swapchain.can_copy = presenter
+            .usage()
+            .contains(vk::ImageUsageFlags::TRANSFER_SRC);
+        let images: Vec<vk::Image> = presenter.images().iter().map(|i| i.raw()).collect();
 
-        // SAFETY: `device` is live, and the infos name only its own live handles.
-        let images = unsafe { self.swapchain.loader.get_swapchain_images(swapchain) }?;
         let mut views = Vec::with_capacity(images.len());
         for &image in &images {
             let view_info = vk::ImageViewCreateInfo::default()
                 .image(image)
                 .view_type(vk::ImageViewType::TYPE_2D)
-                .format(format.format)
+                .format(format)
                 .subresource_range(vk::ImageSubresourceRange {
                     aspect_mask: vk::ImageAspectFlags::COLOR,
                     base_mip_level: 0,
@@ -106,6 +69,9 @@ impl Renderer {
             // SAFETY: `device` is live, and the infos name only its own live handles.
             views.push(unsafe { self.device.create_image_view(&view_info, None) }?);
         }
+        // Kept at once, so a failure below leaves them to the next rebuild.
+        self.swapchain.views = views;
+        self.swapchain.images = images;
 
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let (image, memory, depth_view) = unsafe {
@@ -117,14 +83,14 @@ impl Renderer {
                 self.swapchain.depth_sampled,
             )
         }?;
-        let depth = super::DepthImage {
+        self.swapchain.depth = super::DepthImage {
             image,
             memory,
             view: depth_view,
         };
 
-        let mut framebuffers = Vec::with_capacity(views.len());
-        for &view in &views {
+        let mut framebuffers = Vec::with_capacity(self.swapchain.views.len());
+        for &view in &self.swapchain.views {
             let attachments = [view, depth_view];
             let fb_info = vk::FramebufferCreateInfo::default()
                 .render_pass(self.passes.clear)
@@ -135,24 +101,7 @@ impl Renderer {
             // SAFETY: `device` is live, and the infos name only its own live handles.
             framebuffers.push(unsafe { self.device.create_framebuffer(&fb_info, None) }?);
         }
-
-        let mut render_finished = Vec::with_capacity(images.len());
-        for _ in 0..images.len() {
-            render_finished.push(
-                // SAFETY: `device` is live, and the infos name only its own live handles.
-                unsafe {
-                    self.device
-                        .create_semaphore(&vk::SemaphoreCreateInfo::default(), None)
-                }?,
-            );
-        }
-
-        self.swapchain.views = views;
-        self.swapchain.depth = depth;
         self.swapchain.framebuffers = framebuffers;
-        self.frames.render_finished = render_finished;
-        self.frames.images_in_flight = vec![vk::Fence::null(); images.len()];
-        self.swapchain.images = images;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         unsafe { self.resize_post() }?;
         if let Some(occlusion) = &mut self.occlusion {
@@ -168,6 +117,17 @@ impl Renderer {
             }?;
         }
         Ok(())
+    }
+
+    /// [`Self::rebuild_targets`] outside a frame (a post chain now reads depth).
+    pub(super) unsafe fn rebuild_targets_now(&mut self) -> anyhow::Result<()> {
+        let Some(presenter) = self.presenter.take() else {
+            return Ok(());
+        };
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        let result = unsafe { self.rebuild_targets(&presenter) };
+        self.presenter = Some(presenter);
+        result
     }
 
     pub(super) unsafe fn destroy_swapchain_resources(&mut self) {
@@ -190,6 +150,7 @@ impl Renderer {
             unsafe { self.device.destroy_image_view(view, None) };
         }
         self.swapchain.views.clear();
+        self.swapchain.images.clear();
         let depth = std::mem::take(&mut self.swapchain.depth);
         if depth.image != vk::Image::null() {
             // SAFETY: made by this device, and no frame in flight uses it any more.
@@ -199,11 +160,6 @@ impl Renderer {
                 vk_util::free_memory(&self.device, depth.memory);
             }
         }
-        for &sem in &self.frames.render_finished {
-            // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { self.device.destroy_semaphore(sem, None) };
-        }
-        self.frames.render_finished.clear();
     }
 
     /// Turns VSync on or off, recreating the swapchain if that changes it.
@@ -211,7 +167,8 @@ impl Renderer {
         self.set_present(vsync, self.swapchain.requested)
     }
 
-    /// VSync and, when `requested` is set, the present mode by name.
+    /// VSync and, when `requested` is set, the present mode by name; the
+    /// next frame makes the swapchain with them.
     pub fn set_present(
         &mut self,
         vsync: bool,
@@ -222,11 +179,9 @@ impl Renderer {
         }
         self.swapchain.vsync = vsync;
         self.swapchain.requested = requested;
-        let (width, height) = (self.swapchain.extent.width, self.swapchain.extent.height);
-        // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
-        unsafe {
-            self.device.device_wait_idle()?;
-            self.create_swapchain(width.max(1), height.max(1))?;
+        let config = self.swapchain.present_config();
+        if let Some(presenter) = &mut self.presenter {
+            presenter.set_config(config);
         }
         Ok(())
     }
@@ -236,14 +191,14 @@ impl Renderer {
         self.swapchain.present_mode.name()
     }
 
+    /// The window's new size; the next frame makes the swapchain for it.
     pub fn resize(&mut self, width: u32, height: u32) -> anyhow::Result<()> {
         if width == 0 || height == 0 {
             return Ok(());
         }
-        // SAFETY: the device is waited idle first, so nothing in flight uses what is replaced.
-        unsafe {
-            self.device.device_wait_idle()?;
-            self.create_swapchain(width, height)?;
+        self.swapchain.window = vk::Extent2D { width, height };
+        if let Some(presenter) = &mut self.presenter {
+            presenter.invalidate();
         }
         Ok(())
     }
