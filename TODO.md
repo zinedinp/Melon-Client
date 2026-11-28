@@ -124,10 +124,8 @@ thread:
 ### Frame time
 
 CPU ~0.9-1.5 ms a frame at render distance 32 and 4K, the GPU about as
-long in the bench's `rise` and `turn` phases. Next:
-
-- **Sky after the opaque terrain** with a depth test: 0.11 ms GPU full
-  screen.
+long in the bench's `rise` and `turn` phases. Next on the GPU: the cutout
+terrain, 0.6-0.7 ms in `rise` and `turn`.
 
 ### Features
 

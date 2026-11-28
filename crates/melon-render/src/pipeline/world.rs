@@ -245,6 +245,16 @@ fn translucent_blend() -> vk::PipelineColorBlendAttachmentState {
         .alpha_blend_op(vk::BlendOp::ADD)
 }
 
+/// The sky's: tested, not written. It is drawn after the opaque terrain at
+/// the cleared depth (`record_sky`'s viewport), so it lands only where
+/// nothing covers it, as if drawn first and covered.
+fn sky_depth<'a>() -> vk::PipelineDepthStencilStateCreateInfo<'a> {
+    vk::PipelineDepthStencilStateCreateInfo::default()
+        .depth_test_enable(true)
+        .depth_write_enable(false)
+        .depth_compare_op(vk::CompareOp::GREATER_OR_EQUAL)
+}
+
 /// The world pipeline.
 pub unsafe fn create(
     device: &ash::Device,
@@ -350,7 +360,7 @@ pub unsafe fn create(
         ),
         Mode::Celestial => (
             vk::CullModeFlags::NONE,
-            super::depth_disabled(),
+            sky_depth(),
             vk::PipelineColorBlendAttachmentState::default()
                 .color_write_mask(vk::ColorComponentFlags::RGBA)
                 .blend_enable(true)
@@ -363,14 +373,14 @@ pub unsafe fn create(
         ),
         Mode::SkyDisc => (
             vk::CullModeFlags::NONE,
-            super::depth_disabled(),
+            sky_depth(),
             vk::PipelineColorBlendAttachmentState::default()
                 .color_write_mask(vk::ColorComponentFlags::RGBA)
                 .blend_enable(false),
         ),
         Mode::SkyGlow => (
             vk::CullModeFlags::NONE,
-            super::depth_disabled(),
+            sky_depth(),
             translucent_blend(),
         ),
         Mode::Outline => (

@@ -435,6 +435,8 @@ impl Renderer {
         unsafe { self.device.cmd_clear_attachments(cmd, &[clear], &[rect]) };
     }
 
+    /// The title screen's panorama, or the sky's discs and bodies: after the
+    /// opaque terrain, only where its depth is still clear.
     pub(crate) unsafe fn record_sky(
         &self,
         cmd: vk::CommandBuffer,
@@ -500,6 +502,23 @@ impl Renderer {
         }
         let far = world.map_or(200.0, |w| w.far);
         let view_proj = world_projection(sky.fov_y_degrees, self.aspect_ratio(), far) * sky.view;
+        // At the cleared depth, so the depth test keeps the sky to where
+        // the opaque terrain drawn before it left the depth clear.
+        let extent = self.swapchain.extent;
+        let viewport = |depth: (f32, f32)| vk::Viewport {
+            x: 0.0,
+            y: 0.0,
+            width: extent.width as f32,
+            height: extent.height as f32,
+            min_depth: depth.0,
+            max_depth: depth.1,
+        };
+        let clear = crate::frame::DEPTH_CLEAR;
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device
+                .cmd_set_viewport(cmd, 0, &[viewport((clear, clear))])
+        };
         for body in &sky.celestials {
             // SAFETY: `device` is live, and the infos name only its own live handles.
             if unsafe { self.bind_sky_pass(cmd, body.atlas, body.kind) } {
@@ -516,6 +535,8 @@ impl Renderer {
                 };
             }
         }
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe { self.device.cmd_set_viewport(cmd, 0, &[viewport((0.0, 1.0))]) };
     }
 
     /// The [`LineDraw`](crate::LineDraw)s of `style`, through

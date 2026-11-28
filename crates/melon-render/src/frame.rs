@@ -230,7 +230,9 @@ impl Glint {
 /// The world's draw order, vanilla's (`LevelRenderer.renderLevel`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum RenderLayer {
-    /// The cubemap or sky, behind everything, no depth.
+    /// The cubemap or sky, behind everything. Drawn after the opaque
+    /// terrain where the depth is still clear, which looks the same as
+    /// vanilla's first and covered, and shades only what shows.
     Sky,
     /// Chunk meshes, depth-tested and alpha-cut.
     Terrain,
@@ -254,8 +256,8 @@ pub enum RenderLayer {
 
 impl RenderLayer {
     pub const ORDER: [RenderLayer; 10] = [
-        RenderLayer::Sky,
         RenderLayer::Terrain,
+        RenderLayer::Sky,
         RenderLayer::Entities,
         RenderLayer::Shadows,
         RenderLayer::Crumbling,
