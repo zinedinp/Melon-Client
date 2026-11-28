@@ -115,12 +115,15 @@ impl Renderer {
         }
         let mut bound: Option<bool> = None;
         let mut own_indices = false;
+        // The sorted meshes' index buffer last bound: most share an arena block.
+        let mut index = None;
         for chunk in chunks.iter().filter(|_| rest) {
             let quads = matches!(chunk.mesh, TerrainMesh::Quads(_));
             if quads && by_multi {
                 continue;
             }
             if bound != Some(quads) {
+                index = None;
                 let ok = if quads {
                     // SAFETY: `device` is live, and the infos name only its own live handles.
                     unsafe { self.bind_terrain_pass(cmd, world.atlas, mode) }
@@ -154,8 +157,9 @@ impl Renderer {
                 TerrainMesh::Sorted { vertices, indices } => {
                     let light = light.fogged(FogInput::Chunk);
                     // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-                    own_indices |=
-                        unsafe { self.draw_sorted_mesh(cmd, (vertices, indices), at, &light) };
+                    own_indices |= unsafe {
+                        self.draw_sorted_mesh(cmd, (vertices, indices), at, &light, &mut index)
+                    };
                 }
             }
         }
@@ -379,6 +383,7 @@ impl Renderer {
         (vertices, indices): (MeshId, IndexMeshId),
         (mvp, offset): (Mat4, Vec3),
         light: &DrawLight,
+        bound: &mut Option<(vk::Buffer, vk::IndexType)>,
     ) -> bool {
         let (Some(mesh), Some(list)) = (
             self.meshes.slot(vertices.0),
@@ -395,11 +400,13 @@ impl Renderer {
         };
         // SAFETY: `device` is live, and the infos name only its own live handles.
         unsafe { self.bind_vertices(cmd, vertex_buffer) };
-        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
-        unsafe {
-            self.device
-                .cmd_bind_index_buffer(cmd, index_buffer, 0, kind)
-        };
+        if bound.replace((index_buffer, kind)) != Some((index_buffer, kind)) {
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.device
+                    .cmd_bind_index_buffer(cmd, index_buffer, 0, kind)
+            };
+        }
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.push_world(cmd, self.pipelines.world.layout, mvp, offset, light) };
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.

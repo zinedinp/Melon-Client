@@ -417,10 +417,11 @@ pub struct LevelMeshes {
     columns: Columns,
     /// Built meshes over the upload budget, uploaded in order on the next frames.
     waiting: VecDeque<FinishedMesh>,
-    /// Draws with their distance, sorted before they go out.
-    solid: SortedDraws,
-    cutout: SortedDraws,
-    translucent: SortedDraws,
+    /// Per run of columns, its draws with their distance, sorted before
+    /// they go out; one run when culling on one thread.
+    parts: Vec<CulledColumns>,
+    merge: MergeDraws,
+    cull_pool: CullPool,
     /// Last frame's draw lists, handed back by [`Self::recycle`] to be reused.
     spare_solid: Vec<ChunkDraw>,
     spare_cutout: Vec<ChunkDraw>,
@@ -437,9 +438,9 @@ impl Default for LevelMeshes {
             min_y: Height::OVERWORLD.min_y,
             columns: Columns::default(),
             waiting: VecDeque::new(),
-            solid: SortedDraws::default(),
-            cutout: SortedDraws::default(),
-            translucent: SortedDraws::default(),
+            parts: vec![CulledColumns::default()],
+            merge: MergeDraws::default(),
+            cull_pool: CullPool::new(),
             spare_solid: Vec::new(),
             spare_cutout: Vec::new(),
             spare_translucent: Vec::new(),
@@ -720,12 +721,12 @@ impl LevelMeshes {
         quads
     }
 
-    /// The parts of meshes `culler` lets through: per section, its solid
-    /// TODO(perf): the biggest per-frame cost left on the render thread
-    /// (~0.1 ms at view distance 32): ~5.800 `ChunkDraw`s pushed, sorted and
-    /// copied again every frame, though the cache misses are gone. Next step:
-    /// cull on the GPU (a compute pass over the `SectionDraws`, writing the
-    /// indirect commands itself), the CPU only uploading what changed.
+    /// The parts of meshes `culler` lets through, near to far per layer;
+    /// past [`PARALLEL_CULL_COLUMNS`] the columns are split across
+    /// [`CullPool`]'s threads and merged in the order one thread finds them.
+    /// TODO(perf): still ~0.25 ms at view distance 32, ~10k `ChunkDraw`s
+    /// pushed, sorted and copied every frame. Next step: expand the draws on
+    /// the GPU (`notes/render-performance.md`, "GPU-expanded terrain draws").
     pub fn visible_sections(&mut self, culler: &Culler) -> VisibleChunks {
         let eye = culler.eye();
         let mut visible = VisibleChunks {
@@ -738,9 +739,6 @@ impl LevelMeshes {
         visible.solid.clear();
         visible.cutout.clear();
         visible.translucent.clear();
-        self.solid.clear();
-        self.cutout.clear();
-        self.translucent.clear();
         self.seen_translucent.clear();
         let min_y = self.min_y;
         let vertical = |group: usize| {
@@ -748,126 +746,81 @@ impl LevelMeshes {
                 mask | u32::from(faces_camera(group, DVec3::ZERO, y, eye, min_y)) << y
             })
         };
-        let up = vertical(Direction::Up.index());
-        let down = vertical(Direction::Down.index());
-        let cull = culler.section_cull();
-        for ((cx, cz), column) in self.columns.iter() {
-            let filled = column.filled;
-            if filled == 0 {
-                continue;
+        let frame = CullFrame {
+            culler,
+            cull: culler.section_cull(),
+            eye,
+            min_y,
+            up: vertical(Direction::Up.index()),
+            down: vertical(Direction::Down.index()),
+        };
+        let columns = &self.columns;
+        let helpers = self.cull_pool.helpers(columns.list.len());
+        if helpers == 0 {
+            let part = &mut self.parts[0];
+            cull_columns(columns.iter(), &frame, part);
+            visible.count.total = part.total;
+            visible.count.drawn = part.drawn;
+            for list in [&part.solid, &part.cutout, &part.translucent] {
+                visible.count.vertices += list.vertices;
+                visible.count.draws += list.draws.len();
             }
-            visible.count.total += filled.count_ones() as usize;
-            let in_view = culler.reached_of((cx, cz), cull.column((cx, cz)) & filled);
-            if in_view == 0 {
-                continue;
-            }
-            let (x, z) = (f64::from(cx * SECTION_SIZE), f64::from(cz * SECTION_SIZE));
-            let bottom = |y: u32| f64::from(min_y + y as i32 * SECTION_SIZE);
-            let origin = DVec3::new(x, 0.0, z);
-            // Bit per facing group: whether some face of it can face the eye.
-            let sides = (0..terrain::FACINGS).fold(0u32, |mask, group| {
-                mask | u32::from(faces_camera(group, origin, 0, eye, min_y)) << group
-            });
-            let vertical = 1 << Direction::Up.index() | 1 << Direction::Down.index();
-            let corner = (cx * SECTION_SIZE, cz * SECTION_SIZE);
-            let quads_origin = IVec3::new(corner.0, min_y, corner.1);
-            let mut rest = in_view;
-            while rest != 0 {
-                let y = rest.trailing_zeros();
-                rest &= rest - 1;
-                // Lava and translucent vertices count from the section's corner.
-                let vertices_origin =
-                    IVec3::new(corner.0, min_y + y as i32 * SECTION_SIZE, corner.1);
-                let Some(section) = column.draws.get(y as usize) else {
-                    continue;
-                };
-                visible.count.drawn += 1;
-                let center = DVec3::new(x + 8.0, bottom(y) + 8.0, z + 8.0);
-                let distance = center.distance_squared(eye) as f32;
-                let shown = sides & !vertical
-                    | (up >> y & 1) << Direction::Up.index()
-                    | (down >> y & 1) << Direction::Down.index();
-                for (layer, list) in [
-                    (&section.solid, &mut self.solid),
-                    (&section.cutout, &mut self.cutout),
-                ] {
-                    if layer.mesh == NO_MESH {
-                        continue;
-                    }
-                    let mesh = TerrainMesh::Quads(QuadMeshId(layer.mesh as usize));
-                    let cull = Some(SectionCull {
-                        slot: section.slot,
-                        bottom: y as i32 * SECTION_SIZE,
-                    });
-                    let mut flush = |run: &mut Option<Range<u32>>| {
-                        if let Some(range) = run.take() {
-                            list.push(
-                                distance,
-                                ChunkDraw {
-                                    mesh,
-                                    origin: quads_origin,
-                                    range: range.into(),
-                                    cull,
-                                },
-                            );
-                        }
+            self.seen_translucent.append(&mut part.seen_translucent);
+            part.solid.drain_sorted_into(&mut visible.solid);
+            part.cutout.drain_sorted_into(&mut visible.cutout);
+            part.translucent.drain_sorted_into(&mut visible.translucent);
+            part.total = 0;
+            part.drawn = 0;
+            return visible;
+        }
+        // Columns in runs of one size, taken in turn by the helpers and this
+        // thread; each run's draws are its own until they are merged in run
+        // order, so the lists come out as the loop above makes them.
+        let runs = (helpers + 1) * CULL_RUNS_PER_THREAD;
+        let per_run = columns.list.len().div_ceil(runs);
+        self.parts.resize_with(runs, CulledColumns::default);
+        {
+            let work = std::sync::Mutex::new(
+                columns
+                    .keys
+                    .chunks(per_run)
+                    .zip(columns.list.chunks(per_run))
+                    .zip(self.parts.iter_mut()),
+            );
+            let take = || {
+                loop {
+                    let next = work
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner)
+                        .next();
+                    let Some(((keys, list), part)) = next else {
+                        break;
                     };
-                    let mut run: Option<Range<u32>> = None;
-                    let mut start = 0;
-                    for (group, &end) in layer.ends.iter().enumerate() {
-                        let range = start..end;
-                        start = end;
-                        if range.is_empty() {
-                            continue;
-                        }
-                        if shown >> group & 1 == 0 {
-                            flush(&mut run);
-                            continue;
-                        }
-                        match &mut run {
-                            Some(open) => open.end = range.end,
-                            None => run = Some(range),
-                        }
-                    }
-                    flush(&mut run);
+                    cull_columns(keys.iter().copied().zip(list), &frame, part);
                 }
-                let (lava, count) = section.lava;
-                if lava != NO_MESH {
-                    self.solid.push(
-                        distance,
-                        ChunkDraw {
-                            mesh: TerrainMesh::Vertices(MeshId(lava as usize)),
-                            origin: vertices_origin,
-                            range: (0..count).into(),
-                            cull: None,
-                        },
-                    );
-                }
-                let (vertices, indices, count) = section.translucent;
-                if vertices != NO_MESH {
-                    self.seen_translucent.push((cx, y as i32, cz));
-                    self.translucent.push_far_first(
-                        distance,
-                        ChunkDraw {
-                            mesh: TerrainMesh::Sorted {
-                                vertices: MeshId(vertices as usize),
-                                indices: IndexMeshId(indices as usize),
-                            },
-                            origin: vertices_origin,
-                            range: (0..count).into(),
-                            cull: None,
-                        },
-                    );
-                }
+            };
+            self.cull_pool.run(helpers, &take);
+        }
+        let parts = &mut self.parts[..];
+        for part in parts.iter_mut() {
+            visible.count.total += part.total;
+            visible.count.drawn += part.drawn;
+            for list in [&part.solid, &part.cutout, &part.translucent] {
+                visible.count.vertices += list.vertices;
+                visible.count.draws += list.draws.len();
             }
+            self.seen_translucent.append(&mut part.seen_translucent);
+            part.total = 0;
+            part.drawn = 0;
         }
-        for list in [&self.solid, &self.cutout, &self.translucent] {
-            visible.count.vertices += list.vertices;
-            visible.count.draws += list.draws.len();
-        }
-        self.solid.drain_sorted_into(&mut visible.solid);
-        self.cutout.drain_sorted_into(&mut visible.cutout);
-        self.translucent.drain_sorted_into(&mut visible.translucent);
+        let merge = &mut self.merge;
+        merge.drain_sorted_into(parts, |part| &mut part.solid, &mut visible.solid);
+        merge.drain_sorted_into(parts, |part| &mut part.cutout, &mut visible.cutout);
+        merge.drain_sorted_into(
+            parts,
+            |part| &mut part.translucent,
+            &mut visible.translucent,
+        );
         visible
     }
 
@@ -881,6 +834,269 @@ impl LevelMeshes {
         self.spare_solid = solid;
         self.spare_cutout = cutout;
         self.spare_translucent = translucent;
+    }
+}
+
+/// Column runs per culling thread: more runs than threads, so a thread
+/// that drew a light run takes another while the others finish.
+const CULL_RUNS_PER_THREAD: usize = 4;
+/// Fewer columns than this are culled on the frame's thread alone: waking
+/// the helpers would cost more than they save.
+const PARALLEL_CULL_COLUMNS: usize = 1024;
+
+/// What every thread of one frame's section culling reads.
+struct CullFrame<'a> {
+    culler: &'a Culler<'a>,
+    cull: melon_world::culling::section_cull::SectionCull,
+    eye: DVec3,
+    min_y: i32,
+    /// Bit per section height: whether its up (down) faces can face the eye.
+    up: u32,
+    down: u32,
+}
+
+/// One run of columns' share of [`LevelMeshes::visible_sections`].
+#[derive(Default)]
+struct CulledColumns {
+    solid: SortedDraws,
+    cutout: SortedDraws,
+    translucent: SortedDraws,
+    seen_translucent: Vec<SectionPos>,
+    /// Filled sections, and those drawn, for F3.
+    total: usize,
+    drawn: usize,
+}
+
+/// The draws of `columns` that `frame` lets through, into `out`.
+fn cull_columns<'c>(
+    columns: impl Iterator<Item = ((i32, i32), &'c Column)>,
+    frame: &CullFrame<'_>,
+    out: &mut CulledColumns,
+) {
+    let min_y = frame.min_y;
+    for ((cx, cz), column) in columns {
+        let filled = column.filled;
+        if filled == 0 {
+            continue;
+        }
+        out.total += filled.count_ones() as usize;
+        let in_view = frame
+            .culler
+            .reached_of((cx, cz), frame.cull.column((cx, cz)) & filled);
+        if in_view == 0 {
+            continue;
+        }
+        let (x, z) = (f64::from(cx * SECTION_SIZE), f64::from(cz * SECTION_SIZE));
+        let bottom = |y: u32| f64::from(min_y + y as i32 * SECTION_SIZE);
+        let origin = DVec3::new(x, 0.0, z);
+        // Bit per facing group: whether some face of it can face the eye.
+        let sides = (0..terrain::FACINGS).fold(0u32, |mask, group| {
+            mask | u32::from(faces_camera(group, origin, 0, frame.eye, min_y)) << group
+        });
+        let vertical = 1 << Direction::Up.index() | 1 << Direction::Down.index();
+        let corner = (cx * SECTION_SIZE, cz * SECTION_SIZE);
+        let quads_origin = IVec3::new(corner.0, min_y, corner.1);
+        let mut rest = in_view;
+        while rest != 0 {
+            let y = rest.trailing_zeros();
+            rest &= rest - 1;
+            // Lava and translucent vertices count from the section's corner.
+            let vertices_origin = IVec3::new(corner.0, min_y + y as i32 * SECTION_SIZE, corner.1);
+            let Some(section) = column.draws.get(y as usize) else {
+                continue;
+            };
+            out.drawn += 1;
+            let center = DVec3::new(x + 8.0, bottom(y) + 8.0, z + 8.0);
+            let distance = center.distance_squared(frame.eye) as f32;
+            let shown = sides & !vertical
+                | (frame.up >> y & 1) << Direction::Up.index()
+                | (frame.down >> y & 1) << Direction::Down.index();
+            for (layer, list) in [
+                (&section.solid, &mut out.solid),
+                (&section.cutout, &mut out.cutout),
+            ] {
+                if layer.mesh == NO_MESH {
+                    continue;
+                }
+                let mesh = TerrainMesh::Quads(QuadMeshId(layer.mesh as usize));
+                let cull = Some(SectionCull {
+                    slot: section.slot,
+                    bottom: y as i32 * SECTION_SIZE,
+                });
+                let mut flush = |run: &mut Option<Range<u32>>| {
+                    if let Some(range) = run.take() {
+                        list.push(
+                            distance,
+                            ChunkDraw {
+                                mesh,
+                                origin: quads_origin,
+                                range: range.into(),
+                                cull,
+                            },
+                        );
+                    }
+                };
+                let mut run: Option<Range<u32>> = None;
+                let mut start = 0;
+                for (group, &end) in layer.ends.iter().enumerate() {
+                    let range = start..end;
+                    start = end;
+                    if range.is_empty() {
+                        continue;
+                    }
+                    if shown >> group & 1 == 0 {
+                        flush(&mut run);
+                        continue;
+                    }
+                    match &mut run {
+                        Some(open) => open.end = range.end,
+                        None => run = Some(range),
+                    }
+                }
+                flush(&mut run);
+            }
+            let (lava, count) = section.lava;
+            if lava != NO_MESH {
+                out.solid.push(
+                    distance,
+                    ChunkDraw {
+                        mesh: TerrainMesh::Vertices(MeshId(lava as usize)),
+                        origin: vertices_origin,
+                        range: (0..count).into(),
+                        cull: None,
+                    },
+                );
+            }
+            let (vertices, indices, count) = section.translucent;
+            if vertices != NO_MESH {
+                out.seen_translucent.push((cx, y as i32, cz));
+                out.translucent.push_far_first(
+                    distance,
+                    ChunkDraw {
+                        mesh: TerrainMesh::Sorted {
+                            vertices: MeshId(vertices as usize),
+                            indices: IndexMeshId(indices as usize),
+                        },
+                        origin: vertices_origin,
+                        range: (0..count).into(),
+                        cull: None,
+                    },
+                );
+            }
+        }
+    }
+}
+
+/// The helper threads of the section culling, started on first use.
+struct CullPool {
+    /// Helpers wanted besides the frame's thread; 0 culls on it alone.
+    helpers: usize,
+    pool: Option<rayon::ThreadPool>,
+}
+
+impl CullPool {
+    /// Half the cores less the frame's thread, at most 3: the meshers and
+    /// the integrated server keep the rest.
+    fn new() -> Self {
+        let cores = std::thread::available_parallelism().map_or(1, std::num::NonZero::get);
+        Self::with_helpers((cores / 2).saturating_sub(1).min(3))
+    }
+
+    fn with_helpers(helpers: usize) -> Self {
+        Self {
+            helpers,
+            pool: None,
+        }
+    }
+
+    /// Helpers to cull `columns` with.
+    fn helpers(&mut self, columns: usize) -> usize {
+        if self.helpers == 0 || columns < PARALLEL_CULL_COLUMNS {
+            return 0;
+        }
+        if self.pool.is_none() {
+            let pool = rayon::ThreadPoolBuilder::new()
+                .num_threads(self.helpers)
+                .thread_name(|i| format!("cull-{i}"))
+                .start_handler(|_| melon_base::platform::raise_frame_thread_priority())
+                .build();
+            match pool {
+                Ok(pool) => self.pool = Some(pool),
+                Err(e) => {
+                    melon_base::warn!("Section culling stays on one thread: {e}");
+                    self.helpers = 0;
+                    return 0;
+                }
+            }
+        }
+        self.helpers
+    }
+
+    /// Runs `work` on `helpers` pool threads and on this one, until each returns.
+    fn run(&self, helpers: usize, work: &(dyn Fn() + Sync)) {
+        let Some(pool) = &self.pool else {
+            work();
+            return;
+        };
+        pool.in_place_scope(|scope| {
+            for _ in 0..helpers {
+                scope.spawn(|_| work());
+            }
+            work();
+        });
+    }
+}
+
+/// Sorts several [`SortedDraws`] into one list, as if one had taken all
+/// their draws in turn: the run index in each key counts on across them.
+#[derive(Default)]
+struct MergeDraws {
+    keys: Vec<u64>,
+    scratch: Vec<u64>,
+    /// Per run, its part and its draws there.
+    runs: Vec<(u32, u32, u32)>,
+}
+
+impl MergeDraws {
+    /// Appends the draws of `layer` of every part to `out` in key order and empties them.
+    fn drain_sorted_into(
+        &mut self,
+        parts: &mut [CulledColumns],
+        layer: impl Fn(&mut CulledColumns) -> &mut SortedDraws,
+        out: &mut Vec<ChunkDraw>,
+    ) {
+        self.keys.clear();
+        self.runs.clear();
+        let mut total = 0;
+        for (index, part) in parts.iter_mut().enumerate() {
+            let sorted = layer(part);
+            total += sorted.draws.len();
+            let first = self.runs.len() as u64;
+            for (run, &start) in sorted.starts.iter().enumerate() {
+                let end = sorted
+                    .starts
+                    .get(run + 1)
+                    .map_or(sorted.draws.len() as u32, |&end| end);
+                self.runs.push((index as u32, start, end));
+            }
+            self.keys.extend(
+                sorted
+                    .keys
+                    .iter()
+                    .map(|&key| (key & !0xFFFF_FFFF) | ((key & 0xFFFF_FFFF) + first)),
+            );
+        }
+        radix::sort(&mut self.keys, &mut self.scratch);
+        out.reserve(total);
+        for &key in &self.keys {
+            let (part, start, end) = self.runs[(key & 0xFFFF_FFFF) as usize];
+            out.extend_from_slice(
+                &layer(&mut parts[part as usize]).draws[start as usize..end as usize],
+            );
+        }
+        for part in parts {
+            layer(part).clear();
+        }
     }
 }
 
@@ -1165,20 +1381,128 @@ mod tests {
             melon_world::projection::world_projection(70.0, 16.0 / 9.0, 512.0) * view,
         );
         let culler = Culler::new(frustum, None, eye, (-64, 24), CullSettings::default());
-        let rounds = 300;
-        let mut draws = (0, 0, 0);
-        let started = std::time::Instant::now();
-        for _ in 0..rounds {
-            let visible = meshes.visible_sections(&culler);
-            draws = (
-                visible.count.draws,
-                visible.count.drawn,
-                visible.count.total,
+        for pool in [CullPool::with_helpers(0), CullPool::new()] {
+            let helpers = pool.helpers;
+            meshes.cull_pool = pool;
+            let rounds = 300;
+            let mut draws = (0, 0, 0);
+            let started = std::time::Instant::now();
+            for _ in 0..rounds {
+                let visible = meshes.visible_sections(&culler);
+                draws = (
+                    visible.count.draws,
+                    visible.count.drawn,
+                    visible.count.total,
+                );
+                meshes.recycle(visible.solid, visible.cutout, visible.translucent);
+            }
+            let each = started.elapsed() / rounds;
+            eprintln!(
+                "visible_sections, {helpers} helpers: {each:?} per frame, (draws, sections drawn, of) {draws:?}"
             );
-            meshes.recycle(visible.solid, visible.cutout, visible.translucent);
         }
-        let each = started.elapsed() / rounds;
-        eprintln!("visible_sections: {each:?} per frame, (draws, sections drawn, of) {draws:?}");
+    }
+
+    /// Columns around the origin, `radius` in each direction, their sections
+    /// solid, cutout or translucent by a seeded draw; mesh ids count up.
+    fn random_columns(meshes: &mut LevelMeshes, radius: i32, seed: u64) {
+        meshes.set_height(Height::OVERWORLD);
+        let mut rng = XorShift(seed);
+        let mut next = 0;
+        let eye = DVec3::new(0.5, 80.0, 0.5);
+        for x in -radius..=radius {
+            for z in -radius..=radius {
+                for y in 2..16 {
+                    let roll = rng.next_u64();
+                    if roll.is_multiple_of(4) {
+                        continue;
+                    }
+                    let groups = |shift: u64| -> [Range<u32>; terrain::FACINGS] {
+                        std::array::from_fn(|g| {
+                            let n = (roll >> (shift + g as u64)) as u32 & 1;
+                            g as u32 * 2..g as u32 * 2 + n
+                        })
+                    };
+                    let layer = |shift: u64| LayerMesh {
+                        items: vec![TerrainQuad([0; 5]); 2 * terrain::FACINGS],
+                        groups: groups(shift),
+                    };
+                    let finished = if roll.is_multiple_of(7) {
+                        two_quads((x, y, z), 0.25, 0.75, eye)
+                    } else {
+                        FinishedMesh {
+                            pos: (x, y, z),
+                            mesh: SectionMesh {
+                                solid: layer(8),
+                                cutout: if roll.is_multiple_of(3) {
+                                    layer(24)
+                                } else {
+                                    LayerMesh::default()
+                                },
+                                ..SectionMesh::default()
+                            },
+                            sync: true,
+                        }
+                    };
+                    meshes.insert_headless(finished, || {
+                        next += 1;
+                        next
+                    });
+                }
+            }
+        }
+    }
+
+    /// Culling across threads gives the lists culling on one thread gives,
+    /// in the same order: equal distances included, which ties break by
+    /// where the draws were found.
+    #[test]
+    fn parallel_culling_draws_what_one_thread_draws() {
+        use melon_world::culling::frustum::Frustum;
+        use melon_world::culling::{CullSettings, Culler};
+        let mut one = LevelMeshes {
+            cull_pool: CullPool::with_helpers(0),
+            ..LevelMeshes::default()
+        };
+        let mut many = LevelMeshes {
+            cull_pool: CullPool::with_helpers(3),
+            ..LevelMeshes::default()
+        };
+        // 41 x 41 columns: past `PARALLEL_CULL_COLUMNS`.
+        random_columns(&mut one, 20, 0x5eed_0001);
+        random_columns(&mut many, 20, 0x5eed_0001);
+        let eye = DVec3::new(0.5, 80.0, 0.5);
+        for turn in 0..4 {
+            let view = glam::Mat4::from_rotation_y(turn as f32 * 1.3);
+            let frustum = Frustum::from_view_projection(
+                melon_world::projection::world_projection(70.0, 16.0 / 9.0, 512.0) * view,
+            );
+            let culler = Culler::new(frustum, None, eye, (-64, 24), CullSettings::default());
+            let a = one.visible_sections(&culler);
+            let b = many.visible_sections(&culler);
+            assert!(many.cull_pool.pool.is_some(), "culled on helpers");
+            assert!(!a.solid.is_empty() && !a.cutout.is_empty() && !a.translucent.is_empty());
+            assert_eq!(a.solid, b.solid);
+            assert_eq!(a.cutout, b.cutout);
+            assert_eq!(a.translucent, b.translucent);
+            assert_eq!(
+                (
+                    a.count.total,
+                    a.count.drawn,
+                    a.count.vertices,
+                    a.count.draws
+                ),
+                (
+                    b.count.total,
+                    b.count.drawn,
+                    b.count.vertices,
+                    b.count.draws
+                )
+            );
+            assert_eq!(one.seen_translucent, many.seen_translucent);
+            one.recycle(a.solid, a.cutout, a.translucent);
+            many.recycle(b.solid, b.cutout, b.translucent);
+        }
     }
 
     #[test]

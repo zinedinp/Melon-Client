@@ -31,6 +31,10 @@ pub(super) struct BenchRun {
     gpu_monitor: Option<GpuMonitor>,
     /// The shading frames already recorded.
     shading_read: u64,
+    /// Frames still left out after a phase switch: the one taking the
+    /// phase's snapshot (every thread's times, ~25 ms) and the one after,
+    /// whose time holds it.
+    settling: u8,
 }
 
 impl BenchRun {
@@ -41,6 +45,7 @@ impl BenchRun {
             phase: None,
             gpu_monitor: None,
             shading_read: 0,
+            settling: 0,
         }
     }
 
@@ -111,6 +116,7 @@ impl BenchRun {
             }
             recorder.enter(phase, Snapshot::take(net, audio));
             self.phase = Some(phase);
+            self.settling = 2;
             println!(
                 "Bench: phase {} ({} entities)",
                 phase.name(),
@@ -125,6 +131,10 @@ impl BenchRun {
         }
         if phase == Phase::Done {
             return true;
+        }
+        if self.settling > 0 {
+            self.settling -= 1;
+            return false;
         }
         let (cpu_ms, cpu) = world.profiler.last_frame();
         let (gpu_ms, gpu) = renderer.gpu_last_frame();
@@ -149,7 +159,7 @@ impl BenchRun {
             },
             world.server_mspt(),
             net.totals().backlog,
-            renderer.mesh_memory().1,
+            renderer.mesh_memory(),
             world.chunk_count(),
         );
         false

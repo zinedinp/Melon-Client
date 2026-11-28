@@ -41,6 +41,8 @@ struct PhaseRecord {
     backlog_max: u64,
     rss_max: u64,
     mesh_memory_max: u64,
+    /// The mesh blocks' bytes, used or free: the gap is fragmentation.
+    mesh_allocated_max: u64,
     chunks_end: usize,
     /// NVML's readings while the phase ran.
     gpu_samples: Vec<GpuSample>,
@@ -214,6 +216,7 @@ impl Recorder {
             backlog_max: 0,
             rss_max: 0,
             mesh_memory_max: 0,
+            mesh_allocated_max: 0,
             chunks_end: 0,
             gpu_samples: Vec::new(),
         });
@@ -232,7 +235,7 @@ impl Recorder {
         sample: FrameSample,
         mspt: Option<f64>,
         backlog: u64,
-        mesh_memory: u64,
+        (mesh_allocated, mesh_memory): (u64, u64),
         chunks: usize,
     ) {
         let Some(record) = self.phases.last_mut() else {
@@ -246,6 +249,7 @@ impl Recorder {
         }
         record.backlog_max = record.backlog_max.max(backlog);
         record.mesh_memory_max = record.mesh_memory_max.max(mesh_memory);
+        record.mesh_allocated_max = record.mesh_allocated_max.max(mesh_allocated);
         record.chunks_end = chunks;
         record.frames.push(sample);
     }
@@ -333,6 +337,7 @@ impl Recorder {
                     "main_on_core": main_on_core,
                     "rss_mib": round(record.rss_max as f64 / (1024.0 * 1024.0)),
                     "mesh_mib": round(record.mesh_memory_max as f64 / (1024.0 * 1024.0)),
+                    "mesh_allocated_mib": round(record.mesh_allocated_max as f64 / (1024.0 * 1024.0)),
                 }),
             );
         }
@@ -606,7 +611,7 @@ mod tests {
                 },
                 None,
                 0,
-                0,
+                (0, 0),
                 0,
             );
         }
@@ -644,7 +649,7 @@ mod tests {
                 },
                 None,
                 0,
-                0,
+                (0, 0),
                 0,
             );
         }

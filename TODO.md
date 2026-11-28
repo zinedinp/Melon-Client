@@ -121,6 +121,18 @@ Measured per frame in the bench CSV (`notes/render-performance.md`,
 - **Leaving a singleplayer world** waits for the server's save
   (`IntegratedServer::drop` joins its shutdown): the window freezes.
 
+### Frame time
+
+CPU-bound at ~1.2-1.9 ms a frame (`notes/render-performance.md`, "CPU
+frame time"). Next cuts, largest first:
+
+- **GPU-expanded terrain draws** (the notes' plan): `cull sections` and
+  `gather`, ~0.4 ms together even on four threads.
+- **Translucent sections as multi-draws** per index block: `record scene`
+  grows with the water in view (0.25 ms at 0.7 M primitives).
+- **Entity hitboxes with F3 open** rebuild their gizmo mesh every frame:
+  0.2 ms at 250 mobs.
+
 ### Features
 
 - **Opus proximity voice chat** (`audio`): each speaker a `Binaural` /

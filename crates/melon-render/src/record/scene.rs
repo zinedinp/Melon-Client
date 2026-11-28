@@ -171,9 +171,11 @@ impl Renderer {
                     // The opaque gizmo lines go with the solid entities
                     // (vanilla's solid phase), before the blended ones.
                     let mut lines_drawn = layer != RenderLayer::Entities;
+                    let mut bound = None;
                     for (_, entity) in entities {
                         if !lines_drawn && entity.blend != Blending::Opaque {
                             lines_drawn = true;
+                            bound = None;
                             for style in [LineStyle::Opaque, LineStyle::OpaqueDepthBias] {
                                 // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
                                 unsafe {
@@ -215,7 +217,8 @@ impl Renderer {
                                 .scrolled(entity.scroll)
                         };
                         // SAFETY: `device` is live, and the infos name only its own live handles.
-                        if unsafe { self.bind_world_pass(cmd, entity.atlas, mode) } {
+                        if unsafe { self.bind_world_pass_once(cmd, entity.atlas, mode, &mut bound) }
+                        {
                             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
                             unsafe {
                                 self.draw_world_mesh(
@@ -229,6 +232,7 @@ impl Renderer {
                             };
                         }
                         if entity.glint.on() {
+                            bound = None;
                             let glint = if entity.glint.is_armor() {
                                 scene.glint_armor
                             } else {
@@ -272,9 +276,17 @@ impl Renderer {
                 RenderLayer::WaterMask => {
                     let Some(world) = &scene.world else { continue };
                     let view_proj = self.world_view_projection(world, layer);
+                    let mut bound = None;
                     for entity in scene.entities.iter().filter(|e| e.layer == layer) {
                         // SAFETY: `device` is live, and the infos name only its own live handles.
-                        if unsafe { self.bind_world_pass(cmd, entity.atlas, Mode::WaterMask) } {
+                        if unsafe {
+                            self.bind_world_pass_once(
+                                cmd,
+                                entity.atlas,
+                                Mode::WaterMask,
+                                &mut bound,
+                            )
+                        } {
                             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
                             unsafe {
                                 self.draw_world_mesh(
@@ -295,9 +307,17 @@ impl Renderer {
                 RenderLayer::Crumbling => {
                     let Some(world) = &scene.world else { continue };
                     let view_proj = self.world_view_projection(world, layer);
+                    let mut bound = None;
                     for entity in scene.entities.iter().filter(|e| e.layer == layer) {
                         // SAFETY: `device` is live, and the infos name only its own live handles.
-                        if unsafe { self.bind_world_pass(cmd, entity.atlas, Mode::Crumbling) } {
+                        if unsafe {
+                            self.bind_world_pass_once(
+                                cmd,
+                                entity.atlas,
+                                Mode::Crumbling,
+                                &mut bound,
+                            )
+                        } {
                             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
                             unsafe {
                                 self.draw_world_mesh(
@@ -319,9 +339,17 @@ impl Renderer {
                     let Some(world) = &scene.world else { continue };
                     let view_proj = self.world_view_projection(world, layer);
                     let fog = self.model_fog(world, layer);
+                    let mut bound = None;
                     for entity in scene.entities.iter().filter(|e| e.layer == layer) {
                         // SAFETY: `device` is live, and the infos name only its own live handles.
-                        if unsafe { self.bind_world_pass(cmd, entity.atlas, Mode::Translucent) } {
+                        if unsafe {
+                            self.bind_world_pass_once(
+                                cmd,
+                                entity.atlas,
+                                Mode::Translucent,
+                                &mut bound,
+                            )
+                        } {
                             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
                             unsafe {
                                 self.draw_world_mesh(
@@ -612,6 +640,23 @@ impl Renderer {
         };
         // SAFETY: `device` is live, and the infos name only its own live handles.
         unsafe { self.bind_world_pipeline(cmd, atlas, pass) }
+    }
+
+    /// [`Self::bind_world_pass`] unless `bound` says `mode` and `atlas` are
+    /// bound already: consecutive draws of one kind bind once.
+    unsafe fn bind_world_pass_once(
+        &self,
+        cmd: vk::CommandBuffer,
+        atlas: TextureId,
+        mode: Mode,
+        bound: &mut Option<(Mode, TextureId)>,
+    ) -> bool {
+        if *bound != Some((mode, atlas)) {
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            let ok = unsafe { self.bind_world_pass(cmd, atlas, mode) };
+            *bound = ok.then_some((mode, atlas));
+        }
+        bound.is_some()
     }
 
     /// Binds `pass`, built like the world pipeline, with `atlas`. `false` if

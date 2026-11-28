@@ -129,8 +129,8 @@ impl FrameProfiler {
         self.ended = Some(now);
         if melon_core::probe::enabled() && now - self.probed >= PROBE_PERIOD {
             self.probed = now;
-            melon_core::probe::section("Frame profile (F3, smoothed)", self.lines().join("
-"));
+            let lines = self.lines().join("\n");
+            melon_core::probe::section("Frame profile (F3, smoothed)", lines);
         }
     }
 

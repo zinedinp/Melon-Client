@@ -2655,6 +2655,7 @@ dependencies = [
  "pumpkin-util",
  "pumpkin-world",
  "rand 0.10.4",
+ "rayon",
  "rustc-hash",
  "serde",
  "serde_json",
