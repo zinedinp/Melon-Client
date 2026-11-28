@@ -5,6 +5,7 @@
 // fine relative to the quad. Same outputs as `world.vert`.
 
 #include "fog.glsl"
+#include "lightmap.glsl"
 #include "world_push.glsl"
 #include "world_fog.glsl"
 
@@ -32,8 +33,13 @@ void main() {
     vec3 pos = in_center + right * corner.x + up * corner.y;
     gl_Position = pc.view_proj * vec4(pos + pc.offset.xyz, 1.0);
     frag_uv = vec2(corner.x < 0.0 ? in_uv.z : in_uv.x, corner.y < 0.0 ? in_uv.w : in_uv.y);
-    frag_light = in_light.x > 240u ? vec2(-1.0) : vec2(in_light) / 16.0;
-    frag_color = vec4(in_color.rgb, in_color.a * pc.ambient.a);
+    // Light coordinates are level * 16 (vanilla `UV2`), the lightmap taken
+    // into the colour here; above 240 is the sentinel for meshes lit by
+    // `pc.ambient`, which `world.frag` multiplies in.
+    bool lit = in_light.x <= 240u;
+    frag_light = lit ? vec2(0.0) : vec2(-1.0);
+    vec3 light = lit ? sample_lightmap(vec2(in_light) / 16.0) : vec3(1.0);
+    frag_color = vec4(in_color.rgb * light, in_color.a * pc.ambient.a);
     if (pc.view.z == 1.0) {
         frag_fog = fog_distances(pos + pc.offset.xyz);
     } else if (pc.view.z == 2.0) {

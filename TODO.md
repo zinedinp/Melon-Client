@@ -125,7 +125,10 @@ thread:
 
 CPU ~0.9-1.5 ms a frame at render distance 32 and 4K, the GPU about as
 long in the bench's `rise` and `turn` phases. Next on the GPU: the cutout
-terrain, 0.6-0.7 ms in `rise` and `turn`.
+terrain, 0.55-0.6 ms in `rise` and `turn`. Its time follows its primitives
+(~2.6 M in `rise`, as many per millisecond as the solid layer's); with
+both shaders cut to nothing a pass keeps ~80 % of its time, so fewer
+primitives, not cheaper shading, is what is left to win.
 
 ### Features
 

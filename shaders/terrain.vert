@@ -7,14 +7,16 @@
 // an instance per quad shaded six vertices and left most of a GPU's
 // vertex batch empty. The quad's corners, UVs and colours come from the
 // quad table, which holds every baked block quad once; light and ambient
-// occlusion per corner come from the quad. Same outputs and push constants
-// as `world.vert`.
+// occlusion per corner come from the quad. The push constants of
+// `world.vert`, its outputs but `frag_light`: the lightmap is in the colour,
+// as vanilla's `terrain.vsh` puts it (`world.frag`'s `TERRAIN` variants).
 //
 // `gl_VertexIndex` and `gl_InstanceIndex` are the Vulkan builtins; the
 // latter counts from the draw's `firstInstance`
 // (`drawIndirectFirstInstance`).
 
 #include "fog.glsl"
+#include "lightmap.glsl"
 #include "world_push.glsl"
 
 // [0]: quad index (0-20), offset kind (21-23). [1]: x (0-3), z (4-7),
@@ -28,7 +30,6 @@ layout(std430, set = 4, binding = 0) readonly buffer Quads {
 
 layout(location = 0) out vec2 frag_uv;
 layout(location = 1) out vec4 frag_color;
-layout(location = 2) out vec2 frag_light;
 layout(location = 3) out vec2 frag_fog;
 
 // The same depth in the solid and cutout pipelines: a cutout overlay (the
@@ -122,14 +123,16 @@ void main() {
 
     uint light = (vertex < 2u ? in_quad.z : in_quad.w) >> (12u * (vertex & 1u));
     // Quarter levels to levels: vanilla's smooth light coordinate / 16.
-    frag_light = vec2(float(light & 63u), float((light >> 6) & 63u)) / 4.0;
+    vec2 levels = vec2(float(light & 63u), float((light >> 6) & 63u)) / 4.0;
     uint ao_field = (in_quad.x >> 24) | ((in_quad.z >> 24) << 8) | ((in_quad.w >> 24) << 16);
     // `ARGB.gray(ao)`: floor(ao * 255), with ao in sixtieths.
     uint gray = (((ao_field >> (6u * vertex)) & 63u) * 255u) / 60u;
     vec4 color = unpackUnorm4x8(corner.color); // 16-byte: corner.w
     // The dimension's own cardinal lighting (the nether's lit undersides),
     // as a factor on the default one the colour was baked with, then the
-    // biome tint (`ClientLevel.calculateBlockTint`).
+    // biome tint (`ClientLevel.calculateBlockTint`), then the lightmap
+    // (`Color * sample_lightmap(Sampler2, UV2)`).
     float cardinal = face < 4u ? g.cardinal_a[face] : g.cardinal_b[face - 4u];
-    frag_color = vec4(color.rgb * in_tint.rgb * (float(gray) / 255.0 * cardinal), color.a * pc.ambient.a);
+    vec3 shaded = color.rgb * in_tint.rgb * (float(gray) / 255.0 * cardinal);
+    frag_color = vec4(shaded * sample_lightmap(levels), color.a * pc.ambient.a);
 }

@@ -336,7 +336,8 @@ pub struct WorldDraw {
     pub far: f32,
     /// The lightmap colour at the player's eye, multiplied onto entity draws.
     pub ambient: [f32; 3],
-    /// Time of day and brightness option, applied at draw time.
+    /// Time of day and brightness option: the frame's lightmap
+    /// (`globals.rs`'s `lightmap_table`).
     pub lightmap: melon_world::lightmap::LightmapParams,
     /// The fog every drawn thing but the sky bodies is mixed into.
     pub fog: melon_world::fog::FogData,
@@ -382,7 +383,6 @@ impl WorldDraw {
     pub fn light(&self, ambient: [f32; 4]) -> crate::pipeline::world::DrawLight {
         crate::pipeline::world::DrawLight {
             ambient,
-            lightmap: self.lightmap,
             fog: crate::pipeline::world::FogInput::None,
             overlay: 0.0,
             glint_scale: 0.0,

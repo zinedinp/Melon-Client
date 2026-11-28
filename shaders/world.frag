@@ -1,12 +1,13 @@
 #version 450
 
 // Vanilla `core/terrain.fsh` / `core/entity.fsh`: atlas sample, cutout,
-// lightmap, then fog. Combined image sampler at set 0 (the world pipelines'
-// texture set). Light is evaluated per fragment (`lightmap.glsl`) from
-// interpolated block/sky levels, matching vanilla's smooth-lit corners.
+// then fog. Combined image sampler at set 0 (the world pipelines' texture
+// set). The lightmap is in the vertex colour already, taken per vertex as
+// vanilla does (`lightmap.glsl`); meshes lit by `pc.ambient` get it here.
+// `TERRAIN` (the solid and cutout terrain) knows no `pc.ambient` light and
+// reads no `frag_light`, which `terrain.vert` leaves out.
 
 #include "fog.glsl"
-#include "lightmap.glsl"
 #include "world_push.glsl"
 #ifdef GLINT
 #include "glint.glsl"
@@ -15,8 +16,10 @@ layout(set = 1, binding = 0) uniform sampler2D glint_sampler;
 
 layout(location = 0) in vec2 frag_uv;
 layout(location = 1) in vec4 frag_color;
-// Block and sky light levels, or negative for `pc.ambient` (see world.vert).
+#ifndef TERRAIN
+// Negative for meshes lit by `pc.ambient` (see world.vert).
 layout(location = 2) in vec2 frag_light;
+#endif
 layout(location = 3) in vec2 frag_fog;
 
 layout(location = 0) out vec4 out_color;
@@ -126,11 +129,10 @@ void main() {
 #endif
     // The opaque pipeline doesn't blend, so alpha only counts in the
     // translucent one. Celestial and blob shadows write vertex alpha too.
-    // The lightmap per fragment, as vanilla samples it: interpolating the
-    // light levels between smooth-lit corners, not the colours they give.
-    vec3 lighting = frag_light.x < 0.0
-        ? pc.ambient.rgb
-        : lightmap(frag_light.x, frag_light.y, pc.params.rgb, pc.params.a);
+#ifdef TERRAIN
+    out_color = apply_fog(tex * frag_color, frag_fog);
+#else
+    vec3 lighting = frag_light.x < 0.0 ? pc.ambient.rgb : vec3(1.0);
     vec3 albedo = tex.rgb * frag_color.rgb;
     // Vanilla `core/entity.fsh`'s overlay, before the light: a hurt
     // entity mixed toward red, a flashing creeper toward white. Only
@@ -140,4 +142,5 @@ void main() {
         albedo = mix(albedo, overlay, abs(pc.offset.w));
     }
     out_color = apply_fog(vec4(albedo * lighting, tex.a * frag_color.a), frag_fog);
+#endif
 }

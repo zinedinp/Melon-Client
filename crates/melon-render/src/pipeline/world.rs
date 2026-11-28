@@ -3,7 +3,6 @@
 use ash::vk;
 
 use super::{Pass, PipelineDesc};
-use melon_world::lightmap::LightmapParams;
 use melon_world::mesh::WorldVertex as Vertex;
 use melon_world::mesh::{LineSegment, TerrainQuad};
 use melon_world::particle::mesh::ParticleQuad;
@@ -65,7 +64,7 @@ impl FogInput {
         }
     }
 }
-/// The lightmap's inputs are read where it runs, per fragment.
+/// The fragment shaders read the ambient light, the overlay and the scroll.
 pub const PUSH_STAGES: vk::ShaderStageFlags = vk::ShaderStageFlags::from_raw(
     vk::ShaderStageFlags::VERTEX.as_raw() | vk::ShaderStageFlags::FRAGMENT.as_raw(),
 );
@@ -75,8 +74,6 @@ pub const PUSH_STAGES: vk::ShaderStageFlags = vk::ShaderStageFlags::from_raw(
 pub struct DrawLight {
     /// Multiplied onto sentinel-lit vertices (entities, celestials, ...).
     pub ambient: [f32; 4],
-    /// The lightmap's sky light and gamma, for vertices that carry their own light.
-    pub lightmap: LightmapParams,
     /// How the fog finds the draw's distance from the camera.
     pub fog: FogInput,
     /// Vanilla's entity overlay (`OverlayTexture`) on sentinel-lit vertices.
@@ -92,7 +89,6 @@ impl DrawLight {
     pub const fn tint(ambient: [f32; 4]) -> Self {
         Self {
             ambient,
-            lightmap: LightmapParams::overworld([1.0; 3], 0.0),
             fog: FogInput::None,
             overlay: 0.0,
             glint_scale: 0.0,
@@ -137,8 +133,6 @@ pub fn push_bytes(view_proj: &glam::Mat4, light: &DrawLight) -> [f32; 24] {
     let mut data = [0.0; 24];
     data[..16].copy_from_slice(&view_proj.to_cols_array());
     data[16..20].copy_from_slice(&light.ambient);
-    data[20..23].copy_from_slice(&light.lightmap.sky);
-    data[23] = light.lightmap.gamma;
     if let Some([u, v]) = light.scroll {
         data[20] = u;
         data[21] = v;

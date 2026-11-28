@@ -58,7 +58,7 @@ pub fn layer_runs(ends: &[u32; FACINGS], shown: u32, mut run: impl FnMut(u32, u3
     }
 }
 
-/// How many draws a layer expands to (a run per [`QUADS_PER_DRAW`] quads),
+/// How many draws a layer expands to (a run per `QUADS_PER_DRAW` quads),
 /// and the quads they draw.
 pub fn layer_draws(ends: &[u32; FACINGS], shown: u32) -> (u32, u32) {
     let (mut draws, mut quads) = (0, 0);

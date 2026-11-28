@@ -1,42 +1,30 @@
 #ifndef MELON_LIGHTMAP_GLSL
 #define MELON_LIGHTMAP_GLSL
 
-// Vanilla `core/lightmap.fsh`, evaluated per fragment in `world.frag`.
+// Vanilla `include/sample_lightmap.glsl`, read per vertex as `terrain.vsh`
+// does: the lightmap is a 16 x 16 RGBA8 texture `lightmap.fsh` fills once a
+// frame, here `g.lightmap` (filled by the CPU, `globals.rs`), and the
+// vertex takes it bilinearly between the four levels around its own.
 #include "globals.glsl"
 
-// `BLOCK_LIGHT_TINT` and `AMBIENT_LIGHT_COLOR` of the dimension (the
-// overworld's 0xFFD88C and 0x0A0A0A: light 0 is dark, not black) come from
-// the frame's `Globals`.
-// `LightmapRenderState.blockFactor` without the flicker.
-const float BLOCK_FACTOR = 1.4;
-
-// Levels are floats so smooth lighting's blended corners work.
-float get_brightness(float level) {
-    float v = level / 15.0;
-    return v / (4.0 - 3.0 * v);
+// The lightmap's colour at whole levels.
+vec3 lightmap_entry(uint block, uint sky) {
+    uint i = sky * 16u + block;
+    return unpackUnorm4x8(g.lightmap[i >> 2][i & 3u]).rgb;
 }
 
-vec3 not_gamma(vec3 c) {
-    float maxc = max(c.r, max(c.g, c.b));
-    if (maxc <= 0.0) {
-        return vec3(0.0);
-    }
-    float inv = 1.0 - maxc;
-    float scaled = 1.0 - inv * inv * inv * inv;
-    return c * (scaled / maxc);
-}
-
-vec3 lightmap(float block_level, float sky_level, vec3 sky_light, float gamma) {
-    float block_b = get_brightness(block_level) * BLOCK_FACTOR;
-    float sky_b = get_brightness(sky_level);
-    float t = block_level / 15.0;
-    float parabolic = (2.0 * t - 1.0);
-    parabolic *= parabolic;
-    vec3 block_color = mix(g.block_tint.rgb, vec3(1.0), 0.9 * parabolic);
-    // Clamped before `notGamma` like vanilla: torch plus daylight sums past
-    // 1, where the curve would turn back down.
-    vec3 color = clamp(g.ambient_color.rgb + sky_light * sky_b + block_color * block_b, 0.0, 1.0);
-    return mix(color, not_gamma(color), gamma);
+// `sample_lightmap` at block and sky levels `0..=15` (vanilla's `UV2 / 16`):
+// the texture's `LINEAR` filter between whole levels, clamped to the edge
+// texels.
+vec3 sample_lightmap(vec2 levels) {
+    vec2 at = clamp(levels, 0.0, 15.0);
+    vec2 low = floor(at);
+    vec2 t = at - low;
+    uvec2 lo = uvec2(low);
+    uvec2 hi = min(lo + 1u, uvec2(15u));
+    vec3 below = mix(lightmap_entry(lo.x, lo.y), lightmap_entry(hi.x, lo.y), t.x);
+    vec3 above = mix(lightmap_entry(lo.x, hi.y), lightmap_entry(hi.x, hi.y), t.x);
+    return mix(below, above, t.y);
 }
 
 #endif

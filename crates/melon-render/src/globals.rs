@@ -9,11 +9,12 @@ use majestix_vk::{
     Simple as _, Write,
 };
 use melon_world::fog::FogData;
+use melon_world::lightmap::{self, LightmapParams};
 use numerobis::elem::Pod;
 
-/// `Globals` in `globals.glsl`, std140: ten `vec4`s.
+/// `Globals` in `globals.glsl`, std140: eight `vec4`s and the lightmap.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Globals {
     /// The fog's colour; alpha 0 without fog.
     pub fog_color: [f32; 4],
@@ -21,8 +22,6 @@ pub struct Globals {
     pub fog_env: [f32; 4],
     /// The sky's end, the clouds' end, the aspect ratio.
     pub fog_sky: [f32; 4],
-    pub ambient_color: [f32; 4],
-    pub block_tint: [f32; 4],
     pub cardinal_a: [f32; 4],
     pub cardinal_b: [f32; 4],
     /// The world's up in view space.
@@ -31,9 +30,11 @@ pub struct Globals {
     pub glint: [f32; 4],
     /// xy: the size of the frame in pixels (vanilla `ScreenSize`).
     pub screen: [f32; 4],
+    /// [`lightmap_table`].
+    pub lightmap: [[u32; 4]; 64],
 }
 
-const _: () = assert!(std::mem::size_of::<Globals>() == 160);
+const _: () = assert!(std::mem::size_of::<Globals>() == 8 * 16 + 1024);
 // SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
 unsafe impl Pod for Globals {}
 
@@ -42,8 +43,7 @@ impl Globals {
     pub fn plain() -> Self {
         Self::of(
             &FogData::NONE,
-            [0.0; 3],
-            [1.0, 0.847, 0.549],
+            &LightmapParams::overworld([1.0; 3], 0.0),
             [1.0; 6],
             1.0,
             Mat4::IDENTITY,
@@ -54,8 +54,7 @@ impl Globals {
     pub fn for_world(world: &WorldDraw, aspect: f32) -> Self {
         Self::of(
             &world.fog,
-            world.lightmap.ambient,
-            world.lightmap.block_tint,
+            &world.lightmap,
             world.cardinal,
             aspect,
             world.view,
@@ -64,8 +63,7 @@ impl Globals {
 
     fn of(
         fog: &FogData,
-        ambient: [f32; 3],
-        block_tint: [f32; 3],
+        light: &LightmapParams,
         cardinal: [f32; 6],
         aspect: f32,
         view: Mat4,
@@ -82,15 +80,29 @@ impl Globals {
                 fog.render_distance_end,
             ],
             fog_sky: [fog.sky_end, fog.cloud_end, aspect, 0.0],
-            ambient_color: [ambient[0], ambient[1], ambient[2], 0.0],
-            block_tint: [block_tint[0], block_tint[1], block_tint[2], 0.0],
             cardinal_a: [down, top, north, south],
             cardinal_b: [west, east, 1.0, 1.0],
             view_up: [up.x, up.y, up.z, 0.0],
             glint: [melon_world::glint::millis(), 1.0, 0.0, 0.0],
             screen: [1.0, 1.0, 0.0, 0.0],
+            lightmap: lightmap_table(light),
         }
     }
+}
+
+/// Vanilla's lightmap texture (`lightmap.fsh` into an RGBA8 target): the
+/// colour of each block and sky level, at `block + 16 * sky`, four to an
+/// element.
+pub fn lightmap_table(light: &LightmapParams) -> [[u32; 4]; 64] {
+    let mut table = [[0; 4]; 64];
+    for sky in 0..16u8 {
+        for block in 0..16u8 {
+            let [r, g, b] = lightmap::sample(block, sky, light).map(melon_world::mesh::unorm8);
+            let at = usize::from(sky) * 16 + usize::from(block);
+            table[at / 4][at % 4] = u32::from_le_bytes([r, g, b, u8::MAX]);
+        }
+    }
+    table
 }
 
 /// The projection's `1 / m00` and `1 / m11`, which `world.vert` uses for its view rays.
@@ -235,8 +247,23 @@ mod tests {
     use melon_core::math::angle::Rotation;
 
     #[test]
-    fn the_blocks_size_is_ten_vec4s() {
-        assert_eq!(std::mem::size_of::<Globals>(), 10 * 16);
+    fn the_blocks_size_is_eight_vec4s_and_the_lightmap() {
+        assert_eq!(std::mem::size_of::<Globals>(), 8 * 16 + 64 * 16);
+    }
+
+    #[test]
+    fn the_lightmap_runs_block_across_and_sky_down() {
+        let light = LightmapParams::overworld([1.0; 3], 0.5);
+        let table = lightmap_table(&light);
+        let entry = |block: u8, sky: u8| {
+            let at = usize::from(sky) * 16 + usize::from(block);
+            table[at / 4][at % 4].to_le_bytes()
+        };
+        for (block, sky) in [(0, 0), (15, 0), (0, 15), (7, 3), (15, 15)] {
+            let want = lightmap::sample(block, sky, &light).map(melon_world::mesh::unorm8);
+            assert_eq!(entry(block, sky), [want[0], want[1], want[2], 255], "{block} {sky}");
+        }
+        assert_eq!(entry(15, 15), [255; 4], "daylight is white");
     }
 
     #[test]
@@ -244,7 +271,8 @@ mod tests {
         assert_eq!(Globals::plain().fog_color[3], 0.0);
         let mut fog = FogData::NONE;
         fog.color = [0.2, 0.3, 0.4, 1.0];
-        let globals = Globals::of(&fog, [0.0; 3], [1.0; 3], [1.0; 6], 1.0, Mat4::IDENTITY);
+        let light = LightmapParams::overworld([1.0; 3], 0.0);
+        let globals = Globals::of(&fog, &light, [1.0; 6], 1.0, Mat4::IDENTITY);
         assert_eq!(globals.fog_color, [0.2, 0.3, 0.4, 1.0]);
     }
 

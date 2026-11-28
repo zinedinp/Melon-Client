@@ -6,6 +6,7 @@
 // Vanilla counterpart: `core/terrain.vsh` / `core/entity.vsh` (OpenGL 330).
 
 #include "fog.glsl"
+#include "lightmap.glsl"
 #include "world_push.glsl"
 #include "world_fog.glsl"
 
@@ -16,8 +17,8 @@ layout(location = 3) in uvec2 in_light;
 
 layout(location = 0) out vec2 frag_uv;
 layout(location = 1) out vec4 frag_color;
-// Block and sky light levels for the lightmap, or negative for meshes lit
-// by `pc.ambient`.
+// Negative for meshes lit by `pc.ambient`; 0 for those whose colour has the
+// lightmap in it.
 layout(location = 2) out vec2 frag_light;
 // Spherical and cylindrical distance from the camera, for the fog; negative
 // for meshes the fog doesn't touch.
@@ -46,10 +47,13 @@ void main() {
     vec3 relative = in_pos + draw_offset();
     gl_Position = pc.view_proj * vec4(relative, 1.0);
     frag_uv = in_uv;
-    // Light coordinates are level * 16 (vanilla `UV2`); above 240 is the
-    // sentinel for meshes lit by `pc.ambient`.
-    frag_light = in_light.x > 240u ? vec2(-1.0) : vec2(in_light) / 16.0;
-    frag_color = vec4(in_color.rgb, in_color.a * pc.ambient.a);
+    // Light coordinates are level * 16 (vanilla `UV2`), the lightmap taken
+    // into the colour here; above 240 is the sentinel for meshes lit by
+    // `pc.ambient`, which `world.frag` multiplies in.
+    bool lit = in_light.x <= 240u;
+    frag_light = lit ? vec2(0.0) : vec2(-1.0);
+    vec3 light = lit ? sample_lightmap(vec2(in_light) / 16.0) : vec3(1.0);
+    frag_color = vec4(in_color.rgb * light, in_color.a * pc.ambient.a);
     if (pc.view.z == 1.0) {
         frag_fog = fog_distances(relative);
     } else if (pc.view.z == 2.0) {
