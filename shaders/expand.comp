@@ -23,7 +23,7 @@ layout(std430, set = 0, binding = 0) readonly buffer Records {
     uint records[];
 };
 
-// Per visible layer: slot (0-23), cutout (24), groups shown (25-31); then
+// Per visible layer: slot (0-19), cutout (20), groups shown (21-31); then
 // its first command.
 layout(std430, set = 0, binding = 1) readonly buffer Entries {
     uvec2 entries[];
@@ -50,7 +50,7 @@ layout(push_constant) uniform Push {
     uvec4 info;
 } pc;
 
-const uint FACINGS = 7u;
+const uint FACINGS = 11u;
 const uint RECORD_WORDS = 4u + 2u * (1u + FACINGS);
 const uint QUADS_PER_DRAW = 16384u;
 
@@ -77,9 +77,9 @@ void main() {
         return;
     }
     uvec2 entry = entries[i];
-    uint slot = entry.x & 0xFFFFFFu;
-    uint layer = (entry.x >> 24) & 1u;
-    uint shown = entry.x >> 25;
+    uint slot = entry.x & 0xFFFFFu;
+    uint layer = (entry.x >> 20) & 1u;
+    uint shown = entry.x >> 21;
     uint r = slot * RECORD_WORDS;
     ivec3 origin = ivec3(records[r], records[r + 1u], records[r + 2u]);
     vec3 relative = vec3(origin - pc.eye.xyz);

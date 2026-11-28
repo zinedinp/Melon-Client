@@ -34,23 +34,8 @@ melon-net's `Stream`, which `join_stream` takes. What the cut left behind:
 
 ### The renderer onto majestix-vk
 
-Both renderers adopt melon-base's device with `Device::adopt` and take
-their frame ring (`Frames`) and swapchain (`Presenter`) from majestix-vk:
-the game's and the launcher's `Renderer2d`. Through majestix-vk besides:
-melon-render's `blur.rs`, the world's per-frame globals (`globals.rs`),
-the UI's vertices and indices (melon-base's `gfx/ui_vertices.rs`, shared by
-both), the GUI's uniform blocks and their sets (`gfx/gui_uniforms.rs`,
-with a copy of the glint of its own), and the pipeline cache
-(melon-render's `pipeline_cache.rs`, `cache/pipelines.bin`). About 665
-`unsafe` blocks are left: ~450 in melon-render, ~215 in melon-base's `gfx`.
-
-A fixed-size per-frame buffer moves as the globals and the UI vertices did:
-a `Mapped` ring, each slot's set or offset fixed up front from
-`Frames::slots`. Next of those: melon-render's `pack_outline.rs`, one
-buffer for every frame in flight that each frame rewrites while the one
-before may still read it; per-slot ranges end that.
-
-Of the rest, the memory modules go first, as melon-base and majestix-vk
+About 665 `unsafe` blocks are left: ~450 in melon-render, ~215 in
+melon-base's `gfx`. The memory modules go first, as melon-base and majestix-vk
 would otherwise keep two memory managers. In this order, each waiting on one gap in
 majestix-vk (see its section):
 
@@ -79,18 +64,6 @@ Resource packs' chains run as vanilla runs them; shader packs come in the
 OptiFine/Iris format, a Melon shader type (with hardware ray tracing) after
 that.
 
-Done so far (M1, first half):
-- Chains run by id: every `post_effect/*.json` of the packs, with
-  `end_of_frame`, then the server's list (`ClientboundPostEffectsPacket`).
-- The outline chain runs only when an outlined entity is drawn.
-- Chains run after the hand and the outline's blit.
-- Targets: cleared per run (`clear_color`), `persistent` kept, passes load.
-- `Globals` carries the level's `GameTime` and the camera.
-- The pack's outline shader reads a `Mapped` ring: one set per frame slot,
-  each entity at a dynamic offset, up to 1024 a frame (was 64, and raced
-  with the frame in flight).
-
-Open:
 - **The rest of post on majestix-vk.** The chains are on it (images, effect
   textures, one loaded `Pass`, pipelines, sets, barriers; the main depth
   and the swapchain views too). Raw still: the glowing-entity draw and the
@@ -123,12 +96,15 @@ thread:
 
 ### Frame time
 
-CPU ~0.9-1.5 ms a frame at render distance 32 and 4K, the GPU about as
-long in the bench's `rise` and `turn` phases. Next on the GPU: the cutout
-terrain, 0.55-0.6 ms in `rise` and `turn`. Its time follows its primitives
-(~2.6 M in `rise`, as many per millisecond as the solid layer's); with
-both shaders cut to nothing a pass keeps ~80 % of its time, so fewer
-primitives, not cheaper shading, is what is left to win.
+The cutout terrain is the largest GPU pass (0.55-0.6 ms in `rise` and
+`turn`), and its time follows its primitives, not its shading.
+
+- **Upright diagonal facing groups**: the plants' crosses in groups a
+  section leaves out when they face away. Fewer cutout primitives; whether
+  the extra multi-draw commands cost the CPU more needs an A/B on a quiet
+  machine.
+- **Back faces per face, not per section** (a compute pass before the
+  draw), if it costs less than the primitives it saves.
 
 ### Features
 
@@ -242,11 +218,6 @@ Melon calls none of these today.
   the liveness check's cost per command.
 
 ## numerobis
-
-What Melon uses: byte views (`elem::as_bytes`), memory types
-(`Memory::types_for`), shared blocks (`alloc::Block`; 575 live allocations
-down to 63 in the bench), the swapchain's and `format::depth`'s choices,
-the PCI scan, and through majestix-vk the plan and its barriers.
 
 - **Timeline semaphores**, routed by the plan like the barriers: majestix's
   `Frames` waits on fences, submits signal binary semaphores only.

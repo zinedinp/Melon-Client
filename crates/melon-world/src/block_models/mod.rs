@@ -39,6 +39,8 @@ pub struct BakedQuad {
     pub cullface: Option<Direction>,
     /// The way its front faces, if along an axis; `None` for slanted quads.
     pub facing: Option<Direction>,
+    /// Its facing group ([`crate::terrain::facing_group`]).
+    pub group: u8,
     /// The chunk layer it is drawn in.
     pub layer: ChunkLayer,
     /// Its corners' place in [`BlockModels::quad_corners`].
@@ -638,9 +640,11 @@ impl PendingQuad {
             WorldVertex::new(self.corners[i].to_array(), uv, self.color)
                 .with_face(self.shade_face.index() as u8)
         });
+        let group = crate::terrain::facing_group(normal_of(&self.corners));
         let quad = BakedQuad {
             cullface: self.cullface,
-            facing: facing_of(&self.corners),
+            facing: Direction::ALL.get(group).copied(),
+            group: group as u8,
             layer: ChunkLayer::of(self.alpha.judge(&packed.alpha[self.texture])),
             index: 0,
             emission: self.emission,
@@ -651,15 +655,11 @@ impl PendingQuad {
     }
 }
 
-/// The axis direction the counter-clockwise quad `corners` face, if any.
-fn facing_of(corners: &[Vec3; 4]) -> Option<Direction> {
-    let normal = (corners[1] - corners[0])
+/// The way the counter-clockwise quad `corners` faces, unit length.
+fn normal_of(corners: &[Vec3; 4]) -> Vec3 {
+    (corners[1] - corners[0])
         .cross(corners[2] - corners[0])
-        .normalize_or_zero();
-    Direction::ALL.into_iter().find(|direction| {
-        let [x, y, z] = direction.step();
-        normal.dot(Vec3::new(x as f32, y as f32, z as f32)) > 0.999
-    })
+        .normalize_or_zero()
 }
 
 /// A model with its parents merged, and its elements' quads.
@@ -1181,12 +1181,12 @@ mod tests {
         assert_eq!(stone.len(), 6);
         assert!(stone.iter().all(|q| q.cullface.is_some()));
         assert!(stone.iter().all(|q| q.facing == q.cullface));
-        assert!(
-            models
-                .quads(state_of(&Block::SHORT_GRASS))
-                .iter()
-                .all(|q| q.facing.is_none())
-        );
+        let grass = models.quads(state_of(&Block::SHORT_GRASS));
+        assert!(grass.iter().all(|q| q.facing.is_none()));
+        // The cross's two planes, both sides: the four upright diagonals.
+        let mut groups: Vec<u8> = grass.iter().map(|q| q.group).collect();
+        groups.sort_unstable();
+        assert_eq!(groups, [6, 7, 8, 9]);
         assert!(models.quads(0).is_empty());
 
         let slab = models.quads(state_of(&Block::OAK_SLAB));

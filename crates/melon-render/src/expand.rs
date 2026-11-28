@@ -514,14 +514,16 @@ pub(super) mod tests {
             layer_runs(&ends, shown, |a, b| out.push((a, b)));
             out
         };
-        let ends = [2, 2, 5, 7, 7, 9, 12];
+        let ends = [2, 2, 5, 7, 7, 9, 12, 12, 12, 12, 12];
         // Group 1 is empty, so 0 and 2 join; 3 is hidden.
         assert_eq!(runs(ends, 0b111_0101), [(0, 5), (7, 12)]);
         assert_eq!(runs(ends, 0), []);
         assert_eq!(runs(ends, 0x7F), [(0, 12)]);
+        assert_eq!(runs(ends, 0x7FF), [(0, 12)]);
         assert_eq!(layer_draws(&ends, 0b111_0101), (2, 10));
-        let big = [0, 0, 0, 0, 0, 0, QUADS_PER_DRAW * 2 + 1];
-        assert_eq!(layer_draws(&big, 1 << 6), (3, QUADS_PER_DRAW * 2 + 1));
+        let mut big = [0; FACINGS];
+        big[FACINGS - 1] = QUADS_PER_DRAW * 2 + 1;
+        assert_eq!(layer_draws(&big, 1 << (FACINGS - 1)), (3, QUADS_PER_DRAW * 2 + 1));
     }
 
     #[test]
@@ -530,6 +532,9 @@ pub(super) mod tests {
         assert_eq!(draw.slot(), SectionDraw::SLOTS - 1);
         assert!(draw.cutout());
         assert_eq!(draw.shown(), 0x55);
+        let all = SectionDraw::new(SectionDraw::SLOTS - 1, true, (1 << FACINGS) - 1, 0, 1);
+        assert_eq!((all.slot(), all.cutout()), (SectionDraw::SLOTS - 1, true));
+        assert_eq!(all.shown(), (1 << FACINGS) - 1);
         assert!(!SectionDraw::new(5, false, 0x7F, 0, 1).cutout());
     }
 
@@ -539,13 +544,13 @@ pub(super) mod tests {
             origin: glam::IVec3::new(-32, -64, 48),
             bottom: 80,
             layers: [
-                Some((QuadMeshId(1), [1, 2, 3, 4, 5, 6, 7])),
+                Some((QuadMeshId(1), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])),
                 Some((QuadMeshId(2), [7; FACINGS])),
             ],
         };
         let words = record_words(&record, |mesh| (mesh.0 == 1).then_some(100));
         assert_eq!(words[..4], [(-32i32).cast_unsigned(), (-64i32).cast_unsigned(), 48, 80]);
-        assert_eq!(words[4..12], [100, 1, 2, 3, 4, 5, 6, 7]);
-        assert_eq!(words[12..], [0; 8], "the cutout mesh is gone");
+        assert_eq!(words[4..16], [100, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        assert_eq!(words[16..], [0; 12], "the cutout mesh is gone");
     }
 }

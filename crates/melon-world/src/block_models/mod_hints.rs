@@ -42,6 +42,7 @@ mod tests {
         BakedQuad {
             cullface: Some(Direction::Up),
             facing: Some(Direction::Up),
+            group: Direction::Up.index() as u8,
             layer,
             index: 7,
             emission: 0,

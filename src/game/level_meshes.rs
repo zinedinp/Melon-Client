@@ -1260,24 +1260,24 @@ pub struct SectionCount {
 }
 
 /// Whether some face of facing group `group` in section `y` of the chunk at `origin` can face
-/// `eye`.
+/// `eye`: whether `eye` lies past the plane along the group's normal through the section's
+/// corner nearest it. The diagonals' box is a block wider: a plant's offset moves it out of
+/// its block.
 fn faces_camera(group: usize, origin: DVec3, y: usize, eye: DVec3, min_y: i32) -> bool {
+    let Some(&[x, y_step, z]) = terrain::GROUP_NORMALS.get(group) else {
+        return true;
+    };
+    let margin = if group < Direction::ALL.len() { 0.0 } else { 1.0 };
     let size = f64::from(SECTION_SIZE);
     let min = DVec3::new(
         origin.x,
         f64::from(min_y + y as i32 * SECTION_SIZE),
         origin.z,
-    );
-    let max = min + DVec3::splat(size);
-    let Some(direction) = Direction::ALL.get(group) else {
-        return true;
-    };
-    let axis = direction.axis();
-    if direction.is_positive() {
-        eye[axis] > min[axis]
-    } else {
-        eye[axis] < max[axis]
-    }
+    ) - margin;
+    let max = min + (size + 2.0 * margin);
+    let normal = DVec3::new(f64::from(x), f64::from(y_step), f64::from(z));
+    let nearest = (normal * min).min(normal * max);
+    normal.dot(eye) > nearest.x + nearest.y + nearest.z
 }
 
 /// A vertex list on the GPU, uploaded again only when it changed.

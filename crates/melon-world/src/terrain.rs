@@ -5,7 +5,6 @@ use std::ops::Range;
 use glam::{DVec3, Vec3};
 use melon_core::math::{radix, section_to_block};
 
-use crate::block::direction::Direction;
 use crate::block::offset;
 use crate::block::skip_rendering;
 use crate::block::state_flags;
@@ -104,10 +103,37 @@ impl<'a> Neighborhood<'a> {
     }
 }
 
-/// Facing groups a layer's quads are sorted into.
-pub const FACINGS: usize = 7;
-/// The group of quads not along an axis (plants' crosses, fluid surfaces).
-pub const SLANTED: usize = 6;
+/// Facing groups a layer's quads are sorted into: the six directions (in
+/// [`Direction`] order), the four upright diagonals (plants' crosses), then
+/// [`SLANTED`]. A section leaves out the groups that all face away.
+pub const FACINGS: usize = 11;
+/// The group of the quads in no other (fluid surfaces, tilted parts).
+pub const SLANTED: usize = 10;
+
+/// The way each group but [`SLANTED`] faces, not to scale.
+pub const GROUP_NORMALS: [[i32; 3]; SLANTED] = [
+    [0, -1, 0],
+    [0, 1, 0],
+    [0, 0, -1],
+    [0, 0, 1],
+    [-1, 0, 0],
+    [1, 0, 0],
+    [1, 0, 1],
+    [-1, 0, 1],
+    [1, 0, -1],
+    [-1, 0, -1],
+];
+
+/// The group of a quad whose front faces along unit `normal`.
+pub fn facing_group(normal: Vec3) -> usize {
+    GROUP_NORMALS
+        .iter()
+        .position(|&[x, y, z]| {
+            let along = Vec3::new(x as f32, y as f32, z as f32).normalize();
+            normal.dot(along) > 0.999
+        })
+        .unwrap_or(SLANTED)
+}
 
 /// One layer of a section.
 pub struct LayerMesh<T = TerrainQuad> {
@@ -598,8 +624,7 @@ fn fill_section(
                             continue;
                         }
                         let layer = &mut quad_builders[chunk_layer as usize];
-                        let group = quad.facing.map_or(SLANTED, Direction::index);
-                        layer.groups[group].push(terrain);
+                        layer.groups[usize::from(quad.group)].push(terrain);
                     }
                 });
                 if fluid.is_some() {
@@ -722,6 +747,19 @@ pub fn test_models() -> Option<(&'static std::sync::Arc<BlockModels>, FluidSprit
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::block::direction::Direction;
+
+    #[test]
+    fn the_first_groups_are_the_directions_and_the_rest_upright_diagonals() {
+        for direction in Direction::ALL {
+            assert_eq!(GROUP_NORMALS[direction.index()], direction.step());
+            let [x, y, z] = direction.step().map(|v| v as f32);
+            assert_eq!(facing_group(Vec3::new(x, y, z)), direction.index());
+        }
+        let diagonal = Vec3::new(-1.0, 0.0, 1.0).normalize();
+        assert_eq!(GROUP_NORMALS[facing_group(diagonal)], [-1, 0, 1]);
+        assert_eq!(facing_group(Vec3::new(1.0, 1.0, 0.0).normalize()), SLANTED);
+    }
     use crate::mesh::CornerLight;
 
     const STONE: u16 = 1;

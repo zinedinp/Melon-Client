@@ -430,8 +430,8 @@ impl ChunkDraw {
 /// from the section's record ([`crate::Renderer::set_section_record`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SectionDraw {
-    /// The record's slot (bits 0-23), the layer (bit 24 set for cutout)
-    /// and the facing groups drawn (bits 25-31), as `expand.comp` reads it.
+    /// The record's slot (bits 0-19), the layer (bit 20 set for cutout)
+    /// and the facing groups drawn (bits 21-31), as `expand.comp` reads it.
     pub word: u32,
     /// The quad block the layer's mesh is in ([`crate::Renderer::quad_block`]).
     pub block: u16,
@@ -441,12 +441,12 @@ pub struct SectionDraw {
 
 impl SectionDraw {
     /// Most record slots there can be.
-    pub const SLOTS: u32 = 1 << 24;
+    pub const SLOTS: u32 = 1 << 20;
 
     pub fn new(slot: u32, cutout: bool, shown: u32, block: u16, draws: u16) -> Self {
-        debug_assert!(slot < Self::SLOTS && shown < 1 << 7);
+        debug_assert!(slot < Self::SLOTS && shown < 1 << melon_world::terrain::FACINGS);
         Self {
-            word: slot | u32::from(cutout) << 24 | shown << 25,
+            word: slot | u32::from(cutout) << 20 | shown << 21,
             block,
             draws,
         }
@@ -457,12 +457,12 @@ impl SectionDraw {
     }
 
     pub fn cutout(self) -> bool {
-        self.word >> 24 & 1 != 0
+        self.word >> 20 & 1 != 0
     }
 
     /// Bit per facing group: whether it is drawn.
     pub fn shown(self) -> u32 {
-        self.word >> 25
+        self.word >> 21
     }
 }
 
