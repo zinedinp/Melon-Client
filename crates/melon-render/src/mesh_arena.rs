@@ -227,6 +227,19 @@ impl MeshArena {
         (block.buffer, slot.offset)
     }
 
+    /// The block a slot is in and its first element there.
+    pub fn place(slot: Slot) -> (u32, u32) {
+        (slot.block, slot.offset)
+    }
+
+    /// Block `block`'s buffer, while it lives.
+    pub fn block_buffer(&self, block: u32) -> Option<vk::Buffer> {
+        self.blocks
+            .get(block as usize)
+            .and_then(Option::as_ref)
+            .map(|block| block.buffer)
+    }
+
     /// Whether the slot's block is mapped, so uploads into it are written
     /// directly.
     #[cfg(test)]

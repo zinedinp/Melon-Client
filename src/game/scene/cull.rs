@@ -88,7 +88,9 @@ impl InWorld {
         self.profiler.mark("cull caves");
         self.meshes.resort(renderer, camera.position);
         self.profiler.mark("cull resort");
-        let chunks = self.meshes.visible_sections(&culler);
+        let chunks = self
+            .meshes
+            .visible_sections(&culler, renderer.expands_terrain());
         self.profiler.mark("cull sections");
 
         let block_entities = self.block_entity_meshes.update(

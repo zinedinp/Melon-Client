@@ -134,6 +134,15 @@ pub(super) unsafe fn create(
         world: world(Mode::Opaque)?,
         translucent: world(Mode::Translucent)?,
         translucent_terrain: world(Mode::TranslucentTerrain)?,
+        translucent_terrain_indirect: if multi_draw {
+            Some(in_pass(
+                render_pass,
+                Mode::TranslucentTerrain,
+                Geometry::IndirectVertices,
+            )?)
+        } else {
+            None
+        },
         lightning: world(Mode::Lightning)?,
         energy_swirl: world(Mode::EnergySwirl)?,
         scrolled: world(Mode::Scrolled)?,

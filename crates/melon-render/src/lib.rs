@@ -8,6 +8,7 @@
 mod blur;
 mod capture;
 mod context;
+pub mod expand;
 mod frame;
 mod globals;
 mod gpu_timer;
@@ -41,8 +42,8 @@ use vk_util::{
 
 pub use frame::{
     Blending, Blur, CelestialDraw, ChunkDraw, CloudDraw, EntityDraw, Frame, Glint, LineDraw,
-    LineStyle, ParticleDraw, QuadCorner, RenderLayer, SceneFrame, SectionCull, Sky, SkyKind,
-    TerrainMesh, WeatherDraw, WorldDraw,
+    LineStyle, ParticleDraw, QuadCorner, RenderLayer, SceneFrame, SectionCull, SectionDraw,
+    SectionRecord, Sky, SkyKind, TerrainMesh, WeatherDraw, WorldDraw,
 };
 
 use ash::vk;
@@ -142,6 +143,8 @@ pub struct Renderer {
     indirect: Option<indirect::DrawBuffers>,
     /// Occlusion culling of those multi-draws; `None` without them, or when turned off.
     occlusion: Option<occlusion::Occlusion>,
+    /// Their expansion per visible section on the GPU; `None` without them, or when turned off.
+    expand: Option<expand::Expand>,
     /// A set per terrain mesh buffer, binding it for the shader (set 4).
     quad_sets: quad_table::QuadSets,
     /// The fog and the dimension's light, per frame in flight.
@@ -202,6 +205,8 @@ struct Pipelines {
     translucent: pipeline::Pass,
     /// The blended variant that writes depth, for translucent terrain.
     translucent_terrain: pipeline::Pass,
+    /// Its multi-draw variant; `None` without multi-draws.
+    translucent_terrain_indirect: Option<pipeline::Pass>,
     /// Added on: lightning bolts.
     lightning: pipeline::Pass,
     /// Slid and added on: charged creepers, the wither's armor.
@@ -418,6 +423,9 @@ impl Drop for Renderer {
             if let Some(occlusion) = &mut self.occlusion {
                 occlusion.destroy(&self.device);
             }
+            if let Some(expand) = &mut self.expand {
+                expand.destroy(&self.device);
+            }
             self.globals.destroy();
             self.gui_uniforms.destroy();
             if let Some(table) = self.quad_table.take() {
@@ -461,6 +469,9 @@ impl Drop for Renderer {
             self.pipelines.world.destroy(&self.device);
             self.pipelines.translucent.destroy(&self.device);
             self.pipelines.translucent_terrain.destroy(&self.device);
+            if let Some(pass) = &self.pipelines.translucent_terrain_indirect {
+                pass.destroy(&self.device);
+            }
             self.pipelines.lightning.destroy(&self.device);
             self.pipelines.energy_swirl.destroy(&self.device);
             self.pipelines.scrolled.destroy(&self.device);

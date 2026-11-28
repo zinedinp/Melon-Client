@@ -1,4 +1,5 @@
-//! The terrain's quad draws as indirect multi-draws.
+//! The terrain's quad draws as indirect multi-draws, and the translucent
+//! sections' sorted index lists the same way.
 
 use ash::vk;
 use melon_base::gfx::mapped::MappedBuffer;
@@ -6,7 +7,8 @@ use numerobis::elem::Pod;
 
 use super::mesh_arena::{self, MeshArena};
 use super::vk_util::Place;
-use super::{ChunkDraw, TerrainMesh, WorldDraw};
+use super::{ChunkDraw, SectionDraw, TerrainMesh, WorldDraw};
+use melon_world::mesh::wide_indices;
 
 /// `VkDrawIndexedIndirectCommand` as a `Pod` (ash's own type can't be one here).
 #[repr(C)]
@@ -82,8 +84,16 @@ struct FrameDraws {
     run_table: Mapped,
     /// Per run, phase 1's and phase 2's draw counts.
     counts: Mapped,
+    /// The layers `expand.comp` expands, and where each one's draws go.
+    entries: Mapped,
     capacity: u32,
     set: vk::DescriptorSet,
+    /// The translucent sections' commands and offsets, and the set
+    /// binding the offsets.
+    sorted: Mapped,
+    sorted_offsets: Mapped,
+    sorted_capacity: u32,
+    sorted_set: vk::DescriptorSet,
 }
 
 /// The buffers [`DrawBuffers::culling_buffers`] hands out.
@@ -105,11 +115,22 @@ impl FrameDraws {
             &mut self.keep,
             &mut self.run_table,
             &mut self.counts,
+            &mut self.entries,
         ] {
             // SAFETY: made by this device, and no frame in flight uses it any more.
             unsafe { mapped.destroy(device) };
         }
         self.capacity = 0;
+    }
+
+    /// The translucent draws' buffers, which grow on their own.
+    unsafe fn destroy_sorted(&mut self, device: &ash::Device) {
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe {
+            self.sorted.destroy(device);
+            self.sorted_offsets.destroy(device);
+        }
+        self.sorted_capacity = 0;
     }
 }
 
@@ -136,6 +157,20 @@ pub(super) struct Run {
     pub count: u32,
 }
 
+/// Translucent draws in a row from one vertex buffer and one index buffer:
+/// one `cmd_draw_indexed_indirect`, in their far to near order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct SortedRun {
+    pub vertices: vk::Buffer,
+    pub indices: vk::Buffer,
+    pub kind: vk::IndexType,
+    pub first: u32,
+    pub count: u32,
+}
+
+/// The arenas the gathered draws are found in: quads, vertices, index lists.
+pub(super) type Arenas<'a> = (&'a MeshArena, &'a MeshArena, &'a MeshArena);
+
 /// The terrain passes that draw indirect.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Pass {
@@ -161,6 +196,19 @@ struct Gathered {
     places: Vec<u32>,
     /// The world's [`super::WorldDraw::section_slots`].
     slots: u32,
+    /// The [`SectionDraw`]s as `expand.comp` reads them: the word, and
+    /// where its draws start. They follow the gathered `commands`.
+    entries: Vec<[u32; 2]>,
+    /// The draws, gathered and expanded.
+    total: u32,
+    /// The camera's block.
+    eye: glam::IVec3,
+    /// The translucent draws as multi-draws; `sorted_ready` once they hold
+    /// the whole translucent list.
+    sorted: Vec<DrawCommand>,
+    sorted_offsets: Vec<[f32; 4]>,
+    sorted_runs: Vec<SortedRun>,
+    sorted_ready: bool,
 }
 
 impl Gathered {
@@ -169,6 +217,12 @@ impl Gathered {
         self.offsets.clear();
         self.bounds.clear();
         self.slots = 0;
+        self.entries.clear();
+        self.total = 0;
+        self.sorted.clear();
+        self.sorted_offsets.clear();
+        self.sorted_runs.clear();
+        self.sorted_ready = false;
         for runs in &mut self.runs {
             runs.clear();
         }
@@ -308,20 +362,22 @@ impl DrawBuffers {
         frames: usize,
         layout: vk::DescriptorSetLayout,
     ) -> anyhow::Result<Self> {
+        // Per frame: the quads' offsets, the translucent draws'.
+        let sets = 2 * frames as u32;
         let sizes = [vk::DescriptorPoolSize {
             ty: vk::DescriptorType::STORAGE_BUFFER,
-            descriptor_count: frames as u32,
+            descriptor_count: sets,
         }];
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let pool = unsafe {
             device.create_descriptor_pool(
                 &vk::DescriptorPoolCreateInfo::default()
                     .pool_sizes(&sizes)
-                    .max_sets(frames as u32),
+                    .max_sets(sets),
                 None,
             )
         }?;
-        let layouts = vec![layout; frames];
+        let layouts = vec![layout; 2 * frames];
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let sets = unsafe {
             device.allocate_descriptor_sets(
@@ -330,13 +386,16 @@ impl DrawBuffers {
                     .set_layouts(&layouts),
             )
         }?;
+        let (offsets, sorted) = sets.split_at(frames);
         Ok(Self {
             pool,
             gathered: Gathered::default(),
-            frames: sets
-                .into_iter()
-                .map(|set| FrameDraws {
+            frames: offsets
+                .iter()
+                .zip(sorted)
+                .map(|(&set, &sorted_set)| FrameDraws {
                     set,
+                    sorted_set,
                     ..FrameDraws::default()
                 })
                 .collect(),
@@ -351,6 +410,8 @@ impl DrawBuffers {
         frame: usize,
         draws: u32,
     ) -> anyhow::Result<()> {
+        // SAFETY: the caller's promise, passed on.
+        unsafe { self.prepare_sorted(device, mem_props, frame) }?;
         let slot = &mut self.frames[frame];
         if draws <= slot.capacity {
             return Ok(());
@@ -376,6 +437,9 @@ impl DrawBuffers {
         slot.run_table = unsafe { Mapped::new(device, mem_props, capacity_64 * 8, storage) }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         slot.counts = unsafe { Mapped::new(device, mem_props, 2 * capacity_64 * 4, indirect) }?;
+        // Each expanded layer has a draw at least.
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        slot.entries = unsafe { Mapped::new(device, mem_props, capacity_64 * 8, storage) }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
         slot.offsets = unsafe {
             Mapped::new(
@@ -411,6 +475,76 @@ impl DrawBuffers {
             )
         };
         Ok(())
+    }
+
+    /// Room for the gathered translucent draws in frame slot `frame`.
+    unsafe fn prepare_sorted(
+        &mut self,
+        device: &ash::Device,
+        mem_props: &vk::PhysicalDeviceMemoryProperties,
+        frame: usize,
+    ) -> anyhow::Result<()> {
+        let draws = self.gathered.sorted.len() as u32;
+        let slot = &mut self.frames[frame];
+        if draws <= slot.sorted_capacity {
+            return Ok(());
+        }
+        let capacity = draws.next_power_of_two().max(MIN_DRAWS);
+        // SAFETY: made by this device, and no frame in flight uses it any more.
+        unsafe { slot.destroy_sorted(device) };
+        let capacity_64 = u64::from(capacity);
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        slot.sorted = unsafe {
+            Mapped::new(
+                device,
+                mem_props,
+                capacity_64 * u64::from(COMMAND_SIZE),
+                vk::BufferUsageFlags::INDIRECT_BUFFER,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        slot.sorted_offsets = unsafe {
+            Mapped::new(
+                device,
+                mem_props,
+                capacity_64 * u64::from(OFFSET_SIZE),
+                vk::BufferUsageFlags::STORAGE_BUFFER,
+            )
+        }?;
+        slot.sorted_capacity = capacity;
+        let info = [vk::DescriptorBufferInfo::default()
+            .buffer(slot.sorted_offsets.buffer())
+            .offset(0)
+            .range(vk::WHOLE_SIZE)];
+        // SAFETY: frame `frame`'s fence signalled, so no command buffer in flight binds its set.
+        unsafe {
+            device.update_descriptor_sets(
+                &[vk::WriteDescriptorSet::default()
+                    .dst_set(slot.sorted_set)
+                    .dst_binding(0)
+                    .descriptor_type(vk::DescriptorType::STORAGE_BUFFER)
+                    .buffer_info(&info)],
+                &[],
+            )
+        };
+        Ok(())
+    }
+
+    /// Whether the translucent list was gathered whole into
+    /// [`Self::sorted_runs`], so they draw it in its order.
+    pub fn sorted_ready(&self) -> bool {
+        self.gathered.sorted_ready
+    }
+
+    /// The translucent multi-draws, far to near.
+    pub fn sorted_runs(&self) -> &[SortedRun] {
+        &self.gathered.sorted_runs
+    }
+
+    /// Frame `frame`'s translucent commands, and the set binding their offsets.
+    pub fn sorted(&self, frame: usize) -> (vk::Buffer, vk::DescriptorSet) {
+        let slot = &self.frames[frame];
+        (slot.sorted.buffer(), slot.sorted_set)
     }
 
     /// The set binding frame `frame`'s offsets.
@@ -463,15 +597,20 @@ impl DrawBuffers {
         self.gathered.slots
     }
 
-    /// Gathers the quad meshes of `world`'s solid and cutout passes, before
-    /// the frame's slot is free: it reads only the CPU's own state.
-    pub fn gather(&mut self, world: &WorldDraw, meshes: &MeshArena) {
+    /// Gathers the quad meshes of `world`'s solid and cutout passes and its
+    /// translucent sections, before the frame's slot is free: it reads only
+    /// the CPU's own state.
+    pub fn gather(&mut self, world: &WorldDraw, (meshes, vertices, indices): Arenas<'_>) {
         let gathered = &mut self.gathered;
         gathered.clear();
         gathered.slots = world.section_slots;
+        gathered.eye = world.eye.floor().as_ivec3();
         for (pass, chunks) in [(Pass::Solid, &world.chunks), (Pass::Cutout, &world.cutout)] {
             gather_pass(gathered, pass, world, chunks, meshes);
         }
+        gathered.total = gathered.commands.len() as u32;
+        gather_sections(gathered, &world.sections, |block| meshes.block_buffer(block));
+        gather_sorted(gathered, world, vertices, indices);
     }
 
     /// Forgets what was gathered, for a frame without a world.
@@ -479,9 +618,25 @@ impl DrawBuffers {
         self.gathered.clear();
     }
 
-    /// How many draws were gathered, the room [`Self::prepare`] needs.
+    /// How many draws were gathered and are expanded, the room [`Self::prepare`] needs.
     pub fn gathered(&self) -> u32 {
-        self.gathered.commands.len() as u32
+        self.gathered.total
+    }
+
+    /// The layers `expand.comp` expands this frame, and the camera's block.
+    pub fn expanding(&self) -> (u32, glam::IVec3) {
+        (self.gathered.entries.len() as u32, self.gathered.eye)
+    }
+
+    /// Frame `frame`'s buffers `expand.comp` reads and writes.
+    pub fn expand_buffers(&self, frame: usize) -> super::expand::ExpandBuffers {
+        let slot = &self.frames[frame];
+        super::expand::ExpandBuffers {
+            entries: slot.entries.buffer(),
+            commands: slot.commands.buffer(),
+            offsets: slot.offsets.buffer(),
+            bounds: slot.bounds.buffer(),
+        }
     }
 
     /// The runs pass `pass` draws.
@@ -495,25 +650,37 @@ impl DrawBuffers {
     pub unsafe fn upload(&self, frame: usize, culling: bool) {
         let slot = &self.frames[frame];
         let gathered = &self.gathered;
-        let (Some(commands), Some(offsets), Some(bounds), Some(run_table)) = (
+        let (Some(commands), Some(offsets), Some(bounds), Some(run_table), Some(entries)) = (
             &slot.commands.0,
             &slot.offsets.0,
             &slot.bounds.0,
             &slot.run_table.0,
+            &slot.entries.0,
         ) else {
             return;
         };
-        let count = gathered.commands.len().min(slot.capacity as usize);
-        debug_assert_eq!(count, gathered.commands.len(), "prepared too small");
+        let capacity = slot.capacity as usize;
+        debug_assert!(gathered.total as usize <= capacity, "prepared too small");
+        let count = gathered.commands.len().min(capacity);
+        let expanded = gathered.entries.len().min(capacity);
         // SAFETY: this frame's fence was waited on (this fn's contract), so the GPU is off its buffers.
         unsafe {
             commands.write(0, &gathered.commands[..count]);
             offsets.write(0, &gathered.offsets[..count]);
+            entries.write(0, &gathered.entries[..expanded]);
+        }
+        if let (Some(sorted), Some(sorted_offsets)) = (&slot.sorted.0, &slot.sorted_offsets.0) {
+            let count = gathered.sorted.len().min(slot.sorted_capacity as usize);
+            // SAFETY: as above.
+            unsafe {
+                sorted.write(0, &gathered.sorted[..count]);
+                sorted_offsets.write(0, &gathered.sorted_offsets[..count]);
+            }
         }
         if !culling {
             return;
         }
-        for (i, run) in gathered.runs.iter().flatten().enumerate().take(count) {
+        for (i, run) in gathered.runs.iter().flatten().enumerate().take(capacity) {
             // SAFETY: as above.
             unsafe { run_table.write_one(i * 8, &[run.first, run.count]) };
         }
@@ -525,11 +692,123 @@ impl DrawBuffers {
         self.gathered = Gathered::default();
         for slot in &mut self.frames {
             // SAFETY: made by this device, and no frame in flight uses it any more.
-            unsafe { slot.destroy(device) };
+            unsafe {
+                slot.destroy(device);
+                slot.destroy_sorted(device);
+            }
         }
         // SAFETY: made by this device, and no frame in flight uses it any more.
         unsafe { device.destroy_descriptor_pool(self.pool, None) };
     }
+}
+
+/// Each pass's expanded layers after the gathered draws, grouped by quad
+/// block (in block order) so each block is one run, near to far within;
+/// each entry learns where its draws start.
+fn gather_sections(
+    gathered: &mut Gathered,
+    sections: &[SectionDraw],
+    buffer_of: impl Fn(u32) -> Option<vk::Buffer>,
+) {
+    for (pass, cutout) in [(Pass::Solid, false), (Pass::Cutout, true)] {
+        let layer = || sections.iter().filter(move |s| s.cutout() == cutout);
+        let places = &mut gathered.places;
+        places.clear();
+        for section in layer() {
+            let block = usize::from(section.block);
+            if places.len() <= block {
+                places.resize(block + 1, 0);
+            }
+            places[block] += u32::from(section.draws);
+        }
+        let mut first = gathered.total;
+        for (block, place) in places.iter_mut().enumerate() {
+            let count = std::mem::replace(place, first);
+            if count == 0 {
+                continue;
+            }
+            let buffer = buffer_of(block as u32);
+            debug_assert!(buffer.is_some(), "a drawn layer's block is kept");
+            if let Some(buffer) = buffer {
+                gathered.runs[pass as usize].push(Run {
+                    buffer,
+                    first,
+                    count,
+                });
+            }
+            first += count;
+        }
+        for section in layer() {
+            let at = &mut places[usize::from(section.block)];
+            gathered.entries.push([section.word, *at]);
+            *at += u32::from(section.draws);
+        }
+        gathered.total = first;
+    }
+}
+
+/// `world`'s translucent sections as multi-draws in their order (far to
+/// near), each through its own sorted index list; a run per stretch that
+/// shares its buffers. Only a list of sorted meshes alone is gathered.
+fn gather_sorted(
+    gathered: &mut Gathered,
+    world: &WorldDraw,
+    vertices: &MeshArena,
+    indices: &MeshArena,
+) {
+    let all_sorted = world
+        .translucent
+        .iter()
+        .all(|chunk| matches!(chunk.mesh, TerrainMesh::Sorted { .. }));
+    if !all_sorted {
+        return;
+    }
+    for chunk in &world.translucent {
+        let TerrainMesh::Sorted {
+            vertices: mesh,
+            indices: list,
+        } = chunk.mesh
+        else {
+            continue;
+        };
+        let (Some(mesh), Some(list)) = (vertices.slot(mesh.0), indices.slot(list.0)) else {
+            continue;
+        };
+        let (vertex_buffer, base) = vertices.location(mesh);
+        let (index_buffer, words) = indices.location(list);
+        let (kind, first_index) = if wide_indices(mesh.count) {
+            (vk::IndexType::UINT32, words)
+        } else {
+            (vk::IndexType::UINT16, words * 2)
+        };
+        let index = gathered.sorted.len() as u32;
+        gathered.sorted.push(DrawCommand {
+            index_count: mesh.count / 4 * 6,
+            instance_count: 1,
+            first_index,
+            vertex_offset: base as i32,
+            // `world.vert` finds the draw's offset by it.
+            first_instance: index,
+        });
+        gathered
+            .sorted_offsets
+            .push(world.offset(chunk.origin).extend(0.0).to_array());
+        match gathered.sorted_runs.last_mut() {
+            Some(run)
+                if (run.vertices, run.indices, run.kind) == (vertex_buffer, index_buffer, kind) =>
+            {
+                run.count += 1;
+            }
+            _ => gathered.sorted_runs.push(SortedRun {
+                vertices: vertex_buffer,
+                indices: index_buffer,
+                kind,
+                first: index,
+                count: 1,
+            }),
+        }
+    }
+    gathered.sorted_ready = true;
 }
 
 /// One pass's draws, in the order of `chunks`.
@@ -696,6 +975,47 @@ mod tests {
                 .enumerate()
                 .all(|(i, c)| c.first_instance == i as u32)
         );
+    }
+
+    /// Each pass's layers after the gathered draws, a run per block in block
+    /// order, near to far within it; each entry knows where its draws start.
+    #[test]
+    fn expanded_layers_are_placed_by_block_after_the_gathered_draws() {
+        let mut gathered = Gathered::default();
+        gathered.queue(vk::Buffer::from_raw(9), command(), [0.0; 3], [0.0; 4]);
+        gathered.finish(Pass::Solid);
+        gathered.total = gathered.commands.len() as u32;
+        let draw = |slot, cutout, block, draws| SectionDraw::new(slot, cutout, 1, block, draws);
+        let sections = [
+            draw(0, false, 2, 3),
+            draw(1, true, 0, 1),
+            draw(2, false, 0, 2),
+            draw(3, false, 2, 1),
+            draw(4, true, 0, 4),
+        ];
+        let buffer = |block: u32| Some(vk::Buffer::from_raw(100 + u64::from(block)));
+        gather_sections(&mut gathered, &sections, buffer);
+        let entry = |s: SectionDraw, at| [s.word, at];
+        // Solid: block 0 (slot 2) at 1, then block 2 (slots 0, 3) at 3;
+        // cutout's block 0 (slots 1, 4) after.
+        assert_eq!(
+            gathered.entries,
+            [
+                entry(sections[0], 3),
+                entry(sections[2], 1),
+                entry(sections[3], 6),
+                entry(sections[1], 7),
+                entry(sections[4], 8),
+            ]
+        );
+        let run = |block: u64, first, count| Run {
+            buffer: vk::Buffer::from_raw(100 + block),
+            first,
+            count,
+        };
+        assert_eq!(gathered.runs[Pass::Solid as usize][1..], [run(0, 1, 2), run(2, 3, 4)]);
+        assert_eq!(gathered.runs[Pass::Cutout as usize], [run(0, 7, 5)]);
+        assert_eq!(gathered.total, 12);
     }
 
     #[test]

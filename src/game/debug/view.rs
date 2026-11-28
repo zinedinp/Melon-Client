@@ -39,6 +39,8 @@ pub struct DebugView {
     /// The GUI scale, which sizes the 3D crosshair (`guiScale`).
     pub gui_scale: f32,
     mesh: GizmoMesh,
+    /// The last frame's gizmos, kept for their room.
+    gizmos: Gizmos,
     /// The 3D crosshair, drawn after the hand.
     crosshair: GizmoMesh,
     path: Option<PathBuf>,
@@ -137,7 +139,8 @@ impl InWorld {
             self.debug_view.mesh.release(renderer);
             return;
         }
-        let mut gizmos = Gizmos::default();
+        let mut gizmos = std::mem::take(&mut self.debug_view.gizmos);
+        gizmos.clear();
         if hitboxes {
             self.hitbox_gizmos(&mut gizmos, visible, partial);
         }
@@ -162,6 +165,7 @@ impl InWorld {
             out,
             lines,
         );
+        self.debug_view.gizmos = gizmos;
     }
 
     /// `DebugCrosshairRenderer`.

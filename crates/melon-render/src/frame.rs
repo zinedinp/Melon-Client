@@ -317,6 +317,9 @@ pub struct WorldDraw {
     pub cutout: Vec<ChunkDraw>,
     /// Their translucent layer, far to near.
     pub translucent: Vec<ChunkDraw>,
+    /// The solid and cutout quads the GPU expands into draws, near to far
+    /// (`expand.rs`); `chunks` and `cutout` then hold no quad meshes.
+    pub sections: Vec<SectionDraw>,
     pub atlas: TextureId,
     /// Translate by `-cam_pos` then rotate (vanilla `Camera` order).
     pub view: Mat4,
@@ -419,6 +422,58 @@ impl ChunkDraw {
             TerrainMesh::Vertices(_) | TerrainMesh::Sorted { .. } => len,
         }
     }
+}
+
+/// A section's solid or cutout quads, expanded into their draws on the GPU
+/// from the section's record ([`crate::Renderer::set_section_record`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SectionDraw {
+    /// The record's slot (bits 0-23), the layer (bit 24 set for cutout)
+    /// and the facing groups drawn (bits 25-31), as `expand.comp` reads it.
+    pub word: u32,
+    /// The quad block the layer's mesh is in ([`crate::Renderer::quad_block`]).
+    pub block: u16,
+    /// How many draws it expands to ([`crate::expand::layer_draws`]).
+    pub draws: u16,
+}
+
+impl SectionDraw {
+    /// Most record slots there can be.
+    pub const SLOTS: u32 = 1 << 24;
+
+    pub fn new(slot: u32, cutout: bool, shown: u32, block: u16, draws: u16) -> Self {
+        debug_assert!(slot < Self::SLOTS && shown < 1 << 7);
+        Self {
+            word: slot | u32::from(cutout) << 24 | shown << 25,
+            block,
+            draws,
+        }
+    }
+
+    pub fn slot(self) -> u32 {
+        self.word & (Self::SLOTS - 1)
+    }
+
+    pub fn cutout(self) -> bool {
+        self.word >> 24 & 1 != 0
+    }
+
+    /// Bit per facing group: whether it is drawn.
+    pub fn shown(self) -> u32 {
+        self.word >> 25
+    }
+}
+
+/// What the GPU keeps of a section with solid or cutout quads, to expand
+/// its [`SectionDraw`]s from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SectionRecord {
+    /// Where its quads' positions count from: the column's corner at the world's bottom.
+    pub origin: glam::IVec3,
+    /// Its bottom, in blocks above `origin`.
+    pub bottom: i32,
+    /// Its solid then cutout quads, and where each facing group ends among them.
+    pub layers: [Option<(QuadMeshId, [u32; melon_world::terrain::FACINGS])>; 2],
 }
 
 /// A chunk mesh.
@@ -554,6 +609,7 @@ mod tests {
             chunks: Vec::new(),
             cutout: Vec::new(),
             translucent: Vec::new(),
+            sections: Vec::new(),
             atlas: melon_base::gfx::TextureId(0),
             view: Mat4::IDENTITY,
             eye: glam::DVec3::new(1234.567, 70.31, -987.654),

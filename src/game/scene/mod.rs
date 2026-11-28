@@ -115,6 +115,7 @@ impl InWorld {
                 chunks: chunks.solid,
                 cutout: chunks.cutout,
                 translucent: chunks.translucent,
+                sections: chunks.sections,
                 atlas: assets.atlas,
                 view: camera.view,
                 eye: camera.position,
@@ -161,8 +162,10 @@ impl InWorld {
     /// Takes back a drawn [`SceneFrame`], so the next frame reuses its buffers.
     pub fn recycle(&mut self, scene: SceneFrame) {
         if let Some(world) = scene.world {
-            self.meshes
-                .recycle(world.chunks, world.cutout, world.translucent);
+            self.meshes.recycle(
+                (world.chunks, world.cutout, world.translucent),
+                world.sections,
+            );
         }
         self.spare_entities = scene.entities;
         self.spare_particles = scene.particles;

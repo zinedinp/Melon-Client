@@ -119,6 +119,12 @@ impl Renderer {
         } else {
             None
         };
+        let expand = if indirect.is_some() && super::expand::wanted() {
+            // SAFETY: `device` is live, and the infos name only its own live handles.
+            Some(unsafe { super::expand::Expand::new(&device, MAX_FRAMES_IN_FLIGHT) }?)
+        } else {
+            None
+        };
         // SAFETY: `device` is live, and the infos name only its own live handles.
         let pipelines = unsafe {
             pipelines::create(
@@ -261,6 +267,7 @@ impl Renderer {
             gpu_timer,
             indirect,
             occlusion,
+            expand,
             quad_sets,
             globals,
             recording: crate::record::Recording::new(),
@@ -272,7 +279,15 @@ impl Renderer {
         renderer.swapchain.depth_sampled = renderer.occlusion.is_some();
 
         renderer.textures.white = renderer.load_texture(&white)?;
-        melon_base::info!("renderer: terrain draws {}", renderer.terrain_path().name());
+        melon_base::info!(
+            "renderer: terrain draws {}{}",
+            renderer.terrain_path().name(),
+            if renderer.expand.is_some() {
+                ", expanded on the GPU"
+            } else {
+                ""
+            }
+        );
 
         Ok(renderer)
     }

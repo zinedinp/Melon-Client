@@ -26,15 +26,32 @@ layout(location = 3) out vec2 frag_fog;
 // The same depth in every pipeline: the glint's `EQUAL` test meets its mesh.
 invariant gl_Position;
 
+#ifdef INDIRECT
+// Multi-draw (the translucent terrain): each draw's origin relative to the
+// camera, found by its `firstInstance` (one instance each).
+layout(std430, set = 2, binding = 0) readonly buffer DrawOffsets {
+    vec4 offsets[];
+} draws;
+
+vec3 draw_offset() {
+    return draws.offsets[gl_InstanceIndex].xyz;
+}
+#else
+vec3 draw_offset() {
+    return pc.offset.xyz;
+}
+#endif
+
 void main() {
-    gl_Position = pc.view_proj * vec4(in_pos + pc.offset.xyz, 1.0);
+    vec3 relative = in_pos + draw_offset();
+    gl_Position = pc.view_proj * vec4(relative, 1.0);
     frag_uv = in_uv;
     // Light coordinates are level * 16 (vanilla `UV2`); above 240 is the
     // sentinel for meshes lit by `pc.ambient`.
     frag_light = in_light.x > 240u ? vec2(-1.0) : vec2(in_light) / 16.0;
     frag_color = vec4(in_color.rgb, in_color.a * pc.ambient.a);
     if (pc.view.z == 1.0) {
-        frag_fog = fog_distances(in_pos + pc.offset.xyz);
+        frag_fog = fog_distances(relative);
     } else if (pc.view.z == 2.0) {
         frag_fog = model_fog_distances(gl_Position);
     } else {

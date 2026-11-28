@@ -59,6 +59,15 @@ fn main() {
     compile_shader("../../shaders/skydisc.vert", &out_dir, "vertex");
     compile_shader("../../shaders/skydisc.frag", &out_dir, "fragment");
     compile_shader("../../shaders/world.vert", &out_dir, "vertex");
+    // The same, each draw's offset read per `gl_InstanceIndex`: the
+    // translucent terrain's multi-draws.
+    compile_variant(
+        "../../shaders/world.vert",
+        &out_dir,
+        "vertex",
+        "world_indirect.vert",
+        &["INDIRECT"],
+    );
     // Rain and snow: the texture's drop streaks placed per column.
     compile_shader("../../shaders/weather.vert", &out_dir, "vertex");
     // Particles: a quad per instance.
@@ -75,6 +84,8 @@ fn main() {
         "terrain_indirect.vert",
         &["INDIRECT"],
     );
+    // Those multi-draws, expanded per visible section from its record.
+    compile_shader("../../shaders/expand.comp", &out_dir, "compute");
     // Occlusion culling of those multi-draws: the depth pyramid, the phase 1
     // selection and the phase 2 test, and packing what each phase keeps.
     println!("cargo:rerun-if-changed=../../shaders/occlusion.glsl");

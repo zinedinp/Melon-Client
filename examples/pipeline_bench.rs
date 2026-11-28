@@ -677,10 +677,14 @@ fn cull(report: &mut Report, level: &Level, meshes: &mut LevelMeshes, spawn: Vec
         let mut count = None;
         for _ in 0..50 {
             let t = Instant::now();
-            let visible = meshes.visible_sections(&culler);
+            // As the game culls where the GPU expands the draws.
+            let visible = meshes.visible_sections(&culler, true);
             lists.push(t.elapsed());
             count = Some(visible.count);
-            meshes.recycle(visible.solid, visible.cutout, visible.translucent);
+            meshes.recycle(
+                (visible.solid, visible.cutout, visible.translucent),
+                visible.sections,
+            );
         }
         let count = count.expect("listed");
         report.count(&format!("cull.{name}.reached"), mask.count() as u64);

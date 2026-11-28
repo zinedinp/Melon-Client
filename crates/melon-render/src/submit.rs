@@ -85,6 +85,11 @@ impl Renderer {
             unsafe { indirect.prepare(&self.device, &self.mem_props, current, draws) }?;
             // SAFETY: `device` is live, and the infos name only its own live handles.
             unsafe { indirect.upload(current, self.occlusion.is_some()) };
+            if let Some(expand) = &mut self.expand {
+                let buffers = indirect.expand_buffers(current);
+                // SAFETY: `device` is live, and the infos name only its own live handles.
+                unsafe { expand.prepare(&self.device, &self.mem_props, current, buffers) }?;
+            }
             if let Some(occlusion) = &mut self.occlusion
                 && draws > 0
             {
@@ -137,7 +142,10 @@ impl Renderer {
         let started = Instant::now();
         if let Some(indirect) = &mut self.indirect {
             match frame.scene.and_then(|s| s.world.as_ref()) {
-                Some(world) => indirect.gather(world, &self.quad_meshes),
+                Some(world) => {
+                    let arenas = (&self.quad_meshes, &self.meshes, &self.index_lists);
+                    indirect.gather(world, arenas);
+                }
                 None => indirect.clear(),
             }
         }
@@ -254,6 +262,20 @@ impl Renderer {
         unsafe {
             self.gpu_timer.mark(&self.device, "upload");
             self.record_pictures(cmd, frame.pictures);
+        }
+        if let (Some(expand), Some(indirect)) = (&self.expand, &self.indirect) {
+            let (entries, eye) = indirect.expanding();
+            let bounds = self.occlusion.is_some();
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                if entries > 0 {
+                    self.gpu_timer.pass("expand");
+                }
+                expand.record(&self.device, cmd, self.frames.current, (entries, eye, bounds));
+                if entries > 0 {
+                    self.gpu_timer.mark(&self.device, "expand");
+                }
+            }
         }
 
         // The terrain's occlusion culling: phase 1 picked before the scene's pass.

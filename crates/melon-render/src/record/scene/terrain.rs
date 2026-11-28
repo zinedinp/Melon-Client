@@ -8,9 +8,12 @@
 //! | [`TerrainPath::MultiDraw`] | `multiDrawIndirect`, `drawIndirectFirstInstance` (1.0 features) | the quad meshes' commands gathered before the frame (`indirect.rs`), one `vkCmdDrawIndexedIndirect` per buffer run |
 //! | [`TerrainPath::Counted`] | multi-draw, `drawIndirectCount` (core 1.2 or `VK_KHR_draw_indirect_count`), `MELON_OCCLUSION=1` | two-phase GPU occlusion culling (`occlusion.rs`) packs the commands, `vkCmdDrawIndexedIndirectCount` draws what it kept |
 //!
-//! Vertex meshes (lava) and translucent terrain always take the per-draw path;
-//! the translucent sections each through their own index list, sorted far
-//! to near (vanilla's sorted index buffers), so a sort uploads only that.
+//! With multi-draws, the solid and cutout quads are expanded per section on
+//! the GPU (`expand.rs`) unless `MELON_NO_EXPAND=1`, and the translucent
+//! sections are multi-draws too, one per stretch that shares its vertex and
+//! index buffers. Each translucent section draws through its own index
+//! list, sorted far to near (vanilla's sorted index buffers), so a sort
+//! uploads only that. Vertex meshes (lava) always take the per-draw path.
 
 use crate::pipeline::world::{DrawLight, FogInput, Mode};
 use crate::{
@@ -113,6 +116,10 @@ impl Renderer {
             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
             unsafe { self.draw_terrain_multi(cmd, world, mode, view_proj, light, phase) };
         }
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        let rest = rest
+            && !(mode == Mode::TranslucentTerrain
+                && unsafe { self.draw_sorted_multi(cmd, world, view_proj, light) });
         let mut bound: Option<bool> = None;
         let mut own_indices = false;
         // The sorted meshes' index buffer last bound: most share an arena block.
@@ -177,6 +184,75 @@ impl Renderer {
         }
         // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
         unsafe { self.gpu_timer.mark(&self.device, label) };
+    }
+
+    /// The translucent sections as gathered multi-draws (see
+    /// [`super::super::super::indirect`]), far to near; whether it drew them.
+    unsafe fn draw_sorted_multi(
+        &self,
+        cmd: vk::CommandBuffer,
+        world: &WorldDraw,
+        view_proj: Mat4,
+        light: &DrawLight,
+    ) -> bool {
+        let (Some(indirect), Some(pass)) = (
+            &self.indirect,
+            &self.pipelines.translucent_terrain_indirect,
+        ) else {
+            return false;
+        };
+        if !indirect.sorted_ready() {
+            return false;
+        }
+        let runs = indirect.sorted_runs();
+        if runs.is_empty() {
+            return true;
+        }
+        // SAFETY: `device` is live, and the infos name only its own live handles.
+        if !unsafe { self.bind_world_pipeline(cmd, world.atlas, pass) } {
+            return false;
+        }
+        let layout = self.pipelines.world.layout;
+        let (commands, set) = indirect.sorted(self.frames.current);
+        let stride = super::super::super::indirect::COMMAND_SIZE;
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_descriptor_sets(
+                cmd,
+                vk::PipelineBindPoint::GRAPHICS,
+                layout,
+                2,
+                &[set],
+                &[],
+            );
+            self.push_world(cmd, layout, view_proj, Vec3::ZERO, &light.fogged(FogInput::Chunk));
+        }
+        for run in runs {
+            // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+            unsafe {
+                self.bind_vertices(cmd, run.vertices);
+                self.device
+                    .cmd_bind_index_buffer(cmd, run.indices, 0, run.kind);
+                self.device.cmd_draw_indexed_indirect(
+                    cmd,
+                    commands,
+                    u64::from(run.first) * u64::from(stride),
+                    run.count,
+                    stride,
+                );
+            }
+        }
+        // What follows draws through the shared quad indices again.
+        // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
+        unsafe {
+            self.device.cmd_bind_index_buffer(
+                cmd,
+                self.meshes.index_buffer(),
+                0,
+                vk::IndexType::UINT16,
+            )
+        };
+        true
     }
 
     /// Between the culling's two phases: ends the render pass, picks phase

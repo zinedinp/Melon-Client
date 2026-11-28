@@ -77,7 +77,7 @@ numerobis writes them (see its section).
 
 Resource packs' chains run as vanilla runs them; shader packs come in the
 OptiFine/Iris format, a Melon shader type (with hardware ray tracing) after
-that. Plan and vanilla's rules: `notes/post-and-shaderpacks.md` (local).
+that.
 
 Done so far (M1, first half):
 - Chains run by id: every `post_effect/*.json` of the packs, with
@@ -105,14 +105,14 @@ Open:
 - **`blur.json`** for the menu blur instead of `blur.rs`.
 - **`gl_VertexIndex` in the pack outline pass** counts from the entity's
   place in the mesh arena; vanilla batches the frame's outlined vertices.
-  Lumiere's markers read it (`notes/post-and-shaderpacks.md`).
+  Lumiere's markers read it.
 - **Shader packs**: loading and picking (M2), the GLSL translator (M3), the
   pipeline (M4), breadth (M5).
 
 ### Frame hitches
 
-Measured per frame in the bench CSV (`notes/render-performance.md`,
-"Hitches"). Left on the main thread:
+Measured per frame in the bench CSV (`melon --bench`). Left on the main
+thread:
 
 - **A mob texture's first load** (~0.2-0.7 ms each, mostly the pack
   lookup in `texture_with_meta`); a crowd spawning loads dozens.
@@ -123,15 +123,13 @@ Measured per frame in the bench CSV (`notes/render-performance.md`,
 
 ### Frame time
 
-CPU-bound at ~1.2-1.9 ms a frame (`notes/render-performance.md`, "CPU
-frame time"). Next cuts, largest first:
+CPU ~0.9-1.5 ms a frame at render distance 32 and 4K, the GPU about as
+long in the bench's `rise` and `turn` phases. Next:
 
-- **GPU-expanded terrain draws** (the notes' plan): `cull sections` and
-  `gather`, ~0.4 ms together even on four threads.
-- **Translucent sections as multi-draws** per index block: `record scene`
-  grows with the water in view (0.25 ms at 0.7 M primitives).
-- **Entity hitboxes with F3 open** rebuild their gizmo mesh every frame:
-  0.2 ms at 250 mobs.
+- **Entity hitboxes with F3 open** as instanced lines: 0.15 ms at 250
+  mobs, building and uploading four vertices a line.
+- **Sky after the opaque terrain** with a depth test: 0.11 ms GPU full
+  screen.
 
 ### Features
 

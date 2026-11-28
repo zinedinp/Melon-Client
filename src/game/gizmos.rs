@@ -63,6 +63,14 @@ pub struct Gizmos {
 }
 
 impl Gizmos {
+    /// Empties it, keeping the room for the next frame's.
+    pub fn clear(&mut self) {
+        self.lines.clear();
+        self.points.clear();
+        self.fills.clear();
+        self.texts.clear();
+    }
+
     pub fn line(&mut self, a: DVec3, b: DVec3, color: [f32; 4], width: f32) {
         self.lines.push(Line { a, b, color, width });
     }
@@ -224,6 +232,8 @@ struct Slot {
     mesh: Option<MeshId>,
     built: Vec<WorldVertex>,
     origin: IVec3,
+    /// The next frame's vertices, built here to keep the room.
+    scratch: Vec<WorldVertex>,
 }
 
 impl Slot {
@@ -240,6 +250,26 @@ impl Slot {
             Ok(mesh) => {
                 self.mesh = Some(mesh);
                 self.built = vertices;
+                self.origin = origin;
+            }
+            Err(e) => melon_base::warn!("Gizmo mesh failed: {e:#}"),
+        }
+    }
+
+    /// [`Self::update`] with the vertices in `scratch`.
+    fn update_from_scratch(&mut self, renderer: &mut Renderer, origin: IVec3) {
+        if self.scratch.is_empty() {
+            self.release(renderer);
+            return;
+        }
+        if self.mesh.is_some() && self.origin == origin && self.built == self.scratch {
+            return;
+        }
+        self.release(renderer);
+        match renderer.upload_mesh(&self.scratch) {
+            Ok(mesh) => {
+                self.mesh = Some(mesh);
+                std::mem::swap(&mut self.built, &mut self.scratch);
                 self.origin = origin;
             }
             Err(e) => melon_base::warn!("Gizmo mesh failed: {e:#}"),
@@ -295,8 +325,9 @@ impl GizmoMesh {
         let origin = camera.floor().as_ivec3();
         let white = renderer.white_texture();
         for (slot, opaque) in self.lines.iter_mut().zip([true, false]) {
-            let vertices = line_quads(gizmos, opaque, origin, (camera, forward.as_dvec3()));
-            slot.update(renderer, vertices, origin);
+            let view = (camera, forward.as_dvec3());
+            line_quads(gizmos, opaque, origin, view, &mut slot.scratch);
+            slot.update_from_scratch(renderer, origin);
         }
         let fills = fill_quads(&gizmos.fills, origin);
         self.fills.update(renderer, fills, origin);
@@ -343,9 +374,10 @@ impl GizmoMesh {
         lines: &mut Vec<LineDraw>,
     ) {
         let origin = camera.floor().as_ivec3();
-        let vertices = line_quads(gizmos, true, origin, (camera, forward.as_dvec3()));
-        self.lines[0].update(renderer, vertices, origin);
-        lines.extend(self.lines[0].lines(LineStyle::Hud));
+        let slot = &mut self.lines[0];
+        line_quads(gizmos, true, origin, (camera, forward.as_dvec3()), &mut slot.scratch);
+        slot.update_from_scratch(renderer, origin);
+        lines.extend(slot.lines(LineStyle::Hud));
     }
 
     pub fn release(&mut self, renderer: &mut Renderer) {
@@ -427,23 +459,27 @@ fn text_quads(
 
 /// Whether `color` is in `DrawableGizmoPrimitives`' opaque group.
 fn is_opaque(color: [f32; 4]) -> bool {
-    (color[3].clamp(0.0, 1.0) * 255.0).round() >= 255.0
+    melon_world::mesh::unorm8(color[3]) == u8::MAX
 }
 
 /// The lines and points of one group (`opaque` or not) as
-/// [`WorldVertex::line`]s and [`WorldVertex::point`]s relative to `origin`.
-/// A line is cut off where it passes the near plane `camera` sees along
-/// `forward` (`GizmoFeatureRenderer.buildLines`); one wholly behind it is
-/// left out.
+/// [`WorldVertex::line`]s and [`WorldVertex::point`]s relative to `origin`,
+/// into `out`. A line is cut off where it passes the near plane `camera`
+/// sees along `forward` (`GizmoFeatureRenderer.buildLines`); one wholly
+/// behind it is left out.
 fn line_quads(
     gizmos: &Gizmos,
     opaque: bool,
     origin: IVec3,
     (camera, forward): (DVec3, DVec3),
-) -> Vec<WorldVertex> {
+    out: &mut Vec<WorldVertex>,
+) {
     let origin = origin.as_dvec3();
     let ahead = |p: DVec3| (p - camera).dot(forward);
-    let mut out = Vec::new();
+    out.clear();
+    out.reserve((gizmos.lines.len() + gizmos.points.len()) * 4);
+    // Lines come in runs of one colour and width (a box's twelve edges).
+    let mut style: Option<([f32; 4], f32, WorldVertex)> = None;
     for line in gizmos.lines.iter().filter(|l| is_opaque(l.color) == opaque) {
         let (mut a, mut b) = (line.a, line.b);
         let (behind_a, behind_b) = (ahead(a) < NEAR, ahead(b) < NEAR);
@@ -463,11 +499,17 @@ fn line_quads(
             }
         }
         let (a, b) = ((a - origin).as_vec3(), (b - origin).as_vec3());
-        out.extend(
-            WorldVertex::line(a, b, line.color, line.width)
-                .into_iter()
-                .flatten(),
-        );
+        let vertex = match style {
+            Some((color, width, vertex)) if (color, width) == (line.color, line.width) => vertex,
+            _ => {
+                let vertex = WorldVertex::line_style(line.color, line.width);
+                style = Some((line.color, line.width, vertex));
+                vertex
+            }
+        };
+        if let Some(quad) = WorldVertex::styled_line(a, b, vertex) {
+            out.extend_from_slice(&quad);
+        }
     }
     for point in gizmos
         .points
@@ -477,18 +519,65 @@ fn line_quads(
         let at = (point.at - origin).as_vec3();
         out.extend(WorldVertex::point(at, point.color, point.size));
     }
-    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn line_quads(
+        gizmos: &Gizmos,
+        opaque: bool,
+        origin: IVec3,
+        view: (DVec3, DVec3),
+    ) -> Vec<WorldVertex> {
+        let mut out = vec![WorldVertex::new([9.0; 3], [0.0; 2], [1.0; 3])];
+        super::line_quads(gizmos, opaque, origin, view, &mut out);
+        out
+    }
+
     fn cube() -> Aabb {
         Aabb {
             min: DVec3::ZERO,
             max: DVec3::ONE,
         }
+    }
+
+    /// Times 250 mobs' hitboxes (box, eye band, look arrow, feet). Run with
+    /// `cargo test --profile fast --lib hitbox_quads_time -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn hitbox_quads_time() {
+        let mut gizmos = Gizmos::default();
+        let mut out = Vec::new();
+        let rounds = 500;
+        let started = std::time::Instant::now();
+        for round in 0..rounds {
+            gizmos.clear();
+            for i in 0..250 {
+                let height = 64.0 + f64::from(round % 3);
+                let at = DVec3::new(f64::from(i % 16), height, f64::from(i / 16));
+                let bounds = Aabb {
+                    min: at,
+                    max: at + DVec3::new(0.6, 1.8, 0.6),
+                };
+                gizmos.cuboid(&bounds, [1.0; 4], DEFAULT_WIDTH);
+                gizmos.point(at, [1.0; 4], 2.0);
+                gizmos.cuboid(&bounds, [1.0, 0.0, 0.0, 1.0], DEFAULT_WIDTH);
+                gizmos.arrow(at, at + DVec3::X * 2.0, [0.0, 0.0, 1.0, 1.0], DEFAULT_WIDTH);
+            }
+        }
+        let built = started.elapsed() / rounds;
+        let view = (DVec3::new(8.0, 70.0, -20.0), DVec3::Z);
+        let started = std::time::Instant::now();
+        for _ in 0..rounds {
+            super::line_quads(&gizmos, true, IVec3::ZERO, view, &mut out);
+        }
+        eprintln!(
+            "gizmos {built:?}, vertices {:?} per frame, {} vertices",
+            started.elapsed() / rounds,
+            out.len()
+        );
     }
 
     #[test]

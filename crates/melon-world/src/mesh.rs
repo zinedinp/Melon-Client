@@ -172,7 +172,6 @@ impl WorldVertex {
     pub const SENTINEL_LIGHT: [u8; 2] = [255, 255];
 
     pub fn new(pos: [f32; 3], uv: [f32; 2], color: [f32; 3]) -> Self {
-        let unorm8 = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
         Self {
             pos,
             uv,
@@ -186,7 +185,7 @@ impl WorldVertex {
     /// [`Self::new`] with an alpha other than opaque.
     pub fn rgba(pos: [f32; 3], uv: [f32; 2], color: [f32; 4]) -> Self {
         let mut v = Self::new(pos, uv, [color[0], color[1], color[2]]);
-        v.color[3] = (color[3].clamp(0.0, 1.0) * 255.0).round() as u8;
+        v.color[3] = unorm8(color[3]);
         v
     }
 
@@ -216,30 +215,62 @@ impl WorldVertex {
     /// in `uv` (octahedron-encoded), the width in sixteenths of a pixel in
     /// `light` and the side in `face`. `None` for a line of no length.
     pub fn line(a: glam::Vec3, b: glam::Vec3, color: [f32; 4], width: f32) -> Option<[Self; 4]> {
+        Self::styled_line(a, b, Self::line_style(color, width))
+    }
+
+    /// A line's colour and width as its vertices carry them: what
+    /// [`Self::styled_line`] takes, worked out once for lines that share them.
+    pub fn line_style(color: [f32; 4], width: f32) -> Self {
+        Self::line_vertex(glam::Vec3::X, color, width)
+    }
+
+    /// [`Self::line`] in `style` ([`Self::line_style`]).
+    pub fn styled_line(a: glam::Vec3, b: glam::Vec3, style: Self) -> Option<[Self; 4]> {
         let dir = (b - a).try_normalize()?;
-        let at = |pos: glam::Vec3, corner: u8| Self::line_corner(pos, dir, color, width, corner);
+        let line = Self {
+            uv: octahedron_encode(dir),
+            ..style
+        };
+        let at = |pos: glam::Vec3, face: u8| Self {
+            pos: pos.to_array(),
+            face,
+            ..line
+        };
         Some([at(a, 0), at(a, 1), at(b, 1), at(b, 0)])
     }
 
     /// A square `size` pixels wide on screen around `at`, for
     /// `shaders/lines.vert` (vanilla `core/debug_point.vsh`'s points).
     pub fn point(at: glam::Vec3, color: [f32; 4], size: f32) -> [Self; 4] {
-        [2, 3, 4, 5].map(|corner| Self::line_corner(at, glam::Vec3::X, color, size, corner))
+        let point = Self::line_vertex(glam::Vec3::X, color, size);
+        [2, 3, 4, 5].map(|face| Self {
+            pos: at.to_array(),
+            face,
+            ..point
+        })
     }
 
-    fn line_corner(
-        pos: glam::Vec3,
-        dir: glam::Vec3,
-        color: [f32; 4],
-        width: f32,
-        corner: u8,
-    ) -> Self {
-        let sixteenths = (width.max(0.0) * 16.0).round().min(f32::from(u16::MAX)) as u16;
-        let mut v = Self::rgba(pos.to_array(), octahedron_encode(dir), color);
+    /// What a line's corners share: direction, colour and width.
+    fn line_vertex(dir: glam::Vec3, color: [f32; 4], width: f32) -> Self {
+        let sixteenths = round_up_from_half(width.max(0.0) * 16.0).min(u32::from(u16::MAX)) as u16;
+        let mut v = Self::rgba([0.0; 3], octahedron_encode(dir), color);
         v.light = sixteenths.to_le_bytes();
-        v.face = corner;
         v
     }
+}
+
+/// `(v.clamp(0.0, 1.0) * 255.0).round() as u8`.
+pub fn unorm8(v: f32) -> u8 {
+    round_up_from_half(v.clamp(0.0, 1.0) * 255.0) as u8
+}
+
+/// `x.round() as u32` for `x >= 0`, NaN to 0: below 2^23 the fraction is
+/// exact, so comparing it to a half rounds the same, and above there is
+/// none. `round` itself is a libm call on a plain x86-64 target, the bulk
+/// of building a debug line.
+fn round_up_from_half(x: f32) -> u32 {
+    let whole = x as u32;
+    whole.saturating_add(u32::from(x - whole as f32 >= 0.5))
 }
 
 /// A unit vector as a point of the octahedron's square, `-1..=1` each;
@@ -263,6 +294,26 @@ mod tests {
     use numerobis::elem::as_bytes;
 
     use super::*;
+
+    #[test]
+    fn rounding_by_hand_matches_round() {
+        let mut x = 0.0f32;
+        while x <= 1.0 {
+            assert_eq!(unorm8(x), (x * 255.0).round() as u8, "{x}");
+            x = f32::from_bits(x.to_bits() + 97);
+        }
+        for v in [-1.0, 1.5, f32::NAN, 0.5 / 255.0, 127.5 / 255.0, f32::MIN_POSITIVE] {
+            assert_eq!(unorm8(v), (v.clamp(0.0, 1.0) * 255.0).round() as u8, "{v}");
+        }
+        for w in [0.0, 0.03125, 2.5, 2.53125, 4095.97, 1e9, f32::INFINITY] {
+            let sixteenths = (w * 16.0f32).round().min(f32::from(u16::MAX)) as u16;
+            assert_eq!(
+                round_up_from_half(w * 16.0).min(u32::from(u16::MAX)) as u16,
+                sixteenths,
+                "{w}"
+            );
+        }
+    }
 
     /// `lines.vert`'s `octahedron_decode`.
     fn octahedron_decode([x, y]: [f32; 2]) -> glam::Vec3 {

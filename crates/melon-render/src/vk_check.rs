@@ -372,6 +372,10 @@ fn every_pipeline_passes_validation(version: Option<ApiVersion>) {
         for mode in [Mode::Opaque, Mode::Translucent] {
             keep(world(mode, Geometry::Particles).expect("particles"));
         }
+        keep(
+            world(Mode::TranslucentTerrain, Geometry::IndirectVertices)
+                .expect("translucent terrain indirect"),
+        );
 
         gpu.device.device_wait_idle().expect("idle after pipelines");
         for pass in &passes {
@@ -1412,6 +1416,206 @@ fn occlusion_culls_what_the_depth_hides() {
         }
         device.destroy_image(depth, None);
         vk_util::free_memory(device, depth_memory);
+        device.destroy_command_pool(command_pool, None);
+    }
+    let messages = messages();
+    assert!(
+        messages.is_empty(),
+        "Vulkan validation:\n{}",
+        messages.join("\n")
+    );
+}
+
+/// `expand.comp` writes, for random records and facing groups, the commands,
+/// offsets and bounds the CPU gathers, and takes a record set again.
+#[test]
+fn expanded_draws_match_the_gathered_ones() {
+    use super::SectionDraw;
+    use super::expand::{Expand, ExpandBuffers, RECORD_WORDS, layer_draws, tests::expected};
+    use super::mesh_arena::QUADS_PER_DRAW;
+    use melon_world::terrain::FACINGS;
+
+    let _serial = serial();
+    messages().clear();
+    let mut seed = 0x9e37_79b9_7f4a_7c15_u64;
+    let mut random = move || {
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        seed
+    };
+    let slots = 48u32;
+    let mut records: Vec<[u32; RECORD_WORDS]> = (0..slots)
+        .map(|slot| {
+            let mut words = [0u32; RECORD_WORDS];
+            let coord = |r: u64| (r % 20_000) as i32 - 10_000;
+            words[0] = (coord(random()) * 16).cast_unsigned();
+            words[1] = (-64i32).cast_unsigned();
+            words[2] = (coord(random()) * 16).cast_unsigned();
+            words[3] = (slot % 24) * 16;
+            for layer in 0..2 {
+                let at = 4 + layer * (1 + FACINGS);
+                words[at] = (random() % 100_000) as u32;
+                let mut end = 0;
+                for group in 0..FACINGS {
+                    end += (random() % 4) as u32;
+                    if slot == 7 && group == 3 {
+                        // Past what one draw reaches.
+                        end += 2 * QUADS_PER_DRAW + 5;
+                    }
+                    words[at + 1 + group] = end;
+                }
+            }
+            words
+        })
+        .collect();
+    let eye = glam::IVec3::new(123, 70, -456);
+    // Five draws gathered on the CPU come first.
+    let first = 5u32;
+    let entries_for = |records: &[[u32; RECORD_WORDS]], random: &mut dyn FnMut() -> u64| {
+        let (mut entries, mut want, mut at) = (Vec::new(), Vec::new(), first);
+        for slot in 0..slots {
+            for cutout in [false, true] {
+                let shown = (random() & 0x7F) as u32;
+                let layer = 4 + usize::from(cutout) * (1 + FACINGS);
+                let ends: [u32; FACINGS] = records[slot as usize][layer + 1..layer + 1 + FACINGS]
+                    .try_into()
+                    .expect("ends");
+                let (draws, _) = layer_draws(&ends, shown);
+                if draws == 0 {
+                    continue;
+                }
+                let draw = SectionDraw::new(slot, cutout, shown, 0, draws as u16);
+                want.extend(expected(&records[slot as usize], draw, at, eye));
+                entries.push([draw.word, at]);
+                at += draws;
+            }
+        }
+        (entries, want, at)
+    };
+    // SAFETY: a test instance and device of its own; the queue is waited idle before anything is freed.
+    unsafe {
+        let gpu = Gpu::new().expect("Vulkan instance with validation");
+        let device = &gpu.device;
+        let queue = device.get_device_queue(gpu.family, 0);
+        let command_pool = device
+            .create_command_pool(
+                &vk::CommandPoolCreateInfo::default()
+                    .queue_family_index(gpu.family)
+                    .flags(vk::CommandPoolCreateFlags::RESET_COMMAND_BUFFER),
+                None,
+            )
+            .expect("command pool");
+        let cmd = device
+            .allocate_command_buffers(
+                &vk::CommandBufferAllocateInfo::default()
+                    .command_pool(command_pool)
+                    .level(vk::CommandBufferLevel::PRIMARY)
+                    .command_buffer_count(1),
+            )
+            .expect("cmd")[0];
+        let mem_props = gpu
+            .instance
+            .get_physical_device_memory_properties(gpu.physical);
+        let capacity = 4096u64;
+        let mapped = |size: u64| {
+            let (buffer, memory) = super::create_buffer(
+                device,
+                &mem_props,
+                size,
+                vk::BufferUsageFlags::STORAGE_BUFFER,
+                super::Place::READBACK,
+            )
+            .expect("buffer");
+            let ptr = device
+                .map_memory(memory, 0, size, vk::MemoryMapFlags::empty())
+                .expect("map");
+            (buffer, memory, ptr.cast::<u32>())
+        };
+        let entries = mapped(capacity * 8);
+        let commands = mapped(capacity * u64::from(indirect::COMMAND_SIZE));
+        let offsets = mapped(capacity * 16);
+        let bounds = mapped(capacity * 16);
+        let buffers = ExpandBuffers {
+            entries: entries.0,
+            commands: commands.0,
+            offsets: offsets.0,
+            bounds: bounds.0,
+        };
+        let mut expand = Expand::new(device, 1).expect("expand");
+        for (slot, words) in records.iter().enumerate() {
+            expand.set(slot as u32, *words);
+        }
+        let frame = |expand: &mut Expand, list: &[[u32; 2]]| {
+            std::ptr::copy_nonoverlapping(list.as_ptr().cast::<u32>(), entries.2, list.len() * 2);
+            expand
+                .prepare(device, &mem_props, 0, buffers)
+                .expect("prepare");
+            device
+                .begin_command_buffer(cmd, &vk::CommandBufferBeginInfo::default())
+                .expect("begin");
+            expand.record(device, cmd, 0, (list.len() as u32, eye, true));
+            device.end_command_buffer(cmd).expect("end");
+            let cmds = [cmd];
+            device
+                .queue_submit(
+                    queue,
+                    &[vk::SubmitInfo::default().command_buffers(&cmds)],
+                    vk::Fence::null(),
+                )
+                .expect("submit");
+            device.queue_wait_idle(queue).expect("idle");
+        };
+        let check = |want: &[(indirect::DrawCommand, [f32; 4], [f32; 4])]| {
+            for (i, (command, offset, bound)) in want.iter().enumerate() {
+                let at = first as usize + i;
+                let words = std::slice::from_raw_parts(commands.2.add(at * 5), 5);
+                let expected_words = [
+                    command.index_count,
+                    command.instance_count,
+                    command.first_index,
+                    command.vertex_offset.cast_unsigned(),
+                    command.first_instance,
+                ];
+                assert_eq!(words, expected_words, "command {at}");
+                let read = |ptr: *mut u32| {
+                    std::slice::from_raw_parts(ptr.add(at * 4).cast::<f32>(), 4).to_vec()
+                };
+                assert_eq!(read(offsets.2), offset, "offset {at}");
+                assert_eq!(
+                    read(bounds.2).iter().map(|f| f.to_bits()).collect::<Vec<_>>(),
+                    bound.map(f32::to_bits),
+                    "bounds {at}"
+                );
+            }
+        };
+        let (list, want, end) = entries_for(&records, &mut random);
+        assert!(
+            want.len() > 60 && u64::from(end) < capacity,
+            "{} draws",
+            want.len()
+        );
+        assert!(
+            want.iter().any(|(c, ..)| c.index_count == QUADS_PER_DRAW * 6),
+            "a layer cut into draws"
+        );
+        frame(&mut expand, &list);
+        check(&want);
+        // A record set again lands before the next expansion.
+        records[3][4] += 1000;
+        records[3][3] = 7 * 16;
+        expand.set(3, records[3]);
+        let (list, want, _) = entries_for(&records, &mut random);
+        frame(&mut expand, &list);
+        check(&want);
+
+        device.device_wait_idle().expect("idle");
+        expand.destroy(device);
+        for (buffer, memory, _) in [entries, commands, offsets, bounds] {
+            device.unmap_memory(memory);
+            device.destroy_buffer(buffer, None);
+            vk_util::free_memory(device, memory);
+        }
         device.destroy_command_pool(command_pool, None);
     }
     let messages = messages();

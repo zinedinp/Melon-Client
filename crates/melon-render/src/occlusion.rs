@@ -124,7 +124,7 @@ pub(super) struct Occlusion {
     pub draw_count: Option<vk::PFN_vkCmdDrawIndexedIndirectCount>,
 }
 
-unsafe fn set_layout(
+pub(super) unsafe fn set_layout(
     device: &ash::Device,
     types: &[vk::DescriptorType],
 ) -> anyhow::Result<vk::DescriptorSetLayout> {
@@ -148,7 +148,7 @@ unsafe fn set_layout(
     }?)
 }
 
-unsafe fn pipeline_layout(
+pub(super) unsafe fn pipeline_layout(
     device: &ash::Device,
     set: vk::DescriptorSetLayout,
     push_size: u32,
@@ -168,7 +168,7 @@ unsafe fn pipeline_layout(
     }?)
 }
 
-unsafe fn compute_pipeline(
+pub(super) unsafe fn compute_pipeline(
     device: &ash::Device,
     layout: vk::PipelineLayout,
     spirv: &[u8],
@@ -217,7 +217,7 @@ unsafe fn create_visible(
 }
 
 /// A barrier from `src` to `dst` on every memory.
-unsafe fn memory_barrier(
+pub(super) unsafe fn memory_barrier(
     device: &ash::Device,
     cmd: vk::CommandBuffer,
     (src_stage, src_access): (vk::PipelineStageFlags, vk::AccessFlags),

@@ -9,6 +9,8 @@ use melon_world::mesh::WorldVertex as Vertex;
 use melon_world::particle::mesh::ParticleQuad;
 
 const VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/world.vert.spv"));
+const INDIRECT_VERT_SPV: &[u8] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/world_indirect.vert.spv"));
 const WEATHER_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/weather.vert.spv"));
 const LINES_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/lines.vert.spv"));
 const PARTICLE_VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/particle.vert.spv"));
@@ -212,6 +214,8 @@ impl Mode {
 pub enum Geometry {
     /// [`Vertex`] quads through the shared index buffer.
     Vertices,
+    /// The same as multi-draws, each draw's offset read per instance (set 2).
+    IndirectVertices,
     /// [`TerrainQuad`]s, read from the mesh buffer (set 4) by the terrain shader.
     Quads { indirect: bool },
     /// [`ParticleQuad`]s, one per instance of the shared index buffer's first quad.
@@ -494,6 +498,11 @@ pub unsafe fn create(
                 &vertex_attributes[..4]
             },
         ),
+        Geometry::IndirectVertices => (
+            INDIRECT_VERT_SPV,
+            std::mem::size_of::<Vertex>(),
+            &vertex_attributes[..4],
+        ),
         Geometry::Quads { indirect } => (
             if indirect {
                 TERRAIN_INDIRECT_VERT_SPV
@@ -514,13 +523,15 @@ pub unsafe fn create(
             std::mem::size_of::<ParticleQuad>() as u32,
             &particle_quads[..],
         )),
-        Geometry::Vertices | Geometry::Quads { .. } => None,
+        Geometry::Vertices | Geometry::IndirectVertices | Geometry::Quads { .. } => None,
     };
     let quad_sets = [layouts.table, layouts.draws, layouts.globals, layouts.table];
     let glint_sets = [descriptor_set_layout, layouts.draws, layouts.globals];
     let extra_sets: &[vk::DescriptorSetLayout] = match (mode, geometry) {
         (Mode::Glint, Geometry::Vertices) => &glint_sets,
-        (_, Geometry::Vertices | Geometry::Particles) => &layouts.sets(),
+        (_, Geometry::Vertices | Geometry::IndirectVertices | Geometry::Particles) => {
+            &layouts.sets()
+        }
         (_, Geometry::Quads { .. }) => &quad_sets,
     };
     // SAFETY: `device` is live, and the layout, pass and shaders named are its own.

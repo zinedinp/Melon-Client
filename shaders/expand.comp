@@ -1,0 +1,115 @@
+#version 450
+
+// Expands each visible section's solid or cutout quads into its terrain
+// multi-draws (`renderer/expand.rs`): the facing groups shown, merged into
+// runs, cut every QUADS_PER_DRAW quads. The CPU counted each entry's draws
+// and where they go, so every thread writes its own and nothing is scanned.
+// The same draws `indirect.rs` gathers on the CPU, command for command.
+
+layout(local_size_x = 64) in;
+
+struct Command {
+    uint index_count;
+    uint instance_count;
+    uint first_index;
+    int vertex_offset;
+    uint first_instance;
+};
+
+// Per record slot, RECORD_WORDS words: the quads' origin (x, y, z), the
+// section's bottom above it, then per layer its first quad in the block and
+// where each of its FACINGS groups ends.
+layout(std430, set = 0, binding = 0) readonly buffer Records {
+    uint records[];
+};
+
+// Per visible layer: slot (0-23), cutout (24), groups shown (25-31); then
+// its first command.
+layout(std430, set = 0, binding = 1) readonly buffer Entries {
+    uvec2 entries[];
+};
+
+layout(std430, set = 0, binding = 2) writeonly buffer Commands {
+    Command commands[];
+};
+
+// `terrain.vert`'s: the origin relative to the camera's block, per draw.
+layout(std430, set = 0, binding = 3) writeonly buffer Offsets {
+    vec4 offsets[];
+};
+
+// `occlusion.comp`'s: the section's lowest corner and slot, per draw.
+layout(std430, set = 0, binding = 4) writeonly buffer Bounds {
+    vec4 bounds[];
+};
+
+layout(push_constant) uniform Push {
+    // The camera's block.
+    ivec4 eye;
+    // Entries, and whether the bounds are written.
+    uvec4 info;
+} pc;
+
+const uint FACINGS = 7u;
+const uint RECORD_WORDS = 4u + 2u * (1u + FACINGS);
+const uint QUADS_PER_DRAW = 16384u;
+
+uint at;
+vec4 offset;
+vec4 bound;
+
+// The draws of `quads` quads from `first` on.
+void emit(uint first, uint quads) {
+    for (uint done = 0u; done < quads; done += QUADS_PER_DRAW) {
+        uint n = min(quads - done, QUADS_PER_DRAW);
+        commands[at] = Command(n * 6u, 1u, 0u, int((first + done) * 4u), at);
+        offsets[at] = offset;
+        if (pc.info.y != 0u) {
+            bounds[at] = bound;
+        }
+        at++;
+    }
+}
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= pc.info.x) {
+        return;
+    }
+    uvec2 entry = entries[i];
+    uint slot = entry.x & 0xFFFFFFu;
+    uint layer = (entry.x >> 24) & 1u;
+    uint shown = entry.x >> 25;
+    uint r = slot * RECORD_WORDS;
+    ivec3 origin = ivec3(records[r], records[r + 1u], records[r + 2u]);
+    vec3 relative = vec3(origin - pc.eye.xyz);
+    offset = vec4(relative, 0.0);
+    bound = vec4(relative.x, relative.y + float(int(records[r + 3u])), relative.z,
+        uintBitsToFloat(slot));
+    uint l = r + 4u + layer * (1u + FACINGS);
+    uint base = records[l];
+    at = entry.y;
+    uint start = 0u;
+    bool open = false;
+    uint run = 0u;
+    uint run_end = 0u;
+    for (uint group = 0u; group < FACINGS; group++) {
+        uint end = records[l + 1u + group];
+        if (end > start) {
+            if (((shown >> group) & 1u) != 0u) {
+                if (!open) {
+                    open = true;
+                    run = start;
+                }
+                run_end = end;
+            } else if (open) {
+                emit(base + run, run_end - run);
+                open = false;
+            }
+        }
+        start = end;
+    }
+    if (open) {
+        emit(base + run, run_end - run);
+    }
+}

@@ -294,13 +294,14 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
             let mut frames = Vec::new();
             for frame in 0..WARMUP + FRAMES {
                 meshes.upload(&mut renderer, Vec::new());
-                let visible = meshes.visible_sections(&culler);
+                let visible = meshes.visible_sections(&culler, renderer.expands_terrain());
                 let scene = SceneFrame {
                     sky: None,
                     world: Some(WorldDraw {
                         chunks: visible.solid,
                         cutout: visible.cutout,
                         translucent: visible.translucent,
+                        sections: visible.sections,
                         atlas: atlas_id,
                         view,
                         eye,
@@ -346,7 +347,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
                     .elapsed()
                     .saturating_sub(waits.gpu + waits.acquire + waits.present);
                 if let Some(world) = scene.world {
-                    meshes.recycle(world.chunks, world.cutout, world.translucent);
+                    meshes.recycle((world.chunks, world.cutout, world.translucent), world.sections);
                 }
                 if frame >= WARMUP {
                     let mut sample = Sample::parse(&renderer.gpu_profile());
@@ -357,7 +358,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
             rounds.push(Sample::median(&frames));
         }
         let m = Sample::median(&rounds);
-        let drawn = meshes.visible_sections(&culler);
+        let drawn = meshes.visible_sections(&culler, renderer.expands_terrain());
         println!(
             "{name:<12} {:>9.3} {:>9.3} {:>9.3} {:>11.3} {:>11.3} {:>9.3} {:>9.3}   ({} Sections, {} Draws, {} Vertices)",
             m.total,
@@ -371,7 +372,7 @@ fn run(event_loop: &ActiveEventLoop) -> anyhow::Result<()> {
             drawn.count.draws,
             drawn.count.vertices,
         );
-        meshes.recycle(drawn.solid, drawn.cutout, drawn.translucent);
+        meshes.recycle((drawn.solid, drawn.cutout, drawn.translucent), drawn.sections);
         for mesh in atmosphere_meshes {
             renderer.free_mesh(mesh);
         }
