@@ -3,7 +3,7 @@
 use glam::Mat4;
 use numerobis::elem::Pod;
 
-use super::{CubeMapId, IndexMeshId, MeshId, ParticleMeshId, QuadMeshId};
+use super::{CubeMapId, IndexMeshId, LineMeshId, MeshId, ParticleMeshId, QuadMeshId};
 use melon_base::gfx::TextureId;
 use melon_base::gfx::quad::DrawList;
 use melon_world::mesh::WorldVertex;
@@ -78,11 +78,11 @@ pub struct CloudDraw {
     pub color: [f32; 4],
 }
 
-/// A mesh of [`WorldVertex::line`]s and [`WorldVertex::point`]s: the block
-/// outline or the debug gizmos.
+/// [`LineSegment`](melon_world::mesh::LineSegment)s: the block outline or
+/// the debug gizmos.
 #[derive(Clone)]
 pub struct LineDraw {
-    pub mesh: MeshId,
+    pub mesh: LineMeshId,
     /// From the mesh to world space less [`Self::origin`].
     pub model: Mat4,
     /// The block `model` is relative to.

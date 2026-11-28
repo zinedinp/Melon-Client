@@ -74,6 +74,7 @@ impl Renderer {
             &mut self.meshes,
             &mut self.quad_meshes,
             &mut self.particle_meshes,
+            &mut self.line_meshes,
             &mut self.index_lists,
         ] {
             // SAFETY: `device` is live, and the infos name only its own live handles.
@@ -237,6 +238,7 @@ impl Renderer {
             &mut self.meshes,
             &mut self.quad_meshes,
             &mut self.particle_meshes,
+            &mut self.line_meshes,
             &mut self.index_lists,
         ] {
             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
@@ -253,6 +255,7 @@ impl Renderer {
         self.meshes.take_destroyed();
         self.index_lists.take_destroyed();
         self.particle_meshes.take_destroyed();
+        self.line_meshes.take_destroyed();
         for buffer in self.quad_meshes.take_destroyed() {
             // SAFETY: made by this device, and no frame in flight uses it any more.
             unsafe { self.quad_sets.forget(&self.device, buffer) };
@@ -271,7 +274,12 @@ impl Renderer {
                 if entries > 0 {
                     self.gpu_timer.pass("expand");
                 }
-                expand.record(&self.device, cmd, self.frames.current, (entries, eye, bounds));
+                expand.record(
+                    &self.device,
+                    cmd,
+                    self.frames.current,
+                    (entries, eye, bounds),
+                );
                 if entries > 0 {
                     self.gpu_timer.mark(&self.device, "expand");
                 }
@@ -505,6 +513,7 @@ impl Renderer {
             &mut self.meshes,
             &mut self.quad_meshes,
             &mut self.particle_meshes,
+            &mut self.line_meshes,
             &mut self.index_lists,
         ] {
             arena.submitted();

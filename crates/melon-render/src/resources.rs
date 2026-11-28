@@ -1,11 +1,13 @@
 //! Textures, cube maps and meshes: uploading, updating and freeing them.
 
 use super::{
-    CubeMapId, IndexMeshId, MeshId, ParticleMeshId, QuadMeshId, Renderer, texture, texture_update,
+    CubeMapId, IndexMeshId, LineMeshId, MeshId, ParticleMeshId, QuadMeshId, Renderer, texture,
+    texture_update,
 };
 use ash::vk;
 use image::RgbaImage;
 use melon_base::gfx::TextureId;
+use melon_world::mesh::LineSegment;
 use melon_world::mesh::TerrainQuad;
 use melon_world::mesh::WorldVertex;
 use melon_world::particle::mesh::ParticleQuad;
@@ -374,6 +376,21 @@ impl Renderer {
         self.particle_meshes.free(quads.0, self.frames.number);
     }
 
+    /// Uploads lines and points for [`LineDraw`](crate::LineDraw)s.
+    pub fn upload_lines(&mut self, lines: &[LineSegment]) -> anyhow::Result<LineMeshId> {
+        // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
+        let id = unsafe {
+            self.line_meshes
+                .upload(&self.device, &self.mem_props, &mut self.residency, lines)?
+        };
+        Ok(LineMeshId(id))
+    }
+
+    /// Frees lines from [`upload_lines`](Self::upload_lines).
+    pub fn free_lines(&mut self, lines: LineMeshId) {
+        self.line_meshes.free(lines.0, self.frames.number);
+    }
+
     /// Uploads an index list ([`melon_world::mesh::quad_index_list`]) for a vertex mesh.
     pub fn upload_indices(&mut self, list: &[u32]) -> anyhow::Result<IndexMeshId> {
         // SAFETY: the uploader records into this frame's init commands; the new image isn't in use yet.
@@ -402,7 +419,8 @@ impl Renderer {
         let (c, d) = self.quad_meshes.usage();
         let (e, f) = self.index_lists.usage();
         let (g, h) = self.particle_meshes.usage();
-        (a + c + e + g, b + d + f + h)
+        let (i, j) = self.line_meshes.usage();
+        (a + c + e + g + i, b + d + f + h + j)
     }
 
     pub(super) fn uploader(&self, sampler: vk::Sampler) -> texture::Uploader<'_> {

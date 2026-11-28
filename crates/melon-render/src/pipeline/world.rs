@@ -4,8 +4,8 @@ use ash::vk;
 
 use super::{Pass, PipelineDesc};
 use melon_world::lightmap::LightmapParams;
-use melon_world::mesh::TerrainQuad;
 use melon_world::mesh::WorldVertex as Vertex;
+use melon_world::mesh::{LineSegment, TerrainQuad};
 use melon_world::particle::mesh::ParticleQuad;
 
 const VERT_SPV: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/world.vert.spv"));
@@ -200,15 +200,6 @@ pub enum Mode {
     Scrolled,
 }
 
-impl Mode {
-    fn is_lines(self) -> bool {
-        matches!(
-            self,
-            Self::Lines | Self::LinesDepthBias | Self::LinesTranslucent | Self::LinesNoDepthWrite
-        )
-    }
-}
-
 /// What a pipeline draws.
 #[derive(Clone, Copy)]
 pub enum Geometry {
@@ -220,6 +211,8 @@ pub enum Geometry {
     Quads { indirect: bool },
     /// [`ParticleQuad`]s, one per instance of the shared index buffer's first quad.
     Particles,
+    /// [`LineSegment`]s the same way, through `lines.vert`.
+    Lines,
 }
 
 /// The descriptor sets after the texture's that every world pipeline binds.
@@ -444,11 +437,6 @@ pub unsafe fn create(
             vk::Format::R8G8_UINT,
             std::mem::offset_of!(Vertex, light) as u32,
         ),
-        // Only `lines.vert` reads it: which side or corner a vertex is.
-        (
-            vk::Format::R8_UINT,
-            std::mem::offset_of!(Vertex, face) as u32,
-        ),
     ];
     // `world::weather::pieces`: two vertices of data per instance.
     let second = std::mem::size_of::<Vertex>() as u32;
@@ -478,30 +466,45 @@ pub unsafe fn create(
             std::mem::offset_of!(ParticleQuad, light) as u32,
         ),
     ];
+    let line_segments = [
+        (vk::Format::R32G32B32_SFLOAT, 0),
+        (
+            vk::Format::R8G8B8A8_UNORM,
+            std::mem::offset_of!(LineSegment, color) as u32,
+        ),
+        (
+            vk::Format::R32G32B32_SFLOAT,
+            std::mem::offset_of!(LineSegment, b) as u32,
+        ),
+        (
+            vk::Format::R16_UINT,
+            std::mem::offset_of!(LineSegment, width) as u32,
+        ),
+        (
+            vk::Format::R8_UINT,
+            std::mem::offset_of!(LineSegment, point) as u32,
+        ),
+    ];
     let (vert, vertex_stride, attributes): (_, _, &[_]) = match geometry {
         Geometry::Vertices => (
             if mode == Mode::SkyDisc {
                 SKY_DISC_VERT_SPV
             } else if mode == Mode::Weather {
                 WEATHER_VERT_SPV
-            } else if mode.is_lines() {
-                LINES_VERT_SPV
             } else {
                 VERT_SPV
             },
             std::mem::size_of::<Vertex>(),
             if mode == Mode::SkyDisc {
                 &vertex_attributes[..1]
-            } else if mode.is_lines() {
-                &vertex_attributes
             } else {
-                &vertex_attributes[..4]
+                &vertex_attributes
             },
         ),
         Geometry::IndirectVertices => (
             INDIRECT_VERT_SPV,
             std::mem::size_of::<Vertex>(),
-            &vertex_attributes[..4],
+            &vertex_attributes,
         ),
         Geometry::Quads { indirect } => (
             if indirect {
@@ -513,6 +516,7 @@ pub unsafe fn create(
             &[],
         ),
         Geometry::Particles => (PARTICLE_VERT_SPV, 0, &[]),
+        Geometry::Lines => (LINES_VERT_SPV, 0, &[]),
     };
     let instance = match geometry {
         Geometry::Vertices if mode == Mode::Weather => Some((
@@ -523,15 +527,20 @@ pub unsafe fn create(
             std::mem::size_of::<ParticleQuad>() as u32,
             &particle_quads[..],
         )),
+        Geometry::Lines => Some((
+            std::mem::size_of::<LineSegment>() as u32,
+            &line_segments[..],
+        )),
         Geometry::Vertices | Geometry::IndirectVertices | Geometry::Quads { .. } => None,
     };
     let quad_sets = [layouts.table, layouts.draws, layouts.globals, layouts.table];
     let glint_sets = [descriptor_set_layout, layouts.draws, layouts.globals];
     let extra_sets: &[vk::DescriptorSetLayout] = match (mode, geometry) {
         (Mode::Glint, Geometry::Vertices) => &glint_sets,
-        (_, Geometry::Vertices | Geometry::IndirectVertices | Geometry::Particles) => {
-            &layouts.sets()
-        }
+        (
+            _,
+            Geometry::Vertices | Geometry::IndirectVertices | Geometry::Particles | Geometry::Lines,
+        ) => &layouts.sets(),
         (_, Geometry::Quads { .. }) => &quad_sets,
     };
     // SAFETY: `device` is live, and the layout, pass and shaders named are its own.

@@ -82,6 +82,10 @@ pub struct QuadMeshId(pub usize);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ParticleMeshId(pub usize);
 
+/// Handle to an uploaded list of [`LineSegment`](melon_world::mesh::LineSegment)s.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LineMeshId(pub usize);
+
 /// Handle to an uploaded index list ([`quad_index_list`](melon_world::mesh::quad_index_list)).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct IndexMeshId(pub usize);
@@ -126,6 +130,8 @@ pub struct Renderer {
     quad_meshes: mesh_arena::MeshArena,
     /// The particles' [`ParticleQuad`](melon_world::particle::mesh::ParticleQuad)s, rebuilt every frame.
     particle_meshes: mesh_arena::MeshArena,
+    /// The block outline's and the gizmos' [`LineSegment`](melon_world::mesh::LineSegment)s.
+    line_meshes: mesh_arena::MeshArena,
     /// The translucent terrain's index lists, sorted far to near.
     index_lists: mesh_arena::MeshArena,
     /// Every baked block quad's corners, which terrain quads index.
@@ -415,6 +421,7 @@ impl Drop for Renderer {
             self.meshes.destroy(&self.device);
             self.quad_meshes.destroy(&self.device);
             self.particle_meshes.destroy(&self.device);
+            self.line_meshes.destroy(&self.device);
             self.index_lists.destroy(&self.device);
             self.gpu_timer.destroy(&self.device);
             if let Some(indirect) = &mut self.indirect {

@@ -93,6 +93,7 @@ pub(super) unsafe fn create(
         unsafe { pipeline::world::create(device, pass, texture, &layouts.world, mode, geometry) }
     };
     let world = |mode| in_pass(render_pass, mode, Geometry::Vertices);
+    let lines = |mode| in_pass(render_pass, mode, Geometry::Lines);
     let terrain = |mode| {
         in_pass(
             render_pass,
@@ -158,10 +159,10 @@ pub(super) unsafe fn create(
         outline: in_pass(outline_pass, Mode::Outline, Geometry::Vertices)?,
         glint: world(Mode::Glint)?,
         lines: [
-            world(Mode::Lines)?,
-            world(Mode::LinesDepthBias)?,
-            world(Mode::LinesTranslucent)?,
-            world(Mode::LinesNoDepthWrite)?,
+            lines(Mode::Lines)?,
+            lines(Mode::LinesDepthBias)?,
+            lines(Mode::LinesTranslucent)?,
+            lines(Mode::LinesNoDepthWrite)?,
         ],
         layouts: layouts.world,
         terrain: [terrain(Mode::Solid)?, terrain(Mode::Opaque)?],

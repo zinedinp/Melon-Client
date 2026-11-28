@@ -5,9 +5,11 @@ use glam::{DVec3, IVec3, Mat4, Vec3};
 use melon_base::gfx::TextureId;
 use melon_base::gfx::quad::{DrawList, Vertex};
 use melon_gui::text::font::Font;
-use melon_render::{Blending, EntityDraw, LineDraw, LineStyle, MeshId, RenderLayer, Renderer};
+use melon_render::{
+    Blending, EntityDraw, LineDraw, LineMeshId, LineStyle, MeshId, RenderLayer, Renderer,
+};
 use melon_world::block::direction::Direction;
-use melon_world::mesh::WorldVertex;
+use melon_world::mesh::{LineSegment, WorldVertex};
 use melon_world::physics::Aabb;
 
 /// `GizmoStyle.stroke`'s width, in pixels.
@@ -211,9 +213,9 @@ impl Gizmos {
 pub struct GizmoMesh {
     /// The opaque lines and points, then the see-through ones
     /// (`DrawableGizmoPrimitives`' two groups).
-    lines: [Slot; 2],
-    fills: Slot,
-    texts: Vec<(TextureId, Slot)>,
+    lines: [Slot<LineSegment>; 2],
+    fills: Slot<WorldVertex>,
+    texts: Vec<(TextureId, Slot<WorldVertex>)>,
 }
 
 /// The font and the camera's axes, for [`Gizmos::text`].
@@ -226,18 +228,59 @@ pub struct TextView<'a> {
     pub up: Vec3,
 }
 
-/// One uploaded mesh, kept while its vertices stay the same.
-#[derive(Default)]
-struct Slot {
-    mesh: Option<MeshId>,
-    built: Vec<WorldVertex>,
-    origin: IVec3,
-    /// The next frame's vertices, built here to keep the room.
-    scratch: Vec<WorldVertex>,
+/// What a [`Slot`] uploads: vertices or line segments.
+trait Upload: Copy + PartialEq {
+    type Id: Copy;
+    fn upload(renderer: &mut Renderer, elements: &[Self]) -> anyhow::Result<Self::Id>;
+    fn free(renderer: &mut Renderer, id: Self::Id);
 }
 
-impl Slot {
-    fn update(&mut self, renderer: &mut Renderer, vertices: Vec<WorldVertex>, origin: IVec3) {
+impl Upload for WorldVertex {
+    type Id = MeshId;
+
+    fn upload(renderer: &mut Renderer, elements: &[Self]) -> anyhow::Result<MeshId> {
+        renderer.upload_mesh(elements)
+    }
+
+    fn free(renderer: &mut Renderer, id: MeshId) {
+        renderer.free_mesh(id);
+    }
+}
+
+impl Upload for LineSegment {
+    type Id = LineMeshId;
+
+    fn upload(renderer: &mut Renderer, elements: &[Self]) -> anyhow::Result<LineMeshId> {
+        renderer.upload_lines(elements)
+    }
+
+    fn free(renderer: &mut Renderer, id: LineMeshId) {
+        renderer.free_lines(id);
+    }
+}
+
+/// One uploaded mesh, kept while its elements stay the same.
+struct Slot<T: Upload> {
+    mesh: Option<T::Id>,
+    built: Vec<T>,
+    origin: IVec3,
+    /// The next frame's elements, built here to keep the room.
+    scratch: Vec<T>,
+}
+
+impl<T: Upload> Default for Slot<T> {
+    fn default() -> Self {
+        Self {
+            mesh: None,
+            built: Vec::new(),
+            origin: IVec3::ZERO,
+            scratch: Vec::new(),
+        }
+    }
+}
+
+impl<T: Upload> Slot<T> {
+    fn update(&mut self, renderer: &mut Renderer, vertices: Vec<T>, origin: IVec3) {
         if vertices.is_empty() {
             self.release(renderer);
             return;
@@ -246,7 +289,7 @@ impl Slot {
             return;
         }
         self.release(renderer);
-        match renderer.upload_mesh(&vertices) {
+        match T::upload(renderer, &vertices) {
             Ok(mesh) => {
                 self.mesh = Some(mesh);
                 self.built = vertices;
@@ -266,7 +309,7 @@ impl Slot {
             return;
         }
         self.release(renderer);
-        match renderer.upload_mesh(&self.scratch) {
+        match T::upload(renderer, &self.scratch) {
             Ok(mesh) => {
                 self.mesh = Some(mesh);
                 std::mem::swap(&mut self.built, &mut self.scratch);
@@ -278,11 +321,13 @@ impl Slot {
 
     fn release(&mut self, renderer: &mut Renderer) {
         if let Some(mesh) = self.mesh.take() {
-            renderer.free_mesh(mesh);
+            T::free(renderer, mesh);
         }
         self.built.clear();
     }
+}
 
+impl Slot<LineSegment> {
     fn lines(&self, style: LineStyle) -> Option<LineDraw> {
         Some(LineDraw {
             mesh: self.mesh?,
@@ -291,7 +336,9 @@ impl Slot {
             style,
         })
     }
+}
 
+impl Slot<WorldVertex> {
     fn draw(&self, atlas: TextureId, layer: RenderLayer, blend: Blending) -> Option<EntityDraw> {
         Some(EntityDraw {
             scroll: None,
@@ -324,9 +371,10 @@ impl GizmoMesh {
     ) {
         let origin = camera.floor().as_ivec3();
         let white = renderer.white_texture();
-        for (slot, opaque) in self.lines.iter_mut().zip([true, false]) {
-            let view = (camera, forward.as_dvec3());
-            line_quads(gizmos, opaque, origin, view, &mut slot.scratch);
+        let [opaque, see_through] = &mut self.lines;
+        let view = (camera, forward.as_dvec3());
+        line_segments(gizmos, origin, view, [&mut opaque.scratch, &mut see_through.scratch]);
+        for slot in &mut self.lines {
             slot.update_from_scratch(renderer, origin);
         }
         let fills = fill_quads(&gizmos.fills, origin);
@@ -374,10 +422,11 @@ impl GizmoMesh {
         lines: &mut Vec<LineDraw>,
     ) {
         let origin = camera.floor().as_ivec3();
-        let slot = &mut self.lines[0];
-        line_quads(gizmos, true, origin, (camera, forward.as_dvec3()), &mut slot.scratch);
-        slot.update_from_scratch(renderer, origin);
-        lines.extend(slot.lines(LineStyle::Hud));
+        let [opaque, see_through] = &mut self.lines;
+        let view = (camera, forward.as_dvec3());
+        line_segments(gizmos, origin, view, [&mut opaque.scratch, &mut see_through.scratch]);
+        opaque.update_from_scratch(renderer, origin);
+        lines.extend(opaque.lines(LineStyle::Hud));
     }
 
     pub fn release(&mut self, renderer: &mut Renderer) {
@@ -462,25 +511,25 @@ fn is_opaque(color: [f32; 4]) -> bool {
     melon_world::mesh::unorm8(color[3]) == u8::MAX
 }
 
-/// The lines and points of one group (`opaque` or not) as
-/// [`WorldVertex::line`]s and [`WorldVertex::point`]s relative to `origin`,
-/// into `out`. A line is cut off where it passes the near plane `camera`
-/// sees along `forward` (`GizmoFeatureRenderer.buildLines`); one wholly
-/// behind it is left out.
-fn line_quads(
+/// The lines and points as [`LineSegment`]s relative to `origin`, the
+/// opaque ones into `out[0]`, the see-through ones into `out[1]`. A line is
+/// cut off where it passes the near plane `camera` sees along `forward`
+/// (`GizmoFeatureRenderer.buildLines`); one wholly behind it is left out.
+fn line_segments(
     gizmos: &Gizmos,
-    opaque: bool,
     origin: IVec3,
     (camera, forward): (DVec3, DVec3),
-    out: &mut Vec<WorldVertex>,
+    mut out: [&mut Vec<LineSegment>; 2],
 ) {
     let origin = origin.as_dvec3();
     let ahead = |p: DVec3| (p - camera).dot(forward);
-    out.clear();
-    out.reserve((gizmos.lines.len() + gizmos.points.len()) * 4);
-    // Lines come in runs of one colour and width (a box's twelve edges).
-    let mut style: Option<([f32; 4], f32, WorldVertex)> = None;
-    for line in gizmos.lines.iter().filter(|l| is_opaque(l.color) == opaque) {
+    for out in &mut out {
+        out.clear();
+    }
+    // Lines come in runs of one colour and width (a box's twelve edges):
+    // the segment's style and its group are worked out once per run.
+    let mut style: Option<([f32; 4], f32, LineSegment, usize)> = None;
+    for line in &gizmos.lines {
         let (mut a, mut b) = (line.a, line.b);
         let (behind_a, behind_b) = (ahead(a) < NEAR, ahead(b) < NEAR);
         if behind_a && behind_b {
@@ -499,25 +548,26 @@ fn line_quads(
             }
         }
         let (a, b) = ((a - origin).as_vec3(), (b - origin).as_vec3());
-        let vertex = match style {
-            Some((color, width, vertex)) if (color, width) == (line.color, line.width) => vertex,
+        let (segment, group) = match style {
+            Some((color, width, segment, group)) if (color, width) == (line.color, line.width) => {
+                (segment, group)
+            }
             _ => {
-                let vertex = WorldVertex::line_style(line.color, line.width);
-                style = Some((line.color, line.width, vertex));
-                vertex
+                let segment = LineSegment::style(line.color, line.width);
+                let group = usize::from(!is_opaque(line.color));
+                style = Some((line.color, line.width, segment, group));
+                (segment, group)
             }
         };
-        if let Some(quad) = WorldVertex::styled_line(a, b, vertex) {
-            out.extend_from_slice(&quad);
+        // `extend` with the `Option` costs a reserve per line.
+        if let Some(segment) = LineSegment::line(a, b, segment) {
+            out[group].push(segment);
         }
     }
-    for point in gizmos
-        .points
-        .iter()
-        .filter(|p| is_opaque(p.color) == opaque)
-    {
+    for point in &gizmos.points {
         let at = (point.at - origin).as_vec3();
-        out.extend(WorldVertex::point(at, point.color, point.size));
+        let group = usize::from(!is_opaque(point.color));
+        out[group].push(LineSegment::point(at, point.color, point.size));
     }
 }
 
@@ -525,15 +575,18 @@ fn line_quads(
 mod tests {
     use super::*;
 
-    fn line_quads(
+    fn line_segments(
         gizmos: &Gizmos,
         opaque: bool,
         origin: IVec3,
         view: (DVec3, DVec3),
-    ) -> Vec<WorldVertex> {
-        let mut out = vec![WorldVertex::new([9.0; 3], [0.0; 2], [1.0; 3])];
-        super::line_quads(gizmos, opaque, origin, view, &mut out);
-        out
+    ) -> Vec<LineSegment> {
+        let stale = LineSegment::point(Vec3::splat(9.0), [1.0; 4], 1.0);
+        let mut out = [vec![stale], vec![stale]];
+        let [first, second] = &mut out;
+        super::line_segments(gizmos, origin, view, [first, second]);
+        let [opaque_out, see_through] = out;
+        if opaque { opaque_out } else { see_through }
     }
 
     fn cube() -> Aabb {
@@ -544,12 +597,12 @@ mod tests {
     }
 
     /// Times 250 mobs' hitboxes (box, eye band, look arrow, feet). Run with
-    /// `cargo test --profile fast --lib hitbox_quads_time -- --ignored --nocapture`.
+    /// `cargo test --profile fast --lib hitbox_segments_time -- --ignored --nocapture`.
     #[test]
     #[ignore]
-    fn hitbox_quads_time() {
+    fn hitbox_segments_time() {
         let mut gizmos = Gizmos::default();
-        let mut out = Vec::new();
+        let mut out = [Vec::new(), Vec::new()];
         let rounds = 500;
         let started = std::time::Instant::now();
         for round in 0..rounds {
@@ -571,26 +624,27 @@ mod tests {
         let view = (DVec3::new(8.0, 70.0, -20.0), DVec3::Z);
         let started = std::time::Instant::now();
         for _ in 0..rounds {
-            super::line_quads(&gizmos, true, IVec3::ZERO, view, &mut out);
+            let [opaque, see_through] = &mut out;
+            super::line_segments(&gizmos, IVec3::ZERO, view, [opaque, see_through]);
         }
         eprintln!(
-            "gizmos {built:?}, vertices {:?} per frame, {} vertices",
+            "gizmos {built:?}, segments {:?} per frame, {} segments",
             started.elapsed() / rounds,
-            out.len()
+            out[0].len() + out[1].len()
         );
     }
 
     #[test]
-    fn a_cuboid_is_twelve_line_quads() {
+    fn a_cuboid_is_twelve_line_segments() {
         let mut gizmos = Gizmos::default();
         gizmos.cuboid(&cube(), [1.0; 4], DEFAULT_WIDTH);
         assert_eq!(gizmos.len(), 12);
         let camera = (DVec3::new(0.5, 0.5, -5.0), DVec3::Z);
-        let vertices = line_quads(&gizmos, true, IVec3::ZERO, camera);
-        assert_eq!(vertices.len(), 48);
-        assert!(line_quads(&gizmos, false, IVec3::ZERO, camera).is_empty());
-        for v in &vertices {
-            assert_eq!(u16::from_le_bytes(v.light), 40, "2.5 px in sixteenths");
+        let segments = line_segments(&gizmos, true, IVec3::ZERO, camera);
+        assert_eq!(segments.len(), 12);
+        assert!(line_segments(&gizmos, false, IVec3::ZERO, camera).is_empty());
+        for s in &segments {
+            assert_eq!(s.width, 40, "2.5 px in sixteenths");
         }
     }
 
@@ -609,9 +663,9 @@ mod tests {
             [1.0; 4],
             1.0,
         );
-        let vertices = line_quads(&gizmos, true, IVec3::ZERO, (DVec3::ZERO, DVec3::Z));
-        assert_eq!(vertices.len(), 4, "the line wholly behind is left out");
-        let near = vertices.iter().map(|v| v.pos[2]).fold(f32::MAX, f32::min);
+        let segments = line_segments(&gizmos, true, IVec3::ZERO, (DVec3::ZERO, DVec3::Z));
+        assert_eq!(segments.len(), 1, "the line wholly behind is left out");
+        let near = segments[0].a[2].min(segments[0].b[2]);
         assert!((near - NEAR as f32).abs() < 1.0e-6, "{near}");
     }
 
@@ -621,13 +675,10 @@ mod tests {
         gizmos.line(DVec3::ZERO, DVec3::X, [1.0, 0.0, 0.0, 0.5], 1.0);
         gizmos.point(DVec3::new(0.0, 0.0, 2.0), [1.0; 4], 2.0);
         let camera = (DVec3::new(0.0, 0.0, -5.0), DVec3::Z);
-        let opaque = line_quads(&gizmos, true, IVec3::ZERO, camera);
-        let see_through = line_quads(&gizmos, false, IVec3::ZERO, camera);
-        assert_eq!((opaque.len(), see_through.len()), (4, 4));
-        assert!(
-            opaque.iter().all(|v| (2..6).contains(&v.face)),
-            "a point's corners"
-        );
+        let opaque = line_segments(&gizmos, true, IVec3::ZERO, camera);
+        let see_through = line_segments(&gizmos, false, IVec3::ZERO, camera);
+        assert_eq!((opaque.len(), see_through.len()), (1, 1));
+        assert_eq!((opaque[0].point, see_through[0].point), (1, 0));
     }
 
     #[test]

@@ -126,8 +126,6 @@ thread:
 CPU ~0.9-1.5 ms a frame at render distance 32 and 4K, the GPU about as
 long in the bench's `rise` and `turn` phases. Next:
 
-- **Entity hitboxes with F3 open** as instanced lines: 0.15 ms at 250
-  mobs, building and uploading four vertices a line.
 - **Sky after the opaque terrain** with a depth test: 0.11 ms GPU full
   screen.
 

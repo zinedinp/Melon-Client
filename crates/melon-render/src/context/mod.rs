@@ -188,6 +188,15 @@ impl Renderer {
             )
         }?;
         // SAFETY: `device` is live, and the infos name only its own live handles.
+        let line_meshes = unsafe {
+            mesh_arena::MeshArena::new::<melon_world::mesh::LineSegment>(
+                &device,
+                &mem_props,
+                MAX_FRAMES_IN_FLIGHT,
+                mesh_arena::Kind::Instances,
+            )
+        }?;
+        // SAFETY: `device` is live, and the infos name only its own live handles.
         let index_lists = unsafe {
             mesh_arena::MeshArena::new::<u32>(
                 &device,
@@ -262,6 +271,7 @@ impl Renderer {
             meshes,
             quad_meshes,
             particle_meshes,
+            line_meshes,
             index_lists,
             quad_table: None,
             gpu_timer,

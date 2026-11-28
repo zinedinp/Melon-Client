@@ -12,7 +12,7 @@ use crate::{
 use ash::vk;
 use glam::{Mat4, Vec3};
 use melon_base::gfx::TextureId;
-use melon_world::mesh::WorldVertex;
+use melon_world::mesh::{LineSegment, WorldVertex};
 use melon_world::particle::mesh::ParticleQuad;
 use melon_world::projection::world_projection;
 
@@ -552,19 +552,24 @@ impl Renderer {
         }
         let light = DrawLight::tint([1.0; 4]).fogged(fog);
         for line in lines {
+            let Some(slot) = self.line_meshes.slot(line.mesh.0) else {
+                continue;
+            };
+            if slot.count == 0 {
+                continue;
+            }
             let model = world.relative_to(line.model, line.origin);
             let eye = model.inverse().transform_point3(world.eye_fraction());
+            let (buffer, base) = self.line_meshes.location(slot);
+            let offset = u64::from(base) * std::mem::size_of::<LineSegment>() as u64;
             // SAFETY: the command buffer is recording, and what it uses lives until the frame's fence.
             unsafe {
-                self.draw_world_mesh(
-                    cmd,
-                    pass.layout,
-                    line.mesh,
-                    (view_proj * model, eye),
-                    &light,
-                    None,
-                )
-            };
+                self.push_world(cmd, pass.layout, view_proj * model, eye, &light);
+                self.device
+                    .cmd_bind_vertex_buffers(cmd, 1, &[buffer], &[offset]);
+                // One quad of the shared index buffer per segment.
+                self.device.cmd_draw_indexed(cmd, 6, slot.count, 0, 0, 0);
+            }
         }
     }
 

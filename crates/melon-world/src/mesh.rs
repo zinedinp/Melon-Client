@@ -208,58 +208,73 @@ impl WorldVertex {
         self.light = [block.min(15) << 4, sky.min(15) << 4];
         self
     }
+}
 
-    /// The quad of a line from `a` to `b`, `width` pixels wide on screen,
-    /// for `shaders/lines.vert` (vanilla `RenderPipelines.LINES`): two
-    /// vertices at each end, one per side. They carry the line's direction
-    /// in `uv` (octahedron-encoded), the width in sixteenths of a pixel in
-    /// `light` and the side in `face`. `None` for a line of no length.
-    pub fn line(a: glam::Vec3, b: glam::Vec3, color: [f32; 4], width: f32) -> Option<[Self; 4]> {
-        Self::styled_line(a, b, Self::line_style(color, width))
+/// One line or point of `shaders/lines.vert` (vanilla
+/// `RenderPipelines.LINES` and `core/debug_point.vsh`), drawn as one quad
+/// per instance: the shader puts two corners at each end, moved sideways on
+/// screen by half the width.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LineSegment {
+    /// Where the line starts, or the point.
+    pub a: [f32; 3],
+    pub color: [u8; 4],
+    /// Where the line ends; a point's `a` again.
+    pub b: [f32; 3],
+    /// The width (a point's size) in sixteenths of a pixel.
+    pub width: u16,
+    /// 1 for a point.
+    pub point: u8,
+    pub _pad: u8,
+}
+
+const _: () = assert!(std::mem::size_of::<LineSegment>() == 32);
+// SAFETY: `repr(C)`, every field `Pod`, and the size above is the fields' sum: no padding.
+unsafe impl Pod for LineSegment {}
+
+impl LineSegment {
+    /// A line's colour and width as it carries them: what [`Self::line`]
+    /// takes, worked out once for lines that share them.
+    #[inline]
+    pub fn style(color: [f32; 4], width: f32) -> Self {
+        Self {
+            a: [0.0; 3],
+            color: color.map(unorm8),
+            b: [0.0; 3],
+            width: round_up_from_half(width.max(0.0) * 16.0).min(u32::from(u16::MAX)) as u16,
+            point: 0,
+            _pad: 0,
+        }
     }
 
-    /// A line's colour and width as its vertices carry them: what
-    /// [`Self::styled_line`] takes, worked out once for lines that share them.
-    pub fn line_style(color: [f32; 4], width: f32) -> Self {
-        Self::line_vertex(glam::Vec3::X, color, width)
-    }
-
-    /// [`Self::line`] in `style` ([`Self::line_style`]).
-    pub fn styled_line(a: glam::Vec3, b: glam::Vec3, style: Self) -> Option<[Self; 4]> {
-        let dir = (b - a).try_normalize()?;
-        let line = Self {
-            uv: octahedron_encode(dir),
+    /// The line from `a` to `b` in `style` ([`Self::style`]); `None` for a
+    /// line of no length.
+    #[inline]
+    pub fn line(a: glam::Vec3, b: glam::Vec3, style: Self) -> Option<Self> {
+        // Where `try_normalize` would give `None`, without its square root.
+        let length2 = (b - a).length_squared();
+        (length2 > 0.0 && length2 < f32::INFINITY).then_some(Self {
+            a: a.to_array(),
+            b: b.to_array(),
             ..style
-        };
-        let at = |pos: glam::Vec3, face: u8| Self {
-            pos: pos.to_array(),
-            face,
-            ..line
-        };
-        Some([at(a, 0), at(a, 1), at(b, 1), at(b, 0)])
-    }
-
-    /// A square `size` pixels wide on screen around `at`, for
-    /// `shaders/lines.vert` (vanilla `core/debug_point.vsh`'s points).
-    pub fn point(at: glam::Vec3, color: [f32; 4], size: f32) -> [Self; 4] {
-        let point = Self::line_vertex(glam::Vec3::X, color, size);
-        [2, 3, 4, 5].map(|face| Self {
-            pos: at.to_array(),
-            face,
-            ..point
         })
     }
 
-    /// What a line's corners share: direction, colour and width.
-    fn line_vertex(dir: glam::Vec3, color: [f32; 4], width: f32) -> Self {
-        let sixteenths = round_up_from_half(width.max(0.0) * 16.0).min(u32::from(u16::MAX)) as u16;
-        let mut v = Self::rgba([0.0; 3], octahedron_encode(dir), color);
-        v.light = sixteenths.to_le_bytes();
-        v
+    /// A square `size` pixels wide on screen around `at`.
+    #[inline]
+    pub fn point(at: glam::Vec3, color: [f32; 4], size: f32) -> Self {
+        Self {
+            a: at.to_array(),
+            b: at.to_array(),
+            point: 1,
+            ..Self::style(color, size)
+        }
     }
 }
 
 /// `(v.clamp(0.0, 1.0) * 255.0).round() as u8`.
+#[inline]
 pub fn unorm8(v: f32) -> u8 {
     round_up_from_half(v.clamp(0.0, 1.0) * 255.0) as u8
 }
@@ -268,21 +283,10 @@ pub fn unorm8(v: f32) -> u8 {
 /// exact, so comparing it to a half rounds the same, and above there is
 /// none. `round` itself is a libm call on a plain x86-64 target, the bulk
 /// of building a debug line.
+#[inline]
 fn round_up_from_half(x: f32) -> u32 {
     let whole = x as u32;
     whole.saturating_add(u32::from(x - whole as f32 >= 0.5))
-}
-
-/// A unit vector as a point of the octahedron's square, `-1..=1` each;
-/// `shaders/lines.vert` decodes it.
-fn octahedron_encode(v: glam::Vec3) -> [f32; 2] {
-    let v = v / (v.x.abs() + v.y.abs() + v.z.abs());
-    if v.z >= 0.0 {
-        [v.x, v.y]
-    } else {
-        let sign = |x: f32| if x >= 0.0 { 1.0 } else { -1.0 };
-        [(1.0 - v.y.abs()) * sign(v.x), (1.0 - v.x.abs()) * sign(v.y)]
-    }
 }
 
 const _: () = assert!(std::mem::size_of::<WorldVertex>() == 28);
@@ -315,50 +319,21 @@ mod tests {
         }
     }
 
-    /// `lines.vert`'s `octahedron_decode`.
-    fn octahedron_decode([x, y]: [f32; 2]) -> glam::Vec3 {
-        let mut v = glam::Vec3::new(x, y, 1.0 - x.abs() - y.abs());
-        if v.z < 0.0 {
-            let sign = |x: f32| if x >= 0.0 { 1.0 } else { -1.0 };
-            let (vx, vy) = (v.x, v.y);
-            v.x = (1.0 - vy.abs()) * sign(vx);
-            v.y = (1.0 - vx.abs()) * sign(vy);
-        }
-        v.normalize()
-    }
-
     #[test]
-    fn a_line_direction_survives_the_octahedron() {
-        let dirs = [
-            glam::Vec3::X,
-            -glam::Vec3::Y,
-            glam::Vec3::Z,
-            -glam::Vec3::Z,
-            glam::Vec3::new(1.0, -2.0, -3.0).normalize(),
-            glam::Vec3::new(-0.3, 0.1, 0.9).normalize(),
-        ];
-        for dir in dirs {
-            let back = octahedron_decode(octahedron_encode(dir));
-            assert!(back.distance(dir) < 1.0e-6, "{dir} came back as {back}");
-        }
-    }
-
-    #[test]
-    fn a_line_is_one_quad_both_sides_at_both_ends() {
+    fn a_line_keeps_its_ends_colour_and_width() {
         let (a, b) = (glam::Vec3::ZERO, glam::Vec3::new(0.0, 2.0, 0.0));
-        let quad = WorldVertex::line(a, b, [1.0, 0.0, 0.0, 0.4], 2.5).unwrap();
-        let ends: Vec<_> = quad.iter().map(|v| v.pos).collect();
+        let style = LineSegment::style([1.0, 0.0, 0.0, 0.4], 2.5);
+        let line = LineSegment::line(a, b, style).unwrap();
+        assert_eq!((line.a, line.b), (a.to_array(), b.to_array()));
         assert_eq!(
-            ends,
-            [a.to_array(), a.to_array(), b.to_array(), b.to_array()]
+            (line.width, line.color, line.point),
+            (40, [255, 0, 0, 102], 0)
         );
-        assert_eq!(quad.map(|v| v.face), [0, 1, 1, 0]);
-        assert!(quad.iter().all(|v| u16::from_le_bytes(v.light) == 40));
-        assert!(quad.iter().all(|v| v.color == [255, 0, 0, 102]));
-        assert!(WorldVertex::line(a, a, [1.0; 4], 1.0).is_none());
+        assert!(LineSegment::line(a, a, style).is_none());
+        let point = LineSegment::point(b, [1.0; 4], 2.0);
         assert_eq!(
-            WorldVertex::point(a, [1.0; 4], 2.0).map(|v| v.face),
-            [2, 3, 4, 5]
+            (point.a, point.b, point.point),
+            (b.to_array(), b.to_array(), 1)
         );
     }
 

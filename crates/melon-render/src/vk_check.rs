@@ -347,12 +347,16 @@ fn every_pipeline_passes_validation(version: Option<ApiVersion>) {
             Mode::SkyGlow,
             Mode::Crumbling,
             Mode::WaterMask,
+        ] {
+            keep(world(mode, Geometry::Vertices).expect("world vertices"));
+        }
+        for mode in [
             Mode::Lines,
             Mode::LinesDepthBias,
             Mode::LinesTranslucent,
             Mode::LinesNoDepthWrite,
         ] {
-            keep(world(mode, Geometry::Vertices).expect("world vertices"));
+            keep(world(mode, Geometry::Lines).expect("lines"));
         }
         keep(
             pipeline::world::create(

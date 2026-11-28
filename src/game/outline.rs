@@ -3,9 +3,9 @@
 
 use glam::{DVec3, IVec3, Mat4};
 
-use melon_render::{LineDraw, LineStyle, MeshId, Renderer};
+use melon_render::{LineDraw, LineMeshId, LineStyle, Renderer};
 use melon_world::level::Level;
-use melon_world::mesh::WorldVertex;
+use melon_world::mesh::LineSegment;
 use melon_world::physics::Aabb;
 use melon_world::pick::{self, BlockHit};
 
@@ -31,7 +31,7 @@ struct Key {
 #[derive(Default)]
 pub struct BlockOutline {
     /// The outline's line meshes and how each is drawn, for `key`.
-    meshes: Vec<(MeshId, LineStyle)>,
+    meshes: Vec<(LineMeshId, LineStyle)>,
     key: Option<Key>,
 }
 
@@ -93,11 +93,11 @@ impl BlockOutline {
                 vec![(line_width, COLOR, LineStyle::Translucent)]
             };
             for (width, color, style) in parts {
-                let vertices = lines(&edges, origin, color, width);
-                if vertices.is_empty() {
+                let segments = lines(&edges, origin, color, width);
+                if segments.is_empty() {
                     continue;
                 }
-                match renderer.upload_mesh(&vertices) {
+                match renderer.upload_lines(&segments) {
                     Ok(mesh) => self.meshes.push((mesh, style)),
                     Err(e) => melon_base::warn!("Outline mesh failed: {e:#}"),
                 }
@@ -113,7 +113,7 @@ impl BlockOutline {
 
     fn release(&mut self, renderer: &mut Renderer) {
         for (mesh, _) in self.meshes.drain(..) {
-            renderer.free_mesh(mesh);
+            renderer.free_lines(mesh);
         }
         self.key = None;
     }
@@ -176,15 +176,15 @@ fn edges(boxes: &[Aabb]) -> Vec<Edge> {
 
 /// Every edge as a line `width` pixels wide (`ShapeOutlineFeatureRenderer`),
 /// relative to `origin`.
-fn lines(edges: &[Edge], origin: IVec3, color: [f32; 4], width: f32) -> Vec<WorldVertex> {
+fn lines(edges: &[Edge], origin: IVec3, color: [f32; 4], width: f32) -> Vec<LineSegment> {
     let origin = origin.as_dvec3();
+    let style = LineSegment::style(color, width);
     edges
         .iter()
         .filter_map(|&(a, e)| {
             let (a, e) = ((a - origin).as_vec3(), (e - origin).as_vec3());
-            WorldVertex::line(a, e, color, width)
+            LineSegment::line(a, e, style)
         })
-        .flatten()
         .collect()
 }
 
@@ -243,13 +243,13 @@ mod tests {
     }
 
     #[test]
-    fn every_edge_is_one_line_quad_of_the_width() {
+    fn every_edge_is_one_line_of_the_width() {
         let found = edges(&[cube()]);
-        let vertices = lines(&found, IVec3::ZERO, COLOR, 2.5);
-        assert_eq!(vertices.len(), 12 * 4);
-        for v in &vertices {
-            assert_eq!(u16::from_le_bytes(v.light), 40);
-            assert_eq!(v.color, [0, 0, 0, 102]);
+        let segments = lines(&found, IVec3::ZERO, COLOR, 2.5);
+        assert_eq!(segments.len(), 12);
+        for s in &segments {
+            assert_eq!(s.width, 40);
+            assert_eq!(s.color, [0, 0, 0, 102]);
         }
     }
 }
