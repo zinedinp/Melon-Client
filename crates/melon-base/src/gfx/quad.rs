@@ -187,7 +187,7 @@ impl DrawList {
             white,
             corners([x, y, w, h]),
             [[0.0, 0.0]; 4],
-            [color; 4],
+            [unorm8(color); 4],
             program,
         );
     }
@@ -207,15 +207,17 @@ impl DrawList {
         texture: TextureId,
         corners: [[f32; 2]; 4],
         uvs: [[f32; 2]; 4],
-        colors: [[f32; 4]; 4],
+        colors: [[u8; 4]; 4],
         program: Program,
     ) {
         let first = (self.vertices.len() / 4 * 6) as u32;
-        self.vertices.extend((0..4).map(|i| Vertex {
+        let vertex = |i: usize| Vertex {
             pos: corners[i],
             uv: uvs[i],
-            color: unorm8(colors[i]),
-        }));
+            color: colors[i],
+        };
+        self.vertices
+            .extend_from_slice(&[vertex(0), vertex(1), vertex(2), vertex(3)]);
         self.push_call(texture, first, 6, program);
     }
 
@@ -225,7 +227,7 @@ impl DrawList {
             texture,
             corners(rect),
             rect_uvs(uv),
-            [color; 4],
+            [unorm8(color); 4],
             self.current_program,
         );
     }
@@ -238,7 +240,7 @@ impl DrawList {
         uvs: [[f32; 2]; 4],
         color: [f32; 4],
     ) {
-        self.push_corners(texture, corners, uvs, [color; 4], self.current_program);
+        self.push_corners(texture, corners, uvs, [unorm8(color); 4], self.current_program);
     }
 
     /// `push_rect` after `transform` (splash text).
@@ -255,7 +257,7 @@ impl DrawList {
             texture,
             corners,
             rect_uvs(uv),
-            [color; 4],
+            [unorm8(color); 4],
             self.current_program,
         );
     }
@@ -279,7 +281,7 @@ impl DrawList {
             texture,
             corners,
             rect_uvs(uv),
-            [color; 4],
+            [unorm8(color); 4],
             self.current_program,
         );
     }
@@ -312,7 +314,10 @@ impl DrawList {
             texture,
             corners(rect),
             uvs,
-            [top, bottom, bottom, top],
+            {
+                let (top, bottom) = (unorm8(top), unorm8(bottom));
+                [top, bottom, bottom, top]
+            },
             program,
         );
     }

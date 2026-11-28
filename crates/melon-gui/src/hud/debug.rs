@@ -519,8 +519,9 @@ fn push_column(
     screen_width: f32,
     align_left: bool,
 ) {
-    let placement = |line: &str, i: usize| {
-        let text_width = font.text_width(line);
+    let widths: Vec<f32> = lines.iter().map(|line| font.text_width(line)).collect();
+    let placement = |i: usize| {
+        let text_width = widths[i];
         let left = if align_left {
             2.0
         } else {
@@ -533,7 +534,7 @@ fn push_column(
         if line.is_empty() {
             continue;
         }
-        let (left, top, text_width) = placement(line, i);
+        let (left, top, text_width) = placement(i);
         draw_list.push_rect(
             white,
             [left - 1.0, top - 1.0, text_width + 2.0, LINE_HEIGHT],
@@ -545,7 +546,7 @@ fn push_column(
         if line.is_empty() {
             continue;
         }
-        let (left, top, _) = placement(line, i);
+        let (left, top, _) = placement(i);
         font.push_text_flat(draw_list, font_textures, line, left.round(), top, TEXT);
     }
 }

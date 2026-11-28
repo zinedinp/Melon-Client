@@ -99,10 +99,6 @@ thread:
 The cutout terrain is the largest GPU pass (0.55-0.6 ms in `rise` and
 `turn`), and its time follows its primitives, not its shading.
 
-- **Upright diagonal facing groups**: the plants' crosses in groups a
-  section leaves out when they face away. Fewer cutout primitives; whether
-  the extra multi-draw commands cost the CPU more needs an A/B on a quiet
-  machine.
 - **Back faces per face, not per section** (a compute pass before the
   draw), if it costs less than the primitives it saves.
 

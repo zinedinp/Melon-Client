@@ -144,6 +144,8 @@ pub use super::{DEFAULT_FONT, SPRITE_COUNT, SPRITE_FIRST, sprite_char, sprite_in
 
 pub struct Font {
     glyphs: GlyphMap,
+    /// `glyphs`' ASCII part by code, for the lookup per drawn character.
+    ascii: Box<[Option<Glyph>; 128]>,
     /// The other fonts by full id, for text whose `Style.font` names one.
     faces: HashMap<String, Face>,
     /// Unifont: the glyphs for everything the bitmaps lack, made on use.
@@ -219,6 +221,7 @@ impl Font {
             }
         }
         Ok(Self {
+            ascii: ascii_table(&glyphs),
             glyphs,
             faces,
             unihex,
@@ -233,6 +236,7 @@ impl Font {
     /// A launcher font: one bitmap page, no Unifont, no Mojang files.
     pub fn from_bitmaps(glyphs: GlyphMap, pages: Vec<RgbaImage>) -> Self {
         Self {
+            ascii: ascii_table(&glyphs),
             glyphs,
             faces: HashMap::new(),
             unihex: Vec::new(),
@@ -246,6 +250,9 @@ impl Font {
 
     /// The glyph for `c`: from the bitmap fonts, else Unifont's.
     pub fn glyph(&self, c: char) -> Option<Glyph> {
+        if let Some(Some(glyph)) = self.ascii.get(c as usize) {
+            return Some(*glyph);
+        }
         if let Some(glyph) = self.glyphs.get(&c) {
             return Some(*glyph);
         }
@@ -666,7 +673,8 @@ impl Font {
         let program = draw_list.set_program(Program::Text);
         let mut pen = x;
         for ch in text.chars() {
-            if let Some(glyph) = self.glyph(ch)
+            let found = self.glyph(ch);
+            if let Some(glyph) = found
                 && let GlyphKind::Bitmap {
                     page,
                     u0,
@@ -686,7 +694,11 @@ impl Font {
                 }
                 quad(draw_list, page, [pen, y + up, width, height], uv, color, up);
             }
-            pen += self.advance(ch);
+            // [`Self::advance`] without a second lookup.
+            pen += match found {
+                Some(glyph) if ch != super::OBJECT_CHAR => glyph.advance,
+                _ => self.advance(ch),
+            };
         }
         draw_list.set_program(program);
         pen - x
@@ -760,6 +772,15 @@ impl LineWidth {
     fn width(&self) -> f32 {
         self.done + self.run
     }
+}
+
+/// The ASCII glyphs of `glyphs`, by code.
+fn ascii_table(glyphs: &GlyphMap) -> Box<[Option<Glyph>; 128]> {
+    let mut table = Box::new([None; 128]);
+    for (code, slot) in (0u8..).zip(table.iter_mut()) {
+        *slot = glyphs.get(&char::from(code)).copied();
+    }
+    table
 }
 
 fn has_codes(text: &str) -> bool {
@@ -938,6 +959,7 @@ mod unifont_tests {
         font.glyphs.insert(' ', Glyph::new(GlyphKind::Space, 4.0));
         font.glyphs
             .insert('\u{e000}', Glyph::new(GlyphKind::Space, 1.5));
+        font.ascii = ascii_table(&font.glyphs);
         let mut seed = 7;
         assert_eq!(font.random_glyph_in(None, ' ', &mut seed), ' ');
         assert_ne!(font.random_glyph_in(None, 'a', &mut seed), 'b');
